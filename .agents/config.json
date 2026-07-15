@@ -1,0 +1,57 @@
+{
+  "project_name": "yeolo-fe",
+  "engine": "antigravity-v2",
+  "sandbox": {
+    "readOnly": false,
+    "allowWritePaths": [
+      ".agents/",
+      "packages/",
+      ".git/",
+      "progress.md",
+      "log.md"
+    ],
+    "allowTerminalCommands": [
+      "git",
+      "npm",
+      "yarn",
+      "bash",
+      "expo",
+      "python",
+      "python3",
+      "sh",
+      "mv",
+      "rm",
+      "cat",
+      "touch"
+    ]
+  },
+  "environments": {
+    "web": {
+      "path": "./packages/web",
+      "package_manager": "yarn",
+      "test_runner": "jest",
+      "test_command": "yarn test",
+      "lint_command": "yarn lint"
+    },
+    "app": {
+      "path": "./packages/app",
+      "package_manager": "yarn",
+      "test_runner": "jest",
+      "test_command": "yarn test",
+      "lint_command": "yarn lint"
+    },
+    "common": {
+      "path": "./packages/common",
+      "package_manager": "yarn",
+      "test_runner": "typescript",
+      "test_command": "yarn build"
+    }
+  },
+  "harness": {
+    "requirements_path": "./.agents/Yeolo-SPEC/requirement-specs",
+    "apis_path": "./.agents/Yeolo-SPEC/api-specs",
+    "domains_path": "./.agents/Yeolo-SPEC/domain-specs",
+    "functionals_path": "./.agents/Yeolo-SPEC/functional-specs",
+    "max_tdd_loops": 5
+  }
+}
