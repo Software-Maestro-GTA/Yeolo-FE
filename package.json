@@ -1,0 +1,34 @@
+{
+  "name": "yeolo-fe",
+  "version": "1.0.0",
+  "description": "제로터치 초개인화 여행 플랫폼 여로",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "web:dev": "yarn workspace @yeolo/web dev",
+    "web:build": "yarn workspace @yeolo/web build",
+    "web:start": "yarn workspace @yeolo/web start",
+    "web:test": "yarn workspace @yeolo/web test",
+    "android:dev": "yarn workspace @yeolo/app android",
+    "android:build": "yarn workspace @yeolo/app android:build",
+    "ios:dev": "yarn workspace @yeolo/app ios",
+    "ios:build": "yarn workspace @yeolo/app ios:build",
+    "app:test": "yarn workspace @yeolo/app test",
+    "common:test": "yarn workspace @yeolo/common test",
+    "test": "yarn web:test && yarn app:test && yarn common:test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Software-Maestro-GTA/Yeolo-FE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Software-Maestro-GTA/Yeolo-FE/issues"
+  },
+  "homepage": "https://github.com/Software-Maestro-GTA/Yeolo-FE"
+}

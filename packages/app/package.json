@@ -1,0 +1,31 @@
+{
+  "name": "@yeolo/app",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@yeolo/common": "1.0.0",
+    "expo": "~57.0.4",
+    "expo-status-bar": "~57.0.0",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.2.2",
+    "jest": "^30.4.2",
+    "jest-expo": "^57.0.2",
+    "react-test-renderer": "^19.2.7",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "android:build": "expo run:android --variant release",
+    "ios": "expo start --ios",
+    "ios:build": "expo run:ios --configuration Release",
+    "web": "expo start --web",
+    "test": "jest --watchAll=false"
+  },
+  "private": true
+}
