@@ -3,28 +3,45 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "@react-native-google-signin/google-signin": "^16.1.2",
     "@yeolo/common": "1.0.0",
     "expo": "~57.0.4",
+    "expo-auth-session": "^57.0.3",
+    "expo-build-properties": "^57.0.5",
+    "expo-crypto": "^57.0.1",
+    "expo-linear-gradient": "^57.0.1",
     "expo-status-bar": "~57.0.0",
+    "expo-web-browser": "^57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "^5.8.0"
   },
   "devDependencies": {
+    "@react-native/jest-preset": "^0.86.0",
     "@testing-library/react-native": "^14.0.1",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "29",
     "@types/react": "~19.2.2",
-    "jest": "^30.4.2",
+    "cross-fetch": "^4.1.0",
+    "jest": "29.7.0",
     "jest-expo": "^57.0.2",
+    "msw": "^2.15.0",
+    "node-fetch": "2",
     "react-test-renderer": "^19.2.7",
-    "typescript": "~6.0.3"
+    "test-renderer": "^1.2.0",
+    "typescript": "~6.0.3",
+    "undici": "^8.7.0",
+    "whatwg-fetch": "^3.6.20"
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "android:build": "expo run:android --variant release",
-    "ios": "expo start --ios",
+    "ios": "expo run:ios",
     "ios:build": "expo run:ios --configuration Release",
     "web": "expo start --web",
+    "lint": "tsc --noEmit",
     "test": "jest --watchAll=false"
   },
   "private": true

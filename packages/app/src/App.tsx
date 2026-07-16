@@ -1,20 +1,24 @@
+import React, { useContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import LoginScreen from './screens/LoginScreen';
+import HomeScreen from './screens/HomeScreen';
+
+function NavigationRoot() {
+  const auth = useContext(AuthContext);
+
+  if (auth?.isAuthenticated) {
+    return <HomeScreen />;
+  }
+
+  return <LoginScreen />;
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+    <AuthProvider>
+      <NavigationRoot />
       <StatusBar style="auto" />
-    </View>
+    </AuthProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
