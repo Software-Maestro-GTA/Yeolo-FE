@@ -11,13 +11,17 @@
     "web:build": "yarn workspace @yeolo/web build",
     "web:start": "yarn workspace @yeolo/web start",
     "web:test": "yarn workspace @yeolo/web test",
+    "web:lint": "yarn workspace @yeolo/web lint",
     "android:dev": "yarn workspace @yeolo/app android",
     "android:build": "yarn workspace @yeolo/app android:build",
     "ios:dev": "yarn workspace @yeolo/app ios",
     "ios:build": "yarn workspace @yeolo/app ios:build",
     "app:test": "yarn workspace @yeolo/app test",
+    "app:lint": "yarn workspace @yeolo/app lint",
     "common:test": "yarn workspace @yeolo/common test",
-    "test": "yarn web:test && yarn app:test && yarn common:test"
+    "common:lint": "yarn workspace @yeolo/common lint",
+    "test": "yarn web:test && yarn app:test && yarn common:test",
+    "lint": "yarn web:lint && yarn app:lint && yarn common:lint"
   },
   "repository": {
     "type": "git",
