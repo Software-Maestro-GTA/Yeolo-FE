@@ -81,6 +81,12 @@ jest.mock('perf_hooks', () => {
   };
 });
 
+// Mock parse-sse to bypass ESM importing issue
+jest.mock('parse-sse', () => ({
+  parseServerSentEvents: jest.fn(),
+  ServerSentEventTransformStream: class {},
+}));
+
 // Mock @open-draft/deferred-promise to bypass ESM importing issue
 jest.mock('@open-draft/deferred-promise', () => {
   return {

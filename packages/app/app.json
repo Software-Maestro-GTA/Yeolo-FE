@@ -24,8 +24,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-google-signin/google-signin",
-      "./plugins/withPodfileModularHeaders"
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "성향 분석을 위해 최근 여행 사진의 위치 및 시간 메타데이터를 파싱합니다.",
+          "savePhotosPermission": "분석된 일정을 내 기기에 저장합니다.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ]
   }
 }
