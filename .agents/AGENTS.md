@@ -14,24 +14,23 @@
 
 ## 2. 프로젝트 폴더 구조 (Directory Structure)
 
-```directory
-.
+하네스 시스템이 대상 프로젝트에 삽입될 때 구축되는 전체 프로젝트 레이아웃입니다. 하네스의 코어 소스들은 대상 프로젝트 루트 하위의 `.agents/` 디렉토리에 통합 보관되어 구동됩니다:
+
+```
+Yeolo-FE (대상 프로젝트 루트)
+├── packages/                     # Yarn Workspaces 기반 프론트엔드 모노레포 패키지
+│   ├── web/                      # Next.js 16 (App Router) + Tailwind CSS v4 웹 서비스
+│   ├── app/                      # Expo v57 + React Native 모바일 앱 서비스
+│   └── common/                   # 웹과 앱에서 공유하는 공통 데이터 모델 및 빌드 유틸리티
 ├── .agents/                      # 하네스 오케스트레이션 및 에이전트 규칙 저장소
-│   ├── agents/                   # 다중 에이전트(Planner, Tester, Coder, Reviewer) 역할 프롬프트 (.md)
-│   ├── hooks/                    # 빌드 및 테스트 자동 검증 훅 스크립트 (run_test.sh)
+│   ├── agents/                   # 다중 에이전트(Planner, Tester, Coder, Reviewer, Updater) 역할 프롬프트 (.md)
+│   ├── hooks/                    # 빌드 및 테스트 자동 검증 훅 스크립트 (init.sh, test.sh)
 │   ├── skills/                   # API 모킹, 커밋 메시지 규격, 프레임워크 가이드 등 개별 실행 규칙
 │   ├── templates/                # progress.md, 모듈 주석, 검증 리포트 작성용 템플릿
-│   ├── Yeolo-SPEC/               # 서브모듈로 등록된 공식 기획 스펙 저장소 (요구사항/기능/도메인/API/디자인)
-│   ├── config.json               # 프로젝트 패키지 환경 및 TDD 최대 루프 제한 설정 파일
-│   ├── system.md                 # 전역 에이전트 절대 제약 가이드라인 (System Rules)
-│   ├── progress.md               # 현재 태스크의 TDD 루프 진척 현황판 및 작업 진척도 기록 파일
-│   ├── log.md                    # 현재 태스크 검증 도중 발생한 에러 로그 및 리뷰 결과 파일
-│   └── AGENTS.md                 # 본 문서 (에이전트 공통 프로젝트 가이드라인)
-│
-└── packages/                     # Yarn Workspaces 기반 프론트엔드 모노레포 패키지
-    ├── web/                      # Next.js 16 (App Router) + Tailwind CSS v4 웹 서비스
-    ├── app/                      # Expo v57 + React Native 모바일 앱 서비스
-    └── common/                   # 웹과 앱에서 공유하는 공통 데이터 모델 및 빌드 유틸리티
+│   ├── specs/                    # Given-When-Then 요구사항 및 기능 명세서 보관소
+│   └── system.md                 # 전역 에이전트 절대 제약 가이드라인 (System Rules)
+├── progress.md                   # 전체 에이전트의 기동 상황 및 할 일을 기록하는 진척 보드
+└── log.md                        # 전체 에이전트의 무결성 검증 실패 내역을 누적하는 실행 로그 보드
 ```
 
 ---
@@ -67,22 +66,26 @@
 
 ## 4. 다중 에이전트 협업 워크플로우 (Multi-Agent Workflow)
 
-본 프로젝트는 4개 에이전트가 역할을 교대하며 GitHub Issue 티켓을 할당받아 하나의 작업을 완수해 나가는 자율 TDD 이중 루프(Double-Loop)로 진행됩니다.
+본 프로젝트는 4개 에이전트가 역할을 교대하며 작업을 완수해 나가는 자율 TDD 이중 루프(Double-Loop)로 진행되며, 사후 개선 에이전트가 개선 패치를 지원합니다.
 
 ### 4.1 에이전트별 역할 및 구동 파일
 
 1.  **[Planner](./agents/planner.md)**:
-    - `github-mcp-server`를 이용해 사용자가 등록한 GitHub Issue를 분석하고, `Yeolo-SPEC` 하위 명세를 매핑합니다.
+    - 기동 직후 `sh hooks/init.sh`를 실행하여 진척 보드(`progress.md`)와 로그를 초기화합니다.
+    - 사용자가 지정한 이슈를 분석하고, `.agents/specs/` 하위 명세를 매핑합니다.
     - `progress_template.md`를 바탕으로 `progress.md` 파일 초기화 및 인수 기준(Acceptance Criteria) 작성을 수행합니다.
 2.  **[Tester](./agents/tester.md)**:
     - 기능 구현이 진행되기 전, `progress.md`에 설정된 인수 기준을 검증하는 실패하는 단위 테스트 코드(Red Phase) 및 MSW 모킹 핸들러를 먼저 작성합니다.
+    - 소스코드 경로: `packages/`
 3.  **[Coder](./agents/coder.md)**:
     - 실패하는 테스트 코드를 통과시키는 비즈니스 로직과 화면 스타일을 구현합니다.
     - **테스트 코드를 임의 수정/완화하는 것은 엄격히 금지**됩니다. 파일 헤더에는 `module-explain-formatter` 주석을 추가합니다.
 4.  **[Reviewer](./agents/reviewer.md)**:
-    - 검증 훅인 `bash .agents/hooks/run_test.sh [영역]`을 구동하여 테스트 및 린트 결과(exit code)를 검증합니다.
-    - 실패 시 에러 로그를 `log.md`에 기록하고 Coder/Tester로 롤백합니다.
-    - 성공 시 `git-commit-formatter` 형식에 맞는 표준 커밋을 적용하고 `github-mcp-server`를 호출하여 관련 GitHub 이슈를 종결(Close) 처리합니다.
+    - 검증 훅인 `sh hooks/test.sh`를 구동하여 테스트 및 린트 결과(exit code)를 검증합니다.
+    - 실패 시 에러 로그를 `log.md`에 상세 기입하고 개발 에이전트(Coder 또는 Tester)로 반려 피드백 리포트를 발행하고 롤백합니다.
+    - 성공 시 `progress.md`를 최종 완료(DONE) 마킹하고 전체 파이프라인 작업을 끝마칩니다.
+5.  **[Updater](./agents/updater.md)**:
+    - 사용자의 질의 응답 완료 후 기동하여 하네스 개선이 필요하다고 판단 시, 사용자에게 변경 전후 diff를 제시하여 명시적 승인을 얻은 후 `agents/`, `hooks/`, `skills/` 등의 코어 인프라를 안전하게 개선합니다.
 
 ---
 

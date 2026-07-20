@@ -59,3 +59,8 @@ description: Guideline for writing MSW mocks and RTL tests inside Yeolo-FE.
         }),
       );
       ```
+
+## 3. 모노레포 공통 스토어(@yeolo/common) 테스트 및 의존성 주입
+
+- 모노레포 빌드 산출물(`dist/index.js`) 내 내부 함수는 Jest의 `jest.spyOn`으로 가로채기 어려울 수 있습니다.
+- 공통 Zustand 스토어 및 화면 컴포넌트 구현 시 `fetcher` 등의 비동기 API 호출 함수를 옵셔널 프롭/인자로 전달받을 수 있도록 의존성 주입(Dependency Injection) 구조를 열어두거나, MSW 네트워크 인터셉터를 통해 테스트 코드를 안정적으로 구성합니다.
