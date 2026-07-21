@@ -1,1 +1,7 @@
 node_modules
+
+# Harness dynamic execution sheets
+progress.md
+log.md
+.agents/progress.md
+.agents/log.md

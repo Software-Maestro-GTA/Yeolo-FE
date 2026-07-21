@@ -25,8 +25,8 @@ description: Next.js App Router와 Tailwind CSS v4를 사용하는 웹 프로젝
 - **컴포넌트 구조 통일**:
   - 각 UI 컴포넌트는 `components/[ComponentName]/` 폴더 아래에 생성하고, 핵심 로직은 `[ComponentName].tsx`에 작성합니다.
   - `components/[ComponentName]/index.ts`를 생성하여 외부로의 export 경로를 일원화합니다.
-- **비즈니스 로직과 UI 분리**:
-  - 컴포넌트 내부가 비대해지는 것을 방지하기 위해, 복잡한 상태 관리 및 API 연동 로직은 커스텀 훅(`use[Feature].ts`)으로 분리하여 관리합니다.
+- **비즈니스 로직과 UI 분리 및 모노레포 재사용**:
+  - 컴포넌트 내부가 비대해지는 것을 방지하기 위해 복잡한 상태 관리 및 API 연동 로직은 커스텀 훅으로 분리하되, **웹과 앱이 공유하는 API 요청 함수 및 Zustand 전역 상태는 `@yeolo/common` 패키지의 API(`common/src/api/`) 및 스토어(`common/src/store/`)를 선제 활용**합니다.
 - **엄격한 TypeScript 타입 지정**:
   - `any` 타입을 임의로 사용하지 않고, 모든 Props와 API 응답에 대해 명확한 `interface` 또는 `type`을 지정합니다.
   - 공통으로 사용되는 비즈니스 데이터 모델은 `@yeolo/common` 패키지의 정의를 가져와 공유합니다.

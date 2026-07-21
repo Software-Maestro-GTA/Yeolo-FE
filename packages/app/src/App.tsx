@@ -7,12 +7,13 @@ import HomeScreen from './screens/HomeScreen';
 import IntroScreen from './screens/IntroScreen';
 import PhotoAnalysisScreen from './screens/PhotoAnalysisScreen';
 import TasteAnalysisScreen from './screens/TasteAnalysisScreen';
+import TasteProfileScreen from './screens/TasteProfileScreen';
 
 function NavigationRoot() {
   const auth = useContext(AuthContext);
-  const [step, setStep] = useState<'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'HOME'>(
-    auth?.isAuthenticated ? 'HOME' : 'LOGIN'
-  );
+  const [step, setStep] = useState<
+    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME'
+  >(auth?.isAuthenticated ? 'HOME' : 'LOGIN');
 
   useEffect(() => {
     if (auth?.isAuthenticated) {
@@ -38,8 +39,19 @@ function NavigationRoot() {
     case 'TASTE':
       return (
         <TasteAnalysisScreen
-          onFinish={() => setStep('HOME')}
+          onFinish={() => setStep('PROFILE')}
           onFail={() => setStep('LOGIN')}
+        />
+      );
+    case 'PROFILE':
+      return (
+        <TasteProfileScreen
+          onNavigateToAnalysis={() => setStep('TASTE')}
+          onNavigateToLogin={() => setStep('LOGIN')}
+          onGenerateCourse={() => setStep('HOME')}
+          onTabPress={(tab) => {
+            if (tab === 'home') setStep('HOME');
+          }}
         />
       );
     case 'HOME':

@@ -157,17 +157,37 @@ jest.mock('expo-web-browser', () => {
   };
 });
 
+// Restore global fetch with undici to bypass expo winter fetch limitations
+const undici = require('undici');
+const originalEntries = undici.Headers.prototype.entries;
+undici.Headers.prototype.entries = function () {
+  const iter = originalEntries.call(this);
+  return {
+    [Symbol.iterator]() {
+      return this;
+    },
+    next() {
+      return iter.next();
+    },
+  };
+};
+undici.Headers.prototype[Symbol.iterator] = undici.Headers.prototype.entries;
+
+global.fetch = undici.fetch;
+global.Headers = undici.Headers;
+global.Request = undici.Request;
+global.Response = undici.Response;
+
 // TextEncoder / TextDecoder compatibility for MSW in Node environment
 const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
-// Restore global fetch with undici to bypass expo winter fetch limitations
-const { fetch, Headers, Request, Response } = require('undici');
-global.fetch = fetch;
-global.Headers = Headers;
-global.Request = Request;
-global.Response = Response;
+
+
+
+
+
 
 // Mock @react-native-google-signin/google-signin
 jest.mock('@react-native-google-signin/google-signin', () => {
