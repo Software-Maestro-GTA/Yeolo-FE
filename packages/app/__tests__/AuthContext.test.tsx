@@ -55,6 +55,14 @@ beforeAll(() => {
   }) as any;
 });
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+beforeEach(async () => {
+  await AsyncStorage.clear();
+  shouldFail = false;
+  jest.clearAllMocks();
+});
+
 afterEach(() => {
   shouldFail = false;
   jest.clearAllMocks();

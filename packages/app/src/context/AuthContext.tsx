@@ -1,6 +1,6 @@
 /**
  * @file AuthContext.tsx
- * @description Context provider for managing user authentication state and session restore.
+ * @description Context provider for managing user authentication state, Google Sign-In, and automatic session restore.
  * @requirements REQ-11
  * @functional FUN-1
  * @api API-FB-1
@@ -24,13 +24,28 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
     initializeGoogleSignin(webClientId, iosClientId);
+
+    const restoreSession = async () => {
+      try {
+        const token = await AsyncStorage.getItem('accessToken');
+        if (token) {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.warn('Failed to restore session token:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
 
   const loginWithGoogle = async (code: string) => {
