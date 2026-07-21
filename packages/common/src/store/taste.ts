@@ -28,3 +28,65 @@ export const useTasteStore = create<TasteState>((set) => ({
   setTasteProfileId: (id) => set({ tasteProfileId: id }),
   clearTasteProfileId: () => set({ tasteProfileId: null }),
 }));
+
+import type { TasteProfile } from '../types/taste';
+import { fetchTasteProfileApi, ApiError } from '../api/taste';
+
+export interface TasteProfileState {
+  tasteProfile: TasteProfile | null;
+  isLoading: boolean;
+  error: string | null;
+  errorCode: number | null;
+  fetchTasteProfile: (
+    apiUrl: string,
+    accessToken?: string,
+    fetcher?: typeof fetchTasteProfileApi
+  ) => Promise<TasteProfile | null>;
+  clearTasteProfile: () => void;
+}
+
+export const useTasteProfileStore = create<TasteProfileState>((set) => ({
+  tasteProfile: null,
+  isLoading: false,
+  error: null,
+  errorCode: null,
+
+  fetchTasteProfile: async (
+    apiUrl: string,
+    accessToken?: string,
+    fetcher = fetchTasteProfileApi
+  ) => {
+    set({ isLoading: true, error: null, errorCode: null });
+    try {
+      const profile = await fetcher(apiUrl, accessToken);
+      set({
+        tasteProfile: profile,
+        isLoading: false,
+        error: null,
+        errorCode: 200,
+      });
+      return profile;
+    } catch (err: any) {
+      const status = err instanceof ApiError ? err.status : 500;
+      const message = err?.message || '성향 프로필을 불러오지 못했습니다.';
+      set({
+        tasteProfile: null,
+        isLoading: false,
+        error: message,
+        errorCode: status,
+      });
+      return null;
+    }
+  },
+
+  clearTasteProfile: () => {
+    set({
+      tasteProfile: null,
+      isLoading: false,
+      error: null,
+      errorCode: null,
+    });
+  },
+}));
+
+

@@ -59,3 +59,51 @@ export async function analyzeTastePreferenceStream(
 
   return tasteProfileId;
 }
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = 'ApiError';
+  }
+}
+
+/**
+ * Fetches user taste profile from backend (API-FB-8).
+ * 
+ * @param apiUrl Base backend URL
+ * @param accessToken User JWT access token
+ */
+export async function fetchTasteProfileApi(
+  apiUrl: string,
+  accessToken?: string
+): Promise<import('../types/taste').TasteProfile> {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${apiUrl}/api/me/taste-profile`, {
+      method: 'GET',
+      headers,
+    });
+
+    const json = await response.json();
+
+    if (response.status === 200 && json?.data?.tasteProfile) {
+      return json.data.tasteProfile;
+    }
+
+    throw new ApiError(response.status, json?.message || '성향 프로필 조회 실패');
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, error?.message || '서버 에러가 발생했습니다.');
+  }
+}
+

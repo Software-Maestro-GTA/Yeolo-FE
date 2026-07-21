@@ -33,8 +33,101 @@ export interface TasteCompleteData {
   };
 }
 
+export interface TravelPurposePreference {
+  relaxation?: number;
+  sightseeing?: number;
+  culturalExperience?: number;
+  gourmet?: number;
+  natureExploration?: number;
+  activity?: number;
+  shopping?: number;
+  festivalEvent?: number;
+  wellness?: number;
+  selfDevelopment?: number;
+}
+
+export interface PreferredLocationType {
+  bigCity?: number;
+  smallTownAlley?: number;
+  natureHinterland?: number;
+  beachResort?: number;
+  mountainPlateau?: number;
+  historicalCity?: number;
+  themeParkResort?: number;
+  famousSpotPreferred?: number;
+  hiddenSpotPreferred?: number;
+}
+
+export interface ActivityPreference {
+  viewing?: number;
+  experience?: number;
+  adventure?: number;
+  photographyVideo?: number;
+  gourmetExploration?: number;
+  nightlife?: number;
+  shopping?: number;
+  relaxation?: number;
+  localInteraction?: number;
+}
+
+export interface FoodPreference {
+  localFoodActive?: number;
+  famousRestaurantCentered?: number;
+  streetFood?: number;
+  cafeDessert?: number;
+  fineDining?: number;
+  familiarFoodPreferred?: number;
+  dietaryRestriction?: number;
+  sightseeingOverFood?: number;
+}
+
+export type TravelPaceDensity =
+  | 'slow_stay'
+  | 'balanced'
+  | 'dense_schedule'
+  | 'spontaneous'
+  | 'long_stay';
+
+export type SpendingTendency = 'cost_effective' | 'moderate' | 'luxury';
+
+export type CompanionType =
+  | 'solo'
+  | 'couple'
+  | 'friends'
+  | 'family'
+  | 'with_children'
+  | 'with_parents'
+  | 'group'
+  | 'with_pet'
+  | 'social';
+
+export interface TasteProfile {
+  tasteProfileId: string;
+  userId: string;
+  sourceType: 'survey' | 'behavior' | 'mixed';
+  updatedAt: string;
+  travelPurpose: TravelPurposePreference;
+  travelPaceDensity: TravelPaceDensity;
+  preferredLocationType: PreferredLocationType;
+  activityPreference: ActivityPreference;
+  spendingTendency: SpendingTendency;
+  companionType: CompanionType;
+  foodPreference: FoodPreference;
+  seasonalEnvironmentPreference: string[];
+}
+
 export interface StreamCallbacks {
   onProgress?: (data: TasteProgressData) => void;
   onComplete?: (data: TasteCompleteData) => void;
   onError?: (error: any) => void;
 }
+
+export interface GetTasteProfileResponse {
+  status: number;
+  message: string;
+  data: {
+    tasteProfile: TasteProfile;
+  } | null;
+}
+
+
