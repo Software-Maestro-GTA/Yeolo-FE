@@ -33,6 +33,20 @@ export interface TasteCompleteData {
   };
 }
 
+export interface TasteAnalysisState {
+  isAnalyzing: boolean;
+  progressStep: string | null;
+  progressMessage: string | null;
+  error: string | null;
+  errorCode: number | null;
+}
+
+export interface StreamCallbacks {
+  onProgress?: (event: TasteProgressData) => void;
+  onComplete?: (event: TasteCompleteData) => void;
+  onError?: (error: Error) => void;
+}
+
 export interface TravelPurposePreference {
   relaxation?: number;
   sightseeing?: number;
@@ -88,46 +102,17 @@ export type TravelPaceDensity =
   | 'spontaneous'
   | 'long_stay';
 
-export type SpendingTendency = 'cost_effective' | 'moderate' | 'luxury';
-
-export type CompanionType =
-  | 'solo'
-  | 'couple'
-  | 'friends'
-  | 'family'
-  | 'with_children'
-  | 'with_parents'
-  | 'group'
-  | 'with_pet'
-  | 'social';
-
 export interface TasteProfile {
   tasteProfileId: string;
   userId: string;
-  sourceType: 'survey' | 'behavior' | 'mixed';
+  sourceType: 'onboarding_survey' | 'behavior' | 'mixed';
   updatedAt: string;
   travelPurpose: TravelPurposePreference;
   travelPaceDensity: TravelPaceDensity;
   preferredLocationType: PreferredLocationType;
   activityPreference: ActivityPreference;
-  spendingTendency: SpendingTendency;
-  companionType: CompanionType;
+  spendingTendency: 'cost_effective' | 'moderate' | 'luxury';
+  companionType: 'alone' | 'couple' | 'family' | 'friends';
   foodPreference: FoodPreference;
   seasonalEnvironmentPreference: string[];
 }
-
-export interface StreamCallbacks {
-  onProgress?: (data: TasteProgressData) => void;
-  onComplete?: (data: TasteCompleteData) => void;
-  onError?: (error: any) => void;
-}
-
-export interface GetTasteProfileResponse {
-  status: number;
-  message: string;
-  data: {
-    tasteProfile: TasteProfile;
-  } | null;
-}
-
-
