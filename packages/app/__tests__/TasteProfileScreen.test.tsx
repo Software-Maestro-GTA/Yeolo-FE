@@ -85,6 +85,7 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
 
     const { findByText, getByText } = await render(
       <TasteProfileScreen
+        tasteProfileId="550e8400-e29b-41d4-a716-446655440001"
         fetcher={mockFetcher}
         onNavigateToAnalysis={mockNavigateToAnalysis}
         onNavigateToLogin={mockNavigateToLogin}
@@ -94,6 +95,12 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
     // Wait for the profile data to be rendered (section title from Figma UI v1)
     const sectionTitle = await findByText('여행 성향 분석');
     expect(sectionTitle).toBeTruthy();
+
+    expect(mockFetcher).toHaveBeenCalledWith(
+      expect.any(String),
+      'mock-bearer-token',
+      '550e8400-e29b-41d4-a716-446655440001'
+    );
 
     // Check specific taste profile fields rendered on screen
     expect(getByText('균형형')).toBeTruthy(); // travelPaceDensity: balanced

@@ -1,12 +1,12 @@
 /**
  * @file TasteProfileScreen.tsx
- * @description Screen component for displaying taste profile analysis results following Figma UI v1 design.
+ * @description Screen component for displaying taste profile analysis results using component-local useState and tasteProfileId request parameter.
  * @requirements REQ-11
  * @functional FUN-4
  * @api API-FB-8
  * @author Antigravity Agent
  */
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTasteProfileStore, fetchTasteProfileApi } from '@yeolo/common';
+import { fetchTasteProfileApi, ApiError } from '@yeolo/common';
+import type { TasteProfile } from '@yeolo/common';
 import { TasteProfileView } from '../components/taste/TasteProfileView';
-import { BottomNavBar, NavTab } from '../components/navigation/BottomNavBar';
 import { GenerateCourseButton } from '../components/common/GenerateCourseButton';
+import type { NavTab } from '../components/navigation/BottomNavBar';
 
 export interface TasteProfileScreenProps {
+  tasteProfileId?: string;
   onNavigateToAnalysis?: () => void;
   onNavigateToLogin?: () => void;
   onGenerateCourse?: () => void;
@@ -30,25 +32,45 @@ export interface TasteProfileScreenProps {
 }
 
 export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
+  tasteProfileId,
   onNavigateToAnalysis,
   onNavigateToLogin,
   onGenerateCourse,
-  onTabPress,
-  fetcher,
+  fetcher = fetchTasteProfileApi,
 }) => {
-  const { tasteProfile, isLoading, error, errorCode, fetchTasteProfile } =
-    useTasteProfileStore();
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
 
   const loadProfile = async () => {
-    const token = await AsyncStorage.getItem('accessToken');
-    const apiUrl =
-      process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
-    fetchTasteProfile(apiUrl, token || undefined, fetcher);
+    setIsLoading(true);
+    setError(null);
+    setErrorCode(null);
+
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const profile = await fetcher(apiUrl, token || undefined, tasteProfileId);
+      setTasteProfile(profile);
+      setIsLoading(false);
+      setErrorCode(200);
+    } catch (err: any) {
+      const status = err instanceof ApiError ? err.status : 500;
+      const message =
+        status === 404
+          ? '저장된 여행 성향 분석 결과가 없습니다.'
+          : err?.message || '성향 프로필을 불러오지 못했습니다.';
+      setTasteProfile(null);
+      setIsLoading(false);
+      setError(message);
+      setErrorCode(status);
+    }
   };
 
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [tasteProfileId]);
 
   useEffect(() => {
     if (errorCode === 401) {
@@ -60,103 +82,65 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
     return (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#4648D4" />
-        <Text style={styles.loadingText}>성향 프로필 정보를 불러오는 중...</Text>
+        <Text style={styles.loadingText}>취향 프로필을 불러오는 중...</Text>
       </SafeAreaView>
     );
   }
 
-  // 404 Not Found: Profile missing
-  if (errorCode === 404 || (!tasteProfile && !error)) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.emptyTitle}>저장된 여행 성향 분석 결과가 없습니다.</Text>
-        <Text style={styles.emptySubtitle}>
-          나에게 꼭 맞는 여행 코스를 추천받으려면 먼저 성향 분석을 진행해 주세요.
-        </Text>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => onNavigateToAnalysis?.()}
-        >
-          <Text style={styles.primaryButtonText}>성향 분석 시작하기</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  // 500 / Network Error State
   if (error || !tasteProfile) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorTitle}>성향 프로필을 불러오지 못했습니다.</Text>
-        <Text style={styles.errorSubtitle}>{error || '잠시 후 다시 시도해 주세요.'}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => loadProfile()}
-        >
+        <Text style={styles.errorSubtitle}>
+          {error || '저장된 여행 성향 분석 결과가 없습니다.'}
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
           <Text style={styles.retryButtonText}>다시 시도</Text>
         </TouchableOpacity>
+        {onNavigateToAnalysis && (
+          <TouchableOpacity
+            style={styles.analysisButton}
+            onPress={onNavigateToAnalysis}
+          >
+            <Text style={styles.analysisButtonText}>성향 분석 시작하기</Text>
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
     );
   }
 
-  // 200 OK State - Render Figma UI v1 layout
   return (
-    <SafeAreaView style={styles.screenContainer} edges={['top', 'left', 'right']}>
-      {/* Scrollable Taste Profile View */}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Scrollable Taste Profile View matching Figma UI v1 */}
       <TasteProfileView profile={tasteProfile} />
 
-      {/* Standalone Floating Action Button Component */}
-      <GenerateCourseButton onPress={onGenerateCourse} />
-
-      {/* Standalone Bottom Navigation Bar Component */}
-      <BottomNavBar currentTab="profile" onTabPress={onTabPress} />
+      {/* Floating AI Course Generation Button */}
+      <GenerateCourseButton
+        onPress={onGenerateCourse}
+        label="AI 경로 생성하기"
+        isFloating={true}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  screenContainer: {
+  container: {
     flex: 1,
     backgroundColor: '#F6FAFE',
   },
   centerContainer: {
     flex: 1,
+    backgroundColor: '#F6FAFE',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#F6FAFE',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 15,
     color: '#64748B',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  primaryButton: {
-    backgroundColor: '#4648D4',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   errorTitle: {
     fontSize: 18,
@@ -172,20 +156,36 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#4648D4',
     paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
+    marginBottom: 12,
     width: '100%',
+    maxWidth: 280,
     alignItems: 'center',
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  analysisButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#4648D4',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 280,
+    alignItems: 'center',
+  },
+  analysisButtonText: {
+    color: '#4648D4',
+    fontSize: 15,
     fontWeight: '600',
   },
 });
 
 export default TasteProfileScreen;
-
-

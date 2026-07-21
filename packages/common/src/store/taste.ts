@@ -1,92 +1,112 @@
 /**
  * @file taste.ts
- * @description Zustand global store for managing taste preference analysis states.
+ * @description Zustand global store for managing taste preference SSE streaming analysis states.
  * @requirements REQ-11
  * @functional FUN-1
  * @api API-FB-2
  * @author Antigravity Agent
  */
 import { create } from 'zustand';
+import type { AnalyzeTastePayload, TasteAnalysisState } from '../types/taste';
+import { analyzeTastePreferenceStream } from '../api/taste';
 
-interface TasteState {
-  /**
-   * The UUID of the successfully completed taste profile analysis.
-   */
-  tasteProfileId: string | null;
-  /**
-   * Action to update the taste profile ID.
-   */
-  setTasteProfileId: (id: string | null) => void;
-  /**
-   * Action to clear the taste profile ID.
-   */
-  clearTasteProfileId: () => void;
-}
-
-export const useTasteStore = create<TasteState>((set) => ({
-  tasteProfileId: null,
-  setTasteProfileId: (id) => set({ tasteProfileId: id }),
-  clearTasteProfileId: () => set({ tasteProfileId: null }),
-}));
-
-import type { TasteProfile } from '../types/taste';
-import { fetchTasteProfileApi, ApiError } from '../api/taste';
-
-export interface TasteProfileState {
-  tasteProfile: TasteProfile | null;
-  isLoading: boolean;
-  error: string | null;
-  errorCode: number | null;
-  fetchTasteProfile: (
+export interface TasteStoreState extends TasteAnalysisState {
+  setProgress: (step: string, message: string) => void;
+  setComplete: () => void;
+  setError: (error: string, errorCode?: number) => void;
+  resetTasteState: () => void;
+  analyzeTaste: (
     apiUrl: string,
-    accessToken?: string,
-    fetcher?: typeof fetchTasteProfileApi
-  ) => Promise<TasteProfile | null>;
-  clearTasteProfile: () => void;
+    accessToken: string,
+    payload: AnalyzeTastePayload,
+    fetcher?: typeof analyzeTastePreferenceStream
+  ) => Promise<string | null>;
 }
 
-export const useTasteProfileStore = create<TasteProfileState>((set) => ({
-  tasteProfile: null,
-  isLoading: false,
+export const useTasteStore = create<TasteStoreState>((set) => ({
+  isAnalyzing: false,
+  progressStep: null,
+  progressMessage: null,
   error: null,
   errorCode: null,
 
-  fetchTasteProfile: async (
-    apiUrl: string,
-    accessToken?: string,
-    fetcher = fetchTasteProfileApi
-  ) => {
-    set({ isLoading: true, error: null, errorCode: null });
-    try {
-      const profile = await fetcher(apiUrl, accessToken);
-      set({
-        tasteProfile: profile,
-        isLoading: false,
-        error: null,
-        errorCode: 200,
-      });
-      return profile;
-    } catch (err: any) {
-      const status = err instanceof ApiError ? err.status : 500;
-      const message = err?.message || '성향 프로필을 불러오지 못했습니다.';
-      set({
-        tasteProfile: null,
-        isLoading: false,
-        error: message,
-        errorCode: status,
-      });
-      return null;
-    }
-  },
-
-  clearTasteProfile: () => {
+  setProgress: (step: string, message: string) => {
     set({
-      tasteProfile: null,
-      isLoading: false,
+      isAnalyzing: true,
+      progressStep: step,
+      progressMessage: message,
       error: null,
       errorCode: null,
     });
   },
+
+  setComplete: () => {
+    set({
+      isAnalyzing: false,
+      error: null,
+      errorCode: 200,
+    });
+  },
+
+  setError: (error: string, errorCode: number = 400) => {
+    set({
+      isAnalyzing: false,
+      error,
+      errorCode,
+    });
+  },
+
+  resetTasteState: () => {
+    set({
+      isAnalyzing: false,
+      progressStep: null,
+      progressMessage: null,
+      error: null,
+      errorCode: null,
+    });
+  },
+
+  analyzeTaste: async (apiUrl, accessToken, payload, fetcher = analyzeTastePreferenceStream) => {
+    set({ isAnalyzing: true, error: null, errorCode: null });
+    try {
+      const profileId = await fetcher(apiUrl, accessToken, payload, {
+        onProgress: (event) => {
+          set({
+            isAnalyzing: true,
+            progressStep: event.step,
+            progressMessage: event.message,
+          });
+        },
+        onComplete: () => {
+          set({
+            isAnalyzing: false,
+            errorCode: 200,
+          });
+        },
+        onError: (err) => {
+          set({
+            isAnalyzing: false,
+            error: err?.message || '성향 분석 도중 오류가 발생했습니다.',
+            errorCode: 400,
+          });
+        },
+      });
+
+      if (profileId) {
+        set({
+          isAnalyzing: false,
+          errorCode: 200,
+        });
+      }
+      return profileId;
+    } catch (err: any) {
+      const message = err?.message || '성향 분석 도중 오류가 발생했습니다.';
+      set({
+        isAnalyzing: false,
+        error: message,
+        errorCode: 400,
+      });
+      return null;
+    }
+  },
 }));
-
-

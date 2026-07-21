@@ -113,12 +113,9 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   let cache = {};
   return {
     getItem: jest.fn((key) => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(cache[key] || null);
-        }, 10);
-      });
+      return Promise.resolve(cache[key] || null);
     }),
+
     setItem: jest.fn((key, value) => {
       cache[key] = value.toString();
       return Promise.resolve(null);
@@ -189,7 +186,38 @@ global.TextDecoder = TextDecoder;
 
 
 
+// Mock @expo/vector-icons
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const MockIcon = (props) => React.createElement('Text', props, props.name || 'icon');
+  return new Proxy(
+    { __esModule: true },
+    {
+      get: (target, prop) => {
+        if (prop in target) return target[prop];
+        return MockIcon;
+      },
+    }
+  );
+});
+
+
+
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: ({ children, style, ...props }) =>
+      React.createElement(View, { style, ...props }, children),
+    useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
+  };
+});
+
 // Mock @react-native-google-signin/google-signin
+
 jest.mock('@react-native-google-signin/google-signin', () => {
   return {
     GoogleSignin: {
@@ -203,3 +231,4 @@ jest.mock('@react-native-google-signin/google-signin', () => {
     },
   };
 });
+

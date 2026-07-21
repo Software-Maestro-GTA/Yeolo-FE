@@ -117,6 +117,46 @@ export const handlers = [
       { status: 200 }
     );
   }),
+
+  // Mock SSE Course Generation API-FB-4
+  http.post('*/api/courses', async ({ request }) => {
+    const body = (await request.json()) as {
+      destinationCountry?: string;
+      destinationCity?: string;
+      startDate?: string;
+      totalDays?: number;
+      budgetType?: string;
+    };
+
+    if (
+      !body.destinationCountry ||
+      !body.destinationCity ||
+      !body.startDate ||
+      !body.totalDays ||
+      !body.budgetType
+    ) {
+      return HttpResponse.json(
+        {
+          status: 400,
+          message: '여행 조건 입력값이 올바르지 않습니다.',
+          data: null,
+        },
+        { status: 400 }
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '여행 코스 생성 성공',
+        data: {
+          courseId: '550e8400-e29b-41d4-a716-446655440030',
+        },
+      },
+      { status: 200 }
+    );
+  }),
 ];
+
 
 

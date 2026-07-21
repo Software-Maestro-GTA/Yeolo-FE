@@ -16,30 +16,30 @@ import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-medi
 import { analyzeTastePreferenceStream, ImageMetadata, useTasteStore } from '@yeolo/common';
 import { BRAND_COLORS, AUTH_CONSTANTS } from '../constants/auth';
 
-interface TasteAnalysisScreenProps {
+export interface TasteAnalysisScreenProps {
   /**
    * Callback function triggered when onboarding analysis finishes.
    */
-  onFinish: () => void;
+  onFinish: (tasteProfileId?: string) => void;
   /**
    * Callback function triggered when the preference analysis fails.
    */
   onFail: () => void;
+  /**
+   * Optional custom fetcher for testing/DI.
+   */
+  fetcher?: typeof analyzeTastePreferenceStream;
 }
 
 export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   onFinish,
   onFail,
+  fetcher,
 }) => {
   const [stepIndex, setStepIndex] = useState(0); // 0: Idle, 1: Loading Assets, 2: SSE Request, 3: Completed
-  const setTasteProfileId = useTasteStore((state) => state.setTasteProfileId);
 
   // Pulse animation for the currently active loading step
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  // Animation values for transition states
-  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Pulse animation loop
@@ -139,34 +139,18 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
           setStepIndex(2); // Analyzing Preference
         }
 
-        // 4. Initiate backend preference analysis stream with extracted image metadata
-        const profileId = await analyzeTastePreferenceStream(
+        // 4. Initiate backend preference analysis stream via unified store action
+        const profileId = await useTasteStore.getState().analyzeTaste(
           apiUrl,
           token,
           { images: parsedImages },
-          {
-            onProgress: (progress) => {
-              if (!isSubscribed) return;
-              if (progress.step === 'PREPROCESSING_IMAGE_METADATA') {
-                setStepIndex(1);
-              } else if (progress.step === 'ANALYZING_PREFERENCE') {
-                setStepIndex(2);
-              }
-            },
-            onComplete: (complete) => {
-              console.log('SSE Stream analysis completed successfully:', complete.data?.tasteProfileId);
-            },
-            onError: (err) => {
-              console.error('SSE Stream callback error:', err.message);
-            },
-          }
+          fetcher || analyzeTastePreferenceStream
         );
 
-        if (isSubscribed) {
-          setTasteProfileId(profileId);
+        if (isSubscribed && profileId) {
           setStepIndex(3);
           completionTimeout = setTimeout(() => {
-            onFinish(); // Onboarding complete, navigate to HomeScreen after 1 second
+            onFinish(profileId); // Onboarding complete, pass profileId to parent
           }, 1000);
         }
       } catch (error: any) {
@@ -195,7 +179,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
       }
       pulseAnim.setValue(1);
     };
-  }, [onFinish, onFail, pulseAnim]);
+  }, [onFinish, onFail, fetcher, pulseAnim]);
 
   return (
     <LinearGradient
@@ -298,75 +282,71 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: BRAND_COLORS.TEXT_DARK,
     lineHeight: 36,
-    letterSpacing: -0.6,
   },
   subTitle: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: '#45464c',
+    fontSize: 16,
+    fontWeight: '500',
+    color: BRAND_COLORS.TEXT_MUTED,
     lineHeight: 24,
   },
   stepperContainer: {
-    gap: 16,
+    gap: 20,
     paddingHorizontal: 24,
-    width: '100%',
-    flex: 1,
-    justifyContent: 'center',
   },
   stepNode: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
     gap: 12,
   },
   stepCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   stepCircleCompleted: {
-    backgroundColor: BRAND_COLORS.GRADIENT_GREEN,
-  },
-  stepCircleActive: {
     backgroundColor: BRAND_COLORS.PRIMARY,
   },
+  stepCircleActive: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.PRIMARY,
+  },
   stepCircleInactive: {
-    borderWidth: 1.5,
-    borderColor: '#8e909c',
-    backgroundColor: 'transparent',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
   pulseInner: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: BRAND_COLORS.PRIMARY,
   },
   pendingInner: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#8e909c',
+    backgroundColor: '#94A3B8',
   },
   stepText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    fontWeight: '500',
   },
   stepTextCompleted: {
-    fontWeight: '500',
-    color: '#45464c',
+    color: BRAND_COLORS.TEXT_DARK,
+    fontWeight: '600',
   },
   stepTextActive: {
-    fontWeight: '600',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: BRAND_COLORS.PRIMARY,
+    fontWeight: '700',
   },
   stepTextInactive: {
-    fontWeight: '500',
-    color: '#8e909c',
+    color: '#94A3B8',
   },
   bottomSpacer: {
-    height: 92,
+    height: 20,
   },
 });
 

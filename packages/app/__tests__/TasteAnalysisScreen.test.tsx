@@ -74,6 +74,11 @@ describe('TasteAnalysisScreen Integration Tests', () => {
     mockExe.mockResolvedValue([mockAsset1, mockAsset2]);
   });
 
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
   it('최신 사진을 먼저 가져오도록 내림차순(ascending: false)으로 Query를 빌딩하고 호출해야 한다', async () => {
     render(<TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />);
 
@@ -106,7 +111,7 @@ describe('TasteAnalysisScreen Integration Tests', () => {
     });
   });
 
-  it('성공 시 Zustand 스토어에 Profile ID를 영속화하고 onFinish를 실행해야 한다', async () => {
+  it('성공 시 Profile ID를 반환하고 onFinish를 실행해야 한다', async () => {
     jest.useFakeTimers();
 
     render(<TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />);
@@ -118,13 +123,7 @@ describe('TasteAnalysisScreen Integration Tests', () => {
     // Fast-forward 1 second to fire the setTimeout callback triggering onFinish
     jest.advanceTimersByTime(1000);
 
-    await waitFor(() => {
-      expect(mockOnFinish).toHaveBeenCalled();
-    });
-
-    // Check if the UUID is saved inside Zustand store
-    const storeState = useTasteStore.getState();
-    expect(storeState.tasteProfileId).toBe('test-taste-profile-id-1234');
+    expect(mockOnFinish).toHaveBeenCalledWith('test-taste-profile-id-1234');
 
     jest.useRealTimers();
   });
