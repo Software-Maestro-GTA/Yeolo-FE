@@ -1,40 +1,60 @@
 /**
  * @file GenerateCourseButton.tsx
- * @description Floating gradient button component for generating AI course path matching Figma UI v1.
+ * @description Floating or inline gradient button component for generating AI course path matching Figma UI v1.
  * @requirements REQ-11
  * @functional FUN-4
  * @api API-FB-8
  * @author Antigravity Agent
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 export interface GenerateCourseButtonProps {
   onPress?: () => void;
   label?: string;
+  disabled?: boolean;
+  testID?: string;
+  isFloating?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const GenerateCourseButton: React.FC<GenerateCourseButtonProps> = ({
   onPress,
   label = 'AI 경로 생성하기',
+  disabled = false,
+  testID = 'submit-course-btn',
+  isFloating = false,
+  style,
 }) => {
+  const gradientColors = disabled
+    ? (['#CBD5E1', '#94A3B8'] as const)
+    : (['#4648D4', '#4EDEA3'] as const);
+
   return (
-    <View style={styles.buttonContainer}>
+    <View style={[isFloating ? styles.floatingContainer : styles.inlineContainer, style]}>
       <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.touchable}
+        testID={testID}
+        activeOpacity={disabled ? 1 : 0.85}
+        disabled={disabled}
+        accessibilityState={{ disabled }}
+        style={[styles.touchable, disabled && styles.disabledTouchable]}
         onPress={onPress}
       >
         <LinearGradient
-          colors={['#4648D4', '#4EDEA3']}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.gradient}
         >
-          <Ionicons name="sparkles" size={20} color="#FFFFFF" style={styles.icon} />
-          <Text style={styles.text}>{label}</Text>
+          <Ionicons
+            name="sparkles"
+            size={20}
+            color={disabled ? '#F1F5F9' : '#FFFFFF'}
+            style={styles.icon}
+          />
+          <Text style={[styles.text, disabled && styles.disabledText]}>{label}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -42,7 +62,7 @@ export const GenerateCourseButton: React.FC<GenerateCourseButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  buttonContainer: {
+  floatingContainer: {
     position: 'absolute',
     bottom: 80,
     left: 20,
@@ -50,14 +70,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  inlineContainer: {
+    width: '100%',
+    marginVertical: 12,
+  },
   touchable: {
     width: '100%',
     borderRadius: 9999,
     shadowColor: '#4648D4',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 6,
+  },
+  disabledTouchable: {
+    shadowOpacity: 0,
+    elevation: 0,
   },
   gradient: {
     flexDirection: 'row',
@@ -72,8 +100,12 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  disabledText: {
+    color: '#F1F5F9',
   },
 });
 
