@@ -7,6 +7,65 @@
  * @author Antigravity Agent
  */
 import { http, HttpResponse } from 'msw';
+import type { CourseSummary } from '@yeolo/common';
+
+export const MOCK_COURSE_LIST: CourseSummary[] = [
+  {
+    courseId: '550e8400-e29b-41d4-a716-446655440030',
+    title: '2박 3일 서귀포 감성 가득 힐링 코스',
+    destinationCountry: '대한민국',
+    destinationCity: '제주',
+    startDate: '2026-08-01',
+    totalDays: 3,
+    tags: ['힐링', '카페', '자연', '오션뷰'],
+    recommendationReason: '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
+    createdAt: '2026-07-20T10:00:00Z',
+  },
+  {
+    courseId: '550e8400-e29b-41d4-a716-446655440031',
+    title: '도쿄 3박 4일 미식 & 쇼핑 투어',
+    destinationCountry: '일본',
+    destinationCity: '도쿄',
+    startDate: '2026-09-10',
+    totalDays: 4,
+    tags: ['미식', '쇼핑', '도시', '디저트'],
+    recommendationReason: '도심 미식 탐방 및 긴자·시부야 쇼핑 거리 중심의 알찬 추천 코스입니다.',
+    createdAt: '2026-07-18T14:30:00Z',
+  },
+  {
+    courseId: '550e8400-e29b-41d4-a716-446655440032',
+    title: '파리 4박 5일 미술관 & 로맨틱 시티 투어',
+    destinationCountry: '프랑스',
+    destinationCity: '파리',
+    startDate: '2026-10-05',
+    totalDays: 5,
+    tags: ['미술관', '문화체험', '야경', '와인'],
+    recommendationReason: '루브르·오르세 미술관과 세느강 크루즈, 로맨틱 야경을 만끽하는 감성 예술 코스입니다.',
+    createdAt: '2026-07-15T09:20:00Z',
+  },
+  {
+    courseId: '550e8400-e29b-41d4-a716-446655440033',
+    title: '방콕 3박 4일 스트리트 푸드 & 루프탑 힐링',
+    destinationCountry: '태국',
+    destinationCity: '방콕',
+    startDate: '2026-11-12',
+    totalDays: 4,
+    tags: ['휴양', '스트리트푸드', '야시장', '스파'],
+    recommendationReason: '가성비 높은 호텔 스파와 야시장 스트리트 푸드, 야경 루프탑 바 중심으로 구성된 힐링 일정입니다.',
+    createdAt: '2026-07-10T16:45:00Z',
+  },
+  {
+    courseId: '550e8400-e29b-41d4-a716-446655440034',
+    title: '교토 2박 3일 사찰 & 대나무 숲 힐링 산책',
+    destinationCountry: '일본',
+    destinationCity: '교토',
+    startDate: '2026-11-20',
+    totalDays: 3,
+    tags: ['고즈넉함', '사찰', '자연', '말차'],
+    recommendationReason: '아라시야마 대나무 숲과 기요미즈데라 사찰, 전통 찻집 중심의 아늑하고 조용한 추천 코스입니다.',
+    createdAt: '2026-07-05T11:10:00Z',
+  },
+];
 
 export const handlers = [
   // Mock Google OAuth login API-FB-1
@@ -259,6 +318,20 @@ export const handlers = [
               ],
             },
           },
+        },
+      },
+      { status: 200 }
+    );
+  }),
+
+  // Mock Course List GET API-FB-10
+  http.get('*/api/courses', () => {
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '이전 생성 코스 목록 조회 성공',
+        data: {
+          courses: MOCK_COURSE_LIST,
         },
       },
       { status: 200 }

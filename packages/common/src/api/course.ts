@@ -15,6 +15,8 @@ import type {
   CourseCompleteEvent,
   CourseDetail,
   CourseDetailApiResponse,
+  CourseSummary,
+  CourseListApiResponse,
 } from '../types/course';
 
 export interface CourseStreamCallbacks {
@@ -161,3 +163,48 @@ export async function getCourseDetailApi(
     throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
   }
 }
+
+/**
+ * Sends GET /api/courses request to retrieve list of user's previously generated course recommendations.
+ * 
+ * @param apiUrl Base backend URL
+ * @param accessToken User JWT access token
+ * @returns Promise resolving to array of CourseSummary objects
+ */
+export async function getCourseListApi(
+  apiUrl: string,
+  accessToken: string
+): Promise<CourseSummary[]> {
+  try {
+    const response = await ky.get(`${apiUrl}/api/courses`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const json = (await response.json()) as CourseListApiResponse;
+
+    if (json && json.data && Array.isArray(json.data.courses)) {
+      return json.data.courses;
+    }
+
+    throw new ApiError(response.status || 500, json?.message || '코스 목록을 불러올 수 없습니다.');
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (error?.response) {
+      let status = error.response.status || 400;
+      let message = '코스 목록을 불러오지 못했습니다.';
+      try {
+        const json = await error.response.json();
+        if (json?.message) message = json.message;
+      } catch (_) {
+        // Fallback message
+      }
+      throw new ApiError(status, message);
+    }
+    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+  }
+}
+

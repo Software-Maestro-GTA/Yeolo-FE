@@ -2,10 +2,10 @@
  * @file NavigationRoot.tsx
  * @description Root navigation controller managing screen steps, authentication state, and layout wrappers.
  * @requirements REQ-11, REQ-9
- * @functional FUN-4, FUN-3
+ * @functional FUN-4, FUN-3, FUN-7
  * @author Antigravity Agent
  */
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import type { CourseCreateRequest } from '@yeolo/common';
 import { AuthContext } from '../context/AuthContext';
 import { NavTab } from '../components/navigation/BottomNavBar';
@@ -13,6 +13,7 @@ import MainLayout from '../layouts/MainLayout';
 
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
+import CourseListScreen from '../screens/CourseListScreen';
 import IntroScreen from '../screens/IntroScreen';
 import PhotoAnalysisScreen from '../screens/PhotoAnalysisScreen';
 import TasteAnalysisScreen from '../screens/TasteAnalysisScreen';
@@ -26,29 +27,31 @@ export function NavigationRoot() {
   const [pendingCourseRequest, setPendingCourseRequest] = useState<CourseCreateRequest | null>(null);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+
   const [step, setStep] = useState<
-    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL'
-  >('LOGIN');
+    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL'
+  >('HOME');
 
   useEffect(() => {
     if (!auth?.isLoading) {
       if (auth?.isAuthenticated) {
-        setStep((prev) => (prev === 'LOGIN' ? 'HOME' : prev));
+        setStep('HOME');
       } else {
         setStep('LOGIN');
       }
     }
   }, [auth?.isAuthenticated, auth?.isLoading]);
 
-  const handleTabPress = (tab: NavTab) => {
-    if (tab === 'home') setStep('HOME');
-    if (tab === 'create') setStep('CREATE_COURSE');
-    if (tab === 'profile') setStep('PROFILE');
-  };
-
   if (auth?.isLoading) {
     return null;
   }
+
+  const handleTabPress = (tab: NavTab) => {
+    if (tab === 'home') setStep('HOME');
+    if (tab === 'explore') setStep('COURSE_LIST');
+    if (tab === 'create') setStep('CREATE_COURSE');
+    if (tab === 'profile') setStep('PROFILE');
+  };
 
   switch (step) {
     case 'LOGIN':
@@ -75,6 +78,18 @@ export function NavigationRoot() {
             onNavigateToAnalysis={() => setStep('TASTE')}
             onNavigateToLogin={() => setStep('LOGIN')}
             onGenerateCourse={() => setStep('CREATE_COURSE')}
+          />
+        </MainLayout>
+      );
+    case 'COURSE_LIST':
+      return (
+        <MainLayout currentTab="explore" onTabPress={handleTabPress}>
+          <CourseListScreen
+            onSelectCourse={(courseId) => {
+              setSelectedCourseId(courseId);
+              setStep('COURSE_DETAIL');
+            }}
+            onCreateCourse={() => setStep('CREATE_COURSE')}
           />
         </MainLayout>
       );
@@ -109,7 +124,7 @@ export function NavigationRoot() {
       return (
         <CourseDetailScreen
           courseId={selectedCourseId}
-          onBack={() => setStep('HOME')}
+          onBack={() => setStep('COURSE_LIST')}
         />
       );
     case 'HOME':
