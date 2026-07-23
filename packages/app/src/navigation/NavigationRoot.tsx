@@ -17,7 +17,7 @@ import CourseListScreen from '../screens/CourseListScreen';
 import IntroScreen from '../screens/IntroScreen';
 import PhotoAnalysisScreen from '../screens/PhotoAnalysisScreen';
 import TasteAnalysisScreen from '../screens/TasteAnalysisScreen';
-import TasteProfileScreen from '../screens/TasteProfileScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import CourseCreateScreen from '../screens/CourseCreateScreen';
 import CourseGeneratingScreen from '../screens/CourseGeneratingScreen';
 import { CourseDetailScreen } from '../screens/CourseDetailScreen';
@@ -73,11 +73,9 @@ export function NavigationRoot() {
     case 'PROFILE':
       return (
         <MainLayout currentTab="profile" onTabPress={handleTabPress}>
-          <TasteProfileScreen
-            tasteProfileId={activeTasteProfileId}
+          <ProfileScreen
             onNavigateToAnalysis={() => setStep('TASTE')}
             onNavigateToLogin={() => setStep('LOGIN')}
-            onGenerateCourse={() => setStep('CREATE_COURSE')}
           />
         </MainLayout>
       );
@@ -131,7 +129,11 @@ export function NavigationRoot() {
     default:
       return (
         <MainLayout currentTab="home" onTabPress={handleTabPress}>
-          <HomeScreen />
+          <HomeScreen
+            onNavigateToCreate={() => setStep('CREATE_COURSE')}
+            onNavigateToExplore={() => setStep('COURSE_LIST')}
+            onNavigateToProfile={() => setStep('PROFILE')}
+          />
         </MainLayout>
       );
   }

@@ -35,8 +35,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const restoreSession = async () => {
       try {
         const token = await AsyncStorage.getItem('accessToken');
+        const savedUser = await AsyncStorage.getItem('user');
         if (token) {
           setIsAuthenticated(true);
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          }
         }
       } catch (error) {
         console.warn('Failed to restore session token:', error);
@@ -57,9 +61,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
 
-      // Save tokens to AsyncStorage
+      // Save tokens and user info to AsyncStorage
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
+      await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
 
       setUser(response.data.user);
       setIsAuthenticated(true);
@@ -77,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await signOutGoogle();
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
+      await AsyncStorage.removeItem('user');
       setIsAuthenticated(false);
       setUser(null);
     } catch (error) {
