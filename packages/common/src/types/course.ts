@@ -1,11 +1,31 @@
 /**
  * @file course.ts
- * @description Types and interfaces for course recommendation & course detail (DOM-2, API-FB-7).
+ * @description Types and interfaces for course recommendation, course list & course detail (DOM-2, API-FB-7, API-FB-10).
  * @requirements REQ-9
- * @functional FUN-3
- * @api API-FB-7
+ * @functional FUN-3, FUN-7
+ * @api API-FB-7, API-FB-10
  * @author Antigravity Agent
  */
+
+export interface CourseSummary {
+  courseId: string;
+  title: string;
+  destinationCountry: string;
+  destinationCity: string;
+  startDate: string;
+  totalDays: number;
+  tags: string[];
+  recommendationReason: string;
+  createdAt: string;
+}
+
+export interface CourseListApiResponse {
+  status: number;
+  message: string;
+  data: {
+    courses: CourseSummary[];
+  };
+}
 
 export type BudgetType = 'cost_effective' | 'moderate' | 'standard' | 'luxury';
 export type TransportType = 'walking' | 'transit' | 'driving' | 'taxi' | 'none';
