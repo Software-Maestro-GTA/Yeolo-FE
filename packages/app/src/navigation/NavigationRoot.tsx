@@ -29,20 +29,20 @@ export function NavigationRoot() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
   const [step, setStep] = useState<
-    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL'
-  >('HOME');
+    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL' | null
+  >(null);
 
   useEffect(() => {
     if (!auth?.isLoading) {
       if (auth?.isAuthenticated) {
-        setStep('HOME');
+        setStep((prev) => (prev === null ? 'HOME' : prev));
       } else {
         setStep('LOGIN');
       }
     }
   }, [auth?.isAuthenticated, auth?.isLoading]);
 
-  if (auth?.isLoading) {
+  if (auth?.isLoading || step === null) {
     return null;
   }
 
@@ -123,6 +123,7 @@ export function NavigationRoot() {
         <CourseDetailScreen
           courseId={selectedCourseId}
           onBack={() => setStep('COURSE_LIST')}
+          onTabPress={handleTabPress}
         />
       );
     case 'HOME':
