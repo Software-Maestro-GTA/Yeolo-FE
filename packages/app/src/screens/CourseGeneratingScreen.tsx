@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCourseStore } from '@yeolo/common';
+import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
 import type { CourseCreateRequest } from '@yeolo/common';
 
 export interface CourseGeneratingScreenProps {
@@ -52,7 +52,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     let isSubscribed = true;
     const startGeneration = async () => {
       const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
       if (isSubscribed) {
         await store.createCourse(apiUrl, requestData, token || undefined);
       }

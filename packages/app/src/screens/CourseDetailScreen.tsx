@@ -31,16 +31,18 @@ import {
   calculateRegion,
   getLeafletMapHtml,
   MapCoordinate,
+  DEFAULT_API_URL,
 } from '@yeolo/common';
-import { BottomNavBar } from '../components/navigation/BottomNavBar';
+import { BottomNavBar, NavTab } from '../components/navigation/BottomNavBar';
 
 interface CourseDetailScreenProps {
   courseId: string;
   initialCourse?: CourseDetail;
   onBack?: () => void;
+  onTabPress?: (tab: NavTab) => void;
 }
 
-export function CourseDetailScreen({ courseId, initialCourse, onBack }: CourseDetailScreenProps) {
+export function CourseDetailScreen({ courseId, initialCourse, onBack, onTabPress }: CourseDetailScreenProps) {
   const [course, setCourse] = useState<CourseDetail | null>(initialCourse || null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(!initialCourse);
@@ -64,15 +66,16 @@ export function CourseDetailScreen({ courseId, initialCourse, onBack }: CourseDe
     setIsLoading(true);
     setError(null);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
       const token = (await AsyncStorage.getItem('accessToken')) || '';
       const data = await getCourseDetailApi(apiUrl, token, courseId);
       setCourse(data);
       if (data.itinerary?.days?.length > 0) {
         setSelectedDay(data.itinerary.days[0].day);
       }
-    } catch (err: any) {
-      setError(err?.message || '여행 코스 정보를 불러오지 못했습니다.');
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      setError(errorObj?.message || '여행 코스 정보를 불러오지 못했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -357,7 +360,7 @@ export function CourseDetailScreen({ courseId, initialCourse, onBack }: CourseDe
           </View>
         </View>
       </ScrollView>
-      <BottomNavBar currentTab="create" />
+      <BottomNavBar currentTab="explore" onTabPress={onTabPress} />
     </SafeAreaView>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * @file geocode.ts
- * @description Geocoding utility service using OpenStreetMap Nominatim API.
+ * @description Geocoding utility service using OpenStreetMap Nominatim API with in-memory caching.
  * @author Antigravity Agent
  */
 
@@ -9,7 +9,21 @@ export interface GeocodeResult {
   longitude: number;
 }
 
+export interface NominatimItem {
+  lat: string;
+  lon: string;
+  class?: string;
+  type?: string;
+  display_name?: string;
+}
+
+const geocodeCache = new Map<string, GeocodeResult | null>();
+
 export async function fetchGeocode(query: string): Promise<GeocodeResult | null> {
+  if (geocodeCache.has(query)) {
+    return geocodeCache.get(query) || null;
+  }
+
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=kr&limit=5`;
     const res = await fetch(url, {
@@ -17,24 +31,30 @@ export async function fetchGeocode(query: string): Promise<GeocodeResult | null>
         'User-Agent': 'YeoloTravelApp/1.0',
       },
     });
-    const data = await res.json();
+    const data: NominatimItem[] = await res.json();
     if (Array.isArray(data) && data.length > 0) {
       const bestMatch =
         data.find(
-          (item: any) =>
+          (item) =>
             item.class === 'tourism' ||
             item.class === 'amenity' ||
             item.class === 'leisure' ||
             item.type === 'point'
         ) || data[0];
-      return {
-        latitude: parseFloat(bestMatch.lat),
-        longitude: parseFloat(bestMatch.lon),
-      };
+      if (bestMatch && bestMatch.lat && bestMatch.lon) {
+        const result: GeocodeResult = {
+          latitude: parseFloat(bestMatch.lat),
+          longitude: parseFloat(bestMatch.lon),
+        };
+        geocodeCache.set(query, result);
+        return result;
+      }
     }
   } catch (err) {
     // ignore fetch error
   }
+
+  geocodeCache.set(query, null);
   return null;
 }
 
@@ -42,6 +62,11 @@ export async function fetchGeocode(query: string): Promise<GeocodeResult | null>
  * OpenStreetMap Nominatim Geocoding API를 활용한 스마트 검색어 정제 및 다단계 지오코딩 공통 유틸
  */
 export async function geocodePlace(placeName: string, city: string): Promise<GeocodeResult | null> {
+  const cacheKey = `${placeName}::${city}`;
+  if (geocodeCache.has(cacheKey)) {
+    return geocodeCache.get(cacheKey) || null;
+  }
+
   const cleanedName = placeName
     .replace(/^(감성|카페|맛집|해수욕장|해변|미술관|전시|관광지|추천)\s+/g, '')
     .replace(/\s+(카페|맛집|해변|미술관)$/g, '')
@@ -65,9 +90,11 @@ export async function geocodePlace(placeName: string, city: string): Promise<Geo
   for (const query of candidateQueries) {
     const coords = await fetchGeocode(query);
     if (coords) {
+      geocodeCache.set(cacheKey, coords);
       return coords;
     }
   }
 
+  geocodeCache.set(cacheKey, null);
   return null;
 }

@@ -11,6 +11,14 @@ import { parseServerSentEvents } from 'parse-sse';
 import type { AnalyzeTastePayload, StreamCallbacks, TasteProfile } from '../types/taste';
 import { ApiError } from './errors';
 
+export interface TasteProfileApiResponse {
+  status: number;
+  message: string;
+  data: {
+    tasteProfile: TasteProfile;
+  };
+}
+
 /**
  * Initiates the taste preference analysis SSE stream based on photo metadata.
  * 
@@ -43,7 +51,6 @@ export async function analyzeTastePreferenceStream(
 
       try {
         const parsed = JSON.parse(event.data);
-        console.log('SSE Event:', parsed.step, parsed.message);
         if (event.type === 'progress') {
           callbacks.onProgress?.(parsed);
         } else if (event.type === 'complete') {
@@ -54,19 +61,20 @@ export async function analyzeTastePreferenceStream(
         console.error('Error parsing SSE event data:', jsonError);
       }
     }
-  } catch (error: any) {
-    if (error?.response) {
-      const status = error.response.status;
+  } catch (error: unknown) {
+    const err = error as { response?: Response; message?: string };
+    if (err?.response) {
+      const status = err.response.status;
       let message = '성향 분석 도중 오류가 발생했습니다.';
       try {
-        const body = await error.response.json();
+        const body = await err.response.json();
         if (body?.message) message = body.message;
       } catch (_) {
         // Fallback message
       }
       throw new ApiError(status, message);
     }
-    throw new ApiError(500, error?.message || '성향 분석 도중 오류가 발생했습니다.');
+    throw new ApiError(500, err?.message || '성향 분석 도중 오류가 발생했습니다.');
   }
 
   if (!tasteProfileId) {
@@ -97,26 +105,27 @@ export async function fetchTasteProfileApi(
 
     const searchParams = tasteProfileId ? { tasteProfileId } : undefined;
 
-    const json: any = await ky
+    const json = await ky
       .get(`${apiUrl}/api/me/taste-profile`, {
         headers,
         searchParams,
       })
-      .json();
+      .json<TasteProfileApiResponse>();
 
     if (json?.data?.tasteProfile) {
       return json.data.tasteProfile;
     }
 
     throw new ApiError(400, '성향 프로필 데이터가 올바르지 않습니다.');
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof ApiError) throw error;
 
-    if (error?.response) {
-      const status = error.response.status;
+    const err = error as { response?: Response; message?: string };
+    if (err?.response) {
+      const status = err.response.status;
       let message = '성향 프로필을 불러오지 못했습니다.';
       try {
-        const body = await error.response.json();
+        const body = await err.response.json();
         if (body?.message) message = body.message;
       } catch (_) {
         // Fallback message
@@ -124,6 +133,6 @@ export async function fetchTasteProfileApi(
       throw new ApiError(status, message);
     }
 
-    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+    throw new ApiError(500, err?.message || '네트워크 오류가 발생했습니다.');
   }
 }

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   badgeSecondary: {
-    backgroundColor: '#4EDE A3',
+    backgroundColor: '#4EDEA3',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,

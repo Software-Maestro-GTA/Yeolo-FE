@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BudgetType, CourseCreateRequest } from '@yeolo/common';
+import { DATE_REGEX, formatYYYYMMDD, calculateTotalDays } from '@yeolo/common';
 import type { NavTab } from '../components/navigation/BottomNavBar';
 import { GenerateCourseButton } from '../components/common/GenerateCourseButton';
 import { InlineCalendarView } from '../components/common/InlineCalendarView';
@@ -56,22 +57,6 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
       return () => clearTimeout(scrollTimer);
     }
   }, [isCalendarOpen]);
-
-  const DATE_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-
-  /**
-   * Auto-hyphen formatting function.
-   * Converts raw digits (e.g. 20260801) into YYYY-MM-DD format (2026-08-01).
-   */
-  const formatYYYYMMDD = (text: string): string => {
-    if (DATE_REGEX.test(text.trim())) {
-      return text.trim();
-    }
-    const digits = text.replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-  };
 
   const handleStartDateChange = (text: string) => {
     setStartDate(formatYYYYMMDD(text));
@@ -138,36 +123,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     DATE_REGEX.test(endDate.trim()) ||
     (/^\d+$/.test(endDate.trim()) && Number(endDate.trim()) > 0);
 
-  /**
-   * Calculate total days automatically from start and end dates using explicit local Date components.
-   */
-  const calculateTotalDays = (): number | null => {
-    const startTrim = startDate.trim();
-    const endTrim = endDate.trim();
-
-    if (!startTrim || !endTrim) return null;
-
-    if (/^\d+$/.test(endTrim) && Number(endTrim) > 0) {
-      return Number(endTrim);
-    }
-
-    if (DATE_REGEX.test(startTrim) && DATE_REGEX.test(endTrim)) {
-      const [sY, sM, sD] = startTrim.split('-').map(Number);
-      const [eY, eM, eD] = endTrim.split('-').map(Number);
-
-      const start = new Date(sY, sM - 1, sD);
-      const end = new Date(eY, eM - 1, eD);
-
-      if (end >= start) {
-        const diffTime = end.getTime() - start.getTime();
-        return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      }
-    }
-
-    return null;
-  };
-
-  const calculatedDays = calculateTotalDays();
+  const calculatedDays = calculateTotalDays(startDate, endDate);
 
   const isFormValid =
     destinationCountry.trim().length > 0 &&
