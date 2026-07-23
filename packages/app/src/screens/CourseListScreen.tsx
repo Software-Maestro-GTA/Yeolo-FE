@@ -18,8 +18,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCourseListApi, ApiError, type CourseSummary } from '@yeolo/common';
-import { AuthContext } from '../context/AuthContext';
+import { getCourseListApi, ApiError, DEFAULT_API_URL, type CourseSummary } from '@yeolo/common';
 import { CourseCard } from '../components/course/CourseCard';
 import { CreateCourseCtaCard } from '../components/course/CreateCourseCtaCard';
 
@@ -29,14 +28,13 @@ export interface CourseListScreenProps {
 }
 
 export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListScreenProps) {
-  const auth = useContext(AuthContext);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+  const API_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
   const fetchCourseList = useCallback(async () => {
     setIsLoading(true);
@@ -46,11 +44,12 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
       const token = (await AsyncStorage.getItem('accessToken')) || '';
       const data = await getCourseListApi(API_URL, token);
       setCourses(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
       if (err instanceof ApiError) {
         setError(err.message || '코스 목록을 불러오지 못했습니다.');
       } else {
-        setError(err?.message || '코스 목록을 불러오지 못했습니다.');
+        setError(errorObj?.message || '코스 목록을 불러오지 못했습니다.');
       }
     } finally {
       setIsLoading(false);

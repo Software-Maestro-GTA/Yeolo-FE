@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchTasteProfileApi, ApiError } from '@yeolo/common';
+import { fetchTasteProfileApi, ApiError, DEFAULT_API_URL } from '@yeolo/common';
 import type { TasteProfile } from '@yeolo/common';
 import { TasteProfileView } from '../components/taste/TasteProfileView';
 import { GenerateCourseButton } from '../components/common/GenerateCourseButton';
@@ -50,17 +50,18 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
 
     try {
       const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
       const profile = await fetcher(apiUrl, token || undefined, tasteProfileId);
       setTasteProfile(profile);
       setIsLoading(false);
       setErrorCode(200);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
       const status = err instanceof ApiError ? err.status : 500;
       const message =
         status === 404
           ? '저장된 여행 성향 분석 결과가 없습니다.'
-          : err?.message || '성향 프로필을 불러오지 못했습니다.';
+          : errorObj?.message || '성향 프로필을 불러오지 못했습니다.';
       setTasteProfile(null);
       setIsLoading(false);
       setError(message);

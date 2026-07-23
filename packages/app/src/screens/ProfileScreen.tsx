@@ -7,7 +7,7 @@
  * @domain DOM-3
  * @author Antigravity Agent
  */
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   ScrollView,
@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   logoutApi,
   withdrawApi,
+  DEFAULT_API_URL,
 } from '@yeolo/common';
 import type { User } from '@yeolo/common';
 import { AuthContext } from '../context/AuthContext';
@@ -44,40 +45,51 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const auth = useContext(AuthContext);
   const currentUser = user || auth?.user;
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Modal states
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [confirmModalType, setConfirmModalType] = useState<'logout' | 'withdraw' | null>(null);
   const [isModalActionLoading, setIsModalActionLoading] = useState<boolean>(false);
 
+  const clearSessionAndRedirect = async () => {
+    await AsyncStorage.removeItem('accessToken');
+    await AsyncStorage.removeItem('refreshToken');
+    await AsyncStorage.removeItem('user');
+    auth?.logout?.();
+    if (isMounted.current) {
+      setConfirmModalType(null);
+    }
+    onNavigateToLogin?.();
+  };
+
   const handleLogout = async () => {
     setIsModalActionLoading(true);
     try {
       const token = await AsyncStorage.getItem('accessToken');
       const refreshToken = await AsyncStorage.getItem('refreshToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
       await logoutFetcher(apiUrl, token || undefined, {
         refreshToken: refreshToken || undefined,
       });
 
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      await AsyncStorage.removeItem('user');
-      auth?.logout?.();
-      setConfirmModalType(null);
-      onNavigateToLogin?.();
-    } catch (err: any) {
+      await clearSessionAndRedirect();
+    } catch (err: unknown) {
       console.error('Logout failed:', err);
       // Even if API fails, clear local tokens and redirect
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      await AsyncStorage.removeItem('user');
-      auth?.logout?.();
-      setConfirmModalType(null);
-      onNavigateToLogin?.();
+      await clearSessionAndRedirect();
     } finally {
-      setIsModalActionLoading(false);
+      if (isMounted.current) {
+        setIsModalActionLoading(false);
+      }
     }
   };
 
@@ -85,23 +97,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setIsModalActionLoading(true);
     try {
       const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://api.yeolo.com';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
       await withdrawFetcher(apiUrl, token || undefined, {
         reason: '사용자 요청',
       });
 
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      await AsyncStorage.removeItem('user');
-      auth?.logout?.();
-      setConfirmModalType(null);
-      onNavigateToLogin?.();
-    } catch (err: any) {
+      await clearSessionAndRedirect();
+    } catch (err: unknown) {
+      const error = err as { message?: string };
       console.error('Withdraw failed:', err);
-      Alert.alert('회원탈퇴 오류', err?.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
+      Alert.alert('회원탈퇴 오류', error?.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
     } finally {
-      setIsModalActionLoading(false);
+      if (isMounted.current) {
+        setIsModalActionLoading(false);
+      }
     }
   };
 
