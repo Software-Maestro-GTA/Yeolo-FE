@@ -1,9 +1,9 @@
 /**
  * @file course.ts
- * @description API service for initiating course generation SSE stream (API-FB-4).
- * @requirements REQ-7
- * @functional FUN-6
- * @api API-FB-4
+ * @description API service for initiating course generation SSE stream (API-FB-4) and retrieving course details (API-FB-7).
+ * @requirements REQ-7, REQ-9
+ * @functional FUN-6, FUN-3
+ * @api API-FB-4, API-FB-7
  * @author Antigravity Agent
  */
 import ky from 'ky';
@@ -13,6 +13,8 @@ import type {
   CourseCreateRequest,
   CourseProgressEvent,
   CourseCompleteEvent,
+  CourseDetail,
+  CourseDetailApiResponse,
 } from '../types/course';
 
 export interface CourseStreamCallbacks {
@@ -112,4 +114,50 @@ export async function createCourseStreamApi(
   }
 
   return courseId;
+}
+
+/**
+ * Sends GET /api/courses/{courseId} request to retrieve course details and full itinerary.
+ * 
+ * @param apiUrl Base backend URL
+ * @param accessToken User JWT access token
+ * @param courseId Unique ID of the course to retrieve
+ * @returns Promise resolving to CourseDetail object
+ */
+export async function getCourseDetailApi(
+  apiUrl: string,
+  accessToken: string,
+  courseId: string
+): Promise<CourseDetail> {
+  try {
+    const response = await ky.get(`${apiUrl}/api/courses/${courseId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const json = (await response.json()) as CourseDetailApiResponse;
+
+    if (json && json.data && json.data.course) {
+      return json.data.course;
+    }
+
+    throw new ApiError(response.status || 500, json?.message || '여행 코스 정보를 찾을 수 없습니다.');
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (error?.response) {
+      let status = error.response.status || 400;
+      let message = '여행 코스 정보를 불러오지 못했습니다.';
+      try {
+        const json = await error.response.json();
+        if (json?.message) message = json.message;
+      } catch (_) {
+        // Fallback message
+      }
+      throw new ApiError(status, message);
+    }
+    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+  }
 }
