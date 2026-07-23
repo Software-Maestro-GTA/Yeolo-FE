@@ -22,7 +22,7 @@ async function loginWithGoogleApi(
     throwHttpErrors: false,
   });
 
-  const result: GoogleLoginResponse = await response.json() as any;
+  const result = await response.json<GoogleLoginResponse>();
 
   if (!response.ok || result.status !== 200) {
     throw new ApiError(result.status || response.status, result.message || '인가 코드가 유효하지 않습니다.');
@@ -50,7 +50,7 @@ async function logoutApi(
     throwHttpErrors: false,
   });
 
-  const result: LogoutResponse = await response.json() as any;
+  const result = await response.json<LogoutResponse>();
 
   if (!response.ok || result.status !== 200) {
     throw new ApiError(result.status || response.status, result.message || '로그아웃 실패');
@@ -60,4 +60,3 @@ async function logoutApi(
 }
 
 export { loginWithGoogleApi, logoutApi };
-

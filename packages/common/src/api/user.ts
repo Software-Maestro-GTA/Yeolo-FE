@@ -29,7 +29,7 @@ export async function withdrawApi(
     throwHttpErrors: false,
   });
 
-  const result: WithdrawResponse = await response.json() as any;
+  const result = await response.json<WithdrawResponse>();
 
   if (!response.ok || result.status !== 200) {
     throw new ApiError(result.status || response.status, result.message || '회원탈퇴 실패');
