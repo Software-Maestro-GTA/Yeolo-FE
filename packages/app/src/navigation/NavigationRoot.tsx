@@ -1,8 +1,8 @@
 /**
  * @file NavigationRoot.tsx
- * @description Root navigation controller managing screen steps, authentication state, and layout wrappers with tasteProfileId data binding.
- * @requirements REQ-11
- * @functional FUN-4
+ * @description Root navigation controller managing screen steps, authentication state, and layout wrappers.
+ * @requirements REQ-11, REQ-9
+ * @functional FUN-4, FUN-3
  * @author Antigravity Agent
  */
 import React, { useContext, useState, useEffect } from 'react';
@@ -19,14 +19,16 @@ import TasteAnalysisScreen from '../screens/TasteAnalysisScreen';
 import TasteProfileScreen from '../screens/TasteProfileScreen';
 import CourseCreateScreen from '../screens/CourseCreateScreen';
 import CourseGeneratingScreen from '../screens/CourseGeneratingScreen';
+import { CourseDetailScreen } from '../screens/CourseDetailScreen';
 
 export function NavigationRoot() {
   const auth = useContext(AuthContext);
   const [pendingCourseRequest, setPendingCourseRequest] = useState<CourseCreateRequest | null>(null);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [step, setStep] = useState<
-    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'CREATE_COURSE' | 'GENERATING_COURSE'
-  >(auth?.isAuthenticated ? 'HOME' : 'LOGIN');
+    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL'
+  >('LOGIN');
 
   useEffect(() => {
     if (!auth?.isLoading) {
@@ -91,13 +93,23 @@ export function NavigationRoot() {
       return (
         <CourseGeneratingScreen
           requestData={pendingCourseRequest}
-          onComplete={(_courseId) => {
+          onComplete={(courseId) => {
             setPendingCourseRequest(null);
-            setStep('HOME');
+            if (courseId) {
+              setSelectedCourseId(courseId);
+            }
+            setStep('COURSE_DETAIL');
           }}
           onRetry={() => {
             setStep('CREATE_COURSE');
           }}
+        />
+      );
+    case 'COURSE_DETAIL':
+      return (
+        <CourseDetailScreen
+          courseId={selectedCourseId}
+          onBack={() => setStep('HOME')}
         />
       );
     case 'HOME':
