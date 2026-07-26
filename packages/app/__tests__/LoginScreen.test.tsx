@@ -10,7 +10,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { AuthContext } from '../src/context/AuthContext';
-import LoginScreen from '../src/screens/LoginScreen';
+import { LoginScreen } from '../src/screens/LoginScreen';
 
 const mockLoginWithGoogle = jest.fn();
 

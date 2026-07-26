@@ -9,6 +9,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface ConfirmModalProps {
   visible: boolean;
   type: 'logout' | 'withdraw';
@@ -25,11 +28,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
 }) => {
   const isLogout = type === 'logout';
-  const title = isLogout ? '정말 로그아웃 하시겠습니까?' : '회원탈퇴 안내';
+  const title = isLogout ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM : UI_STRINGS.PROFILE.WITHDRAW_NOTICE;
   const description = isLogout
-    ? '로그아웃 시 현재 세션이 종료되며 다시 로그인해야 서비스를 이용하실 수 있습니다.'
-    : '회원탈퇴 시 생성된 모든 여행 추천 코스 및 개인정보 데이터가 즉시 삭제되며 복구할 수 없습니다.';
-  const confirmText = isLogout ? '로그아웃 확인' : '탈퇴 진행';
+    ? UI_STRINGS.PROFILE.LOGOUT_DESC
+    : UI_STRINGS.PROFILE.WITHDRAW_CONFIRM;
+  const confirmText = isLogout ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM_BTN : UI_STRINGS.PROFILE.WITHDRAW_CONFIRM_BTN;
 
   return (
     <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onCancel}>
@@ -45,7 +48,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               disabled={isLoading}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>취소</Text>
+              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMPONENTS.CONFIRM_CANCEL}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -55,7 +58,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               activeOpacity={0.7}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={theme.colors.text.inverse} />
               ) : (
                 <Text style={styles.confirmButtonText}>{confirmText}</Text>
               )}
@@ -76,13 +79,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -91,13 +94,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   description: {
     fontSize: 14,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -109,31 +112,29 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.colors.border.light,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#475569',
+    color: theme.colors.text.secondary,
     fontSize: 15,
     fontWeight: '600',
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   dangerButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: theme.colors.status.error,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 15,
     fontWeight: '600',
   },
 });
-
-export default ConfirmModal;

@@ -10,12 +10,13 @@ import React, { useContext } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import GoogleLogoIcon from '../components/GoogleLogoIcon';
-import { AUTH_CONSTANTS, BRAND_COLORS } from '../constants/auth';
-import { AuthContext } from '../context/AuthContext';
-import { signInWithGoogle } from '../services/authService';
+import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
+import { UI_STRINGS } from '../constants';
+import { theme } from '../theme';
+import { AuthContext } from '../context';
+import { signInWithGoogle } from '../services';
 
-const LoginScreen: React.FC = () => {
+export const LoginScreen: React.FC = () => {
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
   const isLoggingIn = authContext?.isLoading || false;
@@ -29,27 +30,28 @@ const LoginScreen: React.FC = () => {
       if (loginWithGoogle) {
         await loginWithGoogle(code);
       }
-    } catch (error: any) {
-      Alert.alert('로그인 오류', error.message || 'Google 로그인에 실패했습니다.');
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      Alert.alert(UI_STRINGS.AUTH.LOGIN_ERROR_TITLE, error?.message || UI_STRINGS.AUTH.LOGIN_ERROR_DEFAULT);
     }
   };
 
   return (
     <LinearGradient
-      colors={BRAND_COLORS.BACKGROUND_GRADIENT}
+      colors={theme.colors.gradient.background}
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Bottom Content Area with Top-fading Gradient Background */}
           <LinearGradient
-            colors={BRAND_COLORS.BOTTOM_GRADIENT}
+            colors={theme.colors.gradient.bottom}
             style={styles.bottomContentArea}
           >
             {/* Title Section */}
             <View style={styles.titleSection}>
-              <Text style={styles.subTitle}>{AUTH_CONSTANTS.SUB_TITLE}</Text>
-              <Text style={styles.mainTitle}>{AUTH_CONSTANTS.MAIN_TITLE}</Text>
+              <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
+              <Text style={styles.mainTitle}>{UI_STRINGS.AUTH.MAIN_TITLE}</Text>
             </View>
 
             {/* Google Login Button */}
@@ -61,16 +63,16 @@ const LoginScreen: React.FC = () => {
             >
               <View style={styles.buttonContent}>
                 <GoogleLogoIcon size={20} style={styles.logoIcon} />
-                <Text style={styles.buttonText}>{AUTH_CONSTANTS.GOOGLE_BUTTON_TEXT}</Text>
+                <Text style={styles.buttonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>
 
             {/* Customer Support Footer Link */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
-                {AUTH_CONSTANTS.CUSTOMER_SUPPORT_TEXT}
+                {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_TEXT}
                 <Text style={styles.supportLink}>
-                  {AUTH_CONSTANTS.CUSTOMER_SUPPORT_LINK}
+                  {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
                 </Text>
               </Text>
             </View>
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
   subTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     lineHeight: 32,
     letterSpacing: -0.6,
     marginBottom: 4,
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 40,
     fontWeight: '700',
-    color: BRAND_COLORS.PRIMARY,
+    color: theme.colors.primary,
     lineHeight: 50,
     letterSpacing: -0.8,
   },
@@ -121,14 +123,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     alignSelf: 'center',
-    backgroundColor: BRAND_COLORS.BUTTON_BACKGROUND,
+    backgroundColor: theme.colors.bg.glass,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.BORDER_LIGHT,
+    borderColor: theme.colors.border.light,
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: BRAND_COLORS.SHADOW,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: BRAND_COLORS.BUTTON_TEXT,
+    color: theme.colors.text.secondary,
     lineHeight: 16,
     letterSpacing: 0.3,
   },
@@ -155,14 +157,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: BRAND_COLORS.TEXT_MUTED,
+    color: theme.colors.text.muted,
     lineHeight: 20,
     textAlign: 'center',
   },
   supportLink: {
-    color: BRAND_COLORS.PRIMARY,
+    color: theme.colors.primary,
     fontWeight: '500',
   },
 });
-
-export default LoginScreen;

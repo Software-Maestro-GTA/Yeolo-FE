@@ -1,6 +1,6 @@
 /**
  * @file TasteAnalysisScreen.tsx
- * @description Taste analysis progress loading screen integrated with local EXIF parser and SSE stream.
+ * @description Taste analysis progress loading screen integrated with photo service, SSE stream, and stepper component.
  * @requirements REQ-8, REQ-11
  * @functional FUN-1
  * @api API-FB-2
@@ -10,25 +10,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Easing, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AntDesign } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
-import { analyzeTastePreferenceStream, ImageMetadata, useTasteStore } from '@yeolo/common';
-import { BRAND_COLORS, AUTH_CONSTANTS } from '../constants/auth';
-import { ANALYSIS_PHOTO_LIMIT } from '../constants/analysis';
+import { analyzeTastePreferenceStream, useTasteStore } from '@yeolo/common';
+import { AnalysisProgressStepper } from '../components/taste';
+import { fetchPhotosWithExifData } from '../services';
+import { theme } from '../theme';
+import { APP_CONFIG, ANALYSIS_PHOTO_LIMIT, UI_STRINGS } from '../constants';
 
 export interface TasteAnalysisScreenProps {
-  /**
-   * Callback function triggered when onboarding analysis finishes.
-   */
   onFinish: (tasteProfileId?: string) => void;
-  /**
-   * Callback function triggered when the preference analysis fails.
-   */
   onFail: () => void;
-  /**
-   * Optional custom fetcher for testing/DI.
-   */
   fetcher?: typeof analyzeTastePreferenceStream;
 }
 
@@ -38,12 +29,9 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   fetcher,
 }) => {
   const [stepIndex, setStepIndex] = useState(0); // 0: Idle, 1: Loading Assets, 2: SSE Request, 3: Completed
-
-  // Pulse animation for the currently active loading step
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Pulse animation loop
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -63,84 +51,28 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
     pulseLoop.start();
 
     let isSubscribed = true;
-    let completionTimeout: NodeJS.Timeout;
-
-    // Default timezone set to UTC (baseline coordinate timezone)
-    const resolvedTimezone = 'UTC';
+    let completionTimeout: ReturnType<typeof setTimeout>;
 
     const startStreaming = async () => {
       try {
         const token = await AsyncStorage.getItem('accessToken');
         if (!token) {
-          throw new Error('인증 토큰이 없습니다. 다시 로그인해 주세요.');
+          throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_TOKEN_ERROR);
         }
 
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL || AUTH_CONSTANTS.DEFAULT_API_URL;
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
         if (isSubscribed) {
           setStepIndex(1); // Fetching Media
         }
 
-        // 1. Request permission to access the local photo library using the modern SDK helper
-        const { status } = await requestPermissionsAsync();
-        if (status !== 'granted') {
-          throw new Error('성향 분석을 위해 기기 사진 라이브러리 접근 권한 동의가 필요합니다.');
-        }
-
-        // 2. Query recent photo assets in descending order (newest first)
-        const assets = await new Query()
-          .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
-          .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
-          .limit(ANALYSIS_PHOTO_LIMIT)
-          .exe();
-
-        if (!assets || assets.length === 0) {
-          throw new Error('기기에 성향을 분석할 사진이 존재하지 않습니다.');
-        }
-
-        const parsedImages: ImageMetadata[] = [];
-        for (const asset of assets) {
-          try {
-            // Retrieve location and creationTime using class methods on the returned Asset instances
-            const location = await asset.getLocation();
-            const creationTime = await asset.getCreationTime();
-
-            // Skip assets that do not have valid location (coordinates) or creation time
-            if (
-              !location ||
-              location.latitude === undefined ||
-              location.longitude === undefined ||
-              location.latitude === null ||
-              location.longitude === null
-            ) {
-              continue;
-            }
-
-            if (!creationTime) {
-              continue;
-            }
-
-            parsedImages.push({
-              sourceImageId: asset.id,
-              capturedAt: new Date(creationTime).toISOString(),
-              latitude: location.latitude,
-              longitude: location.longitude,
-              timezone: resolvedTimezone,
-            });
-          } catch (err) {
-            console.warn(`Failed to fetch location metadata for asset ${asset.id}:`, err);
-          }
-        }
-
-        if (parsedImages.length === 0) {
-          throw new Error('기기에 성향을 분석할 만한 위치 정보(위도, 경도) 및 시간 정보가 포함된 사진이 존재하지 않습니다.');
-        }
+        // Delegate photo permission check and EXIF parsing to photoService
+        const parsedImages = await fetchPhotosWithExifData(ANALYSIS_PHOTO_LIMIT, 'UTC');
 
         if (isSubscribed) {
           setStepIndex(2); // Analyzing Preference
         }
 
-        // 4. Initiate backend preference analysis stream via unified store action
         const profileId = await useTasteStore.getState().analyzeTaste(
           apiUrl,
           token,
@@ -151,20 +83,16 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
         if (isSubscribed && profileId) {
           setStepIndex(3);
           completionTimeout = setTimeout(() => {
-            onFinish(profileId); // Onboarding complete, pass profileId to parent
+            onFinish(profileId);
           }, 1000);
         }
-      } catch (error: any) {
+      } catch (err: unknown) {
+        const error = err as { message?: string };
         if (isSubscribed) {
           Alert.alert(
-            '분석 오류',
-            error.message || '성향 분석 도중 오류가 발생했습니다.',
-            [
-              {
-                text: '확인',
-                onPress: onFail,
-              },
-            ]
+            UI_STRINGS.TASTE_ANALYSIS.ERROR_TITLE,
+            error?.message || UI_STRINGS.TASTE_ANALYSIS.DEFAULT_ERROR,
+            [{ text: UI_STRINGS.COMMON.CONFIRM, onPress: onFail }]
           );
         }
       }
@@ -174,17 +102,16 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
 
     return () => {
       isSubscribed = false;
-      pulseLoop.stop();
       if (completionTimeout) {
         clearTimeout(completionTimeout);
       }
-      pulseAnim.setValue(1);
+      pulseLoop.stop();
     };
   }, [onFinish, onFail, fetcher, pulseAnim]);
 
   return (
     <LinearGradient
-      colors={BRAND_COLORS.BACKGROUND_GRADIENT}
+      colors={theme.colors.gradient.background}
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
@@ -193,62 +120,19 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
           <View style={styles.topContent} testID="top-content">
             <View style={styles.heroText}>
               <Text style={styles.mainTitle} testID="loading-title">
-                취향 분석 중
+                {UI_STRINGS.TASTE_ANALYSIS.TITLE}
               </Text>
               <Text style={styles.subTitle}>
-                당신의 성향을 파악하고 있어요.
+                {UI_STRINGS.TASTE_ANALYSIS.SUBTITLE}
               </Text>
             </View>
           </View>
 
-          {/* 3-step Loading Stepper */}
-          <View style={styles.stepperContainer} testID="stepper">
-            {[
-              { id: 1, text: '당신을 알아가고 있어요' },
-              { id: 2, text: '여행 성향을 찾고 있어요' },
-              { id: 3, text: '여행 성향 분석 완료!' },
-            ].map((step) => {
-              const isCompleted = stepIndex > step.id;
-              const isActive = stepIndex === step.id;
-              const isInactive = stepIndex < step.id;
-
-              return (
-                <View key={step.id} style={styles.stepNode} testID={`step-${step.id}`}>
-                  {isCompleted && (
-                    <View style={[styles.stepCircle, styles.stepCircleCompleted]}>
-                      <AntDesign name="check" size={12} color="#ffffff" />
-                    </View>
-                  )}
-                  {isActive && (
-                    <Animated.View
-                      style={[
-                        styles.stepCircle,
-                        styles.stepCircleActive,
-                        { transform: [{ scale: pulseAnim }] },
-                      ]}
-                    >
-                      <View style={styles.pulseInner} />
-                    </Animated.View>
-                  )}
-                  {isInactive && (
-                    <View style={[styles.stepCircle, styles.stepCircleInactive]}>
-                      <View style={styles.pendingInner} />
-                    </View>
-                  )}
-                  <Text
-                    style={[
-                      styles.stepText,
-                      isCompleted && styles.stepTextCompleted,
-                      isActive && styles.stepTextActive,
-                      isInactive && styles.stepTextInactive,
-                    ]}
-                  >
-                    {step.text}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+          {/* 3-step Loading Stepper Component */}
+          <AnalysisProgressStepper
+            stepIndex={stepIndex}
+            pulseAnim={pulseAnim}
+          />
 
           <View style={styles.bottomSpacer} />
         </View>
@@ -281,74 +165,17 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     lineHeight: 36,
+    letterSpacing: -0.6,
   },
   subTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: BRAND_COLORS.TEXT_MUTED,
+    fontSize: 15,
+    fontWeight: '400',
+    color: theme.colors.text.secondary,
     lineHeight: 24,
   },
-  stepperContainer: {
-    gap: 20,
-    paddingHorizontal: 24,
-  },
-  stepNode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  stepCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepCircleCompleted: {
-    backgroundColor: BRAND_COLORS.PRIMARY,
-  },
-  stepCircleActive: {
-    backgroundColor: '#EEF2FF',
-    borderWidth: 2,
-    borderColor: BRAND_COLORS.PRIMARY,
-  },
-  stepCircleInactive: {
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  pulseInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: BRAND_COLORS.PRIMARY,
-  },
-  pendingInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#94A3B8',
-  },
-  stepText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  stepTextCompleted: {
-    color: BRAND_COLORS.TEXT_DARK,
-    fontWeight: '600',
-  },
-  stepTextActive: {
-    color: BRAND_COLORS.PRIMARY,
-    fontWeight: '700',
-  },
-  stepTextInactive: {
-    color: '#94A3B8',
-  },
   bottomSpacer: {
-    height: 20,
+    height: 34,
   },
 });
-
-export default TasteAnalysisScreen;

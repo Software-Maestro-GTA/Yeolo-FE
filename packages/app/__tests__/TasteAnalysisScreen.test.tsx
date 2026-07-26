@@ -9,7 +9,7 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { TasteAnalysisScreen } from '../src/screens/TasteAnalysisScreen';
-import { ANALYSIS_PHOTO_LIMIT } from '../src/constants/analysis';
+import { ANALYSIS_PHOTO_LIMIT } from '../src/constants/config';
 import { Query, AssetField, MediaType } from 'expo-media-library';
 import { analyzeTastePreferenceStream, useTasteStore } from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';

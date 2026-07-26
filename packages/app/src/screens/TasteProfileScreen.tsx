@@ -18,9 +18,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchTasteProfileApi, ApiError, DEFAULT_API_URL } from '@yeolo/common';
 import type { TasteProfile } from '@yeolo/common';
-import { TasteProfileView } from '../components/taste/TasteProfileView';
-import { GenerateCourseButton } from '../components/common/GenerateCourseButton';
-import type { NavTab } from '../components/navigation/BottomNavBar';
+import { TasteProfileView } from '../components/taste';
+import { GenerateCourseButton } from '../components/common';
+import type { NavTab } from '../components/navigation';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
 
 export interface TasteProfileScreenProps {
   tasteProfileId?: string;
@@ -60,8 +62,8 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
       const status = err instanceof ApiError ? err.status : 500;
       const message =
         status === 404
-          ? '저장된 여행 성향 분석 결과가 없습니다.'
-          : errorObj?.message || '성향 프로필을 불러오지 못했습니다.';
+          ? UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND
+          : errorObj?.message || UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED;
       setTasteProfile(null);
       setIsLoading(false);
       setError(message);
@@ -82,8 +84,8 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   if (isLoading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4648D4" />
-        <Text style={styles.loadingText}>취향 프로필을 불러오는 중...</Text>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>{UI_STRINGS.COMMON.LOADING}</Text>
       </SafeAreaView>
     );
   }
@@ -91,19 +93,19 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   if (error || !tasteProfile) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>성향 프로필을 불러오지 못했습니다.</Text>
+        <Text style={styles.errorTitle}>{UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED}</Text>
         <Text style={styles.errorSubtitle}>
-          {error || '저장된 여행 성향 분석 결과가 없습니다.'}
+          {error || UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND}
         </Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
-          <Text style={styles.retryButtonText}>다시 시도</Text>
+          <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
         {onNavigateToAnalysis && (
           <TouchableOpacity
             style={styles.analysisButton}
             onPress={onNavigateToAnalysis}
           >
-            <Text style={styles.analysisButtonText}>성향 분석 시작하기</Text>
+            <Text style={styles.analysisButtonText}>{UI_STRINGS.TASTE_PROFILE.START_ANALYSIS}</Text>
           </TouchableOpacity>
         )}
       </SafeAreaView>
@@ -118,7 +120,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
       {/* Floating AI Course Generation Button */}
       <GenerateCourseButton
         onPress={onGenerateCourse}
-        label="AI 경로 생성하기"
+        label={UI_STRINGS.COMPONENTS.GENERATE_BUTTON_DEFAULT}
         isFloating={true}
       />
     </SafeAreaView>
@@ -128,11 +130,11 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FAFE',
+    backgroundColor: theme.colors.bg.screen,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#F6FAFE',
+    backgroundColor: theme.colors.bg.screen,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -140,24 +142,24 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 15,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     fontWeight: '500',
   },
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#EF4444',
+    color: theme.colors.status.error,
     textAlign: 'center',
     marginBottom: 8,
   },
   errorSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -167,14 +169,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 15,
     fontWeight: '600',
   },
   analysisButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderWidth: 1,
-    borderColor: '#4648D4',
+    borderColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -183,10 +185,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   analysisButtonText: {
-    color: '#4648D4',
+    color: theme.colors.primary,
     fontSize: 15,
     fontWeight: '600',
   },
 });
-
-export default TasteProfileScreen;

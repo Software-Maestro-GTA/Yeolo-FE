@@ -33,5 +33,3 @@ export const GoogleLogoIcon: React.FC<GoogleLogoIconProps> = ({ size = 20, style
     />
   </Svg>
 );
-
-export default GoogleLogoIcon;

@@ -11,7 +11,8 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { BRAND_COLORS } from '../constants/auth';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
 
 interface PhotoAnalysisScreenProps {
   /**
@@ -23,54 +24,48 @@ interface PhotoAnalysisScreenProps {
 export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext }) => {
   const [isAgreed, setIsAgreed] = useState(false);
 
-  const toggleAgreement = () => {
-    setIsAgreed(!isAgreed);
+  const [isConsented, setIsConsented] = useState(false);
+
+  const handleConsentToggle = () => {
+    setIsConsented(!isConsented);
+  };
+
+  const handleAnalyzeClick = () => {
+    if (isConsented) {
+      onNext();
+    }
   };
 
   return (
     <LinearGradient
-      colors={BRAND_COLORS.BACKGROUND_GRADIENT}
+      colors={theme.colors.gradient.background}
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
-          {/* Top content area containing titles */}
+          {/* Top content area containing titles and consent checkbox */}
           <View style={styles.topContent} testID="top-content">
             <View style={styles.heroText}>
               <Text style={styles.mainTitle}>
-                {`사진으로\n취향을 읽어볼까요?`}
+                {UI_STRINGS.PHOTO_ANALYSIS.MAIN_TITLE}
               </Text>
               <Text style={styles.subTitle}>
-                {`당신의 사진을 분석하여 여행 성향을 파악해요.\n사진은 외부로 전송되지 않아요.`}
+                {UI_STRINGS.PHOTO_ANALYSIS.SUB_TITLE}
               </Text>
             </View>
-          </View>
 
-          {/* Consent Checkbox Area */}
-          <View style={styles.consentContainer}>
+            {/* Consent Card Container */}
             <TouchableOpacity
-              style={styles.checkboxRow}
+              style={styles.consentCard}
               activeOpacity={0.8}
-              onPress={toggleAgreement}
-              testID="consent-checkbox"
+              onPress={handleConsentToggle}
+              testID="consent-checkbox-container"
             >
-              <View
-                style={[
-                  styles.checkbox,
-                  isAgreed && styles.checkboxChecked,
-                ]}
-              >
-                {isAgreed && (
-                  <FontAwesome
-                    name="check"
-                    size={12}
-                    color="#ffffff"
-                    testID="checkmark-icon"
-                  />
-                )}
+              <View style={[styles.checkbox, isConsented && styles.checkboxSelected]} testID="consent-checkbox">
+                {isConsented && <Feather name="check" size={14} color={theme.colors.text.inverse} />}
               </View>
               <Text style={styles.consentText}>
-                개인정보 수집 및 사진/위치 정보 분석에 동의합니다.
+                {UI_STRINGS.PHOTO_ANALYSIS.CONSENT_TEXT}
               </Text>
             </TouchableOpacity>
           </View>
@@ -78,20 +73,17 @@ export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext
           {/* Bottom container containing action button */}
           <View style={styles.bottomContainer} testID="bottom-container">
             <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                !isAgreed && styles.disabledButton,
-              ]}
-              activeOpacity={isAgreed ? 0.8 : 1.0}
-              onPress={isAgreed ? onNext : undefined}
-              disabled={!isAgreed}
-              testID="start-button"
+              style={[styles.primaryButton, !isConsented && styles.disabledButton]}
+              activeOpacity={0.8}
+              onPress={handleAnalyzeClick}
+              disabled={!isConsented}
+              testID="analyze-button"
             >
-              <Text style={styles.buttonText}>동의하고 시작하기</Text>
-              <Feather
+              <Text style={styles.buttonText}>{UI_STRINGS.PHOTO_ANALYSIS.START_BUTTON}</Text>
+              <FontAwesome
                 name="shield"
-                size={18}
-                color="#ffffff"
+                size={16}
+                color={theme.colors.text.inverse}
                 style={styles.shieldIcon}
               />
             </TouchableOpacity>
@@ -115,63 +107,60 @@ const styles = StyleSheet.create({
     paddingBottom: 34,
   },
   topContent: {
-    height: 190,
     width: '100%',
   },
   heroText: {
     gap: 12,
     paddingTop: 24,
     paddingHorizontal: 24,
+    marginBottom: 32,
   },
   mainTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     lineHeight: 36,
     letterSpacing: -0.6,
   },
   subTitle: {
     fontSize: 15,
     fontWeight: '400',
-    color: '#45464c',
+    color: theme.colors.text.secondary,
     lineHeight: 24,
   },
-  consentContainer: {
-    paddingHorizontal: 24,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 24,
-  },
-  checkboxRow: {
+  consentCard: {
+    marginHorizontal: 24,
+    backgroundColor: theme.colors.bg.card,
+    borderRadius: 16,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    gap: 12,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.BORDER_LIGHT,
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
+    borderColor: theme.colors.border.light,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: BRAND_COLORS.PRIMARY,
+    borderWidth: 2,
+    borderColor: theme.colors.text.muted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    backgroundColor: '#ffffff',
   },
-  checkboxChecked: {
-    backgroundColor: BRAND_COLORS.PRIMARY,
-    borderColor: BRAND_COLORS.PRIMARY,
+  checkboxSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   consentText: {
     fontSize: 14,
     fontWeight: '500',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     flex: 1,
     lineHeight: 20,
   },
@@ -180,20 +169,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: BRAND_COLORS.PRIMARY,
+    backgroundColor: theme.colors.primary,
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: BRAND_COLORS.PRIMARY,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   disabledButton: {
-    backgroundColor: '#c6c6cc',
+    backgroundColor: theme.colors.border.light,
     shadowColor: 'transparent',
     elevation: 0,
     opacity: 0.8,
@@ -201,11 +190,9 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: theme.colors.text.inverse,
   },
   shieldIcon: {
     marginLeft: 8,
   },
 });
-
-export default PhotoAnalysisScreen;

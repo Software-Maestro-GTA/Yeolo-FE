@@ -11,88 +11,26 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { TasteProfile } from '@yeolo/common';
 import { Ionicons } from '@expo/vector-icons';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface TasteProfileViewProps {
   profile: TasteProfile;
 }
 
-const PACE_LABELS: Record<string, string> = {
-  slow_stay: '느긋한 체류형',
-  balanced: '균형형',
-  dense_schedule: '빡빡한 일정형',
-  spontaneous: '즉흥형',
-  long_stay: '장기여행형',
-};
-
-const SPENDING_LABELS: Record<string, string> = {
-  cost_effective: '가성비형',
-  moderate: '중간 소비형',
-  luxury: '럭셔리형',
-};
-
-const COMPANION_LABELS: Record<string, string> = {
-  solo: '혼자 여행형',
-  couple: '연인 여행형',
-  friends: '친구 여행형',
-  family: '가족 여행형',
-  with_children: '아이 동반형',
-  with_parents: '부모님 동반형',
-  group: '단체 여행형',
-  with_pet: '반려동물 동반형',
-  social: '어울림형',
-};
-
-const PURPOSE_LABELS: Record<string, string> = {
-  relaxation: '휴양/힐링',
-  sightseeing: '관광 탐방',
-  culturalExperience: '문화/예술',
-  gourmet: '미식 탐험',
-  natureExploration: '자연 탐방',
-  activity: '액티비티',
-  shopping: '쇼핑 선호',
-  festivalEvent: '축제/이벤트',
-  wellness: '웰니스/명상',
-  selfDevelopment: '자기계발',
-};
-
-const LOCATION_LABELS: Record<string, string> = {
-  bigCity: '대도시 선호',
-  smallTownAlley: '소도시/골목',
-  natureHinterland: '자연/오지',
-  beachResort: '해변/휴양지',
-  mountainPlateau: '산악/고원',
-  historicalCity: '역사도시',
-  themeParkResort: '테마파크',
-  famousSpotPreferred: '유명 명소',
-  hiddenSpotPreferred: '숨은 명소',
-};
-
-const FOOD_LABELS: Record<string, string> = {
-  localFoodActive: '현지 음식 적극 체험',
-  famousRestaurantCentered: '유명 맛집 탐방',
-  streetFood: '길거리 음식',
-  cafeDessert: '카페 & 디저트',
-  fineDining: '파인다이닝',
-  familiarFoodPreferred: '익숙한 음식 선호',
-  dietaryRestriction: '식단 고려',
-  sightseeingOverFood: '관광 중시',
-};
-
-const SEASON_LABELS: Record<string, string> = {
-  warm_region: '따뜻한 지역',
-  cold_region: '추운 지역',
-  summer_resort: '여름 휴양',
-  winter_sports: '겨울 스포츠',
-  spring_flower_autumn_foliage: '봄꽃·가을 단풍',
-  dry_weather: '건조한 날씨',
-  off_season: '비수기 여행',
-  peak_season: '성수기 여행',
-};
+const PACE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PACE;
+const SPENDING_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SPENDING;
+const COMPANION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.COMPANION;
+const PURPOSE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PURPOSE;
+const LOCATION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.LOCATION;
+const FOOD_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.FOOD;
+const SEASON_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SEASON;
 
 export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) => {
   const renderTraitBar = (label: string, score: number = 3, index: number) => {
     const percentage = Math.min(Math.max(Math.round((score / 5) * 100), 0), 100);
-    // Alternate bar colors between purple (#4648D4) and mint (#4EDEA3) per Figma design
-    const barColor = index % 2 === 0 ? '#4648D4' : '#4EDEA3';
+    // Alternate bar colors between purple (theme.colors.primary) and mint (#4EDEA3) per Figma design
+    const barColor = index % 2 === 0 ? theme.colors.primary : '#4EDEA3';
 
     return (
       <View key={label} style={styles.traitRow}>
@@ -137,7 +75,6 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
   };
 
   return (
-
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -146,14 +83,13 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
       {/* 1. Header Icon Badge */}
       <View style={styles.headerSection}>
         <View style={styles.iconOverlay}>
-          <Ionicons name="sparkles" size={28} color="#4648D4" />
+          <Ionicons name="sparkles" size={28} color={theme.colors.primary} />
         </View>
       </View>
 
-
       {/* 2. Core Style Badges */}
       <View style={styles.summaryCard}>
-        <Text style={styles.cardTitle}>핵심 여행 키워드</Text>
+        <Text style={styles.cardTitle}>{UI_STRINGS.COMPONENTS.CORE_KEYWORDS_TITLE}</Text>
         <View style={styles.badgeRow}>
           <View style={styles.badgePrimary}>
             <Text style={styles.badgePrimaryText}>
@@ -175,19 +111,19 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
 
       {/* 3. Trait Bars Section (Figma Design) */}
       {renderSection(
-        '여행 성향 분석',
+        UI_STRINGS.COMPONENTS.TRAVEL_PURPOSE_TITLE,
         profile.travelPurpose as Record<string, number | undefined>,
         PURPOSE_LABELS
       )}
 
       {renderSection(
-        '선호 장소 유형',
+        UI_STRINGS.COMPONENTS.LOCATION_PREFERENCE_TITLE,
         profile.preferredLocationType as Record<string, number | undefined>,
         LOCATION_LABELS
       )}
 
       {renderSection(
-        '음식 취향',
+        UI_STRINGS.COMPONENTS.FOOD_PREFERENCE_TITLE,
         profile.foodPreference as Record<string, number | undefined>,
         FOOD_LABELS
       )}
@@ -196,7 +132,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
       {Array.isArray(profile.seasonalEnvironmentPreference) &&
         profile.seasonalEnvironmentPreference.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>계절 및 환경 취향</Text>
+            <Text style={styles.cardTitle}>{UI_STRINGS.COMPONENTS.SEASON_ENVIRONMENT_TITLE}</Text>
             <View style={styles.tagWrap}>
               {profile.seasonalEnvironmentPreference.map((item) => (
                 <View key={item} style={styles.tagBadge}>
@@ -215,7 +151,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FAFE',
+    backgroundColor: theme.colors.bg.screen,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -223,7 +159,6 @@ const styles = StyleSheet.create({
     paddingBottom: 150, // Space to scroll past floating button (56px) and bottom nav (64px)
     gap: 20,
   },
-
 
   headerSection: {
     alignItems: 'center',
@@ -233,7 +168,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(225, 224, 255, 0.6)',
+    backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -241,7 +176,7 @@ const styles = StyleSheet.create({
   personaTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     textAlign: 'center',
     lineHeight: 32,
     marginBottom: 8,
@@ -249,17 +184,17 @@ const styles = StyleSheet.create({
   personaSubtitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#45464C',
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
   },
   summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: theme.colors.bg.glass,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#1A1F2C',
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 24,
@@ -271,13 +206,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   badgePrimary: {
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
   },
   badgePrimaryText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -288,30 +223,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   badgeSecondaryText: {
-    color: '#030612',
+    color: theme.colors.text.primary,
     fontWeight: '600',
     fontSize: 14,
   },
   badgeAccent: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: theme.colors.border.active,
   },
   badgeAccentText: {
-    color: '#4338CA',
+    color: theme.colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: theme.colors.bg.glass,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#1A1F2C',
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 24,
@@ -320,7 +255,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#171C1F',
+    color: theme.colors.text.primary,
     marginBottom: 16,
   },
   traitRow: {
@@ -333,7 +268,7 @@ const styles = StyleSheet.create({
   },
   traitLabel: {
     fontSize: 14,
-    color: '#45464C',
+    color: theme.colors.text.secondary,
     fontWeight: '500',
   },
   traitPercentage: {
@@ -342,7 +277,7 @@ const styles = StyleSheet.create({
   },
   barTrack: {
     height: 8,
-    backgroundColor: '#EAEFF2',
+    backgroundColor: theme.colors.border.light,
     borderRadius: 9999,
     overflow: 'hidden',
   },
@@ -356,13 +291,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: theme.colors.border.light,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   tagBadgeText: {
-    color: '#475569',
+    color: theme.colors.text.secondary,
     fontSize: 13,
     fontWeight: '500',
   },

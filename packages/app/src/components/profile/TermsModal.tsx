@@ -8,17 +8,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface TermsModalProps {
   visible: boolean;
+  type?: 'service' | 'privacy';
   onClose: () => void;
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
+export const TermsModal: React.FC<TermsModalProps> = ({ visible, type = 'service', onClose }) => {
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>여로 서비스 이용약관</Text>
+          <Text style={styles.modalTitle}>
+            {type === 'privacy' ? '여로 개인정보 처리방침' : '여로 서비스 이용약관'}
+          </Text>
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={true}>
             <Text style={styles.termsText}>
               제1조 (목적){'\n'}
@@ -33,7 +39,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ visible, onClose }) => {
           </ScrollView>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.closeButtonText}>닫기</Text>
+            <Text style={styles.closeButtonText}>{UI_STRINGS.COMMON.CLOSE}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -50,12 +56,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 20,
     padding: 24,
     width: '100%',
     maxHeight: '80%',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -64,7 +70,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -73,20 +79,18 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    color: '#475569',
+    color: theme.colors.text.secondary,
     lineHeight: 22,
   },
   closeButton: {
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 15,
     fontWeight: '600',
   },
 });
-
-export default TermsModal;

@@ -7,20 +7,21 @@
  */
 import React, { useContext, useEffect, useState } from 'react';
 import type { CourseCreateRequest } from '@yeolo/common';
-import { AuthContext } from '../context/AuthContext';
-import { NavTab } from '../components/navigation/BottomNavBar';
-import MainLayout from '../layouts/MainLayout';
-
-import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
-import CourseListScreen from '../screens/CourseListScreen';
-import IntroScreen from '../screens/IntroScreen';
-import PhotoAnalysisScreen from '../screens/PhotoAnalysisScreen';
-import TasteAnalysisScreen from '../screens/TasteAnalysisScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import CourseCreateScreen from '../screens/CourseCreateScreen';
-import CourseGeneratingScreen from '../screens/CourseGeneratingScreen';
-import { CourseDetailScreen } from '../screens/CourseDetailScreen';
+import { AuthContext } from '../context';
+import { NavTab } from '../components/navigation';
+import { MainLayout } from '../layouts';
+import {
+  LoginScreen,
+  HomeScreen,
+  CourseListScreen,
+  IntroScreen,
+  PhotoAnalysisScreen,
+  TasteAnalysisScreen,
+  ProfileScreen,
+  CourseCreateScreen,
+  CourseGeneratingScreen,
+  CourseDetailScreen,
+} from '../screens';
 
 export function NavigationRoot() {
   const auth = useContext(AuthContext);

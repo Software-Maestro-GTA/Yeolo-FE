@@ -8,7 +8,7 @@
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomNavBar, NavTab } from '../components/navigation/BottomNavBar';
+import { BottomNavBar, NavTab } from '../components/navigation';
 
 export interface MainLayoutProps {
   children: React.ReactNode;
@@ -42,5 +42,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-export default MainLayout;

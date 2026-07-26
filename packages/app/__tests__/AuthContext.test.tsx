@@ -14,10 +14,10 @@ import { server } from './mocks/server';
 import { http, HttpResponse } from 'msw';
 
 let shouldFail = false;
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 
 beforeAll(() => {
-  global.fetch = jest.fn(async (url: any, options: any) => {
+  globalThis.fetch = jest.fn(async (url: any, options: any) => {
     const requestUrl = typeof url === 'string' ? url : (url && url.url) || '';
     if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/google')) {
       if (shouldFail) {
@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  global.fetch = originalFetch;
+  globalThis.fetch = originalFetch;
 });
 
 describe('AuthContext', () => {

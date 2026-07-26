@@ -21,12 +21,17 @@ import {
   DEFAULT_API_URL,
 } from '@yeolo/common';
 import type { User } from '@yeolo/common';
-import { AuthContext } from '../context/AuthContext';
-import ProfileHeader from '../components/profile/ProfileHeader';
-import TasteAnalysisCard from '../components/profile/TasteAnalysisCard';
-import SettingsSection from '../components/profile/SettingsSection';
-import TermsModal from '../components/profile/TermsModal';
-import ConfirmModal from '../components/profile/ConfirmModal';
+import { AuthContext } from '../context';
+import { clearLocalSession } from '../services';
+import {
+  ProfileHeader,
+  TasteAnalysisCard,
+  SettingsSection,
+  TermsModal,
+  ConfirmModal,
+} from '../components/profile';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
 
 export interface ProfileScreenProps {
   user?: Partial<User> | null;
@@ -54,15 +59,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
   }, []);
 
-  // Modal states
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [confirmModalType, setConfirmModalType] = useState<'logout' | 'withdraw' | null>(null);
   const [isModalActionLoading, setIsModalActionLoading] = useState<boolean>(false);
 
   const clearSessionAndRedirect = async () => {
-    await AsyncStorage.removeItem('accessToken');
-    await AsyncStorage.removeItem('refreshToken');
-    await AsyncStorage.removeItem('user');
+    // Delegate local session clearance to authService
+    await clearLocalSession();
     auth?.logout?.();
     if (isMounted.current) {
       setConfirmModalType(null);
@@ -84,7 +87,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       await clearSessionAndRedirect();
     } catch (err: unknown) {
       console.error('Logout failed:', err);
-      // Even if API fails, clear local tokens and redirect
       await clearSessionAndRedirect();
     } finally {
       if (isMounted.current) {
@@ -100,14 +102,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
       await withdrawFetcher(apiUrl, token || undefined, {
-        reason: '사용자 요청',
+        reason: UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
       });
 
       await clearSessionAndRedirect();
     } catch (err: unknown) {
       const error = err as { message?: string };
       console.error('Withdraw failed:', err);
-      Alert.alert('회원탈퇴 오류', error?.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
+      Alert.alert(UI_STRINGS.PROFILE.WITHDRAW_ERROR_TITLE, error?.message || UI_STRINGS.PROFILE.WITHDRAW_ERROR_DEFAULT);
     } finally {
       if (isMounted.current) {
         setIsModalActionLoading(false);
@@ -159,11 +161,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.colors.bg.screen,
   },
   contentContainer: {
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
 });
-
-export default ProfileScreen;

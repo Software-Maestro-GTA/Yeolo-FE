@@ -40,7 +40,7 @@ jest.mock('react-native-webview', () => {
   };
 });
 
-global.fetch = jest.fn().mockImplementation((url: string) => {
+globalThis.fetch = jest.fn().mockImplementation((url: string) => {
   if (url.includes('nominatim.openstreetmap.org')) {
     return Promise.resolve({
       json: () => Promise.resolve([{ lat: '33.5434', lon: '126.6692' }]),

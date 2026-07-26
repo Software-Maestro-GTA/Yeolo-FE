@@ -10,6 +10,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
 
 export interface GenerateCourseButtonProps {
   onPress?: () => void;
@@ -22,15 +24,15 @@ export interface GenerateCourseButtonProps {
 
 export const GenerateCourseButton: React.FC<GenerateCourseButtonProps> = ({
   onPress,
-  label = 'AI 경로 생성하기',
+  label = UI_STRINGS.COMPONENTS.GENERATE_BUTTON_DEFAULT,
   disabled = false,
   testID = 'submit-course-btn',
   isFloating = false,
   style,
 }) => {
   const gradientColors = disabled
-    ? (['#CBD5E1', '#94A3B8'] as const)
-    : (['#4648D4', '#4EDEA3'] as const);
+    ? ([theme.colors.text.placeholder, theme.colors.text.subtle] as const)
+    : theme.colors.gradient.primary;
 
   return (
     <View style={[isFloating ? styles.floatingContainer : styles.inlineContainer, style]}>
@@ -51,7 +53,7 @@ export const GenerateCourseButton: React.FC<GenerateCourseButtonProps> = ({
           <Ionicons
             name="sparkles"
             size={20}
-            color={disabled ? '#F1F5F9' : '#FFFFFF'}
+            color={disabled ? theme.colors.bg.secondary : theme.colors.text.inverse}
             style={styles.icon}
           />
           <Text style={[styles.text, disabled && styles.disabledText]}>{label}</Text>
@@ -77,7 +79,7 @@ const styles = StyleSheet.create({
   touchable: {
     width: '100%',
     borderRadius: 9999,
-    shadowColor: '#4648D4',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -99,14 +101,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   text: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
   disabledText: {
-    color: '#F1F5F9',
+    color: theme.colors.bg.secondary,
+  },
+  arrowIcon: {
+    marginLeft: 6,
   },
 });
-
-export default GenerateCourseButton;

@@ -9,8 +9,8 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginWithGoogleApi, DEFAULT_API_URL, type User } from '@yeolo/common';
-import { initializeGoogleSignin, signOutGoogle } from '../services/authService';
-import { AUTH_CONSTANTS } from '../constants/auth';
+import { initializeGoogleSignin, signOutGoogle } from '../services';
+import { APP_CONFIG } from '../constants';
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
       } catch (error) {
-        console.warn('Failed to restore session token:', error);
+        console.error('세션 복원 실패:', error);
       } finally {
         setIsLoading(false);
       }
@@ -56,8 +56,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-      const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || AUTH_CONSTANTS.DEFAULT_REDIRECT_URI;
-
+      const redirectUri =
+        process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
       const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
 
       // Save tokens and user info to AsyncStorage
