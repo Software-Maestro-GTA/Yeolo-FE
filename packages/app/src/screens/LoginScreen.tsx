@@ -10,7 +10,7 @@ import React, { useContext } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AntDesign } from '@expo/vector-icons';
+import GoogleLogoIcon from '../components/GoogleLogoIcon';
 import { AUTH_CONSTANTS, BRAND_COLORS } from '../constants/auth';
 import { AuthContext } from '../context/AuthContext';
 import { signInWithGoogle } from '../services/authService';
@@ -60,12 +60,7 @@ const LoginScreen: React.FC = () => {
               disabled={isLoggingIn}
             >
               <View style={styles.buttonContent}>
-                <AntDesign
-                  name="google"
-                  size={20}
-                  color={BRAND_COLORS.BUTTON_TEXT}
-                  style={styles.logoIcon}
-                />
+                <GoogleLogoIcon size={20} style={styles.logoIcon} />
                 <Text style={styles.buttonText}>{AUTH_CONSTANTS.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>

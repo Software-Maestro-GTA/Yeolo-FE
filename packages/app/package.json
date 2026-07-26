@@ -21,9 +21,11 @@
     "react-native": "0.86.0",
     "react-native-maps": "1.27.2",
     "react-native-safe-area-context": "^5.8.0",
+    "react-native-svg": "^15.15.5",
     "react-native-webview": "^14.0.1"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^20.2.0",
     "@react-native/jest-preset": "^0.86.0",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29",

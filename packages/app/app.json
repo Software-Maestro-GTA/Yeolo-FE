@@ -33,6 +33,14 @@
           "savePhotosPermission": "분석된 일정을 내 기기에 저장합니다.",
           "isAccessMediaLocationEnabled": true
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
       ]
     ]
   }
