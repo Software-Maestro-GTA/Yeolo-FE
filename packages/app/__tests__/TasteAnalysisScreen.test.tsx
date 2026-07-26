@@ -9,6 +9,7 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { TasteAnalysisScreen } from '../src/screens/TasteAnalysisScreen';
+import { ANALYSIS_PHOTO_LIMIT } from '../src/constants/analysis';
 import { Query, AssetField, MediaType } from 'expo-media-library';
 import { analyzeTastePreferenceStream, useTasteStore } from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -86,7 +87,7 @@ describe('TasteAnalysisScreen Integration Tests', () => {
       // Asserts that Query builders are chain-called with descending order
       expect(mockEq).toHaveBeenCalledWith('mediaType', 'image');
       expect(mockOrderBy).toHaveBeenCalledWith({ key: 'creationTime', ascending: false });
-      expect(mockLimit).toHaveBeenCalledWith(10);
+      expect(mockLimit).toHaveBeenCalledWith(ANALYSIS_PHOTO_LIMIT);
       expect(mockExe).toHaveBeenCalled();
     });
   });

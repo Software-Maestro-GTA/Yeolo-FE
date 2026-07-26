@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
 import { analyzeTastePreferenceStream, ImageMetadata, useTasteStore } from '@yeolo/common';
 import { BRAND_COLORS, AUTH_CONSTANTS } from '../constants/auth';
+import { ANALYSIS_PHOTO_LIMIT } from '../constants/analysis';
 
 export interface TasteAnalysisScreenProps {
   /**
@@ -90,7 +91,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
         const assets = await new Query()
           .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
           .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
-          .limit(10)
+          .limit(ANALYSIS_PHOTO_LIMIT)
           .exe();
 
         if (!assets || assets.length === 0) {

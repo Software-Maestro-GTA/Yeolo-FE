@@ -35,7 +35,7 @@ export function NavigationRoot() {
   useEffect(() => {
     if (!auth?.isLoading) {
       if (auth?.isAuthenticated) {
-        setStep((prev) => (prev === null ? 'HOME' : prev));
+        setStep((prev) => (prev === null || prev === 'LOGIN' ? 'HOME' : prev));
       } else {
         setStep('LOGIN');
       }
