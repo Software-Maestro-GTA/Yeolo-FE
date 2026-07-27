@@ -16,75 +16,39 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
-import type { CourseCreateRequest } from '@yeolo/common';
+import { useCourseStore } from '@yeolo/common';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
 export interface CourseGeneratingScreenProps {
-  requestData?: CourseCreateRequest | null;
-  progressMessage?: string | null;
-  error?: string | null;
-  createdCourseId?: string | null;
   onComplete?: (courseId: string) => void;
   onRetry?: () => void;
 }
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
-  requestData,
-  progressMessage: propProgressMessage,
-  error: propError,
-  createdCourseId: propCreatedCourseId,
   onComplete,
   onRetry,
 }) => {
-  const store = useCourseStore();
-
-  const activeCreatedCourseId =
-    propCreatedCourseId !== undefined ? propCreatedCourseId : store.createdCourseId;
-  const activeProgressMessage =
-    propProgressMessage !== undefined ? propProgressMessage : store.progressMessage;
-  const activeError =
-    propError !== undefined ? propError : store.error;
+  const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
 
   useEffect(() => {
-    if (!requestData) return;
-
-    let isSubscribed = true;
-    const startGeneration = async () => {
-      const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-      if (isSubscribed) {
-        await store.createCourse(apiUrl, requestData, token || undefined);
-      }
-    };
-
-    startGeneration();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [requestData]);
-
-  useEffect(() => {
-    if (activeCreatedCourseId) {
-      onComplete?.(activeCreatedCourseId);
+    if (createdCourseId) {
+      onComplete?.(createdCourseId);
     }
-  }, [activeCreatedCourseId, onComplete]);
+  }, [createdCourseId, onComplete]);
 
   const handleRetry = () => {
-    store.resetCourseState();
+    resetCourseState();
     onRetry?.();
   };
 
-  if (activeError) {
+  if (error) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle-outline" size={48} color={theme.colors.status.error} style={styles.errorIcon} />
           <Text style={styles.errorTitle}>{UI_STRINGS.COURSE_GENERATING.ERROR_TITLE}</Text>
-          <Text testID="error-subtitle" style={styles.errorSubtitle}>{activeError}</Text>
+          <Text testID="error-subtitle" style={styles.errorSubtitle}>{error}</Text>
           <TouchableOpacity testID="retry-btn" style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
           </TouchableOpacity>
@@ -110,13 +74,13 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
         <Text style={styles.title}>{UI_STRINGS.COURSE_GENERATING.TITLE}</Text>
 
         <Text testID="progress-text" style={styles.progressText}>
-          {activeProgressMessage || '사용자 성향 프로필을 분석하고 최적의 경로를 생성 중입니다.'}
+          {progressMessage || UI_STRINGS.COURSE_GENERATING.DEFAULT_PROGRESS}
         </Text>
 
         <View style={styles.tipBox}>
           <Ionicons name="bulb-outline" size={16} color={theme.colors.primary} style={styles.tipIcon} />
           <Text style={styles.tipText}>
-            여로 AI가 성향 데이터, 장소 간 이동 동선, 예산 분포를 종합 분석하고 있습니다.
+            {UI_STRINGS.COURSE_GENERATING.TIP_TEXT}
           </Text>
         </View>
       </View>

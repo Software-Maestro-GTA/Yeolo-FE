@@ -7,9 +7,10 @@
  * @author Antigravity Agent
  */
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
+import { renderWithQueryClient as render } from './test-utils';
 
 describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 바인딩)', () => {
   beforeEach(() => {
@@ -27,10 +28,10 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
   it('SSE progress 이벤트 메시지를 실시간으로 렌더링해야 한다', async () => {
     const mockOnComplete = jest.fn();
 
-    const { getByTestId, rerender } = await render(
+    useCourseStore.setState({ progressMessage: '사용자 성향 프로필을 불러오는 중입니다.' });
+
+    const { getByTestId } = await render(
       <CourseGeneratingScreen
-        progressMessage="사용자 성향 프로필을 불러오는 중입니다."
-        error={null}
         onComplete={mockOnComplete}
       />
     );
@@ -38,25 +39,21 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
     expect(getByTestId('progress-text').props.children).toBe('사용자 성향 프로필을 불러오는 중입니다.');
 
     await act(async () => {
-      await rerender(
-        <CourseGeneratingScreen
-          progressMessage="개인 맞춤형 여행 코스를 생성 중입니다."
-          error={null}
-          onComplete={mockOnComplete}
-        />
-      );
+      useCourseStore.setState({ progressMessage: '개인 맞춤형 여행 코스를 생성 중입니다.' });
     });
 
-    expect(getByTestId('progress-text').props.children).toBe('개인 맞춤형 여행 코스를 생성 중입니다.');
+    await waitFor(() => {
+      expect(getByTestId('progress-text').props.children).toBe('개인 맞춤형 여행 코스를 생성 중입니다.');
+    });
   });
 
   it('complete 이벤트 완료 시 전달된 courseId로 onComplete 네비게이션이 실행되어야 한다', async () => {
     const mockOnComplete = jest.fn();
 
+    useCourseStore.setState({ createdCourseId: '550e8400-e29b-41d4-a716-446655440030' });
+
     await render(
       <CourseGeneratingScreen
-        createdCourseId="550e8400-e29b-41d4-a716-446655440030"
-        error={null}
         onComplete={mockOnComplete}
       />
     );
@@ -69,9 +66,10 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
   it('에러 발생 시 실패 메시지와 재시도 버튼이 노출되고 이전 입력값을 유지할 수 있어야 한다', async () => {
     const mockOnRetry = jest.fn();
 
+    useCourseStore.setState({ error: '여행 조건 입력값이 올바르지 않습니다.' });
+
     const { getByTestId } = await render(
       <CourseGeneratingScreen
-        error="여행 조건 입력값이 올바르지 않습니다."
         onRetry={mockOnRetry}
       />
     );
