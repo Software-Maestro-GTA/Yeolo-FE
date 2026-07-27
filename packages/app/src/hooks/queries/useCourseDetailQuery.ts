@@ -9,7 +9,7 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCourseDetailApi, DEFAULT_API_URL, type CourseDetail } from '@yeolo/common';
-import { UI_STRINGS } from '../../constants';
+import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const getCourseDetailQueryKey = (courseId: string) => ['courseDetail', courseId];
 
@@ -36,6 +36,7 @@ export function useCourseDetailQuery({
       }
     },
     enabled: Boolean(courseId),
+    staleTime: APP_CONFIG.QUERY_STALE_TIME,
     ...options,
   });
 }

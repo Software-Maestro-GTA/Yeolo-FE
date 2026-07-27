@@ -12,11 +12,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import NavigationRoot from './navigation/NavigationRoot';
 
+import { APP_CONFIG } from './constants/config';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 5,
+      staleTime: APP_CONFIG.QUERY_STALE_TIME,
     },
   },
 });

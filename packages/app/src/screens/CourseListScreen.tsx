@@ -6,13 +6,13 @@
  * @api API-FB-10
  * @author Antigravity Agent
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -24,6 +24,7 @@ import {
 import { useCourseListQuery } from '../hooks/queries';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import type { CourseSummary } from '@yeolo/common';
 
 export interface CourseListScreenProps {
   onSelectCourse?: (courseId: string) => void;
@@ -37,36 +38,33 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
   const { data: courses = [], isLoading, error, refetch } = useCourseListQuery();
   const errorMessage = error?.message || null;
 
+  const handleSelectCourse = useCallback(
+    (courseId: string) => {
+      const targetCourse = courses.find((c) => c.courseId === courseId);
+      if (!targetCourse) {
+        Alert.alert(UI_STRINGS.COMMON.NOTICE, UI_STRINGS.COURSE_LIST.UNAUTHORIZED_OR_DELETED);
+        return;
+      }
+      if (onSelectCourse) {
+        onSelectCourse(courseId);
+      }
+    },
+    [courses, onSelectCourse]
+  );
 
-  const handleSelectCourse = (courseId: string) => {
-    const targetCourse = courses.find((c) => c.courseId === courseId);
-    if (!targetCourse) {
-      Alert.alert(UI_STRINGS.COMMON.NOTICE, UI_STRINGS.COURSE_LIST.UNAUTHORIZED_OR_DELETED);
-      return;
-    }
-    if (onSelectCourse) {
-      onSelectCourse(courseId);
-    }
-  };
-
-  const filteredCourses = courses.filter((course) => {
-    if (!searchQuery.trim()) return true;
+  const filteredCourses = useMemo(() => {
+    if (!searchQuery.trim()) return courses;
     const query = searchQuery.toLowerCase().trim();
-    return (
-      course.destinationCountry.toLowerCase().includes(query) ||
-      course.destinationCity.toLowerCase().includes(query)
+    return courses.filter(
+      (course) =>
+        course.destinationCountry.toLowerCase().includes(query) ||
+        course.destinationCity.toLowerCase().includes(query)
     );
-  });
+  }, [courses, searchQuery]);
 
-  return (
-    <View style={styles.container}>
-      {/* Top Header with Course Search Bar Component */}
-      <View style={styles.header}>
-        <CourseSearchBar value={searchQuery} onChangeText={setSearchQuery} />
-      </View>
-
-      {/* Main Content Area */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+  const renderHeader = useCallback(
+    () => (
+      <View>
         {/* Section Header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{UI_STRINGS.COURSE_LIST.TITLE}</Text>
@@ -85,57 +83,91 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
 
         {/* AI Course Generation CTA Card */}
         {onCreateCourse && <CreateCourseCtaCard onPress={onCreateCourse} />}
+      </View>
+    ),
+    [onCreateCourse, viewMode]
+  );
 
-        {/* Loading State */}
-        {isLoading ? (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>{UI_STRINGS.COURSE_LIST.LOADING}</Text>
-          </View>
-        ) : errorMessage ? (
-          <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
-            <TouchableOpacity testID="retry-button" style={styles.retryButton} onPress={() => refetch()}>
-              <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
+  const renderEmpty = useCallback(() => {
+    if (isLoading) {
+      return (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>{UI_STRINGS.COURSE_LIST.LOADING}</Text>
+        </View>
+      );
+    }
+
+    if (errorMessage) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+          <TouchableOpacity testID="retry-button" style={styles.retryButton} onPress={() => refetch()}>
+            <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (courses.length === 0) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyIcon}>🧭</Text>
+          <Text style={styles.emptyTitle}>{UI_STRINGS.COURSE_LIST.EMPTY_TITLE}</Text>
+          <Text style={styles.emptySubtitle}>{UI_STRINGS.COURSE_LIST.EMPTY_SUBTITLE}</Text>
+          {onCreateCourse && (
+            <TouchableOpacity
+              testID="empty-create-button"
+              style={styles.emptyCreateButton}
+              onPress={onCreateCourse}
+            >
+              <Text style={styles.emptyCreateButtonText}>{UI_STRINGS.COURSE_LIST.FIRST_CREATE_BUTTON}</Text>
             </TouchableOpacity>
-          </View>
-        ) : courses.length === 0 ? (
-          <View style={styles.centerContainer}>
-            <Text style={styles.emptyIcon}>🧭</Text>
-            <Text style={styles.emptyTitle}>{UI_STRINGS.COURSE_LIST.EMPTY_TITLE}</Text>
-            <Text style={styles.emptySubtitle}>{UI_STRINGS.COURSE_LIST.EMPTY_SUBTITLE}</Text>
-            {onCreateCourse && (
-              <TouchableOpacity
-                testID="empty-create-button"
-                style={styles.emptyCreateButton}
-                onPress={onCreateCourse}
-              >
-                <Text style={styles.emptyCreateButtonText}>{UI_STRINGS.COURSE_LIST.FIRST_CREATE_BUTTON}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : filteredCourses.length === 0 ? (
-          <View style={styles.centerContainer}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>{UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_TITLE}</Text>
-            <Text style={styles.emptySubtitle}>
-              '{searchQuery}'{UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_SUFFIX}
-            </Text>
-          </View>
-        ) : (
-          /* Bento Grid Layout */
-          <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
-            {filteredCourses.map((course) => (
-              <CourseCard
-                key={course.courseId}
-                course={course}
-                viewMode={viewMode}
-                onPress={handleSelectCourse}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyIcon}>🔍</Text>
+        <Text style={styles.emptyTitle}>{UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_TITLE}</Text>
+        <Text style={styles.emptySubtitle}>
+          '{searchQuery}'{UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_SUFFIX}
+        </Text>
+      </View>
+    );
+  }, [isLoading, errorMessage, courses.length, onCreateCourse, searchQuery, refetch]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: CourseSummary }) => (
+      <View style={viewMode === 'grid' ? styles.gridItemWrapper : styles.listItemWrapper}>
+        <CourseCard course={item} viewMode={viewMode} onPress={handleSelectCourse} />
+      </View>
+    ),
+    [handleSelectCourse, viewMode]
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Top Header with Course Search Bar Component */}
+      <View style={styles.header}>
+        <CourseSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+      </View>
+
+      {/* Main Virtualized List */}
+      <FlatList
+        key={viewMode}
+        data={filteredCourses}
+        keyExtractor={(item) => item.courseId}
+        renderItem={renderItem}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        numColumns={viewMode === 'grid' ? 2 : 1}
+        columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
+      />
     </View>
   );
 }
@@ -245,6 +277,18 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flexDirection: 'column',
+    gap: 12,
+  },
+  gridItemWrapper: {
+    flex: 1,
+    marginBottom: 12,
+  },
+  listItemWrapper: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
     gap: 12,
   },
 });

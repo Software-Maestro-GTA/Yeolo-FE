@@ -9,7 +9,7 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCourseListApi, DEFAULT_API_URL, type CourseSummary, ApiError } from '@yeolo/common';
-import { UI_STRINGS } from '../../constants';
+import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const COURSE_LIST_QUERY_KEY = ['courses'];
 
@@ -34,6 +34,7 @@ export function useCourseListQuery({ options }: UseCourseListQueryOptions = {}) 
         throw new Error(errorObj?.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
       }
     },
+    staleTime: APP_CONFIG.QUERY_STALE_TIME,
     ...options,
   });
 }

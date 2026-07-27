@@ -28,7 +28,11 @@ export interface CourseCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-export function CourseCard({ course, onPress, viewMode = 'grid' }: CourseCardProps) {
+export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
+  course,
+  onPress,
+  viewMode = 'grid',
+}) {
   const durationText =
     course.totalDays && course.totalDays > 1
       ? `${course.totalDays - 1}${UI_STRINGS.COMPONENTS.DURATION_NIGHTS_SUFFIX} ${course.totalDays}${UI_STRINGS.COMPONENTS.DURATION_DAYS_SUFFIX}`
@@ -97,7 +101,7 @@ export function CourseCard({ course, onPress, viewMode = 'grid' }: CourseCardPro
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

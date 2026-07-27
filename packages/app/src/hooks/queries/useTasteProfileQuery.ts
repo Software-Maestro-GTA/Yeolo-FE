@@ -9,7 +9,7 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchTasteProfileApi, DEFAULT_API_URL, type TasteProfile, ApiError } from '@yeolo/common';
-import { UI_STRINGS } from '../../constants';
+import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const getTasteProfileQueryKey = (tasteProfileId?: string) => ['tasteProfile', tasteProfileId || 'me'];
 
@@ -39,6 +39,7 @@ export function useTasteProfileQuery({
       }
     },
     retry: false,
+    staleTime: APP_CONFIG.QUERY_STALE_TIME,
     ...options,
   });
 }
