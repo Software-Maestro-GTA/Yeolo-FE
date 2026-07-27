@@ -15,9 +15,6 @@ import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
 interface PhotoAnalysisScreenProps {
-  /**
-   * Callback function triggered when user successfully consents and clicks the action button.
-   */
   onNext: () => void;
 }
 

@@ -14,15 +14,9 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  logoutApi,
-  withdrawApi,
-  DEFAULT_API_URL,
-} from '@yeolo/common';
-import type { User } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { clearLocalSession } from '../services';
+import { useLogoutMutation, useWithdrawMutation } from '../hooks/queries';
 import {
   ProfileHeader,
   TasteAnalysisCard,
@@ -34,22 +28,18 @@ import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
 export interface ProfileScreenProps {
-  user?: Partial<User> | null;
   onNavigateToAnalysis?: () => void;
+  onNavigateToTasteProfile?: () => void;
   onNavigateToLogin?: () => void;
-  logoutFetcher?: typeof logoutApi;
-  withdrawFetcher?: typeof withdrawApi;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
-  user,
   onNavigateToAnalysis,
+  onNavigateToTasteProfile,
   onNavigateToLogin,
-  logoutFetcher = logoutApi,
-  withdrawFetcher = withdrawApi,
 }) => {
   const auth = useContext(AuthContext);
-  const currentUser = user || auth?.user;
+  const currentUser = auth?.user;
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -61,10 +51,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [confirmModalType, setConfirmModalType] = useState<'logout' | 'withdraw' | null>(null);
-  const [isModalActionLoading, setIsModalActionLoading] = useState<boolean>(false);
+
+  const logoutMutation = useLogoutMutation();
+  const withdrawMutation = useWithdrawMutation();
+
+  const isModalActionLoading = logoutMutation.isPending || withdrawMutation.isPending;
 
   const clearSessionAndRedirect = async () => {
-    // Delegate local session clearance to authService
     await clearLocalSession();
     auth?.logout?.();
     if (isMounted.current) {
@@ -73,48 +66,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onNavigateToLogin?.();
   };
 
-  const handleLogout = async () => {
-    setIsModalActionLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      const refreshToken = await AsyncStorage.getItem('refreshToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-
-      await logoutFetcher(apiUrl, token || undefined, {
-        refreshToken: refreshToken || undefined,
-      });
-
-      await clearSessionAndRedirect();
-    } catch (err: unknown) {
-      console.error('Logout failed:', err);
-      await clearSessionAndRedirect();
-    } finally {
-      if (isMounted.current) {
-        setIsModalActionLoading(false);
-      }
-    }
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: async () => {
+        await clearSessionAndRedirect();
+      },
+      onError: async (err) => {
+        console.error('Logout failed:', err);
+        await clearSessionAndRedirect();
+      },
+    });
   };
 
-  const handleWithdraw = async () => {
-    setIsModalActionLoading(true);
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-
-      await withdrawFetcher(apiUrl, token || undefined, {
-        reason: UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
-      });
-
-      await clearSessionAndRedirect();
-    } catch (err: unknown) {
-      const error = err as { message?: string };
-      console.error('Withdraw failed:', err);
-      Alert.alert(UI_STRINGS.PROFILE.WITHDRAW_ERROR_TITLE, error?.message || UI_STRINGS.PROFILE.WITHDRAW_ERROR_DEFAULT);
-    } finally {
-      if (isMounted.current) {
-        setIsModalActionLoading(false);
-      }
-    }
+  const handleWithdraw = () => {
+    withdrawMutation.mutate(undefined, {
+      onSuccess: async () => {
+        await clearSessionAndRedirect();
+      },
+      onError: (err) => {
+        console.error('Withdraw failed:', err);
+        Alert.alert(
+          UI_STRINGS.PROFILE.WITHDRAW_ERROR_TITLE,
+          err.message || UI_STRINGS.PROFILE.WITHDRAW_ERROR_DEFAULT
+        );
+      },
+    });
   };
 
   return (
@@ -124,7 +100,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <ProfileHeader user={currentUser} />
 
         {/* AI Taste Analysis Card */}
-        <TasteAnalysisCard onNavigateToAnalysis={onNavigateToAnalysis} />
+        <TasteAnalysisCard
+          onNavigateToAnalysis={onNavigateToAnalysis}
+          onNavigateToTasteProfile={onNavigateToTasteProfile}
+        />
 
         {/* Settings List Section */}
         <SettingsSection

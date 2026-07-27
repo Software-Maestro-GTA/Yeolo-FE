@@ -15,9 +15,6 @@ import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
 interface IntroScreenProps {
-  /**
-   * Callback invoked when user taps the "Next" button on the onboarding intro
-   */
   onNext: () => void;
 }
 
