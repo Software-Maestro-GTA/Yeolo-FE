@@ -6,7 +6,8 @@
  * @author Antigravity Agent
  */
 import React, { useContext, useEffect, useState } from 'react';
-import type { CourseCreateRequest } from '@yeolo/common';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout } from '../layouts';
@@ -17,6 +18,7 @@ import {
   IntroScreen,
   PhotoAnalysisScreen,
   TasteAnalysisScreen,
+  TasteProfileScreen,
   ProfileScreen,
   CourseCreateScreen,
   CourseGeneratingScreen,
@@ -25,12 +27,11 @@ import {
 
 export function NavigationRoot() {
   const auth = useContext(AuthContext);
-  const [pendingCourseRequest, setPendingCourseRequest] = useState<CourseCreateRequest | null>(null);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
   const [step, setStep] = useState<
-    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL' | null
+    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'TASTE_PROFILE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL' | null
   >(null);
 
   useEffect(() => {
@@ -56,7 +57,17 @@ export function NavigationRoot() {
 
   switch (step) {
     case 'LOGIN':
-      return <LoginScreen />;
+      return (
+        <LoginScreen
+          onLoginSuccess={(isNewUser) => {
+            if (isNewUser) {
+              setStep('INTRO');
+            } else {
+              setStep('HOME');
+            }
+          }}
+        />
+      );
     case 'INTRO':
       return <IntroScreen onNext={() => setStep('PHOTO')} />;
     case 'PHOTO':
@@ -66,16 +77,26 @@ export function NavigationRoot() {
         <TasteAnalysisScreen
           onFinish={(tasteProfileId) => {
             setActiveTasteProfileId(tasteProfileId);
-            setStep('PROFILE');
+            setStep('TASTE_PROFILE');
           }}
           onFail={() => setStep('LOGIN')}
         />
+      );
+    case 'TASTE_PROFILE':
+      return (
+        <MainLayout currentTab="profile" onTabPress={handleTabPress}>
+          <TasteProfileScreen
+            tasteProfileId={activeTasteProfileId}
+            onGenerateCourse={() => setStep('CREATE_COURSE')}
+          />
+        </MainLayout>
       );
     case 'PROFILE':
       return (
         <MainLayout currentTab="profile" onTabPress={handleTabPress}>
           <ProfileScreen
             onNavigateToAnalysis={() => setStep('TASTE')}
+            onNavigateToTasteProfile={() => setStep('TASTE_PROFILE')}
             onNavigateToLogin={() => setStep('LOGIN')}
           />
         </MainLayout>
@@ -96,9 +117,11 @@ export function NavigationRoot() {
       return (
         <MainLayout currentTab="create" onTabPress={handleTabPress}>
           <CourseCreateScreen
-            onSubmit={(formData) => {
-              setPendingCourseRequest(formData);
+            onSubmit={async (formData) => {
               setStep('GENERATING_COURSE');
+              const token = (await AsyncStorage.getItem('accessToken')) || '';
+              const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+              useCourseStore.getState().createCourse(apiUrl, formData, token);
             }}
           />
         </MainLayout>
@@ -106,9 +129,7 @@ export function NavigationRoot() {
     case 'GENERATING_COURSE':
       return (
         <CourseGeneratingScreen
-          requestData={pendingCourseRequest}
           onComplete={(courseId) => {
-            setPendingCourseRequest(null);
             if (courseId) {
               setSelectedCourseId(courseId);
             }
@@ -123,8 +144,6 @@ export function NavigationRoot() {
       return (
         <CourseDetailScreen
           courseId={selectedCourseId}
-          onBack={() => setStep('COURSE_LIST')}
-          onTabPress={handleTabPress}
         />
       );
     case 'HOME':

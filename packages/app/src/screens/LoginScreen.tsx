@@ -16,7 +16,11 @@ import { theme } from '../theme';
 import { AuthContext } from '../context';
 import { signInWithGoogle } from '../services';
 
-export const LoginScreen: React.FC = () => {
+export interface LoginScreenProps {
+  onLoginSuccess?: (isNewUser: boolean) => void;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
   const isLoggingIn = authContext?.isLoading || false;
@@ -28,7 +32,8 @@ export const LoginScreen: React.FC = () => {
       const code = await signInWithGoogle();
       // 2. Submit authorization code to the backend via AuthContext
       if (loginWithGoogle) {
-        await loginWithGoogle(code);
+        const result = await loginWithGoogle(code);
+        onLoginSuccess?.(result?.isNewUser ?? false);
       }
     } catch (err: unknown) {
       const error = err as { message?: string };

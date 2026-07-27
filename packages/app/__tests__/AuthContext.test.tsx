@@ -68,30 +68,33 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from './test-utils';
+
 afterAll(() => {
   globalThis.fetch = originalFetch;
 });
 
 describe('AuthContext', () => {
-
+  const createWrapper = () => {
+    const queryClient = createTestQueryClient();
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    );
+  };
 
   it('기본 상태는 비인증 상태(isAuthenticated: false)여야 한다', async () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <AuthProvider>{children}</AuthProvider>
-    );
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
     expect(result.current.isLoading).toBe(false);
   });
 
-
   it('loginWithGoogle 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <AuthProvider>{children}</AuthProvider>
-    );
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -103,17 +106,12 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('최고민수');
-
-
   });
 
   it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
     shouldFail = true;
 
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <AuthProvider>{children}</AuthProvider>
-    );
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
