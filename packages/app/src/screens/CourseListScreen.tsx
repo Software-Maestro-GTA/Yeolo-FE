@@ -6,7 +6,7 @@
  * @api API-FB-10
  * @author Antigravity Agent
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,13 +16,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCourseListApi, ApiError, DEFAULT_API_URL, type CourseSummary } from '@yeolo/common';
 import {
   CourseCard,
   CreateCourseCtaCard,
   CourseSearchBar,
 } from '../components/course';
+import { useCourseListQuery } from '../hooks/queries';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
@@ -32,37 +31,12 @@ export interface CourseListScreenProps {
 }
 
 export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListScreenProps) {
-  const [courses, setCourses] = useState<CourseSummary[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const API_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const { data: courses = [], isLoading, error, refetch } = useCourseListQuery();
+  const errorMessage = error?.message || null;
 
-  const fetchCourseList = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const data = await getCourseListApi(API_URL, token);
-      setCourses(data);
-    } catch (err: unknown) {
-      const errorObj = err as { message?: string };
-      if (err instanceof ApiError) {
-        setError(err.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
-      } else {
-        setError(errorObj?.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [API_URL]);
-
-  useEffect(() => {
-    fetchCourseList();
-  }, [fetchCourseList]);
 
   const handleSelectCourse = (courseId: string) => {
     const targetCourse = courses.find((c) => c.courseId === courseId);
@@ -118,10 +92,10 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>{UI_STRINGS.COURSE_LIST.LOADING}</Text>
           </View>
-        ) : error ? (
+        ) : errorMessage ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity testID="retry-button" style={styles.retryButton} onPress={fetchCourseList}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <TouchableOpacity testID="retry-button" style={styles.retryButton} onPress={() => refetch()}>
               <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
             </TouchableOpacity>
           </View>

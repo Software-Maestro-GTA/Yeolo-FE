@@ -6,80 +6,40 @@
  * @api API-FB-8
  * @author Antigravity Agent
  */
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchTasteProfileApi, ApiError, DEFAULT_API_URL } from '@yeolo/common';
-import type { TasteProfile } from '@yeolo/common';
 import { TasteProfileView } from '../components/taste';
 import { GenerateCourseButton } from '../components/common';
+import { useTasteProfileQuery } from '../hooks/queries';
 import type { NavTab } from '../components/navigation';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 
 export interface TasteProfileScreenProps {
   tasteProfileId?: string;
-  onNavigateToAnalysis?: () => void;
-  onNavigateToLogin?: () => void;
   onGenerateCourse?: () => void;
   onTabPress?: (tab: NavTab) => void;
-  fetcher?: typeof fetchTasteProfileApi;
 }
 
 export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   tasteProfileId,
-  onNavigateToAnalysis,
-  onNavigateToLogin,
   onGenerateCourse,
-  fetcher = fetchTasteProfileApi,
 }) => {
-  const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<number | null>(null);
+  const { data: tasteProfile, isLoading, error, refetch } = useTasteProfileQuery({
+    tasteProfileId,
+  });
 
-  const loadProfile = async () => {
-    setIsLoading(true);
-    setError(null);
-    setErrorCode(null);
-
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-      const profile = await fetcher(apiUrl, token || undefined, tasteProfileId);
-      setTasteProfile(profile);
-      setIsLoading(false);
-      setErrorCode(200);
-    } catch (err: unknown) {
-      const errorObj = err as { message?: string };
-      const status = err instanceof ApiError ? err.status : 500;
-      const message =
-        status === 404
-          ? UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND
-          : errorObj?.message || UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED;
-      setTasteProfile(null);
-      setIsLoading(false);
-      setError(message);
-      setErrorCode(status);
-    }
-  };
-
-  useEffect(() => {
-    loadProfile();
-  }, [tasteProfileId]);
-
-  useEffect(() => {
-    if (errorCode === 401) {
-      onNavigateToLogin?.();
-    }
-  }, [errorCode]);
+  const errorCode = error?.status ?? null;
+  const errorMessage =
+    errorCode === 404
+      ? UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND
+      : error?.message || UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED;
 
   if (isLoading) {
     return (
@@ -95,19 +55,11 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorTitle}>{UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED}</Text>
         <Text style={styles.errorSubtitle}>
-          {error || UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND}
+          {errorMessage}
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
-        {onNavigateToAnalysis && (
-          <TouchableOpacity
-            style={styles.analysisButton}
-            onPress={onNavigateToAnalysis}
-          >
-            <Text style={styles.analysisButtonText}>{UI_STRINGS.TASTE_PROFILE.START_ANALYSIS}</Text>
-          </TouchableOpacity>
-        )}
       </SafeAreaView>
     );
   }

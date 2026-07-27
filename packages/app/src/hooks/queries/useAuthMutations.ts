@@ -1,0 +1,81 @@
+/**
+ * @file useAuthMutations.ts
+ * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-FB-12).
+ * @requirements REQ-11, REQ-12
+ * @functional FUN-4
+ * @api API-FB-11, API-FB-12
+ * @author Antigravity Agent
+ */
+import { useMutation, UseMutationOptions } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  loginWithGoogleApi,
+  logoutApi,
+  withdrawApi,
+  DEFAULT_API_URL,
+  type User,
+  type LogoutResponse,
+  type WithdrawResponse,
+} from '@yeolo/common';
+import { UI_STRINGS, APP_CONFIG } from '../../constants';
+
+export interface UseGoogleLoginMutationOptions {
+  options?: UseMutationOptions<{ user: User; isNewUser: boolean }, Error, string>;
+}
+
+export function useGoogleLoginMutation({ options }: UseGoogleLoginMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+
+  return useMutation<{ user: User; isNewUser: boolean }, Error, string>({
+    mutationFn: async (code: string) => {
+      const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
+      const fetchedUser = response.data.user;
+      const isNewUser = !fetchedUser.lastLoginAt;
+
+      await AsyncStorage.setItem('accessToken', response.data.accessToken);
+      await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
+      await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+
+      return { user: fetchedUser, isNewUser };
+    },
+    ...options,
+  });
+}
+
+export interface UseLogoutMutationOptions {
+  options?: UseMutationOptions<LogoutResponse, Error, void>;
+}
+
+export function useLogoutMutation({ options }: UseLogoutMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+
+  return useMutation<LogoutResponse, Error, void>({
+    mutationFn: async () => {
+      const token = await AsyncStorage.getItem('accessToken');
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      return await logoutApi(apiUrl, token || undefined, {
+        refreshToken: refreshToken || undefined,
+      });
+    },
+    ...options,
+  });
+}
+
+export interface UseWithdrawMutationOptions {
+  options?: UseMutationOptions<WithdrawResponse, Error, string | void>;
+}
+
+export function useWithdrawMutation({ options }: UseWithdrawMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+
+  return useMutation<WithdrawResponse, Error, string | void>({
+    mutationFn: async (reason) => {
+      const token = await AsyncStorage.getItem('accessToken');
+      return await withdrawApi(apiUrl, token || undefined, {
+        reason: (typeof reason === 'string' && reason) || UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
+      });
+    },
+    ...options,
+  });
+}

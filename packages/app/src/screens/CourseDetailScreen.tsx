@@ -6,7 +6,7 @@
  * @api API-FB-7
  * @author Antigravity Agent
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,74 +16,43 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getCourseDetailApi,
-  CourseDetail,
   ItineraryStop,
-  DEFAULT_API_URL,
 } from '@yeolo/common';
-import { NavTab } from '../components/navigation';
 import {
   CourseDetailHeader,
   CourseMiniMapView,
   CourseDayTabs,
   ItineraryTimelineItem,
 } from '../components/course';
+import { useCourseDetailQuery } from '../hooks/queries';
 import { processCourseStopsMapData, ProcessedCourseMapData } from '../services';
 import { theme } from '../theme';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
 
-interface CourseDetailScreenProps {
+export interface CourseDetailScreenProps {
   courseId: string;
-  initialCourse?: CourseDetail;
-  onBack?: () => void;
-  onTabPress?: (tab: NavTab) => void;
 }
 
-export function CourseDetailScreen({ courseId, initialCourse, onBack, onTabPress }: CourseDetailScreenProps) {
-  const [course, setCourse] = useState<CourseDetail | null>(initialCourse || null);
+export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
+  const { data: course, isLoading, error, refetch } = useCourseDetailQuery({
+    courseId,
+  });
+
   const [selectedDay, setSelectedDay] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState<boolean>(!initialCourse);
-  const [error, setError] = useState<string | null>(null);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
   const [mapData, setMapData] = useState<ProcessedCourseMapData>({
     coordinates: [],
-    region: { latitude: 37.5665, longitude: 126.978, latitudeDelta: 0.0922, longitudeDelta: 0.0421 },
+    region: APP_CONFIG.DEFAULT_MAP_REGION,
     leafletHtml: '',
   });
 
-  const fetchCourseDetail = useCallback(async () => {
-    if (initialCourse) {
-      setCourse(initialCourse);
-      if (initialCourse.itinerary?.days?.length > 0) {
-        setSelectedDay(initialCourse.itinerary.days[0].day);
-      }
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-      const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const data = await getCourseDetailApi(apiUrl, token, courseId);
-      setCourse(data);
-      if (data.itinerary?.days?.length > 0) {
-        setSelectedDay(data.itinerary.days[0].day);
-      }
-    } catch (err: unknown) {
-      const errorObj = err as { message?: string };
-      setError(errorObj?.message || UI_STRINGS.COURSE_DETAIL.ERROR_TITLE);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [courseId, initialCourse]);
-
   useEffect(() => {
-    fetchCourseDetail();
-  }, [fetchCourseDetail]);
+    if (course?.itinerary?.days?.length) {
+      setSelectedDay(course.itinerary.days[0].day);
+    }
+  }, [course]);
+
 
   const currentDayData = course?.itinerary?.days?.find((d) => d.day === selectedDay);
 
@@ -94,7 +63,7 @@ export function CourseDetailScreen({ courseId, initialCourse, onBack, onTabPress
         if (isMounted) {
           setMapData({
             coordinates: [],
-            region: { latitude: 37.5665, longitude: 126.978, latitudeDelta: 0.0922, longitudeDelta: 0.0421 },
+            region: APP_CONFIG.DEFAULT_MAP_REGION,
             leafletHtml: '',
           });
         }
@@ -127,11 +96,11 @@ export function CourseDetailScreen({ courseId, initialCourse, onBack, onTabPress
     return (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={styles.errorText}>{UI_STRINGS.COURSE_DETAIL.ERROR_TITLE}</Text>
-        {error && <Text style={styles.errorSubText}>{error}</Text>}
+        {error && <Text style={styles.errorSubText}>{error.message}</Text>}
         <TouchableOpacity
           testID="retry-button"
           style={styles.retryButton}
-          onPress={fetchCourseDetail}
+          onPress={() => refetch()}
         >
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>

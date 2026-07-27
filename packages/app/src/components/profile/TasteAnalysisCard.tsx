@@ -15,16 +15,23 @@ import { UI_STRINGS } from '../../constants';
 export interface TasteAnalysisCardProps {
   onStartAnalysis?: () => void;
   onNavigateToAnalysis?: () => void;
+  onNavigateToTasteProfile?: () => void;
 }
 
 export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
   onStartAnalysis,
   onNavigateToAnalysis,
+  onNavigateToTasteProfile,
 }) => {
-  const handlePress = onStartAnalysis || onNavigateToAnalysis;
+  const handleReAnalysisPress = onStartAnalysis || onNavigateToAnalysis;
+  const handleCardPress = onNavigateToTasteProfile || handleReAnalysisPress;
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={handleCardPress}
+      activeOpacity={0.9}
+    >
       <View style={styles.titleWithIcon}>
         <Ionicons name="sparkles" size={22} color={theme.colors.primary} />
         <Text style={styles.cardTitle}>{UI_STRINGS.COMPONENTS.TASTE_CARD_TITLE}</Text>
@@ -32,13 +39,13 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
 
       <TouchableOpacity
         style={styles.largeButton}
-        onPress={handlePress}
+        onPress={handleReAnalysisPress}
         activeOpacity={0.8}
       >
         <Ionicons name="refresh-outline" size={18} color={theme.colors.text.inverse} style={styles.buttonIcon} />
         <Text style={styles.largeButtonText}>{UI_STRINGS.COMPONENTS.TASTE_CARD_BUTTON}</Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 };
 
