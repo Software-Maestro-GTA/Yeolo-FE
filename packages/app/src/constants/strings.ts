@@ -87,6 +87,8 @@ export const UI_STRINGS = {
     SUBTITLE: '당신의 취향과 이동 동선을 기반으로\n최적의 여행 경로를 짜고 있습니다.',
     BADGE_TEXT: '여로 AI 스마트 알고리즘',
     ERROR_TITLE: '코스 생성 중 오류가 발생했습니다.',
+    DEFAULT_PROGRESS: '사용자 성향 프로필을 분석하고 최적의 경로를 생성 중입니다.',
+    TIP_TEXT: '여로 AI가 성향 데이터, 장소 간 이동 동선, 예산 분포를 종합 분석하고 있습니다.',
   },
   COURSE_LIST: {
     TITLE: '당신의 여로',
