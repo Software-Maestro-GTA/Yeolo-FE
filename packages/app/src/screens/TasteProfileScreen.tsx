@@ -1,8 +1,8 @@
 /**
  * @file TasteProfileScreen.tsx
  * @description Screen component for displaying taste profile analysis results using component-local useState and tasteProfileId request parameter.
- * @requirements REQ-11
- * @functional FUN-4
+ * @requirements REQ-11, REQ-22
+ * @functional FUN-4, FUN-GA4
  * @api API-FB-8
  * @author Antigravity Agent
  */
@@ -20,6 +20,7 @@ import { useTasteProfileQuery } from '../hooks/queries';
 import type { NavTab } from '../components/navigation';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface TasteProfileScreenProps {
   tasteProfileId?: string;
@@ -31,6 +32,9 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   tasteProfileId,
   onGenerateCourse,
 }) => {
+  useGA4ScreenTracking('TasteProfileScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const { data: tasteProfile, isLoading, error, refetch } = useTasteProfileQuery({
     tasteProfileId,
   });
@@ -57,7 +61,13 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         <Text style={styles.errorSubtitle}>
           {errorMessage}
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            trackButtonClick('btn_taste_profile_retry', 'Retry Fetch Taste Profile');
+            refetch();
+          }}
+        >
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -71,7 +81,10 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
 
       {/* Floating AI Course Generation Button */}
       <GenerateCourseButton
-        onPress={onGenerateCourse}
+        onPress={() => {
+          trackButtonClick('btn_taste_profile_generate_course', 'Generate Course from Taste Profile');
+          onGenerateCourse?.();
+        }}
         label={UI_STRINGS.COMPONENTS.GENERATE_BUTTON_DEFAULT}
         isFloating={true}
       />

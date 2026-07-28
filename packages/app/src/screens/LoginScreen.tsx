@@ -1,8 +1,8 @@
 /**
  * @file LoginScreen.tsx
  * @description Google login UI screen matching Figma design context and Google OAuth flow.
- * @requirements REQ-11
- * @functional FUN-1
+ * @requirements REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api API-FB-1
  * @author Antigravity Agent
  */
@@ -15,17 +15,22 @@ import { UI_STRINGS } from '../constants';
 import { theme } from '../theme';
 import { AuthContext } from '../context';
 import { signInWithGoogle } from '../services';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface LoginScreenProps {
   onLoginSuccess?: (isNewUser: boolean) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+  useGA4ScreenTracking('LoginScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
   const isLoggingIn = authContext?.isLoading || false;
 
   const handleGoogleLogin = async () => {
+    trackButtonClick('btn_google_login', 'Google OAuth Login Button');
     if (isLoggingIn) return;
     try {
       // 1. Retrieve the authorization code via Google SDK

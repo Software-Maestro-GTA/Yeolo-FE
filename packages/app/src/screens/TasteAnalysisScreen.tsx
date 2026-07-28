@@ -1,8 +1,8 @@
 /**
  * @file TasteAnalysisScreen.tsx
  * @description Taste analysis progress loading screen integrated with photo service, SSE stream, and stepper component.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
+ * @requirements REQ-8, REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api API-FB-2
  * @author Antigravity Agent
  */
@@ -16,6 +16,7 @@ import { AnalysisProgressStepper } from '../components/taste';
 import { fetchPhotosWithExifData } from '../services';
 import { theme } from '../theme';
 import { APP_CONFIG, ANALYSIS_PHOTO_LIMIT, UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking } from '../hooks';
 
 export interface TasteAnalysisScreenProps {
   onFinish: (tasteProfileId?: string) => void;
@@ -28,6 +29,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   onFail,
   fetcher,
 }) => {
+  useGA4ScreenTracking('TasteAnalysisScreen');
   const [stepIndex, setStepIndex] = useState(0); // 0: Idle, 1: Loading Assets, 2: SSE Request, 3: Completed
   const pulseAnim = useRef(new Animated.Value(1)).current;
 

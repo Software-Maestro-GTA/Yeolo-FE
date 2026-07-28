@@ -1,8 +1,8 @@
 /**
  * @file IntroScreen.tsx
  * @description Application introduction screen matching Figma design specifications.
- * @requirements REQ-11
- * @functional FUN-1
+ * @requirements REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api N/A
  * @author Antigravity Agent
  */
@@ -13,12 +13,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 interface IntroScreenProps {
   onNext: () => void;
 }
 
 export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
+  useGA4ScreenTracking('IntroScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   return (
     <LinearGradient
       colors={theme.colors.gradient.background}
@@ -43,7 +47,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
-              onPress={onNext}
+              onPress={() => {
+                trackButtonClick('btn_intro_next', 'Intro Start Button');
+                onNext();
+              }}
               testID="next-button"
             >
               <Text style={styles.buttonText}>{UI_STRINGS.INTRO.NEXT_BUTTON}</Text>

@@ -1,8 +1,8 @@
 /**
  * @file PhotoAnalysisScreen.tsx
  * @description Photo analysis consent screen matching Figma design specifications.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
+ * @requirements REQ-8, REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api N/A
  * @author Antigravity Agent
  */
@@ -13,22 +13,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 interface PhotoAnalysisScreenProps {
   onNext: () => void;
 }
 
 export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext }) => {
-  const [isAgreed, setIsAgreed] = useState(false);
+  useGA4ScreenTracking('PhotoAnalysisScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
 
   const [isConsented, setIsConsented] = useState(false);
 
   const handleConsentToggle = () => {
-    setIsConsented(!isConsented);
+    const nextConsented = !isConsented;
+    trackButtonClick('btn_photo_consent_toggle', 'Toggle Photo Consent', { consented: nextConsented });
+    setIsConsented(nextConsented);
   };
 
   const handleAnalyzeClick = () => {
     if (isConsented) {
+      trackButtonClick('btn_photo_analysis_start', 'Start Photo Analysis');
       onNext();
     }
   };

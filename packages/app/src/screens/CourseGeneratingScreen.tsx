@@ -1,8 +1,8 @@
 /**
  * @file CourseGeneratingScreen.tsx
  * @description Screen displaying SSE streaming loading state and real-time progress feedback following Yeolo UI v1.
- * @requirements REQ-7
- * @functional FUN-6
+ * @requirements REQ-7, REQ-22
+ * @functional FUN-6, FUN-GA4
  * @api API-FB-4
  * @author Antigravity Agent
  */
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCourseStore } from '@yeolo/common';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
@@ -29,6 +30,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onComplete,
   onRetry,
 }) => {
+  useGA4ScreenTracking('CourseGeneratingScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
 
   useEffect(() => {
@@ -38,6 +42,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   }, [createdCourseId, onComplete]);
 
   const handleRetry = () => {
+    trackButtonClick('btn_course_generating_retry', 'Retry Course Generation');
     resetCourseState();
     onRetry?.();
   };

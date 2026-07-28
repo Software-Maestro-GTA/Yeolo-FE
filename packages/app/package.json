@@ -50,7 +50,7 @@
     "ios:build": "expo run:ios --configuration Release",
     "web": "expo start --web",
     "lint": "tsc --noEmit",
-    "test": "jest --watchAll=false"
+    "test": "jest --watchAll=false --forceExit"
   },
   "private": true
 }

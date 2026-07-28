@@ -1,8 +1,8 @@
 /**
  * @file CourseDetailScreen.tsx
  * @description Screen component for rendering recommended travel course details integrated with courseService and subcomponents (FUN-3, REQ-9).
- * @requirements REQ-9
- * @functional FUN-3
+ * @requirements REQ-9, REQ-22
+ * @functional FUN-3, FUN-GA4
  * @api API-FB-7
  * @author Antigravity Agent
  */
@@ -29,12 +29,16 @@ import { useCourseDetailQuery } from '../hooks/queries';
 import { processCourseStopsMapData, ProcessedCourseMapData } from '../services';
 import { theme } from '../theme';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface CourseDetailScreenProps {
   courseId: string;
 }
 
 export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
+  useGA4ScreenTracking('CourseDetailScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const { data: course, isLoading, error, refetch } = useCourseDetailQuery({
     courseId,
   });
@@ -52,7 +56,6 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
       setSelectedDay(course.itinerary.days[0].day);
     }
   }, [course]);
-
 
   const currentDayData = course?.itinerary?.days?.find((d) => d.day === selectedDay);
 
@@ -100,7 +103,10 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
         <TouchableOpacity
           testID="retry-button"
           style={styles.retryButton}
-          onPress={() => refetch()}
+          onPress={() => {
+            trackButtonClick('btn_course_detail_retry', 'Retry Fetch Course Detail');
+            refetch();
+          }}
         >
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
@@ -137,7 +143,10 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
         <CourseDayTabs
           days={course.itinerary?.days}
           selectedDay={selectedDay}
-          onSelectDay={setSelectedDay}
+          onSelectDay={(day) => {
+            trackButtonClick('btn_course_detail_day_tab', `Select Day ${day}`, { day });
+            setSelectedDay(day);
+          }}
         />
 
         {/* Timeline Itinerary Items Stream */}

@@ -1,8 +1,8 @@
 /**
  * @file CourseListScreen.tsx
  * @description Screen component for viewing previously generated courses with Bento Grid, search bar component, and AI generation CTA.
- * @requirements REQ-9, REQ-11
- * @functional FUN-7
+ * @requirements REQ-9, REQ-11, REQ-22
+ * @functional FUN-7, FUN-GA4
  * @api API-FB-10
  * @author Antigravity Agent
  */
@@ -25,6 +25,7 @@ import { useCourseListQuery } from '../hooks/queries';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
 import type { CourseSummary } from '@yeolo/common';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface CourseListScreenProps {
   onSelectCourse?: (courseId: string) => void;
@@ -32,6 +33,9 @@ export interface CourseListScreenProps {
 }
 
 export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListScreenProps) {
+  useGA4ScreenTracking('CourseListScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -40,6 +44,7 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
 
   const handleSelectCourse = useCallback(
     (courseId: string) => {
+      trackButtonClick('btn_select_course', 'Select Course Card', { course_id: courseId });
       const targetCourse = courses.find((c) => c.courseId === courseId);
       if (!targetCourse) {
         Alert.alert(UI_STRINGS.COMMON.NOTICE, UI_STRINGS.COURSE_LIST.UNAUTHORIZED_OR_DELETED);
@@ -49,7 +54,7 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         onSelectCourse(courseId);
       }
     },
-    [courses, onSelectCourse]
+    [courses, onSelectCourse, trackButtonClick]
   );
 
   const filteredCourses = useMemo(() => {
@@ -72,7 +77,11 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
             <TouchableOpacity
               testID="view-toggle-button"
               style={styles.viewToggleButton}
-              onPress={() => setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'))}
+              onPress={() => {
+                const nextMode = viewMode === 'grid' ? 'list' : 'grid';
+                trackButtonClick('btn_course_view_toggle', `Toggle View Mode to ${nextMode}`);
+                setViewMode(nextMode);
+              }}
             >
               <Text style={styles.viewToggleText}>
                 {viewMode === 'grid' ? UI_STRINGS.COURSE_LIST.VIEW_LIST : UI_STRINGS.COURSE_LIST.VIEW_GRID}
@@ -82,10 +91,17 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         </View>
 
         {/* AI Course Generation CTA Card */}
-        {onCreateCourse && <CreateCourseCtaCard onPress={onCreateCourse} />}
+        {onCreateCourse && (
+          <CreateCourseCtaCard
+            onPress={() => {
+              trackButtonClick('btn_course_list_create_cta', 'Create Course List CTA');
+              onCreateCourse();
+            }}
+          />
+        )}
       </View>
     ),
-    [onCreateCourse, viewMode]
+    [onCreateCourse, viewMode, trackButtonClick]
   );
 
   const renderEmpty = useCallback(() => {
@@ -102,7 +118,14 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
       return (
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>{errorMessage}</Text>
-          <TouchableOpacity testID="retry-button" style={styles.retryButton} onPress={() => refetch()}>
+          <TouchableOpacity
+            testID="retry-button"
+            style={styles.retryButton}
+            onPress={() => {
+              trackButtonClick('btn_course_list_retry', 'Retry Fetch Course List');
+              refetch();
+            }}
+          >
             <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
           </TouchableOpacity>
         </View>
@@ -119,7 +142,10 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
             <TouchableOpacity
               testID="empty-create-button"
               style={styles.emptyCreateButton}
-              onPress={onCreateCourse}
+              onPress={() => {
+                trackButtonClick('btn_course_list_empty_create', 'First Create Course Button');
+                onCreateCourse();
+              }}
             >
               <Text style={styles.emptyCreateButtonText}>{UI_STRINGS.COURSE_LIST.FIRST_CREATE_BUTTON}</Text>
             </TouchableOpacity>
@@ -137,7 +163,7 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         </Text>
       </View>
     );
-  }, [isLoading, errorMessage, courses.length, onCreateCourse, searchQuery, refetch]);
+  }, [isLoading, errorMessage, courses.length, onCreateCourse, searchQuery, refetch, trackButtonClick]);
 
   const renderItem = useCallback(
     ({ item }: { item: CourseSummary }) => (
@@ -267,7 +293,7 @@ const styles = StyleSheet.create({
   },
   emptyCreateButtonText: {
     color: theme.colors.text.inverse,
-    fontWeight: '700',
+    fontWeight: 700,
     fontSize: 14,
   },
   gridContainer: {

@@ -1,8 +1,8 @@
 /**
  * @file CourseCreateScreen.tsx
  * @description Screen for entering travel conditions with custom useCourseCreateForm hook and modularized subcomponents.
- * @requirements REQ-7
- * @functional FUN-6
+ * @requirements REQ-7, REQ-22
+ * @functional FUN-6, FUN-GA4
  * @api API-FB-4
  * @author Antigravity Agent
  */
@@ -25,7 +25,7 @@ import {
   CourseCreateHeader,
   BudgetTypeSelector,
 } from '../components/course';
-import { useCourseCreateForm } from '../hooks';
+import { useCourseCreateForm, useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import type { NavTab } from '../components/navigation';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
@@ -38,6 +38,9 @@ export interface CourseCreateScreenProps {
 export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
   onSubmit,
 }) => {
+  useGA4ScreenTracking('CourseCreateScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const {
     destinationCountry,
     setDestinationCountry,
@@ -62,7 +65,14 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     isEndDateValid,
     isFormValid,
     handleSubmit,
-  } = useCourseCreateForm(onSubmit);
+  } = useCourseCreateForm((data) => {
+    trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
+      country: data.destinationCountry,
+      city: data.destinationCity,
+      budgetType: data.budgetType,
+    });
+    onSubmit?.(data);
+  });
 
   return (
     <View style={styles.screenContainer}>
@@ -200,7 +210,10 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
           {/* Budget Type Selector Component */}
           <BudgetTypeSelector
             selectedType={budgetType}
-            onSelect={setBudgetType}
+            onSelect={(type) => {
+              trackButtonClick('btn_select_budget_type', `Select Budget ${type}`, { budgetType: type });
+              setBudgetType(type);
+            }}
           />
         </View>
 

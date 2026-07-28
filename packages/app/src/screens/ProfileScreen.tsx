@@ -1,8 +1,8 @@
 /**
  * @file ProfileScreen.tsx
  * @description Screen component for displaying user profile header, AI taste analysis card, settings, terms, logout API-FB-11, and account withdrawal API-FB-12.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
+ * @requirements REQ-11, REQ-12, REQ-22
+ * @functional FUN-4, FUN-GA4
  * @api API-FB-11, API-FB-12
  * @domain DOM-3
  * @author Antigravity Agent
@@ -26,6 +26,7 @@ import {
 } from '../components/profile';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface ProfileScreenProps {
   onNavigateToAnalysis?: () => void;
@@ -38,6 +39,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onNavigateToTasteProfile,
   onNavigateToLogin,
 }) => {
+  useGA4ScreenTracking('ProfileScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const auth = useContext(AuthContext);
   const currentUser = auth?.user;
   const isMounted = useRef(true);
@@ -67,6 +71,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleLogout = () => {
+    trackButtonClick('btn_profile_logout_confirm', 'Logout Confirm');
     logoutMutation.mutate(undefined, {
       onSuccess: async () => {
         await clearSessionAndRedirect();
@@ -79,6 +84,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleWithdraw = () => {
+    trackButtonClick('btn_profile_withdraw_confirm', 'Withdraw Confirm');
     withdrawMutation.mutate(undefined, {
       onSuccess: async () => {
         await clearSessionAndRedirect();
@@ -101,15 +107,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {/* AI Taste Analysis Card */}
         <TasteAnalysisCard
-          onNavigateToAnalysis={onNavigateToAnalysis}
-          onNavigateToTasteProfile={onNavigateToTasteProfile}
+          onNavigateToAnalysis={() => {
+            trackButtonClick('btn_profile_taste_analysis', 'Go to Taste Analysis');
+            onNavigateToAnalysis?.();
+          }}
+          onNavigateToTasteProfile={() => {
+            trackButtonClick('btn_profile_taste_view', 'View Taste Profile');
+            onNavigateToTasteProfile?.();
+          }}
         />
 
         {/* Settings List Section */}
         <SettingsSection
-          onPressTerms={() => setShowTermsModal(true)}
-          onPressLogout={() => setConfirmModalType('logout')}
-          onPressWithdraw={() => setConfirmModalType('withdraw')}
+          onPressTerms={() => {
+            trackButtonClick('btn_profile_terms', 'Open Terms');
+            setShowTermsModal(true);
+          }}
+          onPressLogout={() => {
+            trackButtonClick('btn_profile_logout', 'Open Logout Dialog');
+            setConfirmModalType('logout');
+          }}
+          onPressWithdraw={() => {
+            trackButtonClick('btn_profile_withdraw', 'Open Withdraw Dialog');
+            setConfirmModalType('withdraw');
+          }}
         />
       </ScrollView>
 

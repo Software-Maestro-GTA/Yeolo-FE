@@ -53,3 +53,35 @@ jest.mock('expo-media-library', () => ({
   AssetField: {},
   Query: {},
 }));
+
+const mockAnalyticsLogEvent = jest.fn();
+const mockAnalyticsLogScreenView = jest.fn();
+const mockAnalyticsSetUserId = jest.fn();
+const mockAnalyticsSetUserProperty = jest.fn();
+const mockAnalyticsSetUserProperties = jest.fn();
+const mockGetAnalytics = jest.fn(() => ({}));
+
+jest.mock('@react-native-firebase/analytics', () => {
+  const defaultExport = () => ({
+    logEvent: mockAnalyticsLogEvent,
+    logScreenView: mockAnalyticsLogScreenView,
+    setUserId: mockAnalyticsSetUserId,
+    setUserProperty: mockAnalyticsSetUserProperty,
+    setUserProperties: mockAnalyticsSetUserProperties,
+  });
+  defaultExport.getAnalytics = mockGetAnalytics;
+  defaultExport.logEvent = mockAnalyticsLogEvent;
+  defaultExport.setUserId = mockAnalyticsSetUserId;
+  defaultExport.setUserProperties = mockAnalyticsSetUserProperties;
+  defaultExport.setUserProperty = mockAnalyticsSetUserProperty;
+
+  return {
+    __esModule: true,
+    default: defaultExport,
+    getAnalytics: mockGetAnalytics,
+    logEvent: mockAnalyticsLogEvent,
+    setUserId: mockAnalyticsSetUserId,
+    setUserProperties: mockAnalyticsSetUserProperties,
+    setUserProperty: mockAnalyticsSetUserProperty,
+  };
+});

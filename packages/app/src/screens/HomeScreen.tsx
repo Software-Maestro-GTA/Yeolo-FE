@@ -1,8 +1,8 @@
 /**
  * @file HomeScreen.tsx
  * @description Main dashboard landing screen displaying AI course recommendations, quick feature shortcuts, and user greeting.
- * @requirements REQ-11, REQ-9
- * @functional FUN-1, FUN-3, FUN-4
+ * @requirements REQ-11, REQ-9, REQ-22
+ * @functional FUN-1, FUN-3, FUN-4, FUN-GA4
  * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface HomeScreenProps {
   onNavigateToCreate?: () => void;
@@ -31,6 +32,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToExplore,
   onNavigateToProfile,
 }) => {
+  useGA4ScreenTracking('HomeScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
@@ -54,7 +58,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <TouchableOpacity
             style={styles.avatarButton}
-            onPress={onNavigateToProfile}
+            onPress={() => {
+              trackButtonClick('btn_home_profile', 'Profile Avatar');
+              onNavigateToProfile?.();
+            }}
             activeOpacity={0.8}
           >
             {user?.profileImageUrl ? (
@@ -81,7 +88,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <TouchableOpacity
             style={styles.heroButton}
-            onPress={onNavigateToCreate}
+            onPress={() => {
+              trackButtonClick('btn_home_create_course', 'Create Course Hero Button');
+              onNavigateToCreate?.();
+            }}
             activeOpacity={0.85}
           >
             <Ionicons name="add-circle" size={18} color={theme.colors.text.inverse} style={styles.heroButtonIcon} />
@@ -95,7 +105,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* 1. AI 코스 탐색 */}
           <TouchableOpacity
             style={styles.shortcutCard}
-            onPress={onNavigateToExplore}
+            onPress={() => {
+              trackButtonClick('btn_home_explore', 'Explore Shortcut');
+              onNavigateToExplore?.();
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
@@ -108,7 +121,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* 2. 내 취향 프로필 */}
           <TouchableOpacity
             style={styles.shortcutCard}
-            onPress={onNavigateToProfile}
+            onPress={() => {
+              trackButtonClick('btn_home_shortcut_profile', 'Profile Shortcut');
+              onNavigateToProfile?.();
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
@@ -121,7 +137,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
