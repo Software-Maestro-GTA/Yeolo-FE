@@ -4,6 +4,8 @@
  * @author Antigravity Agent
  */
 
+import { logger } from '../utils/logger';
+
 export interface GeocodeResult {
   latitude: number;
   longitude: number;
@@ -21,8 +23,12 @@ const geocodeCache = new Map<string, GeocodeResult | null>();
 
 export async function fetchGeocode(query: string): Promise<GeocodeResult | null> {
   if (geocodeCache.has(query)) {
+    logger.info('[GeocodeService] Cache hit for query:', query);
     return geocodeCache.get(query) || null;
   }
+
+  logger.info('[GeocodeService] Fetching geocode for query:', query);
+
 
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=kr&limit=5`;

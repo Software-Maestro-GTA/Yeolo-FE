@@ -8,6 +8,8 @@
  */
 
 import type { AnalyticsTracker, GA4EventParams } from './types';
+import { logger } from '../utils/logger';
+
 
 export class AnalyticsService {
   private static instance: AnalyticsService;
@@ -41,6 +43,7 @@ export class AnalyticsService {
   }
 
   public async logEvent(eventName: string, params?: GA4EventParams): Promise<void> {
+    logger.info(`[AnalyticsService] logEvent "${eventName}":`, params);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
@@ -53,6 +56,7 @@ export class AnalyticsService {
   }
 
   public async logScreenView(screenName: string, screenClass?: string): Promise<void> {
+    logger.info(`[AnalyticsService] logScreenView "${screenName}":`, screenClass);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
@@ -69,6 +73,7 @@ export class AnalyticsService {
     buttonName?: string,
     params?: GA4EventParams
   ): Promise<void> {
+    logger.info(`[AnalyticsService] logButtonClick "${buttonId}":`, buttonName, params);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
@@ -81,6 +86,7 @@ export class AnalyticsService {
   }
 
   public async setUserId(userId: string | null): Promise<void> {
+    logger.info(`[AnalyticsService] setUserId:`, userId);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
@@ -95,6 +101,7 @@ export class AnalyticsService {
   }
 
   public async setUserProperty(name: string, value: string | null): Promise<void> {
+    logger.info(`[AnalyticsService] setUserProperty "${name}":`, value);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {

@@ -53,26 +53,26 @@ export const BudgetTypeSelector: React.FC<BudgetTypeSelectorProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          testID="budget-moderate"
+          testID="budget-standard"
           activeOpacity={0.8}
           style={[
             styles.radioButton,
-            selectedType === 'moderate' && styles.radioButtonActive,
+            selectedType === 'standard' && styles.radioButtonActive,
           ]}
-          onPress={() => onSelect('moderate')}
+          onPress={() => onSelect('standard')}
         >
           <Ionicons
             name="card-outline"
             size={18}
-            color={selectedType === 'moderate' ? theme.colors.primary : theme.colors.text.subtle}
+            color={selectedType === 'standard' ? theme.colors.primary : theme.colors.text.subtle}
           />
           <Text
             style={[
               styles.radioText,
-              selectedType === 'moderate' && styles.radioTextActive,
+              selectedType === 'standard' && styles.radioTextActive,
             ]}
           >
-            {UI_STRINGS.COURSE_CREATE.BUDGET_MODERATE}
+            {UI_STRINGS.COURSE_CREATE.BUDGET_STANDARD}
           </Text>
         </TouchableOpacity>
 

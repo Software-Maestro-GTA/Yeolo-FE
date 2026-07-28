@@ -8,6 +8,7 @@
  */
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
 
 /**
@@ -19,6 +20,7 @@ export const initializeGoogleSignin = (
   webClientId?: string,
   iosClientId?: string
 ): void => {
+  logger.info('[AuthService] Initializing GoogleSignin with webClientId:', webClientId);
   GoogleSignin.configure({
     webClientId,
     iosClientId,

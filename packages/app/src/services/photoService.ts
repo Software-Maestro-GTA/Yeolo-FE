@@ -8,7 +8,9 @@
  */
 import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
 import type { ImageMetadata } from '@yeolo/common';
+import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
+
 
 /**
  * Request device photo library permission and fetch recent images with EXIF location & time metadata.
@@ -70,6 +72,8 @@ export async function fetchPhotosWithExifData(
   if (parsedImages.length === 0) {
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_EXIF_ERROR);
   }
+
+  logger.info(`[PhotoService] Successfully extracted EXIF metadata from ${parsedImages.length} of ${assets.length} photos`);
 
   return parsedImages;
 }

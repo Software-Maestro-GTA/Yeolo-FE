@@ -10,6 +10,8 @@ import ky from 'ky';
 import { parseServerSentEvents } from 'parse-sse';
 import type { AnalyzeTastePayload, StreamCallbacks, TasteProfile } from '../types/taste';
 import { ApiError } from './errors';
+import { logger } from '../utils/logger';
+
 
 export interface TasteProfileApiResponse {
   status: number;
@@ -36,6 +38,7 @@ export async function analyzeTastePreferenceStream(
   let tasteProfileId: string | undefined;
 
   try {
+    logger.info('[TasteAPI] analyzeTastePreferenceStream request, images count:', payload.images?.length);
     const response = await ky.post(`${apiUrl}/api/taste-profile/behavior`, {
       json: payload,
       headers: {
@@ -58,10 +61,11 @@ export async function analyzeTastePreferenceStream(
           tasteProfileId = parsed.data?.tasteProfileId;
         }
       } catch (jsonError) {
-        console.error('Error parsing SSE event data:', jsonError);
+        logger.error('[TasteAPI] Error parsing SSE event data:', jsonError);
       }
     }
   } catch (error: unknown) {
+    logger.error('[TasteAPI] analyzeTastePreferenceStream error:', error);
     const err = error as { response?: Response; message?: string };
     if (err?.response) {
       const status = err.response.status;
@@ -78,6 +82,7 @@ export async function analyzeTastePreferenceStream(
   }
 
   if (!tasteProfileId) {
+    logger.error('[TasteAPI] Stream completed without tasteProfileId');
     throw new ApiError(400, '성향 분석이 완료되었으나 Profile ID를 수신하지 못했습니다.');
   }
 
@@ -98,6 +103,7 @@ export async function fetchTasteProfileApi(
   tasteProfileId?: string
 ): Promise<TasteProfile> {
   try {
+    logger.info('[TasteAPI] fetchTasteProfileApi request:', { tasteProfileId });
     const headers: Record<string, string> = {};
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
@@ -113,11 +119,13 @@ export async function fetchTasteProfileApi(
       .json<TasteProfileApiResponse>();
 
     if (json?.data?.tasteProfile) {
+      logger.info('[TasteAPI] Successfully retrieved TasteProfile:', json.data.tasteProfile.tasteProfileId);
       return json.data.tasteProfile;
     }
 
     throw new ApiError(400, '성향 프로필 데이터가 올바르지 않습니다.');
   } catch (error: unknown) {
+    logger.error('[TasteAPI] fetchTasteProfileApi error:', error);
     if (error instanceof ApiError) throw error;
 
     const err = error as { response?: Response; message?: string };

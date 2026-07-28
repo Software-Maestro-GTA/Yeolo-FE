@@ -14,6 +14,7 @@ import analytics, {
   setUserProperties as modularSetUserProperties,
 } from '@react-native-firebase/analytics';
 import type { AnalyticsTracker, GA4EventParams } from '@yeolo/common';
+import { logger } from '@yeolo/common';
 
 export class AppAnalyticsTracker implements AnalyticsTracker {
   private getAnalyticsInstance() {
@@ -21,6 +22,7 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
   }
 
   public async logEvent(eventName: string, params?: GA4EventParams): Promise<void> {
+    logger.info(`[AppAnalyticsTracker] logEvent "${eventName}":`, params);
     try {
       if (typeof modularLogEvent === 'function') {
         await modularLogEvent(this.getAnalyticsInstance(), eventName, params);

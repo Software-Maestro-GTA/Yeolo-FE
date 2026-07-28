@@ -78,7 +78,7 @@ export const UI_STRINGS = {
     END_DATE_PLACEHOLDER: 'YYYY-MM-DD',
     BUDGET_LABEL: '예산 및 소비 성향',
     BUDGET_COST_EFFECTIVE: '가성비',
-    BUDGET_MODERATE: '적정 수준',
+    BUDGET_STANDARD: '적정 수준',
     BUDGET_LUXURY: '럭셔리',
     SUBMIT_BUTTON: 'AI 코스 생성하기',
   },

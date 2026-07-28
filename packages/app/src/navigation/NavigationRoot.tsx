@@ -95,7 +95,7 @@ export function NavigationRoot() {
       return (
         <MainLayout currentTab="profile" onTabPress={handleTabPress}>
           <ProfileScreen
-            onNavigateToAnalysis={() => setStep('TASTE')}
+            onNavigateToAnalysis={() => setStep('PHOTO')}
             onNavigateToTasteProfile={() => setStep('TASTE_PROFILE')}
             onNavigateToLogin={() => setStep('LOGIN')}
           />
@@ -143,7 +143,7 @@ export function NavigationRoot() {
     case 'COURSE_DETAIL':
       return (
         <CourseDetailScreen
-          courseId={selectedCourseId}
+          courseId={selectedCourseId || ''}
         />
       );
     case 'HOME':

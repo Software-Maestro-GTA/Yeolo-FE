@@ -27,7 +27,7 @@ export interface CourseListApiResponse {
   };
 }
 
-export type BudgetType = 'cost_effective' | 'moderate' | 'standard' | 'luxury';
+export type BudgetType = 'cost_effective' | 'standard' | 'luxury';
 export type TransportType = 'walking' | 'transit' | 'driving' | 'taxi' | 'none';
 export type PaceType = 'relaxed' | 'balanced' | 'dense';
 
