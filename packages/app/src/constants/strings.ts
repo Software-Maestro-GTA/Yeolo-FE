@@ -154,6 +154,7 @@ export const UI_STRINGS = {
     PROFILE_HEADER_SUBTITLE: '나만의 맞춤형 여행 취향 데이터베이스',
     TASTE_CARD_TITLE: 'AI 여행 취향 분석',
     TASTE_CARD_SUBTITLE: '사진 데이터로 나만의 여행 취향을 발견해보세요',
+    TASTE_CARD_VIEW_BUTTON: '취향 보기',
     TASTE_CARD_BUTTON: '취향 분석 요청',
     SETTINGS_TITLE: '계정 및 서비스 설정',
     TERMS_SERVICE: '이용약관',

@@ -102,17 +102,28 @@ export type TravelPaceDensity =
   | 'spontaneous'
   | 'long_stay';
 
+export type CompanionType =
+  | 'solo'
+  | 'couple'
+  | 'friends'
+  | 'family'
+  | 'with_children'
+  | 'with_parents'
+  | 'group'
+  | 'with_pet'
+  | 'social';
+
 export interface TasteProfile {
   tasteProfileId: string;
   userId: string;
-  sourceType: 'onboarding_survey' | 'behavior' | 'mixed';
+  sourceType: 'survey' | 'behavior' | 'mixed';
   updatedAt: string;
   travelPurpose: TravelPurposePreference;
   travelPaceDensity: TravelPaceDensity;
   preferredLocationType: PreferredLocationType;
   activityPreference: ActivityPreference;
   spendingTendency: 'cost_effective' | 'moderate' | 'luxury';
-  companionType: 'alone' | 'couple' | 'family' | 'friends';
+  companionType: CompanionType;
   foodPreference: FoodPreference;
   seasonalEnvironmentPreference: string[];
 }

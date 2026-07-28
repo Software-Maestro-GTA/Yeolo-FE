@@ -1,6 +1,6 @@
 /**
  * @file TasteAnalysisCard.tsx
- * @description Prominent card component displaying AI travel taste analysis banner and large trigger button matching Figma UI specifications.
+ * @description Prominent card component displaying AI travel taste analysis banner with '취향 보기' and '취향 분석 요청' buttons.
  * @requirements REQ-11
  * @functional FUN-4
  * @author Antigravity Agent
@@ -24,18 +24,22 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
   onNavigateToTasteProfile,
 }) => {
   const handleReAnalysisPress = onStartAnalysis || onNavigateToAnalysis;
-  const handleCardPress = onNavigateToTasteProfile || handleReAnalysisPress;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={handleCardPress}
-      activeOpacity={0.9}
-    >
+    <View style={styles.card}>
       <View style={styles.titleWithIcon}>
         <Ionicons name="sparkles" size={22} color={theme.colors.primary} />
         <Text style={styles.cardTitle}>{UI_STRINGS.COMPONENTS.TASTE_CARD_TITLE}</Text>
       </View>
+
+      <TouchableOpacity
+        style={styles.viewButton}
+        onPress={onNavigateToTasteProfile}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="eye-outline" size={18} color={theme.colors.primary} style={styles.buttonIcon} />
+        <Text style={styles.viewButtonText}>{UI_STRINGS.COMPONENTS.TASTE_CARD_VIEW_BUTTON}</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.largeButton}
@@ -45,7 +49,7 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
         <Ionicons name="refresh-outline" size={18} color={theme.colors.text.inverse} style={styles.buttonIcon} />
         <Text style={styles.largeButtonText}>{UI_STRINGS.COMPONENTS.TASTE_CARD_BUTTON}</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -68,7 +72,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 14,
   },
   cardTitle: {
     fontSize: 17,
@@ -80,6 +84,23 @@ const styles = StyleSheet.create({
     color: theme.colors.text.subtle,
     lineHeight: 20,
     marginBottom: 16,
+  },
+  viewButton: {
+    backgroundColor: theme.colors.bg.card,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: '100%',
+    marginBottom: 10,
+  },
+  viewButtonText: {
+    color: theme.colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   largeButton: {
     backgroundColor: theme.colors.primary,

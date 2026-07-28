@@ -62,19 +62,31 @@ describe('ProfileScreen Integration Tests (Issue #21 / API-FB-11 / API-FB-12 / D
     expect(await findByText('sun925@yeolo.com')).toBeTruthy();
   });
 
-  it('AI 여행 취향 분석 카드가 표시되고 "취향 분석 재요청" 클릭 시 콜백이 호출되어야 한다', async () => {
+  it('AI 여행 취향 분석 카드가 표시되고 "취향 보기" 및 "취향 분석 요청" 버튼 클릭 시 각 콜백이 호출되어야 한다', async () => {
+    const mockNavigateToTasteProfile = jest.fn();
     const { findByText, getByText } = await renderProfileScreen({
       onNavigateToAnalysis: mockNavigateToAnalysis,
+      onNavigateToTasteProfile: mockNavigateToTasteProfile,
       onNavigateToLogin: mockNavigateToLogin,
     });
 
     expect(await findByText('AI 여행 취향 분석')).toBeTruthy();
 
+    const viewButton = getByText('취향 보기');
+    expect(viewButton).toBeTruthy();
+    fireEvent.press(viewButton);
+
+    await waitFor(() => {
+      expect(mockNavigateToTasteProfile).toHaveBeenCalledTimes(1);
+    });
+
     const reAnalysisButton = getByText('취향 분석 요청');
     expect(reAnalysisButton).toBeTruthy();
-
     fireEvent.press(reAnalysisButton);
-    expect(mockNavigateToAnalysis).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(mockNavigateToAnalysis).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('"이용약관" 메뉴 클릭 시 이용약관 안내 모달이 노출되어야 한다', async () => {
