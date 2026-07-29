@@ -8,7 +8,7 @@
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomNavBar, NavTab } from '../components/navigation/BottomNavBar';
+import { BottomNavBar, NavTab } from '../components/navigation';
 
 export interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   contentStyle,
 }) => {
   return (
-    <SafeAreaView style={[styles.mainLayout, style]} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.mainLayout, style]} edges={['top', 'left', 'right']}>
       <View style={[styles.content, contentStyle]}>{children}</View>
       <BottomNavBar currentTab={currentTab} onTabPress={onTabPress} />
     </SafeAreaView>
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingTop: 12,
+    paddingBottom: 64,
   },
 });
-
-export default MainLayout;

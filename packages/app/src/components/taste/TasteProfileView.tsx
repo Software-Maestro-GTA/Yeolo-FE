@@ -1,113 +1,61 @@
 /**
  * @file TasteProfileView.tsx
- * @description UI component for visually presenting taste profile analysis following Figma UI v1 design specifications.
+ * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI v1 specifications.
  * @requirements REQ-11
  * @functional FUN-4
  * @api API-FB-8
  * @author Antigravity Agent
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TasteProfile } from '@yeolo/common';
 import { Ionicons } from '@expo/vector-icons';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface TasteProfileViewProps {
   profile: TasteProfile;
+  onReanalyze?: () => void;
 }
 
-const PACE_LABELS: Record<string, string> = {
-  slow_stay: '느긋한 체류형',
-  balanced: '균형형',
-  dense_schedule: '빡빡한 일정형',
-  spontaneous: '즉흥형',
-  long_stay: '장기여행형',
-};
+const PACE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PACE;
+const SPENDING_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SPENDING;
+const COMPANION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.COMPANION;
+const PURPOSE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PURPOSE;
+const LOCATION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.LOCATION;
+const FOOD_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.FOOD;
+const SEASON_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SEASON;
 
-const SPENDING_LABELS: Record<string, string> = {
-  cost_effective: '가성비형',
-  moderate: '중간 소비형',
-  luxury: '럭셔리형',
-};
-
-const COMPANION_LABELS: Record<string, string> = {
-  solo: '혼자 여행형',
-  couple: '연인 여행형',
-  friends: '친구 여행형',
-  family: '가족 여행형',
-  with_children: '아이 동반형',
-  with_parents: '부모님 동반형',
-  group: '단체 여행형',
-  with_pet: '반려동물 동반형',
-  social: '어울림형',
-};
-
-const PURPOSE_LABELS: Record<string, string> = {
-  relaxation: '휴양/힐링',
-  sightseeing: '관광 탐방',
-  culturalExperience: '문화/예술',
-  gourmet: '미식 탐험',
-  natureExploration: '자연 탐방',
-  activity: '액티비티',
-  shopping: '쇼핑 선호',
-  festivalEvent: '축제/이벤트',
-  wellness: '웰니스/명상',
-  selfDevelopment: '자기계발',
-};
-
-const LOCATION_LABELS: Record<string, string> = {
-  bigCity: '대도시 선호',
-  smallTownAlley: '소도시/골목',
-  natureHinterland: '자연/오지',
-  beachResort: '해변/휴양지',
-  mountainPlateau: '산악/고원',
-  historicalCity: '역사도시',
-  themeParkResort: '테마파크',
-  famousSpotPreferred: '유명 명소',
-  hiddenSpotPreferred: '숨은 명소',
-};
-
-const FOOD_LABELS: Record<string, string> = {
-  localFoodActive: '현지 음식 적극 체험',
-  famousRestaurantCentered: '유명 맛집 탐방',
-  streetFood: '길거리 음식',
-  cafeDessert: '카페 & 디저트',
-  fineDining: '파인다이닝',
-  familiarFoodPreferred: '익숙한 음식 선호',
-  dietaryRestriction: '식단 고려',
-  sightseeingOverFood: '관광 중시',
-};
-
-const SEASON_LABELS: Record<string, string> = {
-  warm_region: '따뜻한 지역',
-  cold_region: '추운 지역',
-  summer_resort: '여름 휴양',
-  winter_sports: '겨울 스포츠',
-  spring_flower_autumn_foliage: '봄꽃·가을 단풍',
-  dry_weather: '건조한 날씨',
-  off_season: '비수기 여행',
-  peak_season: '성수기 여행',
-};
-
-export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) => {
+export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onReanalyze }) => {
   const renderTraitBar = (label: string, score: number = 3, index: number) => {
+    const formattedScore = Math.min(Math.max(score, 1), 5).toFixed(1);
     const percentage = Math.min(Math.max(Math.round((score / 5) * 100), 0), 100);
-    // Alternate bar colors between purple (#4648D4) and mint (#4EDEA3) per Figma design
-    const barColor = index % 2 === 0 ? '#4648D4' : '#4EDEA3';
+
+    const gradientColors =
+      index % 2 === 0
+        ? (['#8B5CF6', '#6366F1'] as const)
+        : (['#10B981', '#34D399'] as const);
+    const accentTextColor = index % 2 === 0 ? '#7C3AED' : '#059669';
 
     return (
       <View key={label} style={styles.traitRow}>
         <View style={styles.traitHeader}>
-          <Text style={styles.traitLabel}>{label}</Text>
-          <Text style={[styles.traitPercentage, { color: barColor }]}>
-            {percentage}%
+          <View style={styles.labelContainer}>
+            <View style={[styles.bulletDot, { backgroundColor: accentTextColor }]} />
+            <Text style={styles.traitLabel}>{label}</Text>
+          </View>
+          <Text style={[styles.traitPercentage, { color: accentTextColor }]}>
+            {formattedScore} <Text style={styles.traitScoreMax}>/ 5</Text>
           </Text>
         </View>
         <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              { width: `${percentage}%`, backgroundColor: barColor },
-            ]}
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.barFill, { width: `${percentage}%` }]}
           />
         </View>
       </View>
@@ -117,18 +65,24 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
   const renderSection = (
     title: string,
     dataObj: Record<string, number | undefined>,
-    labelsMap: Record<string, string>
+    labelsMap: Record<string, string>,
+    iconName: keyof typeof Ionicons.glyphMap
   ) => {
     const entries = Object.entries(dataObj || {})
       .filter(([, val]) => typeof val === 'number' && val > 0)
       .sort((a, b) => (b[1] || 0) - (a[1] || 0))
-      .slice(0, 3); // Show top 4 items for clean layout
+      .slice(0, 3);
 
     if (entries.length === 0) return null;
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{title}</Text>
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.cardTitleIconContainer}>
+            <Ionicons name={iconName} size={18} color={theme.colors.primary} />
+          </View>
+          <Text style={styles.cardTitle}>{title}</Text>
+        </View>
         {entries.map(([key, score], idx) =>
           renderTraitBar(labelsMap[key] || key, score, idx)
         )}
@@ -137,77 +91,158 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
   };
 
   return (
-
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. Header Icon Badge */}
-      <View style={styles.headerSection}>
-        <View style={styles.iconOverlay}>
-          <Ionicons name="sparkles" size={28} color="#4648D4" />
-        </View>
+      {/* 1. Premium Hero Persona Card with Natural Top-Right Reanalyze Button */}
+      <View style={styles.heroWrapper}>
+        <LinearGradient
+          colors={['#EEF2FF', '#F5F3FF', '#F0FDFA']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          {onReanalyze && (
+            <TouchableOpacity
+              testID="btn-reanalyze-icon"
+              style={styles.topRightScrollButton}
+              onPress={onReanalyze}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="refresh-outline" size={18} color={theme.colors.primary} />
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.heroIconBadge}>
+            <LinearGradient
+              colors={theme.colors.gradient.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroIconGradient}
+            >
+              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.heroSubtitle}>AI 취향 분석 리포트</Text>
+          <Text style={styles.heroTitle}>나의 시그니처 여행 스타일</Text>
+        </LinearGradient>
       </View>
 
+      {/* 2. Unified Core Travel Keywords Section (Friendly Title) */}
+      {(() => {
+        const EXCLUDED_KEYS = [
+          'solo', 'moderate', 'medium',
+          '혼자 여행형', '중간소비형', '중간 소비형'
+        ];
 
-      {/* 2. Core Style Badges */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.cardTitle}>핵심 여행 키워드</Text>
-        <View style={styles.badgeRow}>
-          <View style={styles.badgePrimary}>
-            <Text style={styles.badgePrimaryText}>
-              {PACE_LABELS[profile.travelPaceDensity] || profile.travelPaceDensity}
-            </Text>
-          </View>
-          <View style={styles.badgeSecondary}>
-            <Text style={styles.badgeSecondaryText}>
-              {COMPANION_LABELS[profile.companionType] || profile.companionType}
-            </Text>
-          </View>
-          <View style={styles.badgeAccent}>
-            <Text style={styles.badgeAccentText}>
-              {SPENDING_LABELS[profile.spendingTendency] || profile.spendingTendency}
-            </Text>
-          </View>
-        </View>
-      </View>
+        const rawKeywords: { key: string; label: string }[] = [];
 
-      {/* 3. Trait Bars Section (Figma Design) */}
-      {renderSection(
-        '여행 성향 분석',
-        profile.travelPurpose as Record<string, number | undefined>,
-        PURPOSE_LABELS
-      )}
+        if (profile.travelPaceDensity) {
+          rawKeywords.push({
+            key: profile.travelPaceDensity,
+            label: PACE_LABELS[profile.travelPaceDensity] || profile.travelPaceDensity,
+          });
+        }
+        if (profile.companionType) {
+          rawKeywords.push({
+            key: profile.companionType,
+            label: COMPANION_LABELS[profile.companionType] || profile.companionType,
+          });
+        }
+        if (profile.spendingTendency) {
+          rawKeywords.push({
+            key: profile.spendingTendency,
+            label: SPENDING_LABELS[profile.spendingTendency] || profile.spendingTendency,
+          });
+        }
+        if (Array.isArray(profile.seasonalEnvironmentPreference)) {
+          profile.seasonalEnvironmentPreference.forEach((item) => {
+            rawKeywords.push({
+              key: item,
+              label: SEASON_LABELS[item] || item,
+            });
+          });
+        }
 
-      {renderSection(
-        '선호 장소 유형',
-        profile.preferredLocationType as Record<string, number | undefined>,
-        LOCATION_LABELS
-      )}
+        const validKeywords = rawKeywords.filter(
+          (k) => !EXCLUDED_KEYS.includes(k.key) && !EXCLUDED_KEYS.includes(k.label)
+        );
 
-      {renderSection(
-        '음식 취향',
-        profile.foodPreference as Record<string, number | undefined>,
-        FOOD_LABELS
-      )}
+        if (validKeywords.length === 0) return null;
 
-      {/* 4. Seasonal Tags */}
-      {Array.isArray(profile.seasonalEnvironmentPreference) &&
-        profile.seasonalEnvironmentPreference.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>계절 및 환경 취향</Text>
-            <View style={styles.tagWrap}>
-              {profile.seasonalEnvironmentPreference.map((item) => (
-                <View key={item} style={styles.tagBadge}>
-                  <Text style={styles.tagBadgeText}>
-                    {SEASON_LABELS[item] || item}
-                  </Text>
-                </View>
-              ))}
+        return (
+          <View style={styles.summaryCard}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardTitleIconContainer}>
+                <Ionicons name="sparkles-outline" size={18} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>한눈에 보는 나의 취향</Text>
+            </View>
+
+            <View style={styles.badgeRow}>
+              {validKeywords.map((item, idx) => {
+                if (idx % 3 === 0) {
+                  return (
+                    <LinearGradient
+                      key={`${item.key}-${idx}`}
+                      colors={['#8B5CF6', '#6366F1']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.badgePillGradientPrimary}
+                    >
+                      <Text style={styles.badgeTextLight}>{item.label}</Text>
+                    </LinearGradient>
+                  );
+                }
+                if (idx % 3 === 1) {
+                  return (
+                    <LinearGradient
+                      key={`${item.key}-${idx}`}
+                      colors={['#10B981', '#059669']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.badgePillGradientSecondary}
+                    >
+                      <Text style={styles.badgeTextLight}>{item.label}</Text>
+                    </LinearGradient>
+                  );
+                }
+                return (
+                  <View key={`${item.key}-${idx}`} style={styles.badgeOutlinePill}>
+                    <Text style={styles.badgeOutlineText}>{item.label}</Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
-        )}
+        );
+      })()}
+
+      {/* 3. Trait Bars Sections with Friendly UX Copywriting */}
+      {renderSection(
+        '내가 여행을 떠나는 이유',
+        profile.travelPurpose as Record<string, number | undefined>,
+        PURPOSE_LABELS,
+        'flag-outline'
+      )}
+
+      {renderSection(
+        '마음이 끌리는 공간',
+        profile.preferredLocationType as Record<string, number | undefined>,
+        LOCATION_LABELS,
+        'map-outline'
+      )}
+
+      {renderSection(
+        '즐거운 미식 스펙트럼',
+        profile.foodPreference as Record<string, number | undefined>,
+        FOOD_LABELS,
+        'restaurant-outline'
+      )}
+
     </ScrollView>
   );
 };
@@ -215,113 +250,164 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6FAFE',
+    backgroundColor: theme.colors.bg.screen,
   },
   contentContainer: {
     paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 150, // Space to scroll past floating button (56px) and bottom nav (64px)
-    gap: 20,
+    paddingTop: 16,
+    paddingBottom: 90,
+    gap: 16,
   },
 
-
-  headerSection: {
+  heroWrapper: {
+    marginBottom: 4,
+  },
+  heroCard: {
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.12)',
+    position: 'relative',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
   },
-  iconOverlay: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(225, 224, 255, 0.6)',
+  topRightScrollButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  personaTitle: {
-    fontSize: 24,
+  heroIconBadge: {
+    marginBottom: 12,
+  },
+  heroIconGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroSubtitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#030612',
-    textAlign: 'center',
-    lineHeight: 32,
-    marginBottom: 8,
+    color: theme.colors.primary,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    textTransform: 'uppercase',
   },
-  personaSubtitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#45464C',
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: theme.colors.text.primary,
     textAlign: 'center',
-    lineHeight: 24,
   },
+
   summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
+    backgroundColor: theme.colors.bg.card,
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#1A1F2C',
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 2,
   },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  badgePrimary: {
-    backgroundColor: '#4648D4',
+  badgePillGradientPrimary: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 7,
+    borderRadius: 18,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  badgePrimaryText: {
+  badgePillGradientSecondary: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  badgeTextLight: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 13,
   },
-  badgeSecondary: {
-    backgroundColor: '#4EDEA3',
+  badgeOutlinePill: {
+    backgroundColor: theme.colors.primaryContainer,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  badgeSecondaryText: {
-    color: '#030612',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  badgeAccent: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 6,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: theme.colors.border.active,
   },
-  badgeAccentText: {
-    color: '#4338CA',
-    fontWeight: '600',
-    fontSize: 14,
+  badgeOutlineText: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
   },
-  card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    shadowColor: '#1A1F2C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 3,
+
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  cardTitleIconContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.colors.primaryContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#171C1F',
-    marginBottom: 16,
+    color: theme.colors.text.primary,
+  },
+
+  card: {
+    backgroundColor: theme.colors.bg.card,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 2,
   },
   traitRow: {
     marginBottom: 14,
@@ -329,41 +415,41 @@ const styles = StyleSheet.create({
   traitHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   traitLabel: {
     fontSize: 14,
-    color: '#45464C',
-    fontWeight: '500',
+    color: theme.colors.text.primary,
+    fontWeight: '600',
   },
   traitPercentage: {
     fontSize: 14,
     fontWeight: '700',
   },
+  traitScoreMax: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.text.subtle,
+  },
   barTrack: {
-    height: 8,
-    backgroundColor: '#EAEFF2',
+    height: 10,
+    backgroundColor: '#F0F4F9',
     borderRadius: 9999,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     borderRadius: 9999,
-  },
-  tagWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tagBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  tagBadgeText: {
-    color: '#475569',
-    fontSize: 13,
-    fontWeight: '500',
   },
 });

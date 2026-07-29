@@ -1,12 +1,12 @@
 /**
  * @file CourseCreateScreen.tsx
- * @description Screen for entering travel conditions with modularized InlineCalendarView and iOS timezone-safe alignment.
- * @requirements REQ-7
- * @functional FUN-6
+ * @description Screen for entering travel conditions with custom useCourseCreateForm hook and modularized subcomponents.
+ * @requirements REQ-7, REQ-22
+ * @functional FUN-6, FUN-GA4
  * @api API-FB-4
  * @author Antigravity Agent
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,11 +16,22 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { BudgetType, CourseCreateRequest } from '@yeolo/common';
-import { DATE_REGEX, formatYYYYMMDD, calculateTotalDays } from '@yeolo/common';
-import type { NavTab } from '../components/navigation/BottomNavBar';
-import { GenerateCourseButton } from '../components/common/GenerateCourseButton';
-import { InlineCalendarView } from '../components/common/InlineCalendarView';
+import type { CourseCreateRequest } from '@yeolo/common';
+import {
+  GenerateCourseButton,
+  InlineCalendarView,
+} from '../components/common';
+import {
+  CourseCreateHeader,
+  BudgetTypeSelector,
+} from '../components/course';
+import { useCourseCreateForm, useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import type { NavTab } from '../components/navigation';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
 
 export interface CourseCreateScreenProps {
   onSubmit?: (data: CourseCreateRequest) => void;
@@ -30,125 +41,48 @@ export interface CourseCreateScreenProps {
 export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
   onSubmit,
 }) => {
-  const [destinationCountry, setDestinationCountry] = useState('');
-  const [destinationCity, setDestinationCity] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [budgetType, setBudgetType] = useState<BudgetType | null>(null);
+  useGA4ScreenTracking('CourseCreateScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
 
-  // Inline Calendar State & Ref
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [activeDateTarget, setActiveDateTarget] = useState<'start' | 'end'>('start');
-
-  const todayDate = new Date();
-  const [currentYearMonth, setCurrentYearMonth] = useState({
-    year: todayDate.getFullYear(),
-    month: todayDate.getMonth() + 1,
+  const {
+    destinationCountry,
+    setDestinationCountry,
+    destinationCity,
+    setDestinationCity,
+    startDate,
+    endDate,
+    budgetType,
+    setBudgetType,
+    isCalendarOpen,
+    setIsCalendarOpen,
+    activeDateTarget,
+    currentYearMonth,
+    scrollViewRef,
+    handleStartDateChange,
+    handleEndDateChange,
+    openCalendarForTarget,
+    handlePrevMonth,
+    handleNextMonth,
+    handleSelectDay,
+    isStartDateValid,
+    isEndDateValid,
+    isFormValid,
+    handleSubmit,
+  } = useCourseCreateForm(async (data) => {
+    trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
+      country: data.destinationCountry,
+      city: data.destinationCity,
+      budgetType: data.budgetType,
+    });
+    try {
+      const token = (await AsyncStorage.getItem('accessToken')) || '';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+      useCourseStore.getState().createCourse(apiUrl, data, token);
+    } catch (err) {
+      console.error('Failed to trigger createCourse store action:', err);
+    }
+    onSubmit?.(data);
   });
-
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  // Smoothly scroll down to keep inline calendar fully visible when expanded
-  useEffect(() => {
-    if (isCalendarOpen) {
-      const scrollTimer = setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      return () => clearTimeout(scrollTimer);
-    }
-  }, [isCalendarOpen]);
-
-  const handleStartDateChange = (text: string) => {
-    setStartDate(formatYYYYMMDD(text));
-  };
-
-  const handleEndDateChange = (text: string) => {
-    setEndDate(formatYYYYMMDD(text));
-  };
-
-  /**
-   * Open calendar focused on the date's specific year and month to avoid iOS timezone mismatch
-   */
-  const openCalendarForTarget = (target: 'start' | 'end') => {
-    setActiveDateTarget(target);
-    const targetDateStr = target === 'start' ? startDate : endDate;
-
-    if (DATE_REGEX.test(targetDateStr.trim())) {
-      const [y, m] = targetDateStr.trim().split('-').map(Number);
-      setCurrentYearMonth({ year: y, month: m });
-    } else {
-      const now = new Date();
-      setCurrentYearMonth({ year: now.getFullYear(), month: now.getMonth() + 1 });
-    }
-
-    setIsCalendarOpen(true);
-  };
-
-  const handlePrevMonth = () => {
-    if (currentYearMonth.month === 1) {
-      setCurrentYearMonth({ year: currentYearMonth.year - 1, month: 12 });
-    } else {
-      setCurrentYearMonth({ year: currentYearMonth.year, month: currentYearMonth.month - 1 });
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (currentYearMonth.month === 12) {
-      setCurrentYearMonth({ year: currentYearMonth.year + 1, month: 1 });
-    } else {
-      setCurrentYearMonth({ year: currentYearMonth.year, month: currentYearMonth.month + 1 });
-    }
-  };
-
-  const handleSelectDay = (day: number) => {
-    const mm = String(currentYearMonth.month).padStart(2, '0');
-    const dd = String(day).padStart(2, '0');
-    const dateStr = `${currentYearMonth.year}-${mm}-${dd}`;
-
-    if (activeDateTarget === 'start') {
-      setStartDate(dateStr);
-      setActiveDateTarget('end');
-    } else {
-      setEndDate(dateStr);
-      setIsCalendarOpen(false);
-    }
-  };
-
-  // Validate start date format YYYY-MM-DD
-  const isStartDateValid = !startDate || DATE_REGEX.test(startDate.trim());
-
-  // Validate end date format YYYY-MM-DD or numeric days for backward compatibility
-  const isEndDateValid =
-    !endDate ||
-    DATE_REGEX.test(endDate.trim()) ||
-    (/^\d+$/.test(endDate.trim()) && Number(endDate.trim()) > 0);
-
-  const calculatedDays = calculateTotalDays(startDate, endDate);
-
-  const isFormValid =
-    destinationCountry.trim().length > 0 &&
-    destinationCity.trim().length > 0 &&
-    startDate.trim().length > 0 &&
-    isStartDateValid &&
-    endDate.trim().length > 0 &&
-    isEndDateValid &&
-    calculatedDays !== null &&
-    calculatedDays > 0 &&
-    budgetType !== null;
-
-  const handleSubmit = () => {
-    if (!isFormValid || !budgetType || !calculatedDays) return;
-
-    const requestData: CourseCreateRequest = {
-      destinationCountry: destinationCountry.trim(),
-      destinationCity: destinationCity.trim(),
-      startDate: startDate.trim(),
-      totalDays: calculatedDays,
-      budgetType,
-    };
-
-    onSubmit?.(requestData);
-  };
 
   return (
     <View style={styles.screenContainer}>
@@ -156,60 +90,67 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Header Card */}
-        <View style={styles.headerCard}>
-          <View style={styles.badge}>
-            <Ionicons name="sparkles" size={14} color="#4648D4" />
-            <Text style={styles.badgeText}>여로 AI 맞춤 코스 생성</Text>
-          </View>
-          <Text style={styles.headerTitle}>어디로 떠나시나요?</Text>
-          <Text style={styles.headerSubtitle}>
-            여행 일정과 취향을 분석하여 당신만을 위한 최적의 이동 코스를 만들어 드립니다.
-          </Text>
-        </View>
+        {/* Header Component */}
+        <CourseCreateHeader />
 
-        {/* Input Form Section */}
+        {/* Input Form Section Card */}
         <View style={styles.formCard}>
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Ionicons name="earth-outline" size={16} color="#4648D4" />
-              <Text style={styles.label}>여행 국가</Text>
+          {/* Destination Section (Country & City arranged horizontally) */}
+          <View style={styles.destinationRow}>
+            {/* Country Input Group */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <View style={styles.labelRow}>
+                <Ionicons name="earth-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}</Text>
+              </View>
+              <TextInput
+                testID="input-country"
+                style={styles.input}
+                placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
+                value={destinationCountry}
+                onChangeText={setDestinationCountry}
+                placeholderTextColor={theme.colors.text.placeholder}
+              />
             </View>
-            <TextInput
-              testID="input-country"
-              style={styles.input}
-              placeholder="예: 대한민국, 일본, 프랑스"
-              value={destinationCountry}
-              onChangeText={setDestinationCountry}
-              placeholderTextColor="#94A3B8"
-            />
+
+            {/* City Input Group */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <View style={styles.labelRow}>
+                <Ionicons name="location-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.CITY_LABEL}</Text>
+              </View>
+              <TextInput
+                testID="input-city"
+                style={styles.input}
+                placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
+                value={destinationCity}
+                onChangeText={setDestinationCity}
+                placeholderTextColor={theme.colors.text.placeholder}
+              />
+            </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Ionicons name="location-outline" size={16} color="#4648D4" />
-              <Text style={styles.label}>여행 도시</Text>
-            </View>
-            <TextInput
-              testID="input-city"
-              style={styles.input}
-              placeholder="예: 제주, 서울, 파리"
-              value={destinationCity}
-              onChangeText={setDestinationCity}
-              placeholderTextColor="#94A3B8"
-            />
-          </View>
-
-          {/* Date Range Section with Auto-Hyphen Formatting */}
+          {/* Date Range Section */}
           <View style={styles.inputGroup}>
             <View style={styles.dateRow}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
                 <View style={styles.labelRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#4648D4" />
-                  <Text style={styles.label}>출발 예정일</Text>
+                  <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
+                  <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}</Text>
                 </View>
-                <View style={styles.inputWithIcon}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isCalendarOpen && activeDateTarget === 'start') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('start');
+                    }
+                  }}
+                  style={styles.inputWithIcon}
+                >
                   <TextInput
                     testID="input-start-date"
                     style={[
@@ -218,35 +159,34 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                       startDate.length > 0 && !isStartDateValid && styles.inputError,
                       isCalendarOpen && activeDateTarget === 'start' && styles.inputFocused,
                     ]}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
                     value={startDate}
-                    onChangeText={handleStartDateChange}
-                    onFocus={() => openCalendarForTarget('start')}
-                    keyboardType="number-pad"
-                    maxLength={10}
-                    placeholderTextColor="#94A3B8"
+                    editable={false}
+                    pointerEvents="none"
+                    placeholderTextColor={theme.colors.text.placeholder}
                   />
-                  <TouchableOpacity
-                    style={styles.calendarIconButton}
-                    onPress={() => {
-                      if (isCalendarOpen && activeDateTarget === 'start') {
-                        setIsCalendarOpen(false);
-                      } else {
-                        openCalendarForTarget('start');
-                      }
-                    }}
-                  >
-                    <Ionicons name="calendar" size={18} color="#4648D4" />
-                  </TouchableOpacity>
-                </View>
+                  <View style={styles.calendarIconButton}>
+                    <Ionicons name="calendar" size={18} color={theme.colors.primary} />
+                  </View>
+                </TouchableOpacity>
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
                 <View style={styles.labelRow}>
-                  <Ionicons name="calendar-sharp" size={16} color="#4648D4" />
-                  <Text style={styles.label}>도착 예정일</Text>
+                  <Ionicons name="calendar-sharp" size={16} color={theme.colors.primary} />
+                  <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}</Text>
                 </View>
-                <View style={styles.inputWithIcon}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isCalendarOpen && activeDateTarget === 'end') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('end');
+                    }
+                  }}
+                  style={styles.inputWithIcon}
+                >
                   <TextInput
                     testID="input-total-days"
                     style={[
@@ -255,27 +195,16 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                       endDate.length > 0 && !isEndDateValid && styles.inputError,
                       isCalendarOpen && activeDateTarget === 'end' && styles.inputFocused,
                     ]}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
                     value={endDate}
-                    onChangeText={handleEndDateChange}
-                    onFocus={() => openCalendarForTarget('end')}
-                    keyboardType="number-pad"
-                    maxLength={10}
-                    placeholderTextColor="#94A3B8"
+                    editable={false}
+                    pointerEvents="none"
+                    placeholderTextColor={theme.colors.text.placeholder}
                   />
-                  <TouchableOpacity
-                    style={styles.calendarIconButton}
-                    onPress={() => {
-                      if (isCalendarOpen && activeDateTarget === 'end') {
-                        setIsCalendarOpen(false);
-                      } else {
-                        openCalendarForTarget('end');
-                      }
-                    }}
-                  >
-                    <Ionicons name="calendar" size={18} color="#4648D4" />
-                  </TouchableOpacity>
-                </View>
+                  <View style={styles.calendarIconButton}>
+                    <Ionicons name="calendar" size={18} color={theme.colors.primary} />
+                  </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -292,92 +221,20 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
             />
           )}
 
-          {/* Budget Type Cards */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Ionicons name="wallet-outline" size={16} color="#4648D4" />
-              <Text style={styles.label}>예산 및 소비 성향</Text>
-            </View>
-            <View style={styles.radioGroup}>
-              <TouchableOpacity
-                testID="budget-cost_effective"
-                activeOpacity={0.8}
-                style={[
-                  styles.radioButton,
-                  budgetType === 'cost_effective' && styles.radioButtonActive,
-                ]}
-                onPress={() => setBudgetType('cost_effective')}
-              >
-                <Ionicons
-                  name="wallet-outline"
-                  size={18}
-                  color={budgetType === 'cost_effective' ? '#4648D4' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.radioText,
-                    budgetType === 'cost_effective' && styles.radioTextActive,
-                  ]}
-                >
-                  가성비
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID="budget-moderate"
-                activeOpacity={0.8}
-                style={[
-                  styles.radioButton,
-                  budgetType === 'moderate' && styles.radioButtonActive,
-                ]}
-                onPress={() => setBudgetType('moderate')}
-              >
-                <Ionicons
-                  name="card-outline"
-                  size={18}
-                  color={budgetType === 'moderate' ? '#4648D4' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.radioText,
-                    budgetType === 'moderate' && styles.radioTextActive,
-                  ]}
-                >
-                  적정 수준
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID="budget-luxury"
-                activeOpacity={0.8}
-                style={[
-                  styles.radioButton,
-                  budgetType === 'luxury' && styles.radioButtonActive,
-                ]}
-                onPress={() => setBudgetType('luxury')}
-              >
-                <Ionicons
-                  name="diamond-outline"
-                  size={18}
-                  color={budgetType === 'luxury' ? '#4648D4' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.radioText,
-                    budgetType === 'luxury' && styles.radioTextActive,
-                  ]}
-                >
-                  럭셔리
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Budget Type Selector Component */}
+          <BudgetTypeSelector
+            selectedType={budgetType}
+            onSelect={(type) => {
+              trackButtonClick('btn_select_budget_type', `Select Budget ${type}`, { budgetType: type });
+              setBudgetType(type);
+            }}
+          />
         </View>
 
-        {/* Shared Yeolo UI v1 AI Path Generation Button */}
+        {/* Generate Button Component */}
         <GenerateCourseButton
           testID="submit-course-btn"
-          label="AI 코스 생성하기"
+          label={UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
           disabled={!isFormValid}
           onPress={handleSubmit}
           isFloating={false}
@@ -390,62 +247,28 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: '#F6FAFE',
+    backgroundColor: theme.colors.bg.screen,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },
-  headerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    gap: 6,
-    marginBottom: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4648D4',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
-  },
   formCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
     elevation: 2,
     gap: 16,
+  },
+  destinationRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   dateRow: {
     flexDirection: 'row',
@@ -463,7 +286,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#334155',
+    color: theme.colors.text.secondary,
   },
   inputWithIcon: {
     flexDirection: 'row',
@@ -471,18 +294,18 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.colors.bg.input,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.border.default,
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 13,
-    color: '#0F172A',
+    color: theme.colors.text.primary,
   },
   inputFocused: {
-    borderColor: '#4648D4',
-    backgroundColor: '#EEF2FF',
+    borderColor: theme.colors.border.active,
+    backgroundColor: theme.colors.primaryContainer,
   },
   calendarIconButton: {
     position: 'absolute',
@@ -490,37 +313,44 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   inputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
+    borderColor: theme.colors.border.error,
+    backgroundColor: theme.colors.bg.error,
   },
-  radioGroup: {
-    flexDirection: 'row',
-    gap: 8,
+  inputDisabled: {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    opacity: 0.7,
   },
-  radioButton: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  dropdownContainer: {
+    position: 'absolute',
+    top: 68,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.bg.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    gap: 6,
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 8,
+    maxHeight: 180,
+    zIndex: 999,
+    overflow: 'hidden',
   },
-  radioButtonActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#4648D4',
+  dropdownScroll: {
+    maxHeight: 180,
   },
-  radioText: {
+  dropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  dropdownItemText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
-  },
-  radioTextActive: {
-    color: '#4648D4',
-    fontWeight: '700',
+    color: theme.colors.text.primary,
   },
 });
-
-export default CourseCreateScreen;

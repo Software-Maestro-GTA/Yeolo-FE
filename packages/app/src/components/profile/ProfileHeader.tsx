@@ -12,6 +12,9 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { User } from '@yeolo/common';
 
+import { theme } from '../../theme';
+import { UI_STRINGS, APP_CONFIG } from '../../constants';
+
 export interface ProfileHeaderProps {
   user?: Partial<User> | null;
   onEditAvatar?: () => void;
@@ -21,8 +24,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   onEditAvatar,
 }) => {
-  const displayName = user?.displayName || '여로 여행자';
-  const email = user?.email || 'user@yeolo.com';
+  const displayName = user?.displayName || UI_STRINGS.COMPONENTS.DEFAULT_USER_NAME;
+  const email = user?.email || APP_CONFIG.DEFAULT_USER_EMAIL;
   const avatarUrl = user?.profileImageUrl;
 
   return (
@@ -32,7 +35,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={36} color="#4648D4" />
+            <Ionicons name="person" size={36} color={theme.colors.primary} />
           </View>
         )}
       </View>
@@ -57,42 +60,40 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 42,
     borderWidth: 2,
-    borderColor: '#4648D4',
+    borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#C7D2FE',
+    borderColor: theme.colors.border.active,
   },
   editBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.text.inverse,
   },
   displayName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     fontWeight: '500',
   },
 });
-
-export default ProfileHeader;

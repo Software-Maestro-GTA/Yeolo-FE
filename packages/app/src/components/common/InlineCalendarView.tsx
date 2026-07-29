@@ -9,6 +9,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface InlineCalendarViewProps {
   currentYearMonth: { year: number; month: number };
   startDate: string;
@@ -58,25 +61,25 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
     <View style={styles.inlineCalendarCard}>
       <View style={styles.calendarHeader}>
         <TouchableOpacity onPress={onPrevMonth} style={styles.monthNavBtn}>
-          <Ionicons name="chevron-back" size={18} color="#4648D4" />
+          <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={styles.calendarMonthText}>
-          {currentYearMonth.year}년 {currentYearMonth.month}월
+          {currentYearMonth.year}{UI_STRINGS.COMPONENTS.CALENDAR_YEAR_SUFFIX} {currentYearMonth.month}{UI_STRINGS.COMPONENTS.CALENDAR_MONTH_SUFFIX}
         </Text>
         <TouchableOpacity onPress={onNextMonth} style={styles.monthNavBtn}>
-          <Ionicons name="chevron-forward" size={18} color="#4648D4" />
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Day of Week Header (7 Columns) */}
       <View style={styles.weekHeaderRow}>
-        {['일', '월', '화', '수', '목', '금', '토'].map((dayName, idx) => (
+        {UI_STRINGS.COMPONENTS.CALENDAR_WEEKDAYS.map((dayName, idx) => (
           <Text
             key={dayName}
             style={[
               styles.weekHeaderText,
-              idx === 0 && { color: '#EF4444' },
-              idx === 6 && { color: '#4648D4' },
+              idx === 0 && { color: theme.colors.status.error },
+              idx === 6 && { color: theme.colors.primary },
             ]}
           >
             {dayName}
@@ -90,7 +93,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
           <View key={`week-${weekIdx}`} style={styles.weekRow}>
             {weekRow.map((dayNum, dayIdx) => {
               if (dayNum === null) {
-                return <View key={`empty-${weekIdx}-${dayIdx}`} style={styles.dayCell} />;
+                return <View key={`empty-${weekIdx}-${dayIdx}`} style={styles.dayCellContainer} />;
               }
 
               const mm = String(currentYearMonth.month).padStart(2, '0');
@@ -99,24 +102,45 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
 
               const isStart = startDate === dateStr;
               const isEnd = endDate === dateStr;
+              const hasBoth = Boolean(startDate) && Boolean(endDate);
+              const isSameDate = isStart && isEnd;
+              const isInRange =
+                hasBoth &&
+                startDate < dateStr &&
+                dateStr < endDate;
+
+              const showStartTrack = hasBoth && !isSameDate && isStart;
+              const showEndTrack = hasBoth && !isSameDate && isEnd;
 
               return (
                 <TouchableOpacity
                   key={`day-${dayNum}`}
-                  style={[
-                    styles.dayCell,
-                    (isStart || isEnd) && styles.dayCellSelected,
-                  ]}
+                  style={styles.dayCellContainer}
+                  activeOpacity={0.7}
                   onPress={() => onSelectDay(dayNum)}
                 >
-                  <Text
+                  {/* Connected Ribbon Background Track */}
+                  {showStartTrack && <View style={[styles.rangeTrack, styles.rangeTrackStart]} />}
+                  {showEndTrack && <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />}
+                  {isInRange && <View style={[styles.rangeTrack, styles.rangeTrackMiddle]} />}
+
+                  {/* Day Content Bubble */}
+                  <View
                     style={[
-                      styles.dayCellText,
-                      (isStart || isEnd) && styles.dayCellTextSelected,
+                      styles.dayBubble,
+                      (isStart || isEnd) && styles.dayBubbleSelected,
                     ]}
                   >
-                    {dayNum}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.dayCellText,
+                        isInRange && styles.dayCellTextInRange,
+                        (isStart || isEnd) && styles.dayCellTextSelected,
+                      ]}
+                    >
+                      {dayNum}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -129,9 +153,9 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
 
 const styles = StyleSheet.create({
   inlineCalendarCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.colors.bg.input,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.border.default,
     borderRadius: 16,
     padding: 14,
     marginTop: 4,
@@ -144,20 +168,20 @@ const styles = StyleSheet.create({
   },
   monthNavBtn: {
     padding: 6,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     borderRadius: 8,
   },
   calendarMonthText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0F172A',
+    color: theme.colors.text.primary,
   },
   weekHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: theme.colors.border.default,
     paddingBottom: 6,
   },
   weekHeaderText: {
@@ -165,34 +189,65 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
-    color: '#64748B',
+    color: theme.colors.text.subtle,
   },
   calendarBody: {
     gap: 4,
   },
   weekRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  dayCell: {
+  dayCellContainer: {
     flex: 1,
-    height: 36,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 18,
+    position: 'relative',
   },
-  dayCellSelected: {
-    backgroundColor: '#4648D4',
+  rangeTrack: {
+    position: 'absolute',
+    height: 32,
+    backgroundColor: theme.colors.primaryContainer,
+    top: 3,
+  },
+  rangeTrackStart: {
+    left: '50%',
+    right: 0,
+  },
+  rangeTrackEnd: {
+    left: 0,
+    right: '50%',
+  },
+  rangeTrackMiddle: {
+    left: 0,
+    right: 0,
+  },
+  dayBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  dayBubbleSelected: {
+    backgroundColor: theme.colors.primary,
   },
   dayCellText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#334155',
+    color: theme.colors.text.secondary,
+  },
+  dayCellTextInRange: {
+    color: theme.colors.primary,
+    fontWeight: '800',
+  },
+  dayTextDisabled: {
+    color: theme.colors.border.default,
   },
   dayCellTextSelected: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontWeight: '800',
   },
 });
-
-export default InlineCalendarView;

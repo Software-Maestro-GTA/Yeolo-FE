@@ -9,6 +9,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
 
 export type NavTab = 'home' | 'explore' | 'create' | 'profile';
 
@@ -21,16 +25,20 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   currentTab = 'profile',
   onTabPress,
 }) => {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 0);
+
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { height: 64 + bottomInset, paddingBottom: bottomInset }]}>
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('home')}
       >
         <Ionicons
           name={currentTab === 'home' ? 'home' : 'home-outline'}
           size={20}
-          color={currentTab === 'home' ? '#4648D4' : '#76777C'}
+          color={currentTab === 'home' ? theme.colors.primary : theme.colors.text.muted}
         />
         <Text
           style={[
@@ -38,18 +46,19 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             currentTab === 'home' && styles.navTextActive,
           ]}
         >
-          홈
+          {UI_STRINGS.COMPONENTS.NAV_HOME}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('explore')}
       >
         <Ionicons
           name={currentTab === 'explore' ? 'compass' : 'compass-outline'}
           size={20}
-          color={currentTab === 'explore' ? '#4648D4' : '#76777C'}
+          color={currentTab === 'explore' ? theme.colors.primary : theme.colors.text.muted}
         />
         <Text
           style={[
@@ -57,18 +66,19 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             currentTab === 'explore' && styles.navTextActive,
           ]}
         >
-          탐색
+          {UI_STRINGS.COMPONENTS.NAV_EXPLORE}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('create')}
       >
         <Ionicons
           name={currentTab === 'create' ? 'add-circle' : 'add-circle-outline'}
           size={22}
-          color={currentTab === 'create' ? '#4648D4' : '#76777C'}
+          color={currentTab === 'create' ? theme.colors.primary : theme.colors.text.muted}
         />
         <Text
           style={[
@@ -76,18 +86,19 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             currentTab === 'create' && styles.navTextActive,
           ]}
         >
-          생성
+          {UI_STRINGS.COMPONENTS.NAV_CREATE}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('profile')}
       >
         <Ionicons
           name={currentTab === 'profile' ? 'person' : 'person-outline'}
           size={20}
-          color={currentTab === 'profile' ? '#4648D4' : '#76777C'}
+          color={currentTab === 'profile' ? theme.colors.primary : theme.colors.text.muted}
         />
         <Text
           style={[
@@ -95,7 +106,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             currentTab === 'profile' && styles.navTextActive,
           ]}
         >
-          프로필
+          {UI_STRINGS.COMPONENTS.NAV_PROFILE}
         </Text>
       </TouchableOpacity>
     </View>
@@ -109,30 +120,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 64,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.08)',
     flexDirection: 'row',
     justifyContent: 'space-around',
-
     alignItems: 'center',
     paddingHorizontal: 16,
     zIndex: 10,
   },
   navItem: {
+    flex: 1,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#76777C',
+    color: theme.colors.text.muted,
     marginTop: 4,
   },
   navTextActive: {
-    color: '#4648D4',
+    color: theme.colors.primary,
     fontWeight: '700',
   },
+  centerButtonLabelActive: {
+    color: theme.colors.primary,
+  },
 });
-
-export default BottomNavBar;

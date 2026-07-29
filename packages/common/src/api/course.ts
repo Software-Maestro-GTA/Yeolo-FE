@@ -9,6 +9,7 @@
 import ky from 'ky';
 import { parseServerSentEvents } from 'parse-sse';
 import { ApiError } from './errors';
+import { logger } from '../utils/logger';
 import type {
   CourseCreateRequest,
   CourseProgressEvent,
@@ -42,6 +43,7 @@ export async function createCourseStreamApi(
   let courseId: string | undefined;
 
   try {
+    logger.info('[CourseAPI] createCourseStreamApi request:', payload.destinationCity);
     const response = await ky.post(`${apiUrl}/api/courses`, {
       json: payload,
       headers: {
@@ -89,10 +91,11 @@ export async function createCourseStreamApi(
           courseId = parsed.data?.courseId;
         }
       } catch (jsonError) {
-        console.error('Error parsing SSE event in course generation:', jsonError);
+        logger.error('[CourseAPI] Error parsing SSE event in course generation:', jsonError);
       }
     }
   } catch (error: any) {
+    logger.error('[CourseAPI] createCourseStreamApi error:', error);
     if (error instanceof ApiError) {
       throw error;
     }
@@ -112,6 +115,7 @@ export async function createCourseStreamApi(
   }
 
   if (!courseId) {
+    logger.error('[CourseAPI] Course generation finished without courseId');
     throw new ApiError(400, '여행 코스 생성이 완료되었으나 Course ID를 수신하지 못했습니다.');
   }
 
@@ -132,6 +136,7 @@ export async function getCourseDetailApi(
   courseId: string
 ): Promise<CourseDetail> {
   try {
+    logger.info('[CourseAPI] getCourseDetailApi request, courseId:', courseId);
     const response = await ky.get(`${apiUrl}/api/courses/${courseId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -146,6 +151,7 @@ export async function getCourseDetailApi(
 
     throw new ApiError(response.status || 500, json?.message || '여행 코스 정보를 찾을 수 없습니다.');
   } catch (error: any) {
+    logger.error(`[CourseAPI] getCourseDetailApi error (courseId: ${courseId}):`, error);
     if (error instanceof ApiError) {
       throw error;
     }
@@ -176,6 +182,7 @@ export async function getCourseListApi(
   accessToken: string
 ): Promise<CourseSummary[]> {
   try {
+    logger.info('[CourseAPI] getCourseListApi request');
     const response = await ky.get(`${apiUrl}/api/courses`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -190,6 +197,7 @@ export async function getCourseListApi(
 
     throw new ApiError(response.status || 500, json?.message || '코스 목록을 불러올 수 없습니다.');
   } catch (error: any) {
+    logger.error('[CourseAPI] getCourseListApi error:', error);
     if (error instanceof ApiError) {
       throw error;
     }

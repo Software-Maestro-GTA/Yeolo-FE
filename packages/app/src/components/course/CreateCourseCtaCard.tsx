@@ -9,6 +9,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
 
 export interface CreateCourseCtaCardProps {
   onPress: () => void;
@@ -23,7 +25,7 @@ export function CreateCourseCtaCard({ onPress }: CreateCourseCtaCardProps) {
       style={styles.container}
     >
       <LinearGradient
-        colors={['#4648d4', '#7c3aed', '#ec4899']}
+        colors={[theme.colors.primary, '#7c3aed', '#ec4899']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
@@ -32,11 +34,11 @@ export function CreateCourseCtaCard({ onPress }: CreateCourseCtaCardProps) {
           <View style={styles.iconCircle}>
             <Text style={styles.iconText}>✨</Text>
           </View>
-          <Text style={styles.titleText}>AI와 함께 여로를 만들어보세요</Text>
-          <Text style={styles.subtitleText}>취향에 꼭 맞는 맞춤형 여행 코스를 즉시 생성합니다</Text>
+          <Text style={styles.titleText}>{UI_STRINGS.COMPONENTS.CTA_TITLE}</Text>
+          <Text style={styles.subtitleText}>{UI_STRINGS.COMPONENTS.CTA_SUBTITLE}</Text>
 
           <View style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>새 코스 생성하기 →</Text>
+            <Text style={styles.actionButtonText}>{UI_STRINGS.COMPONENTS.CTA_BUTTON}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -50,7 +52,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#4648d4',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: theme.colors.bg.glass,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -77,7 +79,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#ffffff',
+    color: theme.colors.text.inverse,
     marginBottom: 4,
   },
   subtitleText: {
@@ -86,13 +88,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.bg.card,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
   },
   actionButtonText: {
-    color: '#4648d4',
+    color: theme.colors.primary,
     fontWeight: '800',
     fontSize: 13,
   },

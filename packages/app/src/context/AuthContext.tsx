@@ -8,15 +8,16 @@
  */
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginWithGoogleApi, DEFAULT_API_URL, type User } from '@yeolo/common';
-import { initializeGoogleSignin, signOutGoogle } from '../services/authService';
-import { AUTH_CONSTANTS } from '../constants/auth';
+import { type User, logger } from '@yeolo/common';
+import { initializeGoogleSignin, signOutGoogle, onUnauthorized, clearLocalSession } from '../services';
+
+import { useGoogleLoginMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
-  loginWithGoogle: (code: string) => Promise<void>;
+  loginWithGoogle: (code: string) => Promise<{ user: User; isNewUser: boolean }>;
   logout: () => void;
 }
 
@@ -24,15 +25,25 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
+  const googleLoginMutation = useGoogleLoginMutation();
+  const logoutMutation = useLogoutMutation();
+
   useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      logger.info('[AuthContext] Received 401 Unauthorized event. Resetting auth state...');
+      setIsAuthenticated(false);
+      setUser(null);
+    });
+
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
     initializeGoogleSignin(webClientId, iosClientId);
 
     const restoreSession = async () => {
+      logger.info('[AuthContext] Restoring session...');
       try {
         const token = await AsyncStorage.getItem('accessToken');
         const savedUser = await AsyncStorage.getItem('user');
@@ -41,55 +52,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (savedUser) {
             setUser(JSON.parse(savedUser));
           }
+          logger.info('[AuthContext] Session restored successfully');
         }
       } catch (error) {
-        console.warn('Failed to restore session token:', error);
+        console.error('세션 복원 실패:', error);
       } finally {
-        setIsLoading(false);
+        setIsRestoring(false);
       }
     };
 
     restoreSession();
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  const loginWithGoogle = async (code: string) => {
-    setIsLoading(true);
+  const loginWithGoogle = async (code: string): Promise<{ user: User; isNewUser: boolean }> => {
+    logger.info('[AuthContext] Executing loginWithGoogle...');
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-      const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || AUTH_CONSTANTS.DEFAULT_REDIRECT_URI;
-
-      const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
-
-      // Save tokens and user info to AsyncStorage
-      await AsyncStorage.setItem('accessToken', response.data.accessToken);
-      await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
-      await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
-
-      setUser(response.data.user);
+      const result = await googleLoginMutation.mutateAsync(code);
+      setUser(result.user);
       setIsAuthenticated(true);
+      logger.info('[AuthContext] Google login successful:', result.user);
+      return result;
     } catch (error) {
       console.error('Login flow API error:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    setIsLoading(true);
+    logger.info('[AuthContext] Executing logout...');
     try {
+      await logoutMutation.mutateAsync();
+      logger.info('[AuthContext] Logout API call completed');
+    } catch (error) {
+      logger.warn('[AuthContext] Logout API error encountered (e.g. token expired/invalid), continuing local session cleanup:', error);
+    } finally {
       await signOutGoogle();
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
       await AsyncStorage.removeItem('user');
       setIsAuthenticated(false);
       setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setIsLoading(false);
+      logger.info('[AuthContext] Local session cleanup finished');
     }
   };
+
+  const isLoading = isRestoring || googleLoginMutation.isPending || logoutMutation.isPending;
 
   return (
     <AuthContext.Provider

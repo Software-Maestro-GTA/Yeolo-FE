@@ -9,6 +9,8 @@
 import { create } from 'zustand';
 import type { AnalyzeTastePayload, TasteAnalysisState } from '../types/taste';
 import { analyzeTastePreferenceStream } from '../api/taste';
+import { logger } from '../utils/logger';
+
 
 export interface TasteStoreState extends TasteAnalysisState {
   setProgress: (step: string, message: string) => void;
@@ -67,10 +69,14 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
   },
 
   analyzeTaste: async (apiUrl, accessToken, payload, fetcher = analyzeTastePreferenceStream) => {
+    logger.info('[TasteStore] Starting analyzeTaste with images payload:', {
+      imageCount: payload.images?.length,
+    });
     set({ isAnalyzing: true, error: null, errorCode: null });
     try {
       const profileId = await fetcher(apiUrl, accessToken, payload, {
         onProgress: (event) => {
+          logger.info('[TasteStore] Taste analysis SSE progress:', event.step, event.message);
           set({
             isAnalyzing: true,
             progressStep: event.step,
@@ -78,12 +84,14 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
           });
         },
         onComplete: () => {
+          logger.info('[TasteStore] Taste analysis SSE complete callback fired');
           set({
             isAnalyzing: false,
             errorCode: 200,
           });
         },
         onError: (err) => {
+          logger.error('[TasteStore] Taste analysis SSE error:', err);
           set({
             isAnalyzing: false,
             error: err?.message || '성향 분석 도중 오류가 발생했습니다.',
@@ -93,6 +101,7 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
       });
 
       if (profileId) {
+        logger.info('[TasteStore] Taste analysis finished successfully. Created Profile ID:', profileId);
         set({
           isAnalyzing: false,
           errorCode: 200,
@@ -101,6 +110,7 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
       return profileId;
     } catch (err: any) {
       const message = err?.message || '성향 분석 도중 오류가 발생했습니다.';
+      logger.error('[TasteStore] analyzeTaste exception caught:', message);
       set({
         isAnalyzing: false,
         error: message,

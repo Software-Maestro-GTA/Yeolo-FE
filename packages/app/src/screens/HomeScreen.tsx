@@ -1,8 +1,8 @@
 /**
  * @file HomeScreen.tsx
  * @description Main dashboard landing screen displaying AI course recommendations, quick feature shortcuts, and user greeting.
- * @requirements REQ-11, REQ-9
- * @functional FUN-1, FUN-3, FUN-4
+ * @requirements REQ-11, REQ-9, REQ-22
+ * @functional FUN-1, FUN-3, FUN-4, FUN-GA4
  * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
@@ -14,9 +14,11 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface HomeScreenProps {
   onNavigateToCreate?: () => void;
@@ -24,17 +26,20 @@ export interface HomeScreenProps {
   onNavigateToProfile?: () => void;
 }
 
-export default function HomeScreen({
+export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToCreate,
   onNavigateToExplore,
   onNavigateToProfile,
-}: HomeScreenProps) {
+}) => {
+  useGA4ScreenTracking('HomeScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const auth = useContext(AuthContext);
   const user = auth?.user;
-  const displayName = user?.displayName || '여행자';
+  const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -43,23 +48,26 @@ export default function HomeScreen({
         <View style={styles.header}>
           <View style={styles.headerTextGroup}>
             <Text style={styles.greetingTitle}>
-              반가워요, <Text style={styles.highlightName}>{displayName}님!</Text> 👋
+              {UI_STRINGS.HOME.GREETING} <Text style={styles.highlightName}>{displayName}{UI_STRINGS.HOME.HONORIFIC_NIM}</Text> 👋
             </Text>
             <Text style={styles.greetingSubtitle}>
-              오늘 어떤 특별한 여행을 떠나볼까요?
+              {UI_STRINGS.HOME.GREETING_SUBTITLE}
             </Text>
           </View>
 
           <TouchableOpacity
             style={styles.avatarButton}
-            onPress={onNavigateToProfile}
+            onPress={() => {
+              trackButtonClick('btn_home_profile', 'Profile Avatar');
+              onNavigateToProfile?.();
+            }}
             activeOpacity={0.8}
           >
             {user?.profileImageUrl ? (
               <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={20} color="#4648D4" />
+                <Ionicons name="person" size={20} color={theme.colors.primary} />
               </View>
             )}
           </TouchableOpacity>
@@ -68,63 +76,72 @@ export default function HomeScreen({
         {/* Hero Banner Card: AI Course Generation CTA */}
         <View style={styles.heroCard}>
           <View style={styles.heroBadge}>
-            <Ionicons name="sparkles" size={14} color="#4648D4" />
-            <Text style={styles.heroBadgeText}>AI 초개인화 엔진</Text>
+            <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
+            <Text style={styles.heroBadgeText}>{UI_STRINGS.HOME.HERO_BADGE}</Text>
           </View>
 
-          <Text style={styles.heroTitle}>나만을 위한 맞춤 코스 생성</Text>
+          <Text style={styles.heroTitle}>{UI_STRINGS.HOME.CREATE_BUTTON}</Text>
           <Text style={styles.heroDescription}>
-            여행 성향과 목적지에 맞춰 최적의 일정 및 경로를 실시간으로 설계해 드려요.
+            {UI_STRINGS.HOME.HERO_DESCRIPTION}
           </Text>
 
           <TouchableOpacity
             style={styles.heroButton}
-            onPress={onNavigateToCreate}
+            onPress={() => {
+              trackButtonClick('btn_home_create_course', 'Create Course Hero Button');
+              onNavigateToCreate?.();
+            }}
             activeOpacity={0.85}
           >
-            <Ionicons name="add-circle" size={18} color="#FFFFFF" style={styles.heroButtonIcon} />
-            <Text style={styles.heroButtonText}>AI 여행 코스 만들기</Text>
+            <Ionicons name="add-circle" size={18} color={theme.colors.text.inverse} style={styles.heroButtonIcon} />
+            <Text style={styles.heroButtonText}>{UI_STRINGS.HOME.HERO_BUTTON}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Quick Shortcut Buttons Grid */}
-        <Text style={styles.sectionTitle}>빠른 추천 서비스</Text>
+        <Text style={styles.sectionTitle}>{UI_STRINGS.HOME.SECTION_TITLE}</Text>
         <View style={styles.shortcutGrid}>
           {/* 1. AI 코스 탐색 */}
           <TouchableOpacity
             style={styles.shortcutCard}
-            onPress={onNavigateToExplore}
+            onPress={() => {
+              trackButtonClick('btn_home_explore', 'Explore Shortcut');
+              onNavigateToExplore?.();
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#EEF2FF' }]}>
-              <Ionicons name="compass-outline" size={24} color="#4648D4" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
+              <Ionicons name="compass-outline" size={24} color={theme.colors.primary} />
             </View>
-            <Text style={styles.shortcutTitle}>코스 둘러보기</Text>
-            <Text style={styles.shortcutSub}>인기 추천 일정 탐색</Text>
+            <Text style={styles.shortcutTitle}>{UI_STRINGS.HOME.SHORTCUT_EXPLORE_TITLE}</Text>
+            <Text style={styles.shortcutSub}>{UI_STRINGS.HOME.SHORTCUT_EXPLORE_SUB}</Text>
           </TouchableOpacity>
 
           {/* 2. 내 취향 프로필 */}
           <TouchableOpacity
             style={styles.shortcutCard}
-            onPress={onNavigateToProfile}
+            onPress={() => {
+              trackButtonClick('btn_home_shortcut_profile', 'Profile Shortcut');
+              onNavigateToProfile?.();
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: '#E0F2FE' }]}>
-              <Ionicons name="options-outline" size={24} color="#0284C7" />
+            <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
+              <Ionicons name="options-outline" size={24} color={theme.colors.primary} />
             </View>
-            <Text style={styles.shortcutTitle}>내 여행 취향</Text>
-            <Text style={styles.shortcutSub}>AI 취향 정보 관리</Text>
+            <Text style={styles.shortcutTitle}>{UI_STRINGS.HOME.SHORTCUT_PROFILE_TITLE}</Text>
+            <Text style={styles.shortcutSub}>{UI_STRINGS.HOME.SHORTCUT_PROFILE_SUB}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: theme.colors.bg.input,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -143,15 +160,15 @@ const styles = StyleSheet.create({
   greetingTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   highlightName: {
-    color: '#4648D4',
+    color: theme.colors.primary,
   },
   greetingSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     fontWeight: '500',
   },
   avatarButton: {
@@ -162,26 +179,26 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#4648D4',
+    borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#C7D2FE',
+    borderColor: theme.colors.border.active,
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 20,
     padding: 22,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#4648D4',
+    borderColor: theme.colors.border.default,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -191,7 +208,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -201,28 +218,28 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4648D4',
+    color: theme.colors.primary,
   },
   heroTitle: {
     fontSize: 19,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 6,
   },
   heroDescription: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     lineHeight: 19,
     marginBottom: 18,
   },
   heroButton: {
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    shadowColor: '#4648D4',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -232,14 +249,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   heroButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 15,
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 12,
   },
   shortcutGrid: {
@@ -249,12 +266,12 @@ const styles = StyleSheet.create({
   },
   shortcutCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderColor: theme.colors.border.default,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
@@ -271,22 +288,22 @@ const styles = StyleSheet.create({
   shortcutTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 2,
   },
   shortcutSub: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.colors.text.placeholder,
   },
   themeCardList: {
     gap: 12,
   },
   themeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.border.default,
   },
   themeCardHeader: {
     flexDirection: 'row',
@@ -295,41 +312,41 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   themeTagPrimary: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: theme.colors.primaryContainer,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   themeTagPrimaryText: {
-    color: '#4648D4',
+    color: theme.colors.primary,
     fontSize: 11,
     fontWeight: '700',
   },
   themeTagSecondary: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: theme.colors.status.successBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   themeTagSecondaryText: {
-    color: '#16A34A',
+    color: theme.colors.status.success,
     fontSize: 11,
     fontWeight: '700',
   },
   themeDuration: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: theme.colors.text.placeholder,
     fontWeight: '500',
   },
   themeTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   themeSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     lineHeight: 18,
   },
 });

@@ -1,55 +1,75 @@
 /**
  * @file LoginScreen.tsx
  * @description Google login UI screen matching Figma design context and Google OAuth flow.
- * @requirements REQ-11
- * @functional FUN-1
+ * @requirements REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api API-FB-1
  * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AntDesign } from '@expo/vector-icons';
-import { AUTH_CONSTANTS, BRAND_COLORS } from '../constants/auth';
-import { AuthContext } from '../context/AuthContext';
-import { signInWithGoogle } from '../services/authService';
+import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
+import { theme } from '../theme';
+import { AuthContext } from '../context';
+import { signInWithGoogle, openCustomerSupportMail } from '../services';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
-const LoginScreen: React.FC = () => {
+export interface LoginScreenProps {
+  onLoginSuccess?: (isNewUser: boolean) => void;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+  useGA4ScreenTracking('LoginScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
   const isLoggingIn = authContext?.isLoading || false;
 
   const handleGoogleLogin = async () => {
+    trackButtonClick('btn_google_login', 'Google OAuth Login Button');
     if (isLoggingIn) return;
     try {
-      // 1. Retrieve the authorization code via Google SDK
       const code = await signInWithGoogle();
-      // 2. Submit authorization code to the backend via AuthContext
       if (loginWithGoogle) {
-        await loginWithGoogle(code);
+        const result = await loginWithGoogle(code);
+        onLoginSuccess?.(result?.isNewUser ?? false);
       }
-    } catch (error: any) {
-      Alert.alert('로그인 오류', error.message || 'Google 로그인에 실패했습니다.');
+    } catch (err: unknown) {
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('로그인에 실패했습니다.', ToastAndroid.SHORT);
+      }
+    }
+  };
+
+  const handleSupportLinkPress = async () => {
+    trackButtonClick('btn_customer_support_mailto', 'Customer Support Mailto Link');
+    try {
+      await openCustomerSupportMail();
+    } catch (err) {
+      console.error('Failed to open customer support mail modal:', err);
     }
   };
 
   return (
     <LinearGradient
-      colors={BRAND_COLORS.BACKGROUND_GRADIENT}
+      colors={theme.colors.gradient.background}
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Bottom Content Area with Top-fading Gradient Background */}
           <LinearGradient
-            colors={BRAND_COLORS.BOTTOM_GRADIENT}
+            colors={theme.colors.gradient.bottom}
             style={styles.bottomContentArea}
           >
             {/* Title Section */}
             <View style={styles.titleSection}>
-              <Text style={styles.subTitle}>{AUTH_CONSTANTS.SUB_TITLE}</Text>
-              <Text style={styles.mainTitle}>{AUTH_CONSTANTS.MAIN_TITLE}</Text>
+              <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
+              <Text style={styles.mainTitle}>{UI_STRINGS.AUTH.MAIN_TITLE}</Text>
             </View>
 
             {/* Google Login Button */}
@@ -60,22 +80,21 @@ const LoginScreen: React.FC = () => {
               disabled={isLoggingIn}
             >
               <View style={styles.buttonContent}>
-                <AntDesign
-                  name="google"
-                  size={20}
-                  color={BRAND_COLORS.BUTTON_TEXT}
-                  style={styles.logoIcon}
-                />
-                <Text style={styles.buttonText}>{AUTH_CONSTANTS.GOOGLE_BUTTON_TEXT}</Text>
+                <GoogleLogoIcon size={22} style={styles.logoIcon} />
+                <Text style={styles.buttonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>
 
             {/* Customer Support Footer Link */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
-                {AUTH_CONSTANTS.CUSTOMER_SUPPORT_TEXT}
-                <Text style={styles.supportLink}>
-                  {AUTH_CONSTANTS.CUSTOMER_SUPPORT_LINK}
+                {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_TEXT}
+                <Text
+                  style={styles.supportLink}
+                  onPress={handleSupportLinkPress}
+                  testID="customer-support-mailto-link"
+                >
+                  {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
                 </Text>
               </Text>
             </View>
@@ -110,7 +129,7 @@ const styles = StyleSheet.create({
   subTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     lineHeight: 32,
     letterSpacing: -0.6,
     marginBottom: 4,
@@ -118,7 +137,7 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 40,
     fontWeight: '700',
-    color: BRAND_COLORS.PRIMARY,
+    color: theme.colors.primary,
     lineHeight: 50,
     letterSpacing: -0.8,
   },
@@ -126,18 +145,18 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     alignSelf: 'center',
-    backgroundColor: BRAND_COLORS.BUTTON_BACKGROUND,
-    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.BORDER_LIGHT,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: BRAND_COLORS.SHADOW,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -145,29 +164,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   buttonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: BRAND_COLORS.BUTTON_TEXT,
-    lineHeight: 16,
-    letterSpacing: 0.3,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.2,
   },
   footerContainer: {
     marginTop: 16,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: BRAND_COLORS.TEXT_MUTED,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
     lineHeight: 20,
-    textAlign: 'center',
   },
   supportLink: {
-    color: BRAND_COLORS.PRIMARY,
+    color: theme.colors.text.primary,
+    textDecorationLine: 'underline',
     fontWeight: '500',
   },
 });
-
-export default LoginScreen;

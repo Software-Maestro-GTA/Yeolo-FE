@@ -7,10 +7,12 @@
  * @author Antigravity Agent
  */
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import CourseListScreen from '../src/screens/CourseListScreen';
+import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { CourseListScreen } from '../src/screens/CourseListScreen';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { renderWithQueryClient as render } from './test-utils';
+
 
 jest.mock('../src/components/navigation/BottomNavBar', () => ({
   BottomNavBar: () => null,

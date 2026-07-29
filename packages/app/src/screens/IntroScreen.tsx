@@ -1,8 +1,8 @@
 /**
  * @file IntroScreen.tsx
  * @description Application introduction screen matching Figma design specifications.
- * @requirements REQ-11
- * @functional FUN-1
+ * @requirements REQ-11, REQ-22
+ * @functional FUN-1, FUN-GA4
  * @api N/A
  * @author Antigravity Agent
  */
@@ -11,19 +11,21 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign } from '@expo/vector-icons';
-import { BRAND_COLORS } from '../constants/auth';
+import { theme } from '../theme';
+import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 interface IntroScreenProps {
-  /**
-   * Callback function triggered when user clicks the 'Next' button.
-   */
   onNext: () => void;
 }
 
 export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
+  useGA4ScreenTracking('IntroScreen');
+  const { trackButtonClick } = useGA4ButtonClick();
+
   return (
     <LinearGradient
-      colors={BRAND_COLORS.BACKGROUND_GRADIENT}
+      colors={theme.colors.gradient.background}
       style={styles.gradientContainer}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
@@ -32,10 +34,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
           <View style={styles.topContent} testID="top-content">
             <View style={styles.heroText}>
               <Text style={styles.mainTitle}>
-                {`여로가 당신의\n여행을 설계합니다`}
+                {UI_STRINGS.INTRO.MAIN_TITLE}
               </Text>
               <Text style={styles.subTitle}>
-                {`AI가 당신의 취향을 분석하고,\n세상에 단 하나뿐인 여행 코스를 만들어요.`}
+                {UI_STRINGS.INTRO.SUB_TITLE}
               </Text>
             </View>
           </View>
@@ -45,14 +47,17 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
-              onPress={onNext}
+              onPress={() => {
+                trackButtonClick('btn_intro_next', 'Intro Start Button');
+                onNext();
+              }}
               testID="next-button"
             >
-              <Text style={styles.buttonText}>다음으로</Text>
+              <Text style={styles.buttonText}>{UI_STRINGS.INTRO.NEXT_BUTTON}</Text>
               <AntDesign
                 name="arrow-right"
                 size={18}
-                color="#ffffff"
+                color={theme.colors.text.inverse}
                 style={styles.arrowIcon}
               />
             </TouchableOpacity>
@@ -87,14 +92,14 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: BRAND_COLORS.TEXT_DARK,
+    color: theme.colors.text.primary,
     lineHeight: 36,
     letterSpacing: -0.6,
   },
   subTitle: {
     fontSize: 15,
     fontWeight: '400',
-    color: '#45464c',
+    color: theme.colors.text.secondary,
     lineHeight: 24,
   },
   bottomContainer: {
@@ -102,13 +107,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: BRAND_COLORS.PRIMARY,
+    backgroundColor: theme.colors.primary,
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: BRAND_COLORS.PRIMARY,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -117,11 +122,9 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: theme.colors.text.inverse,
   },
   arrowIcon: {
     marginLeft: 8,
   },
 });
-
-export default IntroScreen;

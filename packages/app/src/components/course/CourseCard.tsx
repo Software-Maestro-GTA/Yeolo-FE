@@ -10,12 +10,15 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import type { CourseSummary } from '@yeolo/common';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 /**
  * Helper function to dynamically construct an online image search URL based on country and city search terms.
  * Queries LoremFlickr dynamic photo search endpoint by country/city keywords.
  */
 export function getDestinationImageUrl(country: string, city: string): string {
-  const keyword = (city || country || '여행').trim();
+  const keyword = (city || country || UI_STRINGS.COMPONENTS.DEFAULT_TRAVEL_KEYWORD).trim();
   return `https://loremflickr.com/600/400/${encodeURIComponent(keyword)}`;
 }
 
@@ -25,16 +28,20 @@ export interface CourseCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-export function CourseCard({ course, onPress, viewMode = 'grid' }: CourseCardProps) {
+export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
+  course,
+  onPress,
+  viewMode = 'grid',
+}) {
   const durationText =
     course.totalDays && course.totalDays > 1
-      ? `${course.totalDays - 1}박 ${course.totalDays}일`
-      : '당일치기';
+      ? `${course.totalDays - 1}${UI_STRINGS.COMPONENTS.DURATION_NIGHTS_SUFFIX} ${course.totalDays}${UI_STRINGS.COMPONENTS.DURATION_DAYS_SUFFIX}`
+      : UI_STRINGS.COMPONENTS.DURATION_SAME_DAY;
 
   const isList = viewMode === 'list';
 
   // Fallback banner image gradient/color based on course id hash
-  const defaultColors = ['#4648d4', '#6c5ce7', '#00cec9', '#e84393', '#fdcb6e'];
+  const defaultColors = [theme.colors.primary, '#6c5ce7', '#00cec9', '#e84393', '#fdcb6e'];
   const colorIndex = Math.abs(
     course.courseId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   ) % defaultColors.length;
@@ -94,14 +101,14 @@ export function CourseCard({ course, onPress, viewMode = 'grid' }: CourseCardPro
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -131,10 +138,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: theme.colors.bg.glass,
   },
   placeholderText: {
-    color: '#ffffff',
+    color: theme.colors.text.inverse,
     fontWeight: '800',
     fontSize: 16,
   },
@@ -148,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeText: {
-    color: '#ffffff',
+    color: theme.colors.text.inverse,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -158,14 +165,14 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: '#4648d4',
+    color: theme.colors.primary,
     fontWeight: '700',
     marginBottom: 4,
   },
   titleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -176,19 +183,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagChip: {
-    backgroundColor: '#f0f4ff',
+    backgroundColor: theme.colors.primaryContainer,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   tagText: {
     fontSize: 11,
-    color: '#4648d4',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   dateText: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: theme.colors.text.placeholder,
     marginTop: 'auto',
   },
 });

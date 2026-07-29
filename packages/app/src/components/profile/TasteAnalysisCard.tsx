@@ -1,35 +1,34 @@
-/**
- * @file TasteAnalysisCard.tsx
- * @description Prominent card component displaying AI travel taste analysis banner and large trigger button matching Figma UI specifications.
- * @requirements REQ-11
- * @functional FUN-4
- * @author Antigravity Agent
- */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { theme } from '../../theme';
+import { UI_STRINGS } from '../../constants';
+
 export interface TasteAnalysisCardProps {
-  onNavigateToAnalysis?: () => void;
+  onNavigateToTasteProfile?: () => void;
 }
 
 export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
-  onNavigateToAnalysis,
+  onNavigateToTasteProfile,
 }) => {
   return (
     <View style={styles.card}>
       <View style={styles.titleWithIcon}>
-        <Ionicons name="sparkles" size={22} color="#4648D4" />
-        <Text style={styles.cardTitle}>AI 여행 취향 분석</Text>
+        <Ionicons name="sparkles" size={22} color={theme.colors.primary} />
+        <Text style={styles.cardTitle}>{UI_STRINGS.COMPONENTS.TASTE_CARD_TITLE}</Text>
       </View>
+      <Text style={styles.descriptionText}>
+        AI가 분석한 나의 독창적인 여행 스타일과 성향 키워드를 확인해보세요!
+      </Text>
 
       <TouchableOpacity
         style={styles.largeButton}
-        onPress={onNavigateToAnalysis}
+        onPress={onNavigateToTasteProfile}
         activeOpacity={0.8}
       >
-        <Ionicons name="refresh-outline" size={18} color="#FFFFFF" style={styles.buttonIcon} />
-        <Text style={styles.largeButtonText}>취향 분석 요청</Text>
+        <Ionicons name="eye-outline" size={18} color={theme.colors.text.inverse} style={styles.buttonIcon} />
+        <Text style={styles.largeButtonText}>{UI_STRINGS.COMPONENTS.TASTE_CARD_VIEW_BUTTON}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -37,14 +36,14 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.card,
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderColor: theme.colors.border.default,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 8,
@@ -54,41 +53,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#030612',
+    color: theme.colors.text.primary,
   },
   descriptionText: {
     fontSize: 13,
-    color: '#64748B',
+    color: theme.colors.text.subtle,
     lineHeight: 20,
     marginBottom: 16,
   },
   largeButton: {
-    backgroundColor: '#4648D4',
+    backgroundColor: theme.colors.primary,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 12,
     width: '100%',
-    shadowColor: '#4648D4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
   },
   buttonIcon: {
     marginRight: 6,
   },
   largeButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.text.inverse,
     fontSize: 15,
     fontWeight: '600',
   },
 });
-
-export default TasteAnalysisCard;
