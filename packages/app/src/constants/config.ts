@@ -10,6 +10,7 @@ export const APP_CONFIG = {
   DEFAULT_API_URL: 'https://api.yeolo.com',
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
+  DEFAULT_SUPPORT_EMAIL: 'ksk85628781@gmail.com',
   /** Maximum number of recent photos retrieved from media library for taste analysis */
   ANALYSIS_PHOTO_LIMIT: 100,
   /** Default staleTime for TanStack Query (5 minutes) */
@@ -25,6 +26,7 @@ export const APP_CONFIG = {
 
 export const ANALYSIS_PHOTO_LIMIT = APP_CONFIG.ANALYSIS_PHOTO_LIMIT;
 export const DEFAULT_MAP_REGION = APP_CONFIG.DEFAULT_MAP_REGION;
+export const DEFAULT_SUPPORT_EMAIL = APP_CONFIG.DEFAULT_SUPPORT_EMAIL;
 
 export default APP_CONFIG;
 

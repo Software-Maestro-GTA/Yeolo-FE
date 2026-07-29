@@ -7,14 +7,14 @@
  * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { theme } from '../theme';
 import { AuthContext } from '../context';
-import { signInWithGoogle } from '../services';
+import { signInWithGoogle, openCustomerSupportMail } from '../services';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface LoginScreenProps {
@@ -33,16 +33,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     trackButtonClick('btn_google_login', 'Google OAuth Login Button');
     if (isLoggingIn) return;
     try {
-      // 1. Retrieve the authorization code via Google SDK
       const code = await signInWithGoogle();
-      // 2. Submit authorization code to the backend via AuthContext
       if (loginWithGoogle) {
         const result = await loginWithGoogle(code);
         onLoginSuccess?.(result?.isNewUser ?? false);
       }
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      Alert.alert(UI_STRINGS.AUTH.LOGIN_ERROR_TITLE, error?.message || UI_STRINGS.AUTH.LOGIN_ERROR_DEFAULT);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('로그인에 실패했습니다.', ToastAndroid.SHORT);
+      }
+    }
+  };
+
+  const handleSupportLinkPress = async () => {
+    trackButtonClick('btn_customer_support_mailto', 'Customer Support Mailto Link');
+    try {
+      await openCustomerSupportMail();
+    } catch (err) {
+      console.error('Failed to open customer support mail modal:', err);
     }
   };
 
@@ -72,7 +80,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               disabled={isLoggingIn}
             >
               <View style={styles.buttonContent}>
-                <GoogleLogoIcon size={20} style={styles.logoIcon} />
+                <GoogleLogoIcon size={22} style={styles.logoIcon} />
                 <Text style={styles.buttonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>
@@ -81,7 +89,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
                 {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_TEXT}
-                <Text style={styles.supportLink}>
+                <Text
+                  style={styles.supportLink}
+                  onPress={handleSupportLinkPress}
+                  testID="customer-support-mailto-link"
+                >
                   {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
                 </Text>
               </Text>
@@ -133,18 +145,18 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     alignSelf: 'center',
-    backgroundColor: theme.colors.bg.glass,
-    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
+    borderColor: 'rgba(255, 255, 255, 0.9)',
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -152,27 +164,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   buttonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-    lineHeight: 16,
-    letterSpacing: 0.3,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.2,
   },
   footerContainer: {
     marginTop: 16,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
-    color: theme.colors.text.muted,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
     lineHeight: 20,
-    textAlign: 'center',
   },
   supportLink: {
-    color: theme.colors.primary,
+    color: theme.colors.text.primary,
+    textDecorationLine: 'underline',
     fontWeight: '500',
   },
 });

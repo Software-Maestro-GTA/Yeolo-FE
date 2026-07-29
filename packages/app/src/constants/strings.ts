@@ -6,6 +6,8 @@
  * @author Antigravity Agent
  */
 
+import { APP_CONFIG } from './config';
+
 export const UI_STRINGS = {
   AUTH: {
     SUB_TITLE: '당신의 여행을 데이터로 그리다,',
@@ -56,7 +58,7 @@ export const UI_STRINGS = {
     EMPTY_COURSES: '아직 생성된 코스가 없습니다.',
     HERO_BADGE: 'AI 초개인화 엔진',
     HERO_DESCRIPTION: '여행 성향과 목적지에 맞춰 최적의 일정 및 경로를 실시간으로 설계해 드려요.',
-    HERO_BUTTON: 'AI 여행 코스 만들기',
+    HERO_BUTTON: '여행 코스 생성하기',
     SECTION_TITLE: '빠른 추천 서비스',
     SHORTCUT_EXPLORE_TITLE: '코스 둘러보기',
     SHORTCUT_EXPLORE_SUB: '인기 추천 일정 탐색',
@@ -80,7 +82,7 @@ export const UI_STRINGS = {
     BUDGET_COST_EFFECTIVE: '가성비',
     BUDGET_STANDARD: '적정 수준',
     BUDGET_LUXURY: '럭셔리',
-    SUBMIT_BUTTON: 'AI 코스 생성하기',
+    SUBMIT_BUTTON: '여행 코스 생성하기',
   },
   COURSE_GENERATING: {
     TITLE: 'AI 여행 코스 생성 중',
@@ -146,7 +148,7 @@ export const UI_STRINGS = {
     CTA_TITLE: 'AI와 함께 여로를 만들어보세요',
     CTA_SUBTITLE: '취향에 꼭 맞는 맞춤형 여행 코스를 즉시 생성합니다',
     CTA_BUTTON: '새 코스 생성하기 →',
-    GENERATE_BUTTON_DEFAULT: 'AI 경로 생성하기',
+    GENERATE_BUTTON_DEFAULT: '여행 코스 생성하기',
     NAV_HOME: '홈',
     NAV_EXPLORE: '탐색',
     NAV_CREATE: '생성',
@@ -154,7 +156,7 @@ export const UI_STRINGS = {
     PROFILE_HEADER_SUBTITLE: '나만의 맞춤형 여행 취향 데이터베이스',
     TASTE_CARD_TITLE: 'AI 여행 취향 분석',
     TASTE_CARD_SUBTITLE: '사진 데이터로 나만의 여행 취향을 발견해보세요',
-    TASTE_CARD_VIEW_BUTTON: '취향 보기',
+    TASTE_CARD_VIEW_BUTTON: '나의 취향 보기',
     TASTE_CARD_BUTTON: '취향 분석 요청',
     SETTINGS_TITLE: '계정 및 서비스 설정',
     TERMS_SERVICE: '이용약관',

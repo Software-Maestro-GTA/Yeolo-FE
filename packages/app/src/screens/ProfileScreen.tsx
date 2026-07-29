@@ -9,14 +9,15 @@
  */
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
+  View,
   StyleSheet,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context';
-import { clearLocalSession } from '../services';
-import { useLogoutMutation, useWithdrawMutation } from '../hooks/queries';
+import { clearLocalSession, openCustomerSupportMail } from '../services';
+import { useWithdrawMutation } from '../hooks/queries';
 import {
   ProfileHeader,
   TasteAnalysisCard,
@@ -25,17 +26,15 @@ import {
   ConfirmModal,
 } from '../components/profile';
 import { theme } from '../theme';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface ProfileScreenProps {
-  onNavigateToAnalysis?: () => void;
   onNavigateToTasteProfile?: () => void;
   onNavigateToLogin?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
-  onNavigateToAnalysis,
   onNavigateToTasteProfile,
   onNavigateToLogin,
 }) => {
@@ -55,32 +54,32 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [confirmModalType, setConfirmModalType] = useState<'logout' | 'withdraw' | null>(null);
-
-  const logoutMutation = useLogoutMutation();
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const withdrawMutation = useWithdrawMutation();
 
-  const isModalActionLoading = logoutMutation.isPending || withdrawMutation.isPending;
+  const isModalActionLoading = isLoggingOut || withdrawMutation.isPending;
 
   const clearSessionAndRedirect = async () => {
     await clearLocalSession();
-    auth?.logout?.();
     if (isMounted.current) {
       setConfirmModalType(null);
     }
     onNavigateToLogin?.();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     trackButtonClick('btn_profile_logout_confirm', 'Logout Confirm');
-    logoutMutation.mutate(undefined, {
-      onSuccess: async () => {
-        await clearSessionAndRedirect();
-      },
-      onError: async (err) => {
-        console.error('Logout failed:', err);
-        await clearSessionAndRedirect();
-      },
-    });
+    setIsLoggingOut(true);
+    try {
+      if (auth?.logout) {
+        await auth.logout();
+      }
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      setIsLoggingOut(false);
+      await clearSessionAndRedirect();
+    }
   };
 
   const handleWithdraw = () => {
@@ -100,17 +99,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <ProfileHeader user={currentUser} />
 
         {/* AI Taste Analysis Card */}
         <TasteAnalysisCard
-          onNavigateToAnalysis={() => {
-            trackButtonClick('btn_profile_taste_analysis', 'Go to Taste Analysis');
-            onNavigateToAnalysis?.();
-          }}
           onNavigateToTasteProfile={() => {
             trackButtonClick('btn_profile_taste_view', 'View Taste Profile');
             onNavigateToTasteProfile?.();
@@ -122,6 +117,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           onPressTerms={() => {
             trackButtonClick('btn_profile_terms', 'Open Terms');
             setShowTermsModal(true);
+          }}
+          onPressSupport={async () => {
+            trackButtonClick('btn_profile_support_mailto', 'Open Customer Support Mailto');
+            try {
+              await openCustomerSupportMail();
+            } catch (err) {
+              console.error('Failed to open customer support mail modal:', err);
+            }
           }}
           onPressLogout={() => {
             trackButtonClick('btn_profile_logout', 'Open Logout Dialog');
@@ -154,7 +157,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         }}
         onCancel={() => setConfirmModalType(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -164,6 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg.screen,
   },
   contentContainer: {
+    paddingTop: 16,
     paddingBottom: 40,
   },
 });

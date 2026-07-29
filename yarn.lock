@@ -5672,6 +5672,11 @@ expo-linking@~57.0.3:
     expo-constants "~57.0.5"
     invariant "^2.2.4"
 
+expo-mail-composer@^57.0.1:
+  version "57.0.1"
+  resolved "https://registry.yarnpkg.com/expo-mail-composer/-/expo-mail-composer-57.0.1.tgz#e131e3da0a3e4c210c5e6584415393dc7da57354"
+  integrity sha512-6AFey5bULnkE2ZQD20Q31eM8CpoRgkhOcT/4Y08jBHFSxxEy8aAzsbrzc/RpVT42E7I/HSL2JHdfr+HZ9tofrA==
+
 expo-media-library@~57.0.1:
   version "57.0.3"
   resolved "https://registry.yarnpkg.com/expo-media-library/-/expo-media-library-57.0.3.tgz#f8553cebc4b8b13418eecbc612b3de4a02088f7f"

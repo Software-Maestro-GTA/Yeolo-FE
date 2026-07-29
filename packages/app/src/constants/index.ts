@@ -7,3 +7,4 @@
  */
 export * from './strings';
 export * from './config';
+export * from './navigation';

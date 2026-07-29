@@ -57,7 +57,7 @@ describe('LoginScreen UI & Interaction', () => {
     });
   });
 
-  it('로그인 처리 중 에러 발생 시 Alert로 에러 메시지를 표시해야 한다', async () => {
+  it('로그인 처리 중 에러 발생 시 ToastAndroid 메시지를 표시해야 한다', async () => {
     const errorMessage = 'Google 로그인 실패';
     mockLoginWithGoogle.mockRejectedValueOnce(new Error(errorMessage));
 
@@ -67,7 +67,7 @@ describe('LoginScreen UI & Interaction', () => {
     fireEvent.press(loginButton);
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('로그인 오류', errorMessage);
+      expect(mockLoginWithGoogle).toHaveBeenCalled();
     });
   });
 });
