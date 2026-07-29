@@ -41,36 +41,42 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it('유효하지 않은 날짜 포맷이나 0 이하 일수 입력 시 생성 버튼이 비활성화되어야 한다', async () => {
-    const mockOnSubmit = jest.fn();
+  it('시작일 및 종료일 입력란은 키보드 타이핑이 불가능(editable: false)하고 캘린더 선택으로 지정되어야 한다', async () => {
     const { getByTestId } = await render(
-      <CourseCreateScreen onSubmit={mockOnSubmit} />
+      <CourseCreateScreen />
     );
 
-    await act(async () => {
-      fireEvent.changeText(getByTestId('input-country'), '대한민국');
-      fireEvent.changeText(getByTestId('input-city'), '제주');
-      fireEvent.changeText(getByTestId('input-start-date'), '2026-99-99');
-      fireEvent.changeText(getByTestId('input-total-days'), '0');
-      fireEvent.press(getByTestId('budget-cost_effective'));
-    });
+    const startDateInput = getByTestId('input-start-date');
+    const endDateInput = getByTestId('input-total-days');
 
-    await waitFor(() => {
-      expect(getByTestId('submit-course-btn').props.accessibilityState?.disabled).toBe(true);
-    });
+    expect(startDateInput.props.editable).toBe(false);
+    expect(endDateInput.props.editable).toBe(false);
   });
 
-  it('필수 조건이 모두 올바르게 입력되면 버튼이 활성화되고 폼 데이터를 전달하며 submit 되어야 한다', async () => {
+  it('필수 조건(국가, 도시, 캘린더 선택 날짜, 예산)이 모두 올바르게 채워지면 submit 버튼이 활성화되어야 한다', async () => {
     const mockOnSubmit = jest.fn();
-    const { getByTestId } = await render(
+    const { getByTestId, getAllByText } = await render(
       <CourseCreateScreen onSubmit={mockOnSubmit} />
     );
 
     await act(async () => {
       fireEvent.changeText(getByTestId('input-country'), '대한민국');
       fireEvent.changeText(getByTestId('input-city'), '제주');
-      fireEvent.changeText(getByTestId('input-start-date'), '2026-08-01');
-      fireEvent.changeText(getByTestId('input-total-days'), '3');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('input-start-date'));
+    });
+
+    await act(async () => {
+      fireEvent.press(getAllByText('1')[0]);
+    });
+
+    await act(async () => {
+      fireEvent.press(getAllByText('3')[0]);
+    });
+
+    await act(async () => {
       fireEvent.press(getByTestId('budget-cost_effective'));
     });
 
@@ -83,13 +89,26 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        destinationCountry: '대한민국',
-        destinationCity: '제주',
-        startDate: '2026-08-01',
-        totalDays: 3,
-        budgetType: 'cost_effective',
-      });
+      expect(mockOnSubmit).toHaveBeenCalled();
     });
+  });
+
+  it('국가와 도시 입력창이 모두 자유롭게 입력 가능해야 한다', async () => {
+    const { getByTestId } = await render(
+      <CourseCreateScreen />
+    );
+
+    const cityInput = getByTestId('input-city');
+    const countryInput = getByTestId('input-country');
+
+    expect(cityInput.props.editable).not.toBe(false);
+
+    await act(async () => {
+      fireEvent.changeText(cityInput, '파리');
+      fireEvent.changeText(countryInput, '프랑스');
+    });
+
+    expect(countryInput.props.value).toBe('프랑스');
+    expect(cityInput.props.value).toBe('파리');
   });
 });

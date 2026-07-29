@@ -26,7 +26,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   contentStyle,
 }) => {
   return (
-    <SafeAreaView style={[styles.mainLayout, style]} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.mainLayout, style]} edges={['top', 'left', 'right']}>
       <View style={[styles.content, contentStyle]}>{children}</View>
       <BottomNavBar currentTab={currentTab} onTabPress={onTabPress} />
     </SafeAreaView>
@@ -40,5 +40,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingTop: 12,
+    paddingBottom: 64,
   },
 });

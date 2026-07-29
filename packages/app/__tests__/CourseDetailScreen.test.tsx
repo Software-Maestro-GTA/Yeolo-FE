@@ -137,14 +137,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
 
     await waitFor(() => {
       expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
-      expect(getByText('함덕 해수욕장')).toBeTruthy();
-      expect(getByText('감성 카페 델문도')).toBeTruthy();
+      expect(getByText('대한민국 제주')).toBeTruthy();
+      expect(getByText('₩350,000')).toBeTruthy();
+      expect(getByText(/10:00/)).toBeTruthy();
+      expect(getByText(/90분 체류/)).toBeTruthy();
+      expect(getByText('바다 전망 추천')).toBeTruthy();
     });
-
-    expect(getByText(/350,000/)).toBeTruthy();
-    expect(getByText(/10:00/)).toBeTruthy();
-    expect(getByText(/90분 체류/)).toBeTruthy();
-    expect(getByText('바다 전망 추천')).toBeTruthy();
     expect(getByText(/대중교통 30분/)).toBeTruthy();
   });
 
@@ -246,5 +244,18 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     });
 
     require('react-native').Platform.OS = originalOS;
+  });
+
+  it('화면 하단에 총 예상 경비 카드가 정상적으로 렌더링되어야 한다', async () => {
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+
+    const { getByText } = await render(
+      <CourseDetailScreen courseId="test-course-id-123" />
+    );
+
+    await waitFor(() => {
+      expect(getByText('총 예상 경비')).toBeTruthy();
+      expect(getByText('₩350,000')).toBeTruthy();
+    });
   });
 });

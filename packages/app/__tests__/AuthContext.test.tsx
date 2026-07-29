@@ -126,4 +126,26 @@ describe('AuthContext', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
   });
+
+  it('401 Unauthorized 이벤트(notifyUnauthorized) 발생 시 토큰을 비우고 비인증 상태로 초기화되어야 한다', async () => {
+    await AsyncStorage.setItem('accessToken', 'mock-expired-token');
+    await AsyncStorage.setItem('user', JSON.stringify({ userId: 'u1', email: 'test@example.com' }));
+
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+
+    const { notifyUnauthorized } = require('../src/services/authService');
+    await act(async () => {
+      await notifyUnauthorized();
+    });
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.user).toBeNull();
+    expect(await AsyncStorage.getItem('accessToken')).toBeNull();
+  });
 });

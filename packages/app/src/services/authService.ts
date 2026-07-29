@@ -63,3 +63,31 @@ export const clearLocalSession = async (): Promise<void> => {
   await AsyncStorage.removeItem('refreshToken');
   await AsyncStorage.removeItem('user');
 };
+
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/**
+ * Register a listener to be called when 401 Unauthorized occurs.
+ */
+export const onUnauthorized = (listener: UnauthorizedListener): (() => void) => {
+  unauthorizedListeners.add(listener);
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+};
+
+/**
+ * Trigger session cleanup and notify all registered listeners to redirect to login.
+ */
+export const notifyUnauthorized = async (): Promise<void> => {
+  logger.warn('[AuthService] 401 Unauthorized detected! Clearing local session and redirecting to login...');
+  await clearLocalSession();
+  unauthorizedListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (e) {
+      console.error('[AuthService] Error executing 401 listener:', e);
+    }
+  });
+};

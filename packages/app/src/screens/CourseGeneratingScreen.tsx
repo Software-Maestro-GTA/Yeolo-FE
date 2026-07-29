@@ -16,10 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCourseStore } from '@yeolo/common';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
-import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { useGA4ScreenTracking, useGA4ButtonClick, COURSE_LIST_QUERY_KEY } from '../hooks';
 
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
@@ -32,14 +33,17 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const queryClient = useQueryClient();
 
   const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
 
   useEffect(() => {
     if (createdCourseId) {
+      // Invalidate TanStack Query course list cache so newly generated course is automatically refetched
+      queryClient.invalidateQueries({ queryKey: COURSE_LIST_QUERY_KEY });
       onComplete?.(createdCourseId);
     }
-  }, [createdCourseId, onComplete]);
+  }, [createdCourseId, onComplete, queryClient]);
 
   const handleRetry = () => {
     trackButtonClick('btn_course_generating_retry', 'Retry Course Generation');

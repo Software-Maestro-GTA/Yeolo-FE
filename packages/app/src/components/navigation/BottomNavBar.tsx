@@ -9,6 +9,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '../../theme';
 import { UI_STRINGS } from '../../constants';
@@ -24,10 +25,14 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   currentTab = 'profile',
   onTabPress,
 }) => {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 0);
+
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { height: 64 + bottomInset, paddingBottom: bottomInset }]}>
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('home')}
       >
         <Ionicons
@@ -47,6 +52,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('explore')}
       >
         <Ionicons
@@ -66,6 +72,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('create')}
       >
         <Ionicons
@@ -85,6 +92,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
       <TouchableOpacity
         style={styles.navItem}
+        activeOpacity={0.7}
         onPress={() => onTabPress?.('profile')}
       >
         <Ionicons
@@ -122,6 +130,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   navItem: {
+    flex: 1,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

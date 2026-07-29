@@ -30,6 +30,14 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
 }) => {
   const mapRef = React.useRef<MapView | null>(null);
 
+  React.useEffect(() => {
+    if (mapRef.current && mapRegion) {
+      if (typeof mapRef.current.animateToRegion === 'function') {
+        mapRef.current.animateToRegion(mapRegion, 500);
+      }
+    }
+  }, [mapRegion]);
+
   return (
     <View
       style={styles.miniMapSection}
@@ -69,6 +77,7 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
       ) : (
         <View style={styles.miniMapCard} testID="mini-map-webview-card">
           <WebView
+            key={leafletHtml}
             testID="in-app-webview"
             source={{ html: leafletHtml }}
             style={styles.webView}

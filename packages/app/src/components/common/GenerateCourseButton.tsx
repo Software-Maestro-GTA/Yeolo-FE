@@ -66,7 +66,7 @@ export const GenerateCourseButton: React.FC<GenerateCourseButtonProps> = ({
 const styles = StyleSheet.create({
   floatingContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 24,
     left: 20,
     right: 20,
     alignItems: 'center',

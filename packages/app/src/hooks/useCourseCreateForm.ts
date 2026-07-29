@@ -81,12 +81,12 @@ export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => vo
     const dd = String(day).padStart(2, '0');
     const dateStr = `${currentYearMonth.year}-${mm}-${dd}`;
 
-    if (activeDateTarget === 'start') {
+    if (!startDate || (startDate && endDate) || dateStr < startDate) {
       setStartDate(dateStr);
+      setEndDate('');
       setActiveDateTarget('end');
     } else {
       setEndDate(dateStr);
-      setIsCalendarOpen(false);
     }
   };
 

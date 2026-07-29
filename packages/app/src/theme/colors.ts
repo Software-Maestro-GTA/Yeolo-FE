@@ -104,7 +104,7 @@ export const theme = {
     },
 
     gradient: {
-      background: [palette.screenBgStart, palette.screenBgEnd] as const,
+      background: [palette.screenBgStart, palette.gradientBottomEnd] as const,
       bottom: [palette.gradientBottomStart, palette.gradientBottomEnd] as const,
       primary: [palette.blue500, palette.green400] as const,
     },

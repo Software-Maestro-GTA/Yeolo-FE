@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ItineraryStop,
 } from '@yeolo/common';
@@ -84,20 +83,20 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
     return () => {
       isMounted = false;
     };
-  }, [currentDayData, course?.destinationCity]);
+  }, [currentDayData, selectedDay, course?.destinationCity]);
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>{UI_STRINGS.COMMON.LOADING}</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !course) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{UI_STRINGS.COURSE_DETAIL.ERROR_TITLE}</Text>
         {error && <Text style={styles.errorSubText}>{error.message}</Text>}
         <TouchableOpacity
@@ -110,7 +109,7 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
         >
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -119,7 +118,7 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
   }, 0);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} scrollEnabled={!isMapInteracting}>
         {/* Header Section Component */}
         <CourseDetailHeader
@@ -165,8 +164,18 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
             </View>
           )}
         </View>
+
+        {/* Summary Section (총 예상 경비) */}
+        <View style={styles.summarySection}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>{UI_STRINGS.COURSE_DETAIL.TOTAL_ESTIMATED_COST}</Text>
+            <Text style={styles.summaryValue}>
+              ₩{calculatedTotalCost ? calculatedTotalCost.toLocaleString() : '0'}
+            </Text>
+          </View>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -224,5 +233,36 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: theme.colors.text.muted,
+  },
+  summarySection: {
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(198, 198, 204, 0.3)',
+    padding: 17,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#171c1f',
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.primary,
   },
 });

@@ -23,7 +23,6 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
   destinationCity,
   startDate,
   title,
-  totalCost,
 }) => {
   return (
     <View style={styles.headerContainer}>
@@ -33,11 +32,6 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
       <Text style={styles.headerSubtitle}>
         {startDate}, {title}
       </Text>
-      {totalCost !== undefined && totalCost > 0 && (
-        <Text style={styles.totalCostText}>
-          {UI_STRINGS.COURSE_DETAIL.TOTAL_ESTIMATED_COST}: {UI_STRINGS.COURSE_DETAIL.APPROX_CURRENCY}{totalCost.toLocaleString()}
-        </Text>
-      )}
     </View>
   );
 };
@@ -58,11 +52,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.text.subtle,
     fontWeight: '500',
-    marginBottom: 4,
-  },
-  totalCostText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.primary,
   },
 });

@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -307,6 +307,7 @@ const styles = StyleSheet.create({
   },
   gridItemWrapper: {
     flex: 1,
+    maxWidth: '48.5%',
     marginBottom: 12,
   },
   listItemWrapper: {

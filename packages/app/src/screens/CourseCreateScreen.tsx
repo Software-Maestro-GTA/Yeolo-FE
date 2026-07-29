@@ -6,7 +6,7 @@
  * @api API-FB-4
  * @author Antigravity Agent
  */
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,9 @@ import { useCourseCreateForm, useGA4ScreenTracking, useGA4ButtonClick } from '..
 import type { NavTab } from '../components/navigation';
 import { theme } from '../theme';
 import { UI_STRINGS } from '../constants';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
 
 export interface CourseCreateScreenProps {
   onSubmit?: (data: CourseCreateRequest) => void;
@@ -65,12 +68,19 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     isEndDateValid,
     isFormValid,
     handleSubmit,
-  } = useCourseCreateForm((data) => {
+  } = useCourseCreateForm(async (data) => {
     trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
       country: data.destinationCountry,
       city: data.destinationCity,
       budgetType: data.budgetType,
     });
+    try {
+      const token = (await AsyncStorage.getItem('accessToken')) || '';
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+      useCourseStore.getState().createCourse(apiUrl, data, token);
+    } catch (err) {
+      console.error('Failed to trigger createCourse store action:', err);
+    }
     onSubmit?.(data);
   });
 
@@ -80,40 +90,46 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header Component */}
         <CourseCreateHeader />
 
         {/* Input Form Section Card */}
         <View style={styles.formCard}>
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Ionicons name="earth-outline" size={16} color={theme.colors.primary} />
-              <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}</Text>
+          {/* Destination Section (Country & City arranged horizontally) */}
+          <View style={styles.destinationRow}>
+            {/* Country Input Group */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <View style={styles.labelRow}>
+                <Ionicons name="earth-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}</Text>
+              </View>
+              <TextInput
+                testID="input-country"
+                style={styles.input}
+                placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
+                value={destinationCountry}
+                onChangeText={setDestinationCountry}
+                placeholderTextColor={theme.colors.text.placeholder}
+              />
             </View>
-            <TextInput
-              testID="input-country"
-              style={styles.input}
-              placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
-              value={destinationCountry}
-              onChangeText={setDestinationCountry}
-              placeholderTextColor={theme.colors.text.placeholder}
-            />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Ionicons name="location-outline" size={16} color={theme.colors.primary} />
-              <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.CITY_LABEL}</Text>
+            {/* City Input Group */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <View style={styles.labelRow}>
+                <Ionicons name="location-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.CITY_LABEL}</Text>
+              </View>
+              <TextInput
+                testID="input-city"
+                style={styles.input}
+                placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
+                value={destinationCity}
+                onChangeText={setDestinationCity}
+                placeholderTextColor={theme.colors.text.placeholder}
+              />
             </View>
-            <TextInput
-              testID="input-city"
-              style={styles.input}
-              placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
-              value={destinationCity}
-              onChangeText={setDestinationCity}
-              placeholderTextColor={theme.colors.text.placeholder}
-            />
           </View>
 
           {/* Date Range Section */}
@@ -124,7 +140,17 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                   <Ionicons name="calendar-outline" size={16} color={theme.colors.primary} />
                   <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}</Text>
                 </View>
-                <View style={styles.inputWithIcon}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isCalendarOpen && activeDateTarget === 'start') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('start');
+                    }
+                  }}
+                  style={styles.inputWithIcon}
+                >
                   <TextInput
                     testID="input-start-date"
                     style={[
@@ -135,25 +161,14 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                     ]}
                     placeholder={UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
                     value={startDate}
-                    onChangeText={handleStartDateChange}
-                    onFocus={() => openCalendarForTarget('start')}
-                    keyboardType="number-pad"
-                    maxLength={10}
+                    editable={false}
+                    pointerEvents="none"
                     placeholderTextColor={theme.colors.text.placeholder}
                   />
-                  <TouchableOpacity
-                    style={styles.calendarIconButton}
-                    onPress={() => {
-                      if (isCalendarOpen && activeDateTarget === 'start') {
-                        setIsCalendarOpen(false);
-                      } else {
-                        openCalendarForTarget('start');
-                      }
-                    }}
-                  >
+                  <View style={styles.calendarIconButton}>
                     <Ionicons name="calendar" size={18} color={theme.colors.primary} />
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               </View>
 
               <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -161,7 +176,17 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                   <Ionicons name="calendar-sharp" size={16} color={theme.colors.primary} />
                   <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}</Text>
                 </View>
-                <View style={styles.inputWithIcon}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isCalendarOpen && activeDateTarget === 'end') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('end');
+                    }
+                  }}
+                  style={styles.inputWithIcon}
+                >
                   <TextInput
                     testID="input-total-days"
                     style={[
@@ -172,25 +197,14 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                     ]}
                     placeholder={UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
                     value={endDate}
-                    onChangeText={handleEndDateChange}
-                    onFocus={() => openCalendarForTarget('end')}
-                    keyboardType="number-pad"
-                    maxLength={10}
+                    editable={false}
+                    pointerEvents="none"
                     placeholderTextColor={theme.colors.text.placeholder}
                   />
-                  <TouchableOpacity
-                    style={styles.calendarIconButton}
-                    onPress={() => {
-                      if (isCalendarOpen && activeDateTarget === 'end') {
-                        setIsCalendarOpen(false);
-                      } else {
-                        openCalendarForTarget('end');
-                      }
-                    }}
-                  >
+                  <View style={styles.calendarIconButton}>
                     <Ionicons name="calendar" size={18} color={theme.colors.primary} />
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -252,6 +266,10 @@ const styles = StyleSheet.create({
     elevation: 2,
     gap: 16,
   },
+  destinationRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   dateRow: {
     flexDirection: 'row',
     gap: 10,
@@ -297,5 +315,42 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: theme.colors.border.error,
     backgroundColor: theme.colors.bg.error,
+  },
+  inputDisabled: {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    opacity: 0.7,
+  },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 68,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.bg.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 8,
+    maxHeight: 180,
+    zIndex: 999,
+    overflow: 'hidden',
+  },
+  dropdownScroll: {
+    maxHeight: 180,
+  },
+  dropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
   },
 });

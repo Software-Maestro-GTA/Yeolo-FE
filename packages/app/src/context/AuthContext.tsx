@@ -9,7 +9,7 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type User, logger } from '@yeolo/common';
-import { initializeGoogleSignin, signOutGoogle } from '../services';
+import { initializeGoogleSignin, signOutGoogle, onUnauthorized, clearLocalSession } from '../services';
 
 import { useGoogleLoginMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
 
@@ -32,6 +32,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logoutMutation = useLogoutMutation();
 
   useEffect(() => {
+    const unsubscribe = onUnauthorized(() => {
+      logger.info('[AuthContext] Received 401 Unauthorized event. Resetting auth state...');
+      setIsAuthenticated(false);
+      setUser(null);
+    });
+
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
     initializeGoogleSignin(webClientId, iosClientId);
@@ -56,6 +62,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     restoreSession();
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loginWithGoogle = async (code: string): Promise<{ user: User; isNewUser: boolean }> => {
@@ -76,21 +86,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logger.info('[AuthContext] Executing logout...');
     try {
       await logoutMutation.mutateAsync();
-      await signOutGoogle();
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      await AsyncStorage.removeItem('user');
-      setIsAuthenticated(false);
-      setUser(null);
-      logger.info('[AuthContext] Logout successful');
+      logger.info('[AuthContext] Logout API call completed');
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.warn('[AuthContext] Logout API error encountered (e.g. token expired/invalid), continuing local session cleanup:', error);
+    } finally {
       await signOutGoogle();
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
       await AsyncStorage.removeItem('user');
       setIsAuthenticated(false);
       setUser(null);
+      logger.info('[AuthContext] Local session cleanup finished');
     }
   };
 

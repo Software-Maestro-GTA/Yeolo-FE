@@ -93,7 +93,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
           <View key={`week-${weekIdx}`} style={styles.weekRow}>
             {weekRow.map((dayNum, dayIdx) => {
               if (dayNum === null) {
-                return <View key={`empty-${weekIdx}-${dayIdx}`} style={styles.dayCell} />;
+                return <View key={`empty-${weekIdx}-${dayIdx}`} style={styles.dayCellContainer} />;
               }
 
               const mm = String(currentYearMonth.month).padStart(2, '0');
@@ -102,24 +102,45 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
 
               const isStart = startDate === dateStr;
               const isEnd = endDate === dateStr;
+              const hasBoth = Boolean(startDate) && Boolean(endDate);
+              const isSameDate = isStart && isEnd;
+              const isInRange =
+                hasBoth &&
+                startDate < dateStr &&
+                dateStr < endDate;
+
+              const showStartTrack = hasBoth && !isSameDate && isStart;
+              const showEndTrack = hasBoth && !isSameDate && isEnd;
 
               return (
                 <TouchableOpacity
                   key={`day-${dayNum}`}
-                  style={[
-                    styles.dayCell,
-                    (isStart || isEnd) && styles.dayCellSelected,
-                  ]}
+                  style={styles.dayCellContainer}
+                  activeOpacity={0.7}
                   onPress={() => onSelectDay(dayNum)}
                 >
-                  <Text
+                  {/* Connected Ribbon Background Track */}
+                  {showStartTrack && <View style={[styles.rangeTrack, styles.rangeTrackStart]} />}
+                  {showEndTrack && <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />}
+                  {isInRange && <View style={[styles.rangeTrack, styles.rangeTrackMiddle]} />}
+
+                  {/* Day Content Bubble */}
+                  <View
                     style={[
-                      styles.dayCellText,
-                      (isStart || isEnd) && styles.dayCellTextSelected,
+                      styles.dayBubble,
+                      (isStart || isEnd) && styles.dayBubbleSelected,
                     ]}
                   >
-                    {dayNum}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.dayCellText,
+                        isInRange && styles.dayCellTextInRange,
+                        (isStart || isEnd) && styles.dayCellTextSelected,
+                      ]}
+                    >
+                      {dayNum}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -175,22 +196,52 @@ const styles = StyleSheet.create({
   },
   weekRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  dayCell: {
+  dayCellContainer: {
     flex: 1,
-    height: 36,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 18,
+    position: 'relative',
   },
-  dayCellSelected: {
+  rangeTrack: {
+    position: 'absolute',
+    height: 32,
+    backgroundColor: theme.colors.primaryContainer,
+    top: 3,
+  },
+  rangeTrackStart: {
+    left: '50%',
+    right: 0,
+  },
+  rangeTrackEnd: {
+    left: 0,
+    right: '50%',
+  },
+  rangeTrackMiddle: {
+    left: 0,
+    right: 0,
+  },
+  dayBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  dayBubbleSelected: {
     backgroundColor: theme.colors.primary,
   },
   dayCellText: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.text.secondary,
+  },
+  dayCellTextInRange: {
+    color: theme.colors.primary,
+    fontWeight: '800',
   },
   dayTextDisabled: {
     color: theme.colors.border.default,

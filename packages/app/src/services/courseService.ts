@@ -10,6 +10,7 @@ import {
   getAdjustedCoordinates,
   calculateRegion,
   getLeafletMapHtml,
+  logger,
   type ItineraryStop,
   type MapCoordinate,
   type MapRegion,
@@ -33,20 +34,25 @@ export async function processCourseStopsMapData(
     return {
       coordinates: [],
       region: defaultRegion,
-      leafletHtml: '',
+      leafletHtml: getLeafletMapHtml([]),
     };
   }
 
   const rawStops = (
     await Promise.all(
-      stops.map(async (stop) => {
+      stops.map(async (stop, index) => {
         const coords = await geocodePlace(stop.placeName, city);
-        if (!coords) return null;
-        return {
-          ...coords,
-          placeName: stop.placeName,
-          sequence: stop.sequence,
-        };
+        if (coords) {
+          logger.info(`[CourseService] Geocoded coords for "${stop.placeName}" (${city}):`, coords);
+          return {
+            ...coords,
+            placeName: stop.placeName,
+            sequence: stop.sequence ?? index + 1,
+          };
+        }
+
+        logger.warn(`[CourseService] Failed to geocode coords for "${stop.placeName}" (${city})`);
+        return null;
       })
     )
   ).filter((item): item is NonNullable<typeof item> => item !== null);
@@ -54,6 +60,8 @@ export async function processCourseStopsMapData(
   const coordinates = getAdjustedCoordinates(rawStops);
   const region = calculateRegion(coordinates);
   const leafletHtml = getLeafletMapHtml(coordinates);
+
+  logger.info(`[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`);
 
   return {
     coordinates,
