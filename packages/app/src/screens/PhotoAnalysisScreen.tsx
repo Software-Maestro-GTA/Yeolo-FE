@@ -45,7 +45,7 @@ export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
-          {/* Top content area containing titles and consent checkbox */}
+          {/* Top content area containing titles */}
           <View style={styles.topContent} testID="top-content">
             <View style={styles.heroText}>
               <Text style={styles.mainTitle}>
@@ -55,8 +55,11 @@ export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext
                 {UI_STRINGS.PHOTO_ANALYSIS.SUB_TITLE}
               </Text>
             </View>
+          </View>
 
-            {/* Consent Card Container */}
+          {/* Bottom container containing consent card and action button */}
+          <View style={styles.bottomContainer} testID="bottom-container">
+            {/* Consent Card Container - positioned directly above analyze button */}
             <TouchableOpacity
               style={styles.consentCard}
               activeOpacity={0.8}
@@ -70,10 +73,7 @@ export const PhotoAnalysisScreen: React.FC<PhotoAnalysisScreenProps> = ({ onNext
                 {UI_STRINGS.PHOTO_ANALYSIS.CONSENT_TEXT}
               </Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Bottom container containing action button */}
-          <View style={styles.bottomContainer} testID="bottom-container">
             <TouchableOpacity
               style={[styles.primaryButton, !isConsented && styles.disabledButton]}
               activeOpacity={0.8}
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   consentCard: {
-    marginHorizontal: 24,
+    marginHorizontal: 0,
     backgroundColor: theme.colors.bg.card,
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
   bottomContainer: {
     paddingHorizontal: 24,
     width: '100%',
+    gap: 16,
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,

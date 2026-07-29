@@ -4,3 +4,4 @@
  */
 export * from './GenerateCourseButton';
 export * from './InlineCalendarView';
+export * from './PhotoAnalysisModal';

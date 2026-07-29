@@ -6,16 +6,17 @@
  * @api API-FB-8
  * @author Antigravity Agent
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { TasteProfileView } from '../components/taste';
-import { GenerateCourseButton } from '../components/common';
+import { GenerateCourseButton, PhotoAnalysisModal } from '../components/common';
 import { useTasteProfileQuery } from '../hooks/queries';
 import type { NavTab } from '../components/navigation';
 import { theme } from '../theme';
@@ -25,15 +26,18 @@ import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 export interface TasteProfileScreenProps {
   tasteProfileId?: string;
   onGenerateCourse?: () => void;
+  onReanalyze?: () => void;
   onTabPress?: (tab: NavTab) => void;
 }
 
 export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   tasteProfileId,
   onGenerateCourse,
+  onReanalyze,
 }) => {
   useGA4ScreenTracking('TasteProfileScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const [isConsentModalVisible, setIsConsentModalVisible] = useState(false);
 
   const { data: tasteProfile, isLoading, error, refetch } = useTasteProfileQuery({
     tasteProfileId,
@@ -47,16 +51,16 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>{UI_STRINGS.COMMON.LOADING}</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !tasteProfile) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorTitle}>{UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED}</Text>
         <Text style={styles.errorSubtitle}>
           {errorMessage}
@@ -70,14 +74,30 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         >
           <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <View style={styles.container}>
       {/* Scrollable Taste Profile View matching Figma UI v1 */}
-      <TasteProfileView profile={tasteProfile} />
+      <TasteProfileView
+        profile={tasteProfile}
+        onReanalyze={() => {
+          trackButtonClick('btn_taste_profile_reanalyze', 'Reanalyze Taste Profile');
+          setIsConsentModalVisible(true);
+        }}
+      />
+
+      {/* Photo Consent Modal before proceeding to TasteAnalysisScreen */}
+      <PhotoAnalysisModal
+        visible={isConsentModalVisible}
+        onClose={() => setIsConsentModalVisible(false)}
+        onConfirm={() => {
+          setIsConsentModalVisible(false);
+          onReanalyze?.();
+        }}
+      />
 
       {/* Floating AI Course Generation Button */}
       <GenerateCourseButton
@@ -88,7 +108,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         label={UI_STRINGS.COMPONENTS.GENERATE_BUTTON_DEFAULT}
         isFloating={true}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -1,16 +1,9 @@
-/**
- * @file NavigationRoot.tsx
- * @description Root navigation controller managing screen steps, authentication state, and layout wrappers.
- * @requirements REQ-11, REQ-9
- * @functional FUN-4, FUN-3, FUN-7
- * @author Antigravity Agent
- */
-import React, { useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { BackHandler, ToastAndroid, Platform } from 'react-native';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout } from '../layouts';
+import { NAV_STEPS, NAV_TABS, NavStep } from '../constants';
 import {
   LoginScreen,
   HomeScreen,
@@ -25,135 +18,183 @@ import {
   CourseDetailScreen,
 } from '../screens';
 
+const NON_HISTORY_STEPS: NavStep[] = [
+  NAV_STEPS.GENERATING_COURSE,
+  NAV_STEPS.TASTE,
+];
+
+const MAX_HISTORY_LENGTH = 10;
+
 export function NavigationRoot() {
   const auth = useContext(AuthContext);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [history, setHistory] = useState<NavStep[]>([]);
+  const [step, setStep] = useState<NavStep | null>(null);
+  const lastBackPressRef = useRef<number>(0);
 
-  const [step, setStep] = useState<
-    'LOGIN' | 'INTRO' | 'PHOTO' | 'TASTE' | 'TASTE_PROFILE' | 'PROFILE' | 'HOME' | 'COURSE_LIST' | 'CREATE_COURSE' | 'GENERATING_COURSE' | 'COURSE_DETAIL' | null
-  >(null);
+  const navigateTo = (nextStep: NavStep) => {
+    if (nextStep === NAV_STEPS.HOME || nextStep === NAV_STEPS.LOGIN) {
+      setHistory([]);
+    } else if (step && step !== nextStep && !NON_HISTORY_STEPS.includes(step)) {
+      setHistory((prev) => [...prev.slice(-(MAX_HISTORY_LENGTH - 1)), step]);
+    }
+    setStep(nextStep);
+  };
 
   useEffect(() => {
     if (!auth?.isLoading) {
       if (auth?.isAuthenticated) {
-        setStep((prev) => (prev === null || prev === 'LOGIN' ? 'HOME' : prev));
+        setStep((prev) => (prev === null || prev === NAV_STEPS.LOGIN ? NAV_STEPS.HOME : prev));
       } else {
-        setStep('LOGIN');
+        setStep(NAV_STEPS.LOGIN);
       }
     }
   }, [auth?.isAuthenticated, auth?.isLoading]);
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      if (step === NAV_STEPS.GENERATING_COURSE || step === NAV_STEPS.TASTE) {
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('진행 중에는 이전으로 돌아갈 수 없습니다.', ToastAndroid.SHORT);
+        }
+        return true;
+      }
+
+      if (step !== NAV_STEPS.HOME && step !== NAV_STEPS.LOGIN && history.length > 0) {
+        const prev = history[history.length - 1];
+        setHistory((old) => old.slice(0, -1));
+        setStep(prev);
+        return true;
+      }
+
+      const now = Date.now();
+      if (lastBackPressRef.current && now - lastBackPressRef.current < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+      lastBackPressRef.current = now;
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('한 번 더 누르시면 앱이 종료됩니다.', ToastAndroid.SHORT);
+      }
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress
+    );
+
+    return () => subscription.remove();
+  }, [step, history]);
 
   if (auth?.isLoading || step === null) {
     return null;
   }
 
   const handleTabPress = (tab: NavTab) => {
-    if (tab === 'home') setStep('HOME');
-    if (tab === 'explore') setStep('COURSE_LIST');
-    if (tab === 'create') setStep('CREATE_COURSE');
-    if (tab === 'profile') setStep('PROFILE');
+    if (tab === NAV_TABS.HOME) navigateTo(NAV_STEPS.HOME);
+    if (tab === NAV_TABS.EXPLORE) navigateTo(NAV_STEPS.COURSE_LIST);
+    if (tab === NAV_TABS.CREATE) navigateTo(NAV_STEPS.CREATE_COURSE);
+    if (tab === NAV_TABS.PROFILE) navigateTo(NAV_STEPS.PROFILE);
   };
 
   switch (step) {
-    case 'LOGIN':
+    case NAV_STEPS.LOGIN:
       return (
         <LoginScreen
           onLoginSuccess={(isNewUser) => {
             if (isNewUser) {
-              setStep('INTRO');
+              navigateTo(NAV_STEPS.INTRO);
             } else {
-              setStep('HOME');
+              navigateTo(NAV_STEPS.HOME);
             }
           }}
         />
       );
-    case 'INTRO':
-      return <IntroScreen onNext={() => setStep('PHOTO')} />;
-    case 'PHOTO':
-      return <PhotoAnalysisScreen onNext={() => setStep('TASTE')} />;
-    case 'TASTE':
+    case NAV_STEPS.INTRO:
+      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
+    case NAV_STEPS.PHOTO:
+      return <PhotoAnalysisScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
+    case NAV_STEPS.TASTE:
       return (
         <TasteAnalysisScreen
           onFinish={(tasteProfileId) => {
             setActiveTasteProfileId(tasteProfileId);
-            setStep('TASTE_PROFILE');
+            navigateTo(NAV_STEPS.TASTE_PROFILE);
           }}
-          onFail={() => setStep('LOGIN')}
+          onFail={() => navigateTo(NAV_STEPS.LOGIN)}
         />
       );
-    case 'TASTE_PROFILE':
+    case NAV_STEPS.TASTE_PROFILE:
       return (
-        <MainLayout currentTab="profile" onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
           <TasteProfileScreen
             tasteProfileId={activeTasteProfileId}
-            onGenerateCourse={() => setStep('CREATE_COURSE')}
+            onGenerateCourse={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
           />
         </MainLayout>
       );
-    case 'PROFILE':
+    case NAV_STEPS.PROFILE:
       return (
-        <MainLayout currentTab="profile" onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
           <ProfileScreen
-            onNavigateToAnalysis={() => setStep('PHOTO')}
-            onNavigateToTasteProfile={() => setStep('TASTE_PROFILE')}
-            onNavigateToLogin={() => setStep('LOGIN')}
+            onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
+            onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
           />
         </MainLayout>
       );
-    case 'COURSE_LIST':
+    case NAV_STEPS.COURSE_LIST:
       return (
-        <MainLayout currentTab="explore" onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
           <CourseListScreen
             onSelectCourse={(courseId) => {
               setSelectedCourseId(courseId);
-              setStep('COURSE_DETAIL');
+              navigateTo(NAV_STEPS.COURSE_DETAIL);
             }}
-            onCreateCourse={() => setStep('CREATE_COURSE')}
+            onCreateCourse={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
           />
         </MainLayout>
       );
-    case 'CREATE_COURSE':
+    case NAV_STEPS.CREATE_COURSE:
       return (
-        <MainLayout currentTab="create" onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.CREATE} onTabPress={handleTabPress}>
           <CourseCreateScreen
-            onSubmit={async (formData) => {
-              setStep('GENERATING_COURSE');
-              const token = (await AsyncStorage.getItem('accessToken')) || '';
-              const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-              useCourseStore.getState().createCourse(apiUrl, formData, token);
-            }}
+            onSubmit={() => navigateTo(NAV_STEPS.GENERATING_COURSE)}
           />
         </MainLayout>
       );
-    case 'GENERATING_COURSE':
+    case NAV_STEPS.GENERATING_COURSE:
       return (
         <CourseGeneratingScreen
           onComplete={(courseId) => {
             if (courseId) {
               setSelectedCourseId(courseId);
             }
-            setStep('COURSE_DETAIL');
+            navigateTo(NAV_STEPS.COURSE_DETAIL);
           }}
           onRetry={() => {
-            setStep('CREATE_COURSE');
+            navigateTo(NAV_STEPS.CREATE_COURSE);
           }}
         />
       );
-    case 'COURSE_DETAIL':
+    case NAV_STEPS.COURSE_DETAIL:
       return (
-        <CourseDetailScreen
-          courseId={selectedCourseId || ''}
-        />
+        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
+          <CourseDetailScreen
+            courseId={selectedCourseId || ''}
+          />
+        </MainLayout>
       );
-    case 'HOME':
+    case NAV_STEPS.HOME:
     default:
       return (
-        <MainLayout currentTab="home" onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.HOME} onTabPress={handleTabPress}>
           <HomeScreen
-            onNavigateToCreate={() => setStep('CREATE_COURSE')}
-            onNavigateToExplore={() => setStep('COURSE_LIST')}
-            onNavigateToProfile={() => setStep('PROFILE')}
+            onNavigateToCreate={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}
+            onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
           />
         </MainLayout>
       );
