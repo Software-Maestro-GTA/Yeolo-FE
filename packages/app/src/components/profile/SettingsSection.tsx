@@ -17,12 +17,14 @@ export interface SettingsSectionProps {
   onPressTerms: () => void;
   onPressLogout: () => void;
   onPressWithdraw: () => void;
+  onPressSupport?: () => void;
 }
 
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
   onPressTerms,
   onPressLogout,
   onPressWithdraw,
+  onPressSupport,
 }) => {
   return (
     <View style={styles.card}>
@@ -33,6 +35,17 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         <View style={styles.menuItemLeft}>
           <Ionicons name="document-text-outline" size={20} color={theme.colors.text.secondary} />
           <Text style={styles.menuItemText}>{UI_STRINGS.COMPONENTS.TERMS_SERVICE}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* 고객 지원 */}
+      <TouchableOpacity style={styles.menuItem} onPress={onPressSupport} activeOpacity={0.6}>
+        <View style={styles.menuItemLeft}>
+          <Ionicons name="help-circle-outline" size={20} color={theme.colors.text.secondary} />
+          <Text style={styles.menuItemText}>{UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
       </TouchableOpacity>

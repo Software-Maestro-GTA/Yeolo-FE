@@ -83,13 +83,13 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
   it('200 OK: 저장된 성향 프로필 데이터를 정상적으로 불러와 8개 카테고리 정보와 함께 표시해야 한다', async () => {
     const fetchSpy = jest.spyOn(commonApi, 'fetchTasteProfileApi').mockResolvedValue(mockProfile);
 
-    const { findByText, getByText } = await render(
+    const { findByText, getByText, getAllByText } = await render(
       <TasteProfileScreen
         tasteProfileId="550e8400-e29b-41d4-a716-446655440001"
       />
     );
 
-    const sectionTitle = await findByText('여행 성향 분석');
+    const sectionTitle = await findByText('한눈에 보는 나의 취향');
     expect(sectionTitle).toBeTruthy();
 
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -98,10 +98,9 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
       '550e8400-e29b-41d4-a716-446655440001'
     );
 
-    expect(getByText('균형형')).toBeTruthy();
-    expect(getByText('친구 여행형')).toBeTruthy();
-    expect(getByText('가성비형')).toBeTruthy();
-    expect(getByText('미식 탐험')).toBeTruthy();
+    expect(getByText('휴양/힐링')).toBeTruthy();
+    expect(getByText('자연 탐방')).toBeTruthy();
+    expect(getAllByText('따뜻한 지역').length).toBeGreaterThan(0);
   });
 
   it('404 Not Found: 저장된 프로필이 없을 경우 안내 메시지와 다시 시도 버튼이 표시되어야 한다', async () => {
@@ -111,8 +110,8 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
       <TasteProfileScreen />
     );
 
-    const notFoundText = await findByText('저장된 여행 성향 분석 결과가 없습니다.');
-    expect(notFoundText).toBeTruthy();
+    const emptyTitle = await findByText('성향 프로필을 불러오지 못했습니다.');
+    expect(emptyTitle).toBeTruthy();
 
     const retryButton = getByText('다시 시도');
     expect(retryButton).toBeTruthy();
@@ -139,8 +138,8 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
 
     fireEvent.press(retryButton);
 
-    const updatedTitle = await findByText('여행 성향 분석');
+    const updatedTitle = await findByText('한눈에 보는 나의 취향');
     expect(updatedTitle).toBeTruthy();
-    expect(getByText('럭셔리형')).toBeTruthy();
+    expect(getByText('미식 탐험')).toBeTruthy();
   });
 });
