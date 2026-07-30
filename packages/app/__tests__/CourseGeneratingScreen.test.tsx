@@ -10,6 +10,7 @@ import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
+import { UI_STRINGS } from '../src/constants';
 import { renderWithQueryClient as render } from './test-utils';
 
 describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 바인딩)', () => {
@@ -28,7 +29,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
   it('SSE progress 이벤트 메시지를 실시간으로 렌더링해야 한다', async () => {
     const mockOnComplete = jest.fn();
 
-    useCourseStore.setState({ progressMessage: '사용자 성향 프로필을 불러오는 중입니다.' });
+    useCourseStore.setState({ progressMessage: '사용자 취향 프로필을 불러오는 중입니다.' });
 
     const { getByTestId } = await render(
       <CourseGeneratingScreen
@@ -36,7 +37,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
       />
     );
 
-    expect(getByTestId('progress-text').props.children).toBe('사용자 성향 프로필을 불러오는 중입니다.');
+    expect(getByTestId('progress-text').props.children).toBe('사용자 취향 프로필을 불러오는 중입니다.');
 
     await act(async () => {
       useCourseStore.setState({ progressMessage: '개인 맞춤형 여행 코스를 생성 중입니다.' });
@@ -68,18 +69,43 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
 
     useCourseStore.setState({ error: '여행 조건 입력값이 올바르지 않습니다.' });
 
-    const { getByTestId } = await render(
+    const { getByTestId, getByText } = await render(
       <CourseGeneratingScreen
         onRetry={mockOnRetry}
       />
     );
 
-    expect(getByTestId('error-subtitle').props.children).toBe('여행 조건 입력값이 올바르지 않습니다.');
+    expect(getByText('코스 생성 중 오류가 발생했습니다.')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(getByTestId('retry-btn'));
     });
 
     expect(mockOnRetry).toHaveBeenCalled();
+  });
+
+  it('코스 생성 중 에러 발생 시 취향 분석하기 버튼(go-intro-btn)이 노출되고 클릭 시 Intro 화면(onNavigateToIntro)으로 이동해야 한다', async () => {
+    const mockOnNavigateToIntro = jest.fn();
+    const mockOnRetry = jest.fn();
+
+    useCourseStore.setState({
+      error: '코스 생성 중 서버 오류가 발생했습니다.',
+      errorCode: 500,
+    });
+
+    const { getByTestId, getByText } = await render(
+      <CourseGeneratingScreen
+        onRetry={mockOnRetry}
+        onNavigateToIntro={mockOnNavigateToIntro}
+      />
+    );
+
+    expect(getByText(UI_STRINGS.TASTE_PROFILE.START_ANALYSIS)).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByTestId('go-intro-btn'));
+    });
+
+    expect(mockOnNavigateToIntro).toHaveBeenCalled();
   });
 });

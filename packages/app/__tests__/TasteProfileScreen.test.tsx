@@ -104,17 +104,35 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
   });
 
   it('404 Not Found: 저장된 프로필이 없을 경우 안내 메시지와 다시 시도 버튼이 표시되어야 한다', async () => {
-    jest.spyOn(commonApi, 'fetchTasteProfileApi').mockRejectedValue(new ApiError(404, '저장된 성향 프로필이 없습니다.'));
+    jest.spyOn(commonApi, 'fetchTasteProfileApi').mockRejectedValue(new ApiError(404, '저장된 취향 프로필이 없습니다.'));
 
     const { findByText, getByText } = await render(
       <TasteProfileScreen />
     );
 
-    const emptyTitle = await findByText('성향 프로필을 불러오지 못했습니다.');
+    const emptyTitle = await findByText('취향 프로필을 불러오지 못했습니다.');
     expect(emptyTitle).toBeTruthy();
 
     const retryButton = getByText('다시 시도');
     expect(retryButton).toBeTruthy();
+  });
+
+  it('404 Not Found + onNavigateToIntro: 취향 분석 시작하기 버튼 클릭 시 onNavigateToIntro가 호출되어야 한다', async () => {
+    jest.spyOn(commonApi, 'fetchTasteProfileApi').mockRejectedValue(new ApiError(404, '저장된 취향 프로필이 없습니다.'));
+    const mockNavigateToIntro = jest.fn();
+
+    const { findByText, getByText } = await render(
+      <TasteProfileScreen onNavigateToIntro={mockNavigateToIntro} />
+    );
+
+    const emptyTitle = await findByText('취향 프로필을 불러오지 못했습니다.');
+    expect(emptyTitle).toBeTruthy();
+
+    const introButton = getByText('취향 분석 시작하기');
+    expect(introButton).toBeTruthy();
+
+    fireEvent.press(introButton);
+    expect(mockNavigateToIntro).toHaveBeenCalledTimes(1);
   });
 
   it('500 Server Error: 서버 에러 발생 시 에러 메세지와 "다시 시도" 버튼이 노출되어야 한다', async () => {
@@ -130,7 +148,7 @@ describe('TasteProfileScreen Integration Tests (REQ-11 / FUN-4 / API-FB-8)', () 
       <TasteProfileScreen />
     );
 
-    const errorText = await findByText('성향 프로필을 불러오지 못했습니다.');
+    const errorText = await findByText('취향 프로필을 불러오지 못했습니다.');
     expect(errorText).toBeTruthy();
 
     const retryButton = getByText('다시 시도');
