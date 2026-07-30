@@ -27,6 +27,7 @@ export interface TasteProfileScreenProps {
   tasteProfileId?: string;
   onGenerateCourse?: () => void;
   onReanalyze?: () => void;
+  onNavigateToIntro?: () => void;
   onTabPress?: (tab: NavTab) => void;
 }
 
@@ -34,6 +35,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   tasteProfileId,
   onGenerateCourse,
   onReanalyze,
+  onNavigateToIntro,
 }) => {
   useGA4ScreenTracking('TasteProfileScreen');
   const { trackButtonClick } = useGA4ButtonClick();
@@ -44,8 +46,9 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   });
 
   const errorCode = error?.status ?? null;
+  const isNotFound = errorCode === 404;
   const errorMessage =
-    errorCode === 404
+    isNotFound
       ? UI_STRINGS.TASTE_PROFILE.ERROR_NOT_FOUND
       : error?.message || UI_STRINGS.TASTE_PROFILE.ERROR_LOAD_FAILED;
 
@@ -65,15 +68,27 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         <Text style={styles.errorSubtitle}>
           {errorMessage}
         </Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={() => {
-            trackButtonClick('btn_taste_profile_retry', 'Retry Fetch Taste Profile');
-            refetch();
-          }}
-        >
-          <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
-        </TouchableOpacity>
+        {isNotFound && onNavigateToIntro ? (
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              trackButtonClick('btn_taste_profile_go_intro', 'Navigate to Intro Screen');
+              onNavigateToIntro();
+            }}
+          >
+            <Text style={styles.retryButtonText}>{UI_STRINGS.TASTE_PROFILE.START_ANALYSIS}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              trackButtonClick('btn_taste_profile_retry', 'Retry Fetch Taste Profile');
+              refetch();
+            }}
+          >
+            <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }

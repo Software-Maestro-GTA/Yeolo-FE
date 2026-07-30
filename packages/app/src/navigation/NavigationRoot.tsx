@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { BackHandler, ToastAndroid, Platform } from 'react-native';
+import { View, BackHandler, ToastAndroid, Platform } from 'react-native';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout } from '../layouts';
@@ -113,7 +113,7 @@ export function NavigationRoot() {
         />
       );
     case NAV_STEPS.INTRO:
-      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
+      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.PHOTO)} />;
     case NAV_STEPS.PHOTO:
       return <PhotoAnalysisScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
     case NAV_STEPS.TASTE:
@@ -133,6 +133,7 @@ export function NavigationRoot() {
             tasteProfileId={activeTasteProfileId}
             onGenerateCourse={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
             onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
+            onNavigateToIntro={() => navigateTo(NAV_STEPS.INTRO)}
           />
         </MainLayout>
       );
@@ -176,6 +177,9 @@ export function NavigationRoot() {
           }}
           onRetry={() => {
             navigateTo(NAV_STEPS.CREATE_COURSE);
+          }}
+          onNavigateToIntro={() => {
+            navigateTo(NAV_STEPS.INTRO);
           }}
         />
       );

@@ -25,17 +25,19 @@ import { useGA4ScreenTracking, useGA4ButtonClick, COURSE_LIST_QUERY_KEY } from '
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
   onRetry?: () => void;
+  onNavigateToIntro?: () => void;
 }
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onComplete,
   onRetry,
+  onNavigateToIntro,
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const queryClient = useQueryClient();
 
-  const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
+  const { createdCourseId, progressMessage, error, errorCode, resetCourseState } = useCourseStore();
 
   useEffect(() => {
     if (createdCourseId) {
@@ -51,16 +53,35 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     onRetry?.();
   };
 
+  const handleGoIntro = () => {
+    trackButtonClick('btn_course_generating_go_intro', 'Navigate to Intro from Course Error');
+    resetCourseState();
+    onNavigateToIntro?.();
+  };
+
   if (error) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <View style={styles.errorCard}>
-          <Ionicons name="alert-circle-outline" size={48} color={theme.colors.status.error} style={styles.errorIcon} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={theme.colors.status.error}
+            style={styles.errorIcon}
+          />
           <Text style={styles.errorTitle}>{UI_STRINGS.COURSE_GENERATING.ERROR_TITLE}</Text>
-          <Text testID="error-subtitle" style={styles.errorSubtitle}>{error}</Text>
-          <TouchableOpacity testID="retry-btn" style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
-          </TouchableOpacity>
+
+          <View style={styles.errorButtonContainer}>
+            {onNavigateToIntro && (
+              <TouchableOpacity testID="go-intro-btn" style={styles.introButton} onPress={handleGoIntro}>
+                <Text style={styles.introButtonText}>{UI_STRINGS.TASTE_PROFILE.START_ANALYSIS}</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity testID="retry-btn" style={styles.retryButton} onPress={handleRetry}>
+              <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -210,8 +231,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 20,
   },
+  errorButtonContainer: {
+    width: '100%',
+    gap: 10,
+  },
+  introButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+  },
+  introButtonText: {
+    color: theme.colors.text.inverse,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   retryButton: {
-    backgroundColor: theme.colors.text.primary,
+    backgroundColor: theme.colors.bg.input,
+    borderWidth: 1,
+    borderColor: theme.colors.border.default,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 14,
@@ -219,8 +259,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retryButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: 16,
+    color: theme.colors.text.secondary,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

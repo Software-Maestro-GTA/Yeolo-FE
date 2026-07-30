@@ -7,7 +7,7 @@
  * @author Antigravity Agent
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Animated, Easing, Alert } from 'react-native';
+import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,13 +89,9 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
           }, 1000);
         }
       } catch (err: unknown) {
-        const error = err as { message?: string };
+        console.error('Taste analysis stream error:', err);
         if (isSubscribed) {
-          Alert.alert(
-            UI_STRINGS.TASTE_ANALYSIS.ERROR_TITLE,
-            error?.message || UI_STRINGS.TASTE_ANALYSIS.DEFAULT_ERROR,
-            [{ text: UI_STRINGS.COMMON.CONFIRM, onPress: onFail }]
-          );
+          onFail();
         }
       }
     };

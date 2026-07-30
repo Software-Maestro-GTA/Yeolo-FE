@@ -12,7 +12,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Alert,
   Linking,
 } from 'react-native';
 import { AuthContext } from '../context';
@@ -86,14 +85,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     trackButtonClick('btn_profile_withdraw_confirm', 'Withdraw Confirm');
     withdrawMutation.mutate(undefined, {
       onSuccess: async () => {
-        await clearSessionAndRedirect();
+        try {
+          if (auth?.logout) {
+            await auth.logout();
+          }
+        } catch (err) {
+          console.error('Logout state cleanup on withdraw failed:', err);
+        } finally {
+          await clearSessionAndRedirect();
+        }
       },
       onError: (err) => {
         console.error('Withdraw failed:', err);
-        Alert.alert(
-          UI_STRINGS.PROFILE.WITHDRAW_ERROR_TITLE,
-          err.message || UI_STRINGS.PROFILE.WITHDRAW_ERROR_DEFAULT
-        );
+        setConfirmModalType(null);
       },
     });
   };
