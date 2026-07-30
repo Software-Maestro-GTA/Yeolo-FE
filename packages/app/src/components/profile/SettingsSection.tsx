@@ -15,6 +15,7 @@ import { UI_STRINGS } from '../../constants';
 
 export interface SettingsSectionProps {
   onPressTerms: () => void;
+  onPressPrivacy?: () => void;
   onPressLogout: () => void;
   onPressWithdraw: () => void;
   onPressSupport?: () => void;
@@ -22,6 +23,7 @@ export interface SettingsSectionProps {
 
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
   onPressTerms,
+  onPressPrivacy,
   onPressLogout,
   onPressWithdraw,
   onPressSupport,
@@ -35,6 +37,17 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         <View style={styles.menuItemLeft}>
           <Ionicons name="document-text-outline" size={20} color={theme.colors.text.secondary} />
           <Text style={styles.menuItemText}>{UI_STRINGS.COMPONENTS.TERMS_SERVICE}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* 개인정보 처리방침 */}
+      <TouchableOpacity style={styles.menuItem} onPress={onPressPrivacy} activeOpacity={0.6}>
+        <View style={styles.menuItemLeft}>
+          <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.text.secondary} />
+          <Text style={styles.menuItemText}>{UI_STRINGS.COMPONENTS.TERMS_PRIVACY}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
       </TouchableOpacity>
