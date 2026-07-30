@@ -122,6 +122,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             trackButtonClick('btn_profile_terms', 'Open Terms');
             setShowTermsModal(true);
           }}
+          onPressPrivacy={async () => {
+            trackButtonClick('btn_profile_privacy_notion', 'Open Privacy Policy Notion URL');
+            try {
+              await Linking.openURL(APP_CONFIG.PRIVACY_POLICY_URL);
+            } catch (err) {
+              console.error('Failed to open privacy policy notion url:', err);
+            }
+          }}
           onPressSupport={async () => {
             trackButtonClick('btn_profile_support_mailto', 'Open Customer Support Mailto');
             try {
