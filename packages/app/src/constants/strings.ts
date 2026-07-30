@@ -6,8 +6,6 @@
  * @author Antigravity Agent
  */
 
-import { APP_CONFIG } from './config';
-
 export const UI_STRINGS = {
   AUTH: {
     SUB_TITLE: '당신의 여행을 데이터로 그리다,',
@@ -30,23 +28,23 @@ export const UI_STRINGS = {
   },
   TASTE_ANALYSIS: {
     TITLE: '취향 분석 중',
-    SUBTITLE: '당신의 성향을 파악하고 있어요.',
+    SUBTITLE: '당신의 취향을 파악하고 있어요.',
     STEP_1: '당신을 알아가고 있어요',
-    STEP_2: '여행 성향을 찾고 있어요',
-    STEP_3: '여행 성향 분석 완료!',
+    STEP_2: '여행 취향을 찾고 있어요',
+    STEP_3: '여행 취향 분석 완료!',
     NO_TOKEN_ERROR: '인증 토큰이 없습니다. 다시 로그인해 주세요.',
-    PERMISSION_ERROR: '성향 분석을 위해 기기 사진 라이브러리 접근 권한 동의가 필요합니다.',
-    NO_PHOTOS_ERROR: '기기에 성향을 분석할 사진이 존재하지 않습니다.',
-    NO_EXIF_ERROR: '기기에 성향을 분석할 만한 위치 정보(위도, 경도) 및 시간 정보가 포함된 사진이 존재하지 않습니다.',
+    PERMISSION_ERROR: '취향 분석을 위해 기기 사진 라이브러리 접근 권한 동의가 필요합니다.',
+    NO_PHOTOS_ERROR: '기기에 취향을 분석할 사진이 존재하지 않습니다.',
+    NO_EXIF_ERROR: '기기에 취향을 분석할 만한 위치 정보(위도, 경도) 및 시간 정보가 포함된 사진이 존재하지 않습니다.',
     ERROR_TITLE: '분석 오류',
-    DEFAULT_ERROR: '성향 분석 도중 오류가 발생했습니다.',
+    DEFAULT_ERROR: '취향 분석 도중 오류가 발생했습니다.',
   },
   TASTE_PROFILE: {
-    TITLE: '내 여행 성향 프로필',
+    TITLE: '내 여행 취향 프로필',
     RE_ANALYSIS: '재분석하기',
-    START_ANALYSIS: '성향 분석 시작하기',
-    ERROR_NOT_FOUND: '저장된 여행 성향 분석 결과가 없습니다.',
-    ERROR_LOAD_FAILED: '성향 프로필을 불러오지 못했습니다.',
+    START_ANALYSIS: '취향 분석 시작하기',
+    ERROR_NOT_FOUND: '저장된 여행 취향 분석 결과가 없습니다.',
+    ERROR_LOAD_FAILED: '취향 프로필을 불러오지 못했습니다.',
   },
   HOME: {
     GREETING: '반가워요,',
@@ -57,7 +55,7 @@ export const UI_STRINGS = {
     CREATE_BUTTON: '새 맞춤 코스 만들기',
     EMPTY_COURSES: '아직 생성된 코스가 없습니다.',
     HERO_BADGE: 'AI 초개인화 엔진',
-    HERO_DESCRIPTION: '여행 성향과 목적지에 맞춰 최적의 일정 및 경로를 실시간으로 설계해 드려요.',
+    HERO_DESCRIPTION: '여행 취향과 목적지에 맞춰 최적의 일정 및 경로를 실시간으로 설계해 드려요.',
     HERO_BUTTON: '여행 코스 생성하기',
     SECTION_TITLE: '빠른 추천 서비스',
     SHORTCUT_EXPLORE_TITLE: '코스 둘러보기',
@@ -78,7 +76,7 @@ export const UI_STRINGS = {
     START_DATE_PLACEHOLDER: 'YYYY-MM-DD',
     END_DATE_LABEL: '도착 예정일',
     END_DATE_PLACEHOLDER: 'YYYY-MM-DD',
-    BUDGET_LABEL: '예산 및 소비 성향',
+    BUDGET_LABEL: '예산 및 소비 취향',
     BUDGET_COST_EFFECTIVE: '가성비',
     BUDGET_STANDARD: '적정 수준',
     BUDGET_LUXURY: '럭셔리',
@@ -89,8 +87,9 @@ export const UI_STRINGS = {
     SUBTITLE: '당신의 취향과 이동 동선을 기반으로\n최적의 여행 경로를 짜고 있습니다.',
     BADGE_TEXT: '여로 AI 스마트 알고리즘',
     ERROR_TITLE: '코스 생성 중 오류가 발생했습니다.',
-    DEFAULT_PROGRESS: '사용자 성향 프로필을 분석하고 최적의 경로를 생성 중입니다.',
-    TIP_TEXT: '여로 AI가 성향 데이터, 장소 간 이동 동선, 예산 분포를 종합 분석하고 있습니다.',
+    GO_INTRO_BUTTON: '취향 분석 시작하기',
+    DEFAULT_PROGRESS: '사용자 취향 프로필을 분석하고 최적의 경로를 생성 중입니다.',
+    TIP_TEXT: '여로 AI가 취향 데이터, 장소 간 이동 동선, 예산 분포를 종합 분석하고 있습니다.',
   },
   COURSE_LIST: {
     TITLE: '당신의 여로',
@@ -172,7 +171,7 @@ export const UI_STRINGS = {
     DURATION_NIGHTS_SUFFIX: '박',
     DURATION_DAYS_SUFFIX: '일',
     CORE_KEYWORDS_TITLE: '핵심 여행 키워드',
-    TRAVEL_PURPOSE_TITLE: '여행 성향 분석',
+    TRAVEL_PURPOSE_TITLE: '여행 취향 분석',
     LOCATION_PREFERENCE_TITLE: '선호 장소 유형',
     FOOD_PREFERENCE_TITLE: '음식 취향',
     SEASON_ENVIRONMENT_TITLE: '계절 및 환경 취향',
