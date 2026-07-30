@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {
   CourseCard,
@@ -45,11 +44,6 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
   const handleSelectCourse = useCallback(
     (courseId: string) => {
       trackButtonClick('btn_select_course', 'Select Course Card', { course_id: courseId });
-      const targetCourse = courses.find((c) => c.courseId === courseId);
-      if (!targetCourse) {
-        Alert.alert(UI_STRINGS.COMMON.NOTICE, UI_STRINGS.COURSE_LIST.UNAUTHORIZED_OR_DELETED);
-        return;
-      }
       if (onSelectCourse) {
         onSelectCourse(courseId);
       }
