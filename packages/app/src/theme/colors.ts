@@ -10,11 +10,12 @@
  * Raw color palette values.
  */
 export const palette = {
-  // Brand / Primary
-  blue500: '#4648D4',
-  blue600: '#383AC0',
-  blue50: '#EEF2FF',
-  indigo500: '#4F45E5',
+  // Brand / Primary (Ocean Sky Blue)
+  blue500: '#0284C7',
+  blue600: '#0369A1',
+  blue50: '#F0F9FF',
+  indigo500: '#6366F1',
+  cyan400: '#38BDF8',
 
   // Accent & Secondary
   emerald500: '#10B981',
@@ -51,10 +52,10 @@ export const palette = {
   transparent: 'transparent',
 
   // Gradients
-  screenBgStart: '#F6FAFE',
+  screenBgStart: '#F0F9FF',
   screenBgEnd: '#FFFFFF',
-  gradientBottomStart: '#F6FAFE',
-  gradientBottomEnd: 'rgba(246, 250, 254, 0)',
+  gradientBottomStart: '#F0F9FF',
+  gradientBottomEnd: 'rgba(240, 249, 255, 0)',
   borderLight: 'rgba(198, 198, 204, 0.5)',
   buttonGlass: 'rgba(255, 255, 255, 0.7)',
 } as const;
@@ -68,6 +69,7 @@ export const theme = {
     primaryDark: palette.blue600,
     primaryContainer: palette.blue50,
     secondary: palette.emerald500,
+    aiAccent: palette.indigo500,
 
     text: {
       primary: palette.slate900,
@@ -106,7 +108,8 @@ export const theme = {
     gradient: {
       background: [palette.screenBgStart, palette.gradientBottomEnd] as const,
       bottom: [palette.gradientBottomStart, palette.gradientBottomEnd] as const,
-      primary: [palette.blue500, palette.green400] as const,
+      primary: [palette.blue500, palette.cyan400] as const,
+      ai: [palette.indigo500, palette.cyan400] as const,
     },
 
     shadow: palette.black,
