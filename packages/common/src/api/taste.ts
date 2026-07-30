@@ -83,7 +83,7 @@ export async function analyzeTastePreferenceStream(
 
   if (!tasteProfileId) {
     logger.error('[TasteAPI] Stream completed without tasteProfileId');
-    throw new ApiError(400, '성향 분석이 완료되었으나 Profile ID를 수신하지 못했습니다.');
+    throw new ApiError(400, '성향 분석 중 Profile ID를 수신하지 못했습니다.');
   }
 
   return tasteProfileId;

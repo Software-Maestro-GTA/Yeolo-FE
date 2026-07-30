@@ -116,7 +116,7 @@ export async function createCourseStreamApi(
 
   if (!courseId) {
     logger.error('[CourseAPI] Course generation finished without courseId');
-    throw new ApiError(400, '여행 코스 생성이 완료되었으나 Course ID를 수신하지 못했습니다.');
+    throw new ApiError(400, '여행 코스 생성 중 Course ID를 수신하지 못했습니다.');
   }
 
   return courseId;

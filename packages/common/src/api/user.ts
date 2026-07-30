@@ -25,11 +25,15 @@ export async function withdrawApi(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await ky.delete(`${apiUrl}/api/users/me`, {
+  const requestOptions: Record<string, unknown> = {
     headers,
-    json: payload || {},
     throwHttpErrors: false,
-  });
+  };
+  if (payload && Object.keys(payload).length > 0) {
+    requestOptions.json = payload;
+  }
+
+  const response = await ky.delete(`${apiUrl}/api/users/me`, requestOptions);
 
   const result = await response.json<WithdrawResponse>();
 
