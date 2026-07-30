@@ -44,6 +44,7 @@
     "whatwg-fetch": "^3.6.20"
   },
   "scripts": {
+    "eas-build-post-install": "yarn workspace @yeolo/common build",
     "start": "expo start",
     "android": "expo run:android",
     "android:build": "expo run:android --variant release",
