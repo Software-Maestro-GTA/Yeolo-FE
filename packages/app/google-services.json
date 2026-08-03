@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "902358830088",
+    "project_id": "yeolo-gta",
+    "storage_bucket": "yeolo-gta.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:902358830088:android:a233238f66ff0236dad5bd",
+        "android_client_info": {
+          "package_name": "com.yeolo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "902358830088-qqe77jo77mafpand1243h7qlcdlsei68.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yeolo.app",
+            "certificate_hash": "42ff17587011b2e9c0be5aba106a5483fc8332d2"
+          }
+        },
+        {
+          "client_id": "902358830088-vs8jb4oleq7u092niuu912iae5t3fcou.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yeolo.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "902358830088-7gr77qg2f5l8fvh4ejvpr0lce4cdc8li.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPRAbBEG6iN4MVEvFAGgmcriAl0ljCV4c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "902358830088-7gr77qg2f5l8fvh4ejvpr0lce4cdc8li.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.yeolo-travel.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

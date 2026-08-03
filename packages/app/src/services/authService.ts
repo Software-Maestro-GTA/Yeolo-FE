@@ -21,11 +21,19 @@ export const initializeGoogleSignin = (
   iosClientId?: string
 ): void => {
   logger.info('[AuthService] Initializing GoogleSignin with webClientId:', webClientId);
-  GoogleSignin.configure({
-    webClientId,
-    iosClientId,
-    offlineAccess: true,
-  });
+  try {
+    if (!webClientId) {
+      logger.warn('[AuthService] webClientId가 설정되지 않아 GoogleSignin 구성을 건너뜁니다.');
+      return;
+    }
+    GoogleSignin.configure({
+      webClientId,
+      iosClientId,
+      offlineAccess: true
+    });
+  } catch (error) {
+    logger.error('[AuthService] GoogleSignin initialize error:', error);
+  }
 };
 
 /**
