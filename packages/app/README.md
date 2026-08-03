@@ -1,46 +1,41 @@
-# 📱 @yeolo/app (React Native / Expo Package)
+# @yeolo/app
 
-여로(Yeolo)의 **React Native (Expo)** 기반 모바일 하이브리드 앱 프로젝트입니다.  
-하나의 코드베이스로 Android와 iOS 애플리케이션을 모두 빌드하며, 공통 Core 패키지인 `@yeolo/common`과 연동되어 핵심 비즈니스 로직을 활용합니다.
+여로(의 React Native (Expo) 기반 모바일 앱 패키지입니다.  
+공통 모듈인 `@yeolo/common`과 연동하여 통합 비즈니스 로직을 사용합니다.
 
 ---
 
-## 📂 폴더 구조
+## 폴더 구조
 
 ```text
 packages/app/
 ├── src/
-│   ├── components/   # 앱 전용 공통 UI 컴포넌트 (Button, Input 등)
-│   ├── screens/      # 앱 화면 단위 컴포넌트 (LoginScreen, HomeScreen 등)
-│   ├── navigation/   # Stack/Tab Navigator 등 화면 간 이동 경로 및 흐름 정의
+│   ├── components/   # 앱 공통 및 도메인별 UI 컴포넌트
+│   ├── context/      # 인증 및 전역 상태 콘텍스트
+│   ├── hooks/        # React Query 및 커스텀 훅
+│   ├── navigation/   # 라우팅 및 네비게이션 정의
+│   ├── screens/      # 화면 컴포넌트 (Home, Login 등)
+│   ├── services/     # Native SDK 및 세션 유틸리티
 │   └── App.tsx       # 모바일 앱 메인 컴포넌트
-├── assets/           # 앱 아이콘, 스플래시 화면 등 하드웨어 설정 관련 고정 에셋
-├── index.ts          # Expo 앱 기동 엔트리 포인트
-├── app.json          # Expo 앱 전역 빌드 및 메타데이터 설정 파일
-├── metro.config.js   # 모노레포 환경을 지원하는 Metro 번들러 설정 파일
-├── package.json      # @yeolo/common 의존성 링크 포함
-└── tsconfig.json
+├── assets/           # 아이콘 및 스플래시 이미지 에셋
+├── app.config.js     # Expo 동적 설정 파일
+├── app.json          # Expo 앱 전역 설정 및 메타데이터
+├── eas.json          # EAS 빌드 프로필 설정
+└── package.json
 ```
 
 ---
 
-## 🚀 실행 및 빌드 명령어
+## 개발 모드 실행
 
-원활한 구동을 위해 Android Studio 에뮬레이터 또는 Xcode iOS 시뮬레이터가 PC에 사전에 세팅 및 가동 중이어야 합니다.
+개발 서버 실행 전 Android 에뮬레이터 또는 iOS 시뮬레이터가 기동되어 있어야 합니다.
 
-### 1. Android 실행 및 빌드
+```bash
+# packages/app 디렉터리 내에서 실행 시
 
-| 작업 내용 | 최상위(Root) 폴더 명령어 | 개별 app 폴더 명령어 |
-| :--- | :--- | :--- |
-| **개발 모드 구동** | `yarn android:dev` | `yarn android` |
-| **로컬 릴리즈 빌드** | `yarn android:build` | `yarn android:build` |
+# Android 개발 모드 실행
+yarn android
 
-* **개발 모드**는 로컬 Expo Go 앱을 통해 QR 스캔으로 실물 기기 테스트도 가능합니다.
-* **릴리즈 빌드** 시 안드로이드 빌드 모듈이 컴파일되어 APK/AAB 아웃풋 준비 프로세스가 진행됩니다.
-
-### 2. iOS 실행 및 빌드 (macOS 전용)
-
-| 작업 내용 | 최상위(Root) 폴더 명령어 | 개별 app 폴더 명령어 |
-| :--- | :--- | :--- |
-| **개발 모드 구동** | `yarn ios:dev` | `yarn ios` |
-| **로컬 릴리즈 빌드** | `yarn ios:build` | `yarn ios:build` |
+# iOS 개발 모드 실행 (macOS 전용)
+yarn ios
+```

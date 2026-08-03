@@ -38,7 +38,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         const result = await loginWithGoogle(code);
         onLoginSuccess?.(result?.isNewUser ?? false);
       }
-    } catch (err: unknown) {
+    } catch (err: any) {
+      console.error('[DEV] Google login error detail:', err?.code, err?.message, JSON.stringify(err));
       if (Platform.OS === 'android') {
         ToastAndroid.show('로그인에 실패했습니다.', ToastAndroid.SHORT);
       }
