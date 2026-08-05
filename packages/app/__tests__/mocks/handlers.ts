@@ -3,7 +3,7 @@
  * @description MSW handlers for mocking backend API endpoints in @yeolo/app.
  * @requirements REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1
  * @author Antigravity Agent
  */
 import { http, HttpResponse } from 'msw';
@@ -68,7 +68,7 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
 ];
 
 export const handlers = [
-  // Mock Google OAuth login API-FB-1
+  // Mock Google OAuth login API-AUTH-1
   http.post('*/api/auth/google', async ({ request }) => {
     const body = (await request.json()) as { code?: string; redirectUri?: string };
 
@@ -99,6 +99,44 @@ export const handlers = [
           },
           accessToken: 'mock-access-token',
           refreshToken: 'mock-refresh-token',
+        },
+      },
+      { status: 200 }
+    );
+  }),
+
+  // Mock Apple OAuth login API-AUTH-2
+  http.post('*/api/auth/apple', async ({ request }) => {
+    const body = (await request.json()) as { code?: string; redirectUri?: string; idToken?: string | null };
+
+    if (!body.code) {
+      return HttpResponse.json(
+        {
+          status: 400,
+          message: '유효하지 않은 Apple OAuth 인가 코드입니다.',
+          data: null,
+        },
+        { status: 400 }
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '로그인 성공',
+        data: {
+          user: {
+            userId: '550e8400-e29b-41d4-a716-446655440001',
+            provider: 'apple',
+            email: 'appleuser@privacy.apple.com',
+            displayName: 'Apple User',
+            profileImageUrl: null,
+            status: 'active',
+            lastLoginAt: '2026-08-04T10:00:00Z',
+          },
+          doOnboarding: false,
+          accessToken: 'mock-apple-access-token',
+          refreshToken: 'mock-apple-refresh-token',
         },
       },
       { status: 200 }

@@ -28,7 +28,7 @@ Planner는 분석 결과를 `progress.md`에 다음과 같은 형식의 마크�
 ```markdown
 - **관련 요구사항**: [REQ-1 (인덱스 링크)](./Yeolo-SPEC/requirement-specs/REQ-01.md)
 - **비즈니스 로직**: [FUN-1 (인덱스 링크)](./Yeolo-SPEC/functional-specs/FUN-01.md)
-- **API 명세**: [API-FB-1 (인덱스 링크)](./Yeolo-SPEC/api-specs/API-FB-01.md)
+- **API 명세**: [API-AUTH-1 (인덱스 링크)](./Yeolo-SPEC/api-specs/API-FB-01.md)
 - **인수 기준 (Acceptance Criteria)**:
   - [ ] 사용자가 스타일 버튼 클릭 시 활성화 상태(Active)로 표시되어야 함
   - [ ] API 호출 실패 시 에러 모달이 표시되어야 함

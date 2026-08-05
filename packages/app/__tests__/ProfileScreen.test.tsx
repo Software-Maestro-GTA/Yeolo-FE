@@ -30,6 +30,7 @@ const renderProfileScreen = async (props: any = {}) => {
     user: mockUserData,
     isLoading: false,
     loginWithGoogle: jest.fn(),
+    loginWithApple: jest.fn(),
     logout: jest.fn(async () => {
       await commonApi.logoutApi('http://localhost:3000');
     }),

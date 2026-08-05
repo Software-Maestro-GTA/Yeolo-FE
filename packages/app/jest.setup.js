@@ -24,6 +24,26 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('expo-apple-authentication', () => ({
+  signInAsync: jest.fn().mockResolvedValue({
+    authorizationCode: 'mock-apple-auth-code',
+    identityToken: 'mock-apple-id-token',
+  }),
+  AppleAuthenticationScope: {
+    FULL_NAME: 0,
+    EMAIL: 1,
+  },
+  AppleAuthenticationButton: 'AppleAuthenticationButton',
+  AppleAuthenticationButtonStyle: {
+    BLACK: 0,
+    WHITE: 1,
+  },
+  AppleAuthenticationButtonType: {
+    SIGN_IN: 0,
+  },
+  isAvailableAsync: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock('react-native-maps', () => {
   const mockReact = require('react');
   const { View: mockView } = require('react-native');
