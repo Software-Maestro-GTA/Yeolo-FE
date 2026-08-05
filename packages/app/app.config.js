@@ -15,12 +15,22 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    plugins: [
+      ...(config.plugins || []),
+      'expo-apple-authentication',
+    ],
     android: {
       ...config.android,
       googleServicesFile: androidGoogleServices,
     },
     ios: {
       ...config.ios,
+      bundleIdentifier: 'com.yeolo-travel.app',
+      usesAppleSignIn: true,
+      entitlements: {
+        ...config.ios?.entitlements,
+        'com.apple.developer.applesignin': ['Default'],
+      },
       googleServicesFile: iosGoogleServices,
       infoPlist: {
         ...config.ios?.infoPlist,

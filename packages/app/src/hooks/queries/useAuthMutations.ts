@@ -10,6 +10,7 @@ import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   loginWithGoogleApi,
+  loginWithAppleApi,
   logoutApi,
   withdrawApi,
   DEFAULT_API_URL,
@@ -38,6 +39,36 @@ export function useGoogleLoginMutation({ options }: UseGoogleLoginMutationOption
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
 
       return { user: fetchedUser, isNewUser };
+    },
+    ...options,
+  });
+}
+
+export interface AppleAuthPayloadInput {
+  code: string;
+  idToken?: string | null;
+}
+
+export interface UseAppleLoginMutationOptions {
+  options?: UseMutationOptions<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>;
+}
+
+export function useAppleLoginMutation({ options }: UseAppleLoginMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+
+  return useMutation<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>({
+    mutationFn: async ({ code, idToken }: AppleAuthPayloadInput) => {
+      const response = await loginWithAppleApi(apiUrl, { code, redirectUri, idToken });
+      const fetchedUser = response.data.user;
+      const isNewUser = !fetchedUser.lastLoginAt;
+      const doOnboarding = response.data.doOnboarding;
+
+      await AsyncStorage.setItem('accessToken', response.data.accessToken);
+      await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
+      await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+
+      return { user: fetchedUser, isNewUser, doOnboarding };
     },
     ...options,
   });

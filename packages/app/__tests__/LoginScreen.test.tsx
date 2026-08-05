@@ -3,16 +3,17 @@
  * @description Unit tests for LoginScreen layout, style parameters, and OAuth login action trigger.
  * @requirements REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1
  * @author Antigravity Agent
  */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { AuthContext } from '../src/context/AuthContext';
 import { LoginScreen } from '../src/screens/LoginScreen';
 
 const mockLoginWithGoogle = jest.fn();
+const mockLoginWithApple = jest.fn();
 
 const renderLoginScreen = async (isAuthenticated = false) => {
   const mockContextValue = {
@@ -20,6 +21,7 @@ const renderLoginScreen = async (isAuthenticated = false) => {
     user: null,
     isLoading: false,
     loginWithGoogle: mockLoginWithGoogle,
+    loginWithApple: mockLoginWithApple,
     logout: jest.fn(),
   };
 
@@ -31,9 +33,16 @@ const renderLoginScreen = async (isAuthenticated = false) => {
 };
 
 describe('LoginScreen UI & Interaction', () => {
+  const originalPlatform = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    Platform.OS = 'android';
+  });
+
+  afterEach(() => {
+    Platform.OS = originalPlatform;
   });
 
   it('기본 UI 문구 및 로그인 버튼이 정상적으로 렌더링되어야 한다', async () => {
@@ -42,6 +51,13 @@ describe('LoginScreen UI & Interaction', () => {
     expect(getByText('당신의 여행을 데이터로 그리다,')).toBeTruthy();
     expect(getByText('여로')).toBeTruthy();
     expect(getByText('Google 계정으로 계속하기')).toBeTruthy();
+  });
+
+  it('iOS 환경일 경우 Apple 로그인 버튼이 노출되어야 한다', async () => {
+    Platform.OS = 'ios';
+    const { getByTestId } = await renderLoginScreen();
+
+    expect(getByTestId('apple-login-button')).toBeTruthy();
   });
 
   it('Google 계정으로 계속하기 버튼 클릭 시 promptAsync 혹은 로그인 로직이 촉발되어야 한다', async () => {
@@ -54,6 +70,23 @@ describe('LoginScreen UI & Interaction', () => {
 
     await waitFor(() => {
       expect(mockLoginWithGoogle).toHaveBeenCalledWith('mock-google-auth-code');
+    });
+  });
+
+  it('iOS 환경에서 Apple 로그인 버튼 클릭 시 signInWithApple 및 loginWithApple이 촉발되어야 한다', async () => {
+    Platform.OS = 'ios';
+    mockLoginWithApple.mockResolvedValueOnce({ isNewUser: false });
+
+    const { getByTestId } = await renderLoginScreen();
+    const appleButton = getByTestId('apple-login-button');
+
+    fireEvent.press(appleButton);
+
+    await waitFor(() => {
+      expect(mockLoginWithApple).toHaveBeenCalledWith({
+        code: 'mock-apple-auth-code',
+        idToken: 'mock-apple-id-token',
+      });
     });
   });
 
@@ -71,3 +104,4 @@ describe('LoginScreen UI & Interaction', () => {
     });
   });
 });
+

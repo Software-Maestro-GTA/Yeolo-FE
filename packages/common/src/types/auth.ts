@@ -1,9 +1,9 @@
 /**
  * @file auth.ts
  * @description Shared authentication types and interfaces across Web and Mobile.
- * @requirements REQ-11
+ * @requirements REQ-1, REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1, API-AUTH-2
  * @author Antigravity Agent
  */
 
@@ -35,6 +35,23 @@ export interface GoogleLoginResponse {
   };
 }
 
+export interface AppleLoginPayload {
+  code: string;
+  redirectUri: string;
+  idToken?: string | null;
+}
+
+export interface AppleLoginResponse {
+  status: number;
+  message: string;
+  data: {
+    user: User;
+    doOnboarding?: boolean;
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
 export interface LogoutRequest {
   refreshToken?: string;
 }
@@ -54,4 +71,5 @@ export interface WithdrawResponse {
   message: string;
   data: null;
 }
+
 

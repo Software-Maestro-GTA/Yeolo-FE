@@ -1,9 +1,9 @@
 /**
  * @file AuthContext.tsx
- * @description Context provider for managing user authentication state, Google Sign-In, and automatic session restore.
- * @requirements REQ-11
+ * @description Context provider for managing user authentication state, Google/Apple Sign-In, and automatic session restore.
+ * @requirements REQ-1, REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1, API-AUTH-2
  * @author Antigravity Agent
  */
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
@@ -11,13 +11,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type User, logger } from '@yeolo/common';
 import { initializeGoogleSignin, signOutGoogle, onUnauthorized, clearLocalSession } from '../services';
 
-import { useGoogleLoginMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
+import { useGoogleLoginMutation, useAppleLoginMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
   loginWithGoogle: (code: string) => Promise<{ user: User; isNewUser: boolean }>;
+  loginWithApple: (payload: { code: string; idToken?: string | null }) => Promise<{ user: User; isNewUser: boolean; doOnboarding?: boolean }>;
   logout: () => void;
 }
 
@@ -29,6 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
 
   const googleLoginMutation = useGoogleLoginMutation();
+  const appleLoginMutation = useAppleLoginMutation();
   const logoutMutation = useLogoutMutation();
 
   useEffect(() => {
@@ -82,6 +84,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const loginWithApple = async (payload: { code: string; idToken?: string | null }): Promise<{ user: User; isNewUser: boolean; doOnboarding?: boolean }> => {
+    logger.info('[AuthContext] Executing loginWithApple...');
+    try {
+      const result = await appleLoginMutation.mutateAsync(payload);
+      setUser(result.user);
+      setIsAuthenticated(true);
+      logger.info('[AuthContext] Apple login successful:', result.user);
+      return result;
+    } catch (error) {
+      console.error('Apple login flow API error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     logger.info('[AuthContext] Executing logout...');
     try {
@@ -100,7 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const isLoading = isRestoring || googleLoginMutation.isPending || logoutMutation.isPending;
+  const isLoading = isRestoring || googleLoginMutation.isPending || appleLoginMutation.isPending || logoutMutation.isPending;
 
   return (
     <AuthContext.Provider
@@ -109,6 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         isLoading,
         loginWithGoogle,
+        loginWithApple,
         logout,
       }}
     >
@@ -116,3 +133,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
+

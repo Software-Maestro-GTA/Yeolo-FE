@@ -1,20 +1,20 @@
 /**
  * @file LoginScreen.tsx
- * @description Google login UI screen matching Figma design context and Google OAuth flow.
- * @requirements REQ-11, REQ-22
+ * @description Google & Apple login UI screen matching Figma design context and OAuth flows.
+ * @requirements REQ-1, REQ-11, REQ-22
  * @functional FUN-1, FUN-GA4
- * @api API-FB-1
+ * @api API-AUTH-1, API-AUTH-2
  * @author Antigravity Agent
  */
-import React, { useContext } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, Linking } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
-import { UI_STRINGS, APP_CONFIG } from '../constants';
+import { UI_STRINGS } from '../constants';
 import { theme } from '../theme';
 import { AuthContext } from '../context';
-import { signInWithGoogle, openCustomerSupportMail } from '../services';
+import { signInWithGoogle, signInWithApple, isAppleAuthAvailable, openCustomerSupportMail } from '../services';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface LoginScreenProps {
@@ -27,7 +27,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
+  const loginWithApple = authContext?.loginWithApple;
   const isLoggingIn = authContext?.isLoading || false;
+
+  const [isAppleAvailable, setIsAppleAvailable] = useState<boolean>(Platform.OS === 'ios');
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      isAppleAuthAvailable().then(setIsAppleAvailable).catch(() => setIsAppleAvailable(false));
+    }
+  }, []);
 
   const handleGoogleLogin = async () => {
     trackButtonClick('btn_google_login', 'Google OAuth Login Button');
@@ -42,6 +51,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       console.error('[DEV] Google login error detail:', err?.code, err?.message, JSON.stringify(err));
       if (Platform.OS === 'android') {
         ToastAndroid.show('로그인에 실패했습니다.', ToastAndroid.SHORT);
+      }
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    trackButtonClick('btn_apple_login', 'Apple OAuth Login Button');
+    if (isLoggingIn) return;
+    try {
+      const { code, idToken } = await signInWithApple();
+      if (loginWithApple) {
+        const result = await loginWithApple({ code, idToken });
+        onLoginSuccess?.(result?.isNewUser ?? false);
+      }
+    } catch (err: any) {
+      if (err?.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
+      console.error('[DEV] Apple login error detail:', err?.code, err?.message, JSON.stringify(err));
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Apple 로그인에 실패했습니다.', ToastAndroid.SHORT);
       }
     }
   };
@@ -85,6 +114,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 <Text style={styles.buttonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>
+
+            {/* Apple Login Button (iOS only) */}
+            {isAppleAvailable && (
+              <TouchableOpacity
+                style={[styles.loginButton, styles.appleLoginButton]}
+                activeOpacity={0.8}
+                onPress={handleAppleLogin}
+                disabled={isLoggingIn}
+                testID="apple-login-button"
+              >
+                <View style={styles.buttonContent}>
+                  <Text style={styles.appleButtonText}>{UI_STRINGS.AUTH.APPLE_BUTTON_TEXT}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
             {/* Customer Support Footer Link */}
             <View style={styles.footerContainer}>
@@ -159,6 +203,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
+  appleLoginButton: {
+    backgroundColor: '#000000',
+    marginTop: 12,
+  },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,6 +219,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#1E293B',
+    letterSpacing: -0.2,
+  },
+  appleButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: -0.2,
   },
   footerContainer: {
@@ -188,3 +242,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+

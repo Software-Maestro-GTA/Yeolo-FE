@@ -11,9 +11,11 @@ export const UI_STRINGS = {
     SUB_TITLE: '당신의 여행을 데이터로 그리다,',
     MAIN_TITLE: '여로',
     GOOGLE_BUTTON_TEXT: 'Google 계정으로 계속하기',
+    APPLE_BUTTON_TEXT: 'Apple ID로 로그인',
     LOGIN_ERROR_TITLE: '로그인 오류',
-    LOGIN_ERROR_DEFAULT: 'Google 로그인에 실패했습니다.',
+    LOGIN_ERROR_DEFAULT: '로그인에 실패했습니다.',
     MISSING_AUTH_CODE_ERROR: 'Google 인가 코드가 누락되었습니다.',
+    MISSING_APPLE_CODE_ERROR: 'Apple 인가 코드가 누락되었습니다.',
   },
   INTRO: {
     MAIN_TITLE: '여로가 당신의\n여행을 설계합니다',

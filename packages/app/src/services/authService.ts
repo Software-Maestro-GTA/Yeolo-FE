@@ -3,10 +3,11 @@
  * @description Google Sign-in helper functions encapsulating native @react-native-google-signin/google-signin SDK.
  * @requirements REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1
  * @author Antigravity Agent
  */
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
@@ -50,6 +51,46 @@ export const signInWithGoogle = async (): Promise<string> => {
   }
 
   return code;
+};
+
+/**
+ * Check if Apple authentication is available on the current device.
+ */
+export const isAppleAuthAvailable = async (): Promise<boolean> => {
+  try {
+    return await AppleAuthentication.isAvailableAsync();
+  } catch (error) {
+    logger.warn('[AuthService] isAvailableAsync check failed:', error);
+    return false;
+  }
+};
+
+/**
+ * Execute native Apple login and extract authorization code & identity token.
+ * @returns Promise<{ code: string; idToken: string | null }> representing authorization credentials.
+ */
+export const signInWithApple = async (): Promise<{ code: string; idToken: string | null }> => {
+  logger.info('[AuthService] Executing signInWithApple...');
+  const isAvailable = await isAppleAuthAvailable();
+  if (!isAvailable) {
+    throw new Error('Apple 로그인을 이용할 수 없는 환경 또는 빌드입니다.');
+  }
+
+  const credential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    ],
+  });
+
+  const code = credential.authorizationCode;
+  const idToken = credential.identityToken;
+
+  if (!code) {
+    throw new Error(UI_STRINGS.AUTH.MISSING_APPLE_CODE_ERROR);
+  }
+
+  return { code, idToken };
 };
 
 /**

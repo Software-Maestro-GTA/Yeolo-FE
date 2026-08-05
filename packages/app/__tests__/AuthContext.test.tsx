@@ -3,7 +3,7 @@
  * @description Unit tests for AuthContext state management and auto-login restore.
  * @requirements REQ-11
  * @functional FUN-1
- * @api API-FB-1
+ * @api API-AUTH-1
  * @author Antigravity Agent
  */
 import React from 'react';
@@ -19,6 +19,39 @@ const originalFetch = globalThis.fetch;
 beforeAll(() => {
   globalThis.fetch = jest.fn(async (url: any, options: any) => {
     const requestUrl = typeof url === 'string' ? url : (url && url.url) || '';
+    if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/apple')) {
+      if (shouldFail) {
+        return new Response(JSON.stringify({
+          status: 400,
+          message: '유효하지 않은 Apple OAuth 인가 코드입니다.',
+          data: null,
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({
+        status: 200,
+        message: '로그인 성공',
+        data: {
+          user: {
+            userId: '550e8400-e29b-41d4-a716-446655440001',
+            provider: 'apple',
+            email: 'appleuser@privacy.apple.com',
+            displayName: 'Apple User',
+            profileImageUrl: null,
+            status: 'active',
+            lastLoginAt: '2026-08-04T10:00:00Z',
+          },
+          doOnboarding: false,
+          accessToken: 'mock-apple-access-token',
+          refreshToken: 'mock-apple-refresh-token',
+        },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/google')) {
       if (shouldFail) {
         return new Response(JSON.stringify({
@@ -108,6 +141,22 @@ describe('AuthContext', () => {
     expect(result.current.user?.displayName).toBe('최고민수');
   });
 
+  it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    await act(async () => {
+      await result.current.loginWithApple({ code: 'mock-apple-code', idToken: 'mock-apple-id-token' });
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.user?.displayName).toBe('Apple User');
+    expect(result.current.user?.provider).toBe('apple');
+  });
+
   it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
     shouldFail = true;
 
@@ -149,3 +198,4 @@ describe('AuthContext', () => {
     expect(await AsyncStorage.getItem('accessToken')).toBeNull();
   });
 });
+
