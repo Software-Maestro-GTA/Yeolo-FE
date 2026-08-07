@@ -13,8 +13,8 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
-  loginWithGoogle: (code: string) => Promise<{ user: User; isNewUser: boolean }>;
-  loginWithApple: (payload: { code: string; idToken?: string | null }) => Promise<{ user: User; isNewUser: boolean; doOnboarding?: boolean }>;
+  loginWithGoogle: (code: string) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
+  loginWithApple: (payload: { code: string; idToken?: string | null }) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
   logout: () => void;
 }
 
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           logger.info('[AuthContext] Session restored successfully');
         }
       } catch (error) {
-        console.error('세션 복원 실패:', error);
+        logger.error('[AuthContext] 세션 복원 실패:', error);
       } finally {
         setIsRestoring(false);
       }
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const loginWithGoogle = async (code: string): Promise<{ user: User; isNewUser: boolean }> => {
+  const loginWithGoogle = async (code: string): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
     logger.info('[AuthContext] Executing loginWithGoogle...');
     try {
       const result = await googleLoginMutation.mutateAsync(code);
@@ -75,12 +75,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logger.info('[AuthContext] Google login successful:', result.user);
       return result;
     } catch (error) {
-      console.error('Login flow API error:', error);
+      logger.error('[AuthContext] Login flow API error:', error);
       throw error;
     }
   };
 
-  const loginWithApple = async (payload: { code: string; idToken?: string | null }): Promise<{ user: User; isNewUser: boolean; doOnboarding?: boolean }> => {
+  const loginWithApple = async (payload: { code: string; idToken?: string | null }): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
     logger.info('[AuthContext] Executing loginWithApple...');
     try {
       const result = await appleLoginMutation.mutateAsync(payload);
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logger.info('[AuthContext] Apple login successful:', result.user);
       return result;
     } catch (error) {
-      console.error('Apple login flow API error:', error);
+      logger.error('[AuthContext] Apple login flow API error:', error);
       throw error;
     }
   };

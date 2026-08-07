@@ -7,12 +7,8 @@ import { StyleSheet, Text, View, TouchableOpacity, Animated, Image } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_IMAGES } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
-
-// Intro Illustration Asset Images
-const introPhotoImg = require('../../assets/images/intro_photo_analysis.jpg');
-const introMapImg = require('../../assets/images/intro_map_route.jpg');
 
 interface IntroScreenProps {
   onNext: () => void;
@@ -24,30 +20,40 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const isAnimatingRef = useRef<boolean>(false);
 
-  // 3초마다 main-body 자동 전환 (0 -> 1 -> 2 -> 0 무한 순환만 수행)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      cycleNextSlide();
-    }, 5000);
+  const goToSlide = (nextIndex: number) => {
+    if (nextIndex === activeIndex || isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
 
-    return () => clearInterval(timer);
-  }, [activeIndex]);
-
-  const cycleNextSlide = () => {
-    setActiveIndex((prev) => (prev + 1) % 3);
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 150,
       useNativeDriver: true,
-    }).start(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+    }).start(({ finished }) => {
+      if (finished) {
+        setActiveIndex(nextIndex);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          isAnimatingRef.current = false;
+        });
+      } else {
+        isAnimatingRef.current = false;
+      }
     });
   };
+
+  // 5초마다 main-body 자동 전환 (0 -> 1 -> 2 -> 0 무한 순환)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      goToSlide((activeIndex + 1) % 3);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [activeIndex]);
 
   // 사람이 "다음으로" 버튼을 눌렀을 때만 동작
   const handlePressNextButton = () => {
@@ -58,7 +64,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
   // 사람이 메인 바디 영역을 눌렀을 때의 터치 전환 (0 -> 1 -> 2 -> 0 순환)
   const handleMainBodyPress = () => {
     trackButtonClick('btn_intro_main_body_touch', `Intro Main Body Touch Slide ${activeIndex + 1}`);
-    cycleNextSlide();
+    goToSlide((activeIndex + 1) % 3);
   };
 
   // Main Body Slide 0: 3가지 핵심 기능 카드 리스트 (앱 소개1)
@@ -69,8 +75,8 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
           <Ionicons name="heart" size={20} color={palette.primary} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>AI 취향 분석</Text>
-          <Text style={styles.cardDesc}>몇 장의 사진으로 발견하는 나만의 여행 취향</Text>
+          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_1_TITLE}</Text>
+          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_1_DESC}</Text>
         </View>
       </View>
 
@@ -79,8 +85,8 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
           <Ionicons name="map" size={20} color={palette.accent} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>맞춤 코스 생성</Text>
-          <Text style={styles.cardDesc}>동선과 운영 시간을 계산한 최적의 일정 설계</Text>
+          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_2_TITLE}</Text>
+          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_2_DESC}</Text>
         </View>
       </View>
 
@@ -89,8 +95,8 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
           <Ionicons name="share-social" size={20} color={palette.primary} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>코스 공유</Text>
-          <Text style={styles.cardDesc}>나만의 여행 코스를 친구와 공유하고 즐기기</Text>
+          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_3_TITLE}</Text>
+          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_3_DESC}</Text>
         </View>
       </View>
     </View>
@@ -101,7 +107,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
     <View style={styles.illustrationFrame}>
       {/* Background Illustration Image */}
       <Image
-        source={introPhotoImg}
+        source={APP_IMAGES.INTRO_PHOTO_ANALYSIS}
         style={styles.bgIllustrationImage}
         resizeMode="cover"
       />
@@ -111,15 +117,15 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
       {/* Analysis Badges */}
       <View style={[styles.analysisBadge, { top: 20, left: 16 }]}>
-        <Text style={styles.badgeText}>🌿 자연/힐링 <Text style={styles.accentText}>92%</Text></Text>
+        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_1} <Text style={styles.accentText}>92%</Text></Text>
       </View>
 
       <View style={[styles.analysisBadge, { top: 76, right: 16 }]}>
-        <Text style={styles.badgeText}>🌊 오션뷰 <Text style={styles.accentText}>85%</Text></Text>
+        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_2} <Text style={styles.accentText}>85%</Text></Text>
       </View>
 
       <View style={[styles.analysisBadge, { top: 136, left: 20 }]}>
-        <Text style={styles.badgeText}>📸 감성사진 <Text style={{ color: palette.primary, fontWeight: '700' }}>76%</Text></Text>
+        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_3} <Text style={{ color: palette.primary, fontWeight: '700' }}>76%</Text></Text>
       </View>
 
       {/* Progress Card Overlay */}
@@ -127,14 +133,14 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
         <View style={styles.progressHeaderRow}>
           <View style={styles.rowFlex}>
             <View style={styles.dotIndicator} />
-            <Text style={styles.progressTitle}>취향 분석 중...</Text>
+            <Text style={styles.progressTitle}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_TITLE}</Text>
           </View>
-          <Text style={styles.progressPercent}>65%</Text>
+          <Text style={styles.progressPercent}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_PERCENT}</Text>
         </View>
         <View style={styles.progressBarTrack}>
           <View style={[styles.progressBarFill, { width: '65%' }]} />
         </View>
-        <Text style={styles.progressSubText}>342장의 사진 데이터 파싱 완료</Text>
+        <Text style={styles.progressSubText}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_SUBTEXT}</Text>
       </View>
     </View>
   );
@@ -144,7 +150,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
     <View style={[styles.illustrationFrame, styles.mapFrameBg]}>
       {/* Background Illustration Image */}
       <Image
-        source={introMapImg}
+        source={APP_IMAGES.INTRO_MAP_ROUTE}
         style={styles.bgIllustrationImage}
         resizeMode="cover"
       />
@@ -152,7 +158,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
       {/* Route Navigation Badge Overlay */}
       <View style={styles.mapOverlayBadge}>
         <Ionicons name="location" size={16} color={palette.accent} />
-        <Text style={styles.mapOverlayText}>나만을 위한 최적의 여행 경로 탐색 중</Text>
+        <Text style={styles.mapOverlayText}>{UI_STRINGS.INTRO.SLIDE_2_BADGE_TEXT}</Text>
       </View>
     </View>
   );
@@ -189,7 +195,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
                 <TouchableOpacity
                   key={idx}
                   activeOpacity={0.6}
-                  onPress={() => setActiveIndex(idx)}
+                  onPress={() => goToSlide(idx)}
                   style={[
                     styles.dot,
                     activeIndex === idx ? styles.activeDot : styles.inactiveDot,
@@ -209,7 +215,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
               <Feather
                 name="chevron-right"
                 size={18}
-                color="#FFFFFF"
+                color={palette.white}
                 style={styles.arrowIcon}
               />
             </TouchableOpacity>
@@ -327,7 +333,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   mapFrameBg: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.gray100,
   },
   laserLine: {
     position: 'absolute',
@@ -346,7 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    shadowColor: '#000',
+    shadowColor: palette.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -370,7 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     gap: 8,
-    shadowColor: '#000',
+    shadowColor: palette.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -405,7 +411,7 @@ const styles = StyleSheet.create({
   progressBarTrack: {
     height: 8,
     width: '100%',
-    backgroundColor: '#F0F5F2',
+    backgroundColor: palette.lightTeal,
     borderRadius: 100,
     overflow: 'hidden',
   },
@@ -428,7 +434,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#000',
+    shadowColor: palette.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
@@ -477,7 +483,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: palette.white,
   },
   arrowIcon: {
     marginLeft: 8,

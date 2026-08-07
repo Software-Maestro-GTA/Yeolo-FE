@@ -9,32 +9,32 @@ import {
   loginWithAppleApi,
   logoutApi,
   withdrawApi,
-  DEFAULT_API_URL,
   type User,
   type LogoutResponse,
   type WithdrawResponse,
 } from '@yeolo/common';
-import { UI_STRINGS, APP_CONFIG } from '../../constants';
+import { APP_CONFIG, UI_STRINGS } from '../../constants';
 
 export interface UseGoogleLoginMutationOptions {
-  options?: UseMutationOptions<{ user: User; isNewUser: boolean }, Error, string>;
+  options?: UseMutationOptions<{ user: User; isNewUser: boolean; doOnboarding: boolean }, Error, string>;
 }
 
 export function useGoogleLoginMutation({ options }: UseGoogleLoginMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
 
-  return useMutation<{ user: User; isNewUser: boolean }, Error, string>({
+  return useMutation<{ user: User; isNewUser: boolean; doOnboarding: boolean }, Error, string>({
     mutationFn: async (code: string) => {
       const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
       const fetchedUser = response.data.user;
       const isNewUser = !fetchedUser.lastLoginAt;
+      const doOnboarding = response.data.doOnboarding;
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
 
-      return { user: fetchedUser, isNewUser };
+      return { user: fetchedUser, isNewUser, doOnboarding };
     },
     ...options,
   });
@@ -46,14 +46,14 @@ export interface AppleAuthPayloadInput {
 }
 
 export interface UseAppleLoginMutationOptions {
-  options?: UseMutationOptions<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>;
+  options?: UseMutationOptions<{ user: User; isNewUser: boolean; doOnboarding: boolean }, Error, AppleAuthPayloadInput>;
 }
 
 export function useAppleLoginMutation({ options }: UseAppleLoginMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
 
-  return useMutation<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>({
+  return useMutation<{ user: User; isNewUser: boolean; doOnboarding: boolean }, Error, AppleAuthPayloadInput>({
     mutationFn: async ({ code, idToken }: AppleAuthPayloadInput) => {
       const response = await loginWithAppleApi(apiUrl, { code, redirectUri, idToken });
       const fetchedUser = response.data.user;
@@ -75,7 +75,7 @@ export interface UseLogoutMutationOptions {
 }
 
 export function useLogoutMutation({ options }: UseLogoutMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useMutation<LogoutResponse, Error, void>({
     mutationFn: async () => {
@@ -94,7 +94,7 @@ export interface UseWithdrawMutationOptions {
 }
 
 export function useWithdrawMutation({ options }: UseWithdrawMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useMutation<WithdrawResponse, Error, string | void>({
     mutationFn: async (reason) => {

@@ -72,6 +72,7 @@ beforeAll(() => {
             status: 'active',
             lastLoginAt: '2026-07-16T11:00:00Z',
           },
+          doOnboarding: true,
           accessToken: 'mock-access-token',
           refreshToken: 'mock-refresh-token',
         },
@@ -129,12 +130,14 @@ describe('AuthContext', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
+    let res: any;
     await act(async () => {
-      await result.current.loginWithGoogle('mock-code');
+      res = await result.current.loginWithGoogle('mock-code');
     });
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('최고민수');
+    expect(res?.doOnboarding).toBe(true);
   });
 
   it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {

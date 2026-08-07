@@ -94,7 +94,7 @@ export function NavigationRoot() {
     return () => subscription.remove();
   }, [step, history]);
 
-  if (auth?.isLoading || step === null) {
+  if (step === null) {
     return null;
   }
 
@@ -109,8 +109,8 @@ export function NavigationRoot() {
     case NAV_STEPS.LOGIN:
       return (
         <LoginScreen
-          onLoginSuccess={(isNewUser) => {
-            if (isNewUser) {
+          onLoginSuccess={(doOnboarding) => {
+            if (doOnboarding) {
               navigateTo(NAV_STEPS.INTRO);
             } else {
               navigateTo(NAV_STEPS.HOME);
