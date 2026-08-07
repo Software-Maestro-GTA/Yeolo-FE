@@ -24,7 +24,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   onEditAvatar,
 }) => {
-  const displayName = user?.displayName || UI_STRINGS.COMPONENTS.DEFAULT_USER_NAME;
+  const displayName = user?.displayName || UI_STRINGS.PROFILE.DEFAULT_USER_NAME;
   const email = user?.email || APP_CONFIG.DEFAULT_USER_EMAIL;
   const avatarUrl = user?.profileImageUrl;
 

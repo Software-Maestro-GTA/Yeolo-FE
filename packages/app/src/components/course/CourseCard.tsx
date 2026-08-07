@@ -1,24 +1,18 @@
 /**
  * @file CourseCard.tsx
- * @description Card component displaying previous course recommendation details in Bento Grid layout (FUN-7, DOM-2).
+ * @description Course card component displaying course summary, travel tags, and destination details in modern UI v2 layout.
  * @requirements REQ-9
  * @functional FUN-7
- * @api API-FB-10
  * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import type { CourseSummary } from '@yeolo/common';
-
-import { theme } from '../../theme';
+import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
-/**
- * Helper function to dynamically construct an online image search URL based on country and city search terms.
- * Queries LoremFlickr dynamic photo search endpoint by country/city keywords.
- */
 export function getDestinationImageUrl(country: string, city: string): string {
-  const keyword = (city || country || UI_STRINGS.COMPONENTS.DEFAULT_TRAVEL_KEYWORD).trim();
+  const keyword = (city || country || '여행').trim();
   return `https://loremflickr.com/600/400/${encodeURIComponent(keyword)}`;
 }
 
@@ -35,20 +29,18 @@ export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
 }) {
   const durationText =
     course.totalDays && course.totalDays > 1
-      ? `${course.totalDays - 1}${UI_STRINGS.COMPONENTS.DURATION_NIGHTS_SUFFIX} ${course.totalDays}${UI_STRINGS.COMPONENTS.DURATION_DAYS_SUFFIX}`
-      : UI_STRINGS.COMPONENTS.DURATION_SAME_DAY;
+      ? `${course.totalDays - 1}박 ${course.totalDays}일`
+      : '당일치기';
 
   const isList = viewMode === 'list';
-
-  // Fallback banner image gradient/color based on course id hash
-  const defaultColors = [theme.colors.primary, '#6c5ce7', '#00cec9', '#e84393', '#fdcb6e'];
+  const defaultColors = [palette.primary, '#6c5ce7', palette.accent, '#e84393', '#fdcb6e'];
   const colorIndex = Math.abs(
     course.courseId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   ) % defaultColors.length;
   const accentColor = defaultColors[colorIndex];
 
   const imageUrl = getDestinationImageUrl(course.destinationCountry, course.destinationCity);
-  
+
   return (
     <TouchableOpacity
       testID={`course-card-${course.courseId}`}
@@ -70,20 +62,12 @@ export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
       </View>
 
       <View style={styles.contentContainer}>
-        {!isList ? (
-          <Text style={styles.titleText} numberOfLines={1}>
-            {course.destinationCountry} {course.destinationCity}
-          </Text>
-        ) : (
-          <>
-            <Text style={styles.locationText}>
-              {course.destinationCountry} {course.destinationCity}
-            </Text>
-            <Text style={styles.titleText} numberOfLines={2}>
-              {course.title}
-            </Text>
-          </>
-        )}
+        <Text style={styles.locationText}>
+          {course.destinationCountry} {course.destinationCity}
+        </Text>
+        <Text style={styles.titleText} numberOfLines={2}>
+          {course.title}
+        </Text>
 
         {course.tags && course.tags.length > 0 && (
           <View style={styles.tagContainer}>
@@ -105,10 +89,10 @@ export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.bg.card,
+    backgroundColor: palette.white,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: theme.colors.shadow,
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -138,10 +122,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: theme.colors.bg.glass,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   placeholderText: {
-    color: theme.colors.text.inverse,
+    color: palette.white,
     fontWeight: '800',
     fontSize: 16,
   },
@@ -149,13 +133,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(3, 6, 18, 0.65)',
+    backgroundColor: 'rgba(13, 33, 55, 0.65)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   badgeText: {
-    color: theme.colors.text.inverse,
+    color: palette.white,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -165,14 +149,14 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: theme.colors.primary,
+    color: palette.primary,
     fontWeight: '700',
     marginBottom: 4,
   },
   titleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -183,19 +167,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagChip: {
-    backgroundColor: theme.colors.primaryContainer,
+    backgroundColor: '#E0F7F1',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   tagText: {
     fontSize: 11,
-    color: theme.colors.primary,
+    color: palette.primary,
     fontWeight: '600',
   },
   dateText: {
     fontSize: 11,
-    color: theme.colors.text.placeholder,
+    color: palette.subText,
     marginTop: 'auto',
   },
 });

@@ -1,9 +1,8 @@
 /**
  * @file CourseDetailScreen.tsx
- * @description Screen component for rendering recommended travel course details integrated with courseService and subcomponents (FUN-3, REQ-9).
- * @requirements REQ-9, REQ-22
- * @functional FUN-3, FUN-GA4
- * @api API-FB-7
+ * @description Screen component for rendering recommended travel course details and timeline itinerary.
+ * @requirements REQ-9, REQ-10
+ * @functional FUN-3
  * @author Antigravity Agent
  */
 import React, { useEffect, useState } from 'react';
@@ -15,9 +14,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import {
-  ItineraryStop,
-} from '@yeolo/common';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ItineraryStop } from '@yeolo/common';
 import {
   CourseDetailHeader,
   CourseMiniMapView,
@@ -26,15 +24,16 @@ import {
 } from '../components/course';
 import { useCourseDetailQuery } from '../hooks/queries';
 import { processCourseStopsMapData, ProcessedCourseMapData } from '../services';
-import { theme } from '../theme';
+import { palette } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface CourseDetailScreenProps {
   courseId: string;
+  onSelectPlace?: (stop: ItineraryStop) => void;
 }
 
-export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
+export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScreenProps) {
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
 
@@ -72,7 +71,6 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
         return;
       }
 
-      // Delegate geocoding and map region calculation to courseService
       const processed = await processCourseStopsMapData(currentDayData.stops, course?.destinationCity);
       if (isMounted) {
         setMapData(processed);
@@ -87,17 +85,17 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
 
   if (isLoading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>{UI_STRINGS.COMMON.LOADING}</Text>
+      <View style={[styles.screenContainer, styles.centerContainer]}>
+        <ActivityIndicator size="large" color={palette.primary} />
+        <Text style={styles.loadingText}>코스 정보를 불러오는 중...</Text>
       </View>
     );
   }
 
   if (error || !course) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{UI_STRINGS.COURSE_DETAIL.ERROR_TITLE}</Text>
+      <View style={[styles.screenContainer, styles.centerContainer]}>
+        <Text style={styles.errorText}>코스 정보를 불러오지 못했습니다.</Text>
         {error && <Text style={styles.errorSubText}>{error.message}</Text>}
         <TouchableOpacity
           testID="retry-button"
@@ -106,8 +104,9 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
             trackButtonClick('btn_course_detail_retry', 'Retry Fetch Course Detail');
             refetch();
           }}
+          activeOpacity={0.8}
         >
-          <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
+          <Text style={styles.retryButtonText}>다시 시도하기</Text>
         </TouchableOpacity>
       </View>
     );
@@ -118,8 +117,12 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
   }, 0);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} scrollEnabled={!isMapInteracting}>
+    <View style={styles.screenContainer} testID="screen-container">
+      <ScrollView
+        contentContainerStyle={styles.scrollContentContainer}
+        scrollEnabled={!isMapInteracting}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header Section Component */}
         <CourseDetailHeader
           destinationCountry={course.destinationCountry}
@@ -127,51 +130,115 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
           startDate={course.startDate}
           title={course.title}
           totalCost={calculatedTotalCost}
+          onBack={() => trackButtonClick('btn_course_detail_back', 'Back Button Click')}
+          onShare={() => trackButtonClick('btn_course_detail_share', 'Share Course Click')}
         />
 
-        {/* Mini Map View Component */}
-        <CourseMiniMapView
-          stopCoordinates={mapData.coordinates}
-          mapRegion={mapData.region}
-          leafletHtml={mapData.leafletHtml}
-          onInteractionStart={() => setIsMapInteracting(true)}
-          onInteractionEnd={() => setIsMapInteracting(false)}
-        />
+        {/* Main Content Body */}
+        <View style={styles.mainContentBody}>
+          {/* Mini Map View Component */}
+          <CourseMiniMapView
+            stopCoordinates={mapData.coordinates}
+            mapRegion={mapData.region}
+            leafletHtml={mapData.leafletHtml}
+            onInteractionStart={() => setIsMapInteracting(true)}
+            onInteractionEnd={() => setIsMapInteracting(false)}
+          />
 
-        {/* Day Selector Tabs Component */}
-        <CourseDayTabs
-          days={course.itinerary?.days}
-          selectedDay={selectedDay}
-          onSelectDay={(day) => {
-            trackButtonClick('btn_course_detail_day_tab', `Select Day ${day}`, { day });
-            setSelectedDay(day);
-          }}
-        />
+          {/* Day Selector Tabs Component */}
+          <CourseDayTabs
+            days={course.itinerary?.days}
+            selectedDay={selectedDay}
+            onSelectDay={(day) => {
+              trackButtonClick('btn_course_detail_day_tab', `Select Day ${day}`, { day });
+              setSelectedDay(day);
+            }}
+          />
 
-        {/* Timeline Itinerary Items Stream */}
-        <View style={styles.timelineSection}>
-          {currentDayData?.stops && currentDayData.stops.length > 0 ? (
-            currentDayData.stops.map((stop: ItineraryStop, index: number) => (
-              <ItineraryTimelineItem
-                key={stop.sequence || index}
-                stop={stop}
-                isLast={index === currentDayData.stops.length - 1}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>{UI_STRINGS.COURSE_DETAIL.EMPTY_SCHEDULE}</Text>
+          {/* Flight Booking Banner */}
+          <TouchableOpacity
+            style={styles.ctaBanner}
+            activeOpacity={0.85}
+            onPress={() => trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner')}
+          >
+            <LinearGradient
+              colors={['rgba(45,125,210,0.9)', 'rgba(30,95,166,0.9)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.bannerGradient}
+            >
+              <View style={styles.bannerLeft}>
+                <Text style={styles.bannerTitle}>
+                  {UI_STRINGS.COURSE_DETAIL.FLIGHT_BANNER_TITLE}
+                </Text>
+                <Text style={styles.bannerSubTitle}>
+                  {UI_STRINGS.COURSE_DETAIL.FLIGHT_BANNER_DESC}
+                </Text>
+              </View>
+              <View style={styles.bannerCtaBadge}>
+                <Text style={styles.bannerCtaText}>
+                  {UI_STRINGS.COURSE_DETAIL.BOOK_NOW}
+                </Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Timeline Itinerary Items Stream */}
+          <View style={styles.timelineSection} testID="timeline-section">
+            {currentDayData?.stops && currentDayData.stops.length > 0 ? (
+              currentDayData.stops.map((stop: ItineraryStop, index: number) => (
+                <ItineraryTimelineItem
+                  key={stop.sequence || index}
+                  stop={stop}
+                  isLast={index === currentDayData.stops.length - 1}
+                  onPressPlace={onSelectPlace}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>해당 일차의 일정이 존재하지 않습니다.</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Hotel Booking Banner */}
+          <TouchableOpacity
+            style={styles.ctaBanner}
+            activeOpacity={0.85}
+            onPress={() => trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner')}
+          >
+            <LinearGradient
+              colors={['rgba(0,201,167,0.9)', 'rgba(13,115,97,0.9)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.bannerGradient}
+            >
+              <View style={styles.bannerLeft}>
+                <Text style={styles.bannerTitle}>
+                  {UI_STRINGS.COURSE_DETAIL.HOTEL_BANNER_TITLE}
+                </Text>
+                <Text style={styles.bannerSubTitle}>
+                  {UI_STRINGS.COURSE_DETAIL.HOTEL_BANNER_DESC}
+                </Text>
+              </View>
+              <View style={styles.bannerCtaBadge}>
+                <Text style={styles.bannerCtaText}>
+                  {UI_STRINGS.COURSE_DETAIL.BOOK_NOW}
+                </Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Summary Section (총 예상 경비) */}
+          <View style={styles.summarySection} testID="summary-section">
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>
+                {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
+              </Text>
+              <Text style={styles.summaryValue}>
+                ₩{calculatedTotalCost ? calculatedTotalCost.toLocaleString() : '78,000'}
+              </Text>
             </View>
-          )}
-        </View>
-
-        {/* Summary Section (총 예상 경비) */}
-        <View style={styles.summarySection}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>{UI_STRINGS.COURSE_DETAIL.TOTAL_ESTIMATED_COST}</Text>
-            <Text style={styles.summaryValue}>
-              ₩{calculatedTotalCost ? calculatedTotalCost.toLocaleString() : '0'}
-            </Text>
           </View>
         </View>
       </ScrollView>
@@ -180,89 +247,135 @@ export function CourseDetailScreen({ courseId }: CourseDetailScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenContainer: {
     flex: 1,
-    backgroundColor: theme.colors.bg.screen,
+    backgroundColor: palette.softMint, // #F5FAF8
   },
   centerContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: theme.colors.bg.screen,
+    gap: 12,
   },
   loadingText: {
-    marginTop: 12,
     fontSize: 14,
-    color: theme.colors.text.subtle,
+    color: palette.subText,
   },
   errorText: {
     fontSize: 16,
     fontWeight: '700',
-    color: theme.colors.status.error,
-    marginBottom: 8,
+    color: '#EF4444',
     textAlign: 'center',
   },
   errorSubText: {
     fontSize: 13,
-    color: theme.colors.text.subtle,
-    marginBottom: 16,
+    color: palette.subText,
     textAlign: 'center',
+    marginBottom: 8,
   },
   retryButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: palette.primary,
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
   },
   retryButtonText: {
-    color: theme.colors.text.inverse,
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
-  scrollContent: {
-    paddingBottom: 40,
+  scrollContentContainer: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 76,
+  },
+  mainContentBody: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  ctaBanner: {
+    width: '100%',
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  bannerGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  bannerLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  bannerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  bannerSubTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  bannerCtaBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  bannerCtaText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   timelineSection: {
     width: '100%',
   },
   emptyContainer: {
-    padding: 30,
+    padding: 24,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 14,
-    color: theme.colors.text.muted,
+    color: palette.subText,
   },
   summarySection: {
     width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 16,
   },
   summaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: 'rgba(198, 198, 204, 0.3)',
-    padding: 17,
+    borderColor: palette.gray200,
+    padding: 18,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
   },
   summaryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#171c1f',
+    fontSize: 15,
+    fontWeight: '700',
+    color: palette.deepNavy,
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.primary,
+    fontSize: 20,
+    fontWeight: '800',
+    color: palette.deepNavy,
   },
 });

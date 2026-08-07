@@ -1,9 +1,8 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Screen displaying SSE streaming loading state and real-time progress feedback following Yeolo UI v1.
- * @requirements REQ-7, REQ-22
- * @functional FUN-6, FUN-GA4
- * @api API-FB-4
+ * @description Screen displaying SSE streaming course generation progress with linear gradient progress bar.
+ * @requirements REQ-8
+ * @functional FUN-6
  * @author Antigravity Agent
  */
 import React, { useEffect } from 'react';
@@ -15,10 +14,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourseStore } from '@yeolo/common';
-import { theme } from '../theme';
+import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick, COURSE_LIST_QUERY_KEY } from '../hooks';
 
@@ -37,11 +37,10 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   const { trackButtonClick } = useGA4ButtonClick();
   const queryClient = useQueryClient();
 
-  const { createdCourseId, progressMessage, error, errorCode, resetCourseState } = useCourseStore();
+  const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
 
   useEffect(() => {
     if (createdCourseId) {
-      // Invalidate TanStack Query course list cache so newly generated course is automatically refetched
       queryClient.invalidateQueries({ queryKey: COURSE_LIST_QUERY_KEY });
       onComplete?.(createdCourseId);
     }
@@ -61,154 +60,258 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
   if (error) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <View style={styles.errorCard}>
-          <Ionicons
-            name="alert-circle-outline"
-            size={48}
-            color={theme.colors.status.error}
-            style={styles.errorIcon}
-          />
-          <Text style={styles.errorTitle}>{UI_STRINGS.COURSE_GENERATING.ERROR_TITLE}</Text>
+      <View style={styles.screenContainer}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+          <View style={styles.errorContainer}>
+            <View style={styles.errorCard}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={48}
+                color="#EF4444"
+                style={styles.errorIcon}
+              />
+              <Text style={styles.errorTitle}>코스 생성 중 오류가 발생했습니다</Text>
+              <Text style={styles.errorSubtitle}>{error}</Text>
 
-          <View style={styles.errorButtonContainer}>
-            {onNavigateToIntro && (
-              <TouchableOpacity testID="go-intro-btn" style={styles.introButton} onPress={handleGoIntro}>
-                <Text style={styles.introButtonText}>{UI_STRINGS.TASTE_PROFILE.START_ANALYSIS}</Text>
-              </TouchableOpacity>
-            )}
+              <View style={styles.errorButtonContainer}>
+                {onNavigateToIntro && (
+                  <TouchableOpacity
+                    testID="go-intro-btn"
+                    style={styles.introButton}
+                    onPress={handleGoIntro}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.introButtonText}>시작 화면으로 이동</Text>
+                  </TouchableOpacity>
+                )}
 
-            <TouchableOpacity testID="retry-btn" style={styles.retryButton} onPress={handleRetry}>
-              <Text style={styles.retryButtonText}>{UI_STRINGS.COURSE_DETAIL.RETRY_BUTTON}</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  testID="retry-btn"
+                  style={styles.retryButton}
+                  onPress={handleRetry}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.retryButtonText}>다시 시도하기</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.centerContainer}>
-      <View style={styles.glassCard}>
-        {/* Sparkle Badge */}
-        <View style={styles.badge}>
-          <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
-          <Text style={styles.badgeText}>{UI_STRINGS.COURSE_GENERATING.BADGE_TEXT}</Text>
+    <View style={styles.screenContainer}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={styles.contentContainer}>
+          {/* Main Body Section */}
+          <View style={styles.mainBodyContainer} testID="main-content">
+            {/* Title Group */}
+            <View style={styles.titleGroup} testID="title-group">
+              <Text style={styles.mainTitle}>{UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}</Text>
+              <Text style={styles.subTitle}>{UI_STRINGS.COURSE_GENERATING.SUB_TITLE}</Text>
+            </View>
+
+            {/* Checklist Card */}
+            <View style={styles.checklistCard} testID="checklist-card">
+              {/* Step 1: 사용자 취향 불러오기 (Completed) */}
+              <View style={styles.stepRow} testID="step-1">
+                <View style={styles.completedCircle}>
+                  <Feather name="check" size={12} color="#FFFFFF" />
+                </View>
+                <Text style={styles.completedStepText}>
+                  {UI_STRINGS.COURSE_GENERATING.STEP_1}
+                </Text>
+              </View>
+
+              {/* Divider Line */}
+              <View style={styles.dividerLine} />
+
+              {/* Step 2: 여행 코스 생성 중 (In Progress) */}
+              <View style={styles.stepRow} testID="step-2">
+                <View style={styles.loadingCircle}>
+                  <ActivityIndicator size="small" color={palette.primary} />
+                </View>
+                <Text style={styles.activeStepText}>
+                  {UI_STRINGS.COURSE_GENERATING.STEP_2}
+                </Text>
+              </View>
+            </View>
+
+            {/* Progress Bar Container */}
+            <View style={styles.progressBarContainer} testID="progress-bar-container">
+              <View style={styles.progressTrack}>
+                <LinearGradient
+                  colors={[palette.primary, palette.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: '60%' }]}
+                />
+              </View>
+              <View style={styles.progressLabelRow}>
+                <Text style={styles.progressStatusText} testID="progress-text">
+                  {progressMessage || UI_STRINGS.COURSE_GENERATING.PROGRESS_LABEL}
+                </Text>
+                <Text style={styles.progressPercentageText}>60%</Text>
+              </View>
+            </View>
+
+            {/* Bottom SubText */}
+            <View style={styles.bottomSubTextGroup}>
+              <Text style={styles.bottomSubText}>{UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_1}</Text>
+              <Text style={styles.bottomSubText}>{UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_2}</Text>
+            </View>
+          </View>
         </View>
-
-        {/* Activity Ring Spinner */}
-        <View style={styles.spinnerWrapper}>
-          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.spinner} />
-        </View>
-
-        <Text style={styles.title}>{UI_STRINGS.COURSE_GENERATING.TITLE}</Text>
-
-        <Text testID="progress-text" style={styles.progressText}>
-          {progressMessage || UI_STRINGS.COURSE_GENERATING.DEFAULT_PROGRESS}
-        </Text>
-
-        <View style={styles.tipBox}>
-          <Ionicons name="bulb-outline" size={16} color={theme.colors.primary} style={styles.tipIcon} />
-          <Text style={styles.tipText}>
-            {UI_STRINGS.COURSE_GENERATING.TIP_TEXT}
-          </Text>
-        </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  centerContainer: {
+  screenContainer: {
     flex: 1,
-    backgroundColor: theme.colors.bg.screen,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    backgroundColor: palette.softMint, // #F5FAF8
   },
-  glassCard: {
+  safeArea: {
+    flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  mainBodyContainer: {
+    gap: 28,
+    alignItems: 'center',
     width: '100%',
-    maxWidth: 340,
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 24,
-    padding: 28,
+  },
+  titleGroup: {
     alignItems: 'center',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 4,
+    gap: 8,
+    width: '100%',
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryContainer,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    gap: 6,
-    marginBottom: 24,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  spinnerWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.primaryContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  spinner: {
-    transform: [{ scale: 1.2 }],
-  },
-  title: {
+  mainTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: theme.colors.text.primary,
-    marginBottom: 12,
+    fontWeight: '700',
+    color: palette.deepNavy, // #0D2137
     textAlign: 'center',
+    lineHeight: 28,
   },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.primary,
+  subTitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#45464C',
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-    minHeight: 40,
+    lineHeight: 18,
   },
-  tipBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: theme.colors.bg.input,
+  checklistCard: {
+    backgroundColor: palette.white, // #FFFFFF
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
-    padding: 14,
-    borderRadius: 14,
+    borderColor: '#E0E8E5',
+    borderRadius: 24,
+    padding: 20,
+    gap: 16,
+    width: '100%',
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  completedCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: palette.accent, // #00C9A7
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedStepText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: '#E0E8E5',
+    width: '100%',
+  },
+  loadingCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeStepText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: palette.deepNavy,
+  },
+  progressBarContainer: {
+    width: '100%',
+    paddingHorizontal: 10,
     gap: 8,
   },
-  tipIcon: {
-    marginTop: 2,
+  progressTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(45, 125, 210, 0.12)',
+    overflow: 'hidden',
   },
-  tipText: {
-    flex: 1,
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  progressStatusText: {
     fontSize: 12,
-    color: theme.colors.text.subtle,
-    lineHeight: 17,
+    fontWeight: '600',
+    color: palette.primary, // #2D7DD2
+  },
+  progressPercentageText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.primary, // #2D7DD2
+  },
+  bottomSubTextGroup: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  bottomSubText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#45464C',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
   errorCard: {
     width: '100%',
-    maxWidth: 340,
-    backgroundColor: theme.colors.bg.card,
+    backgroundColor: palette.white,
     borderRadius: 24,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
-    shadowColor: theme.colors.shadow,
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
@@ -220,13 +323,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: theme.colors.status.error,
+    color: '#EF4444',
     textAlign: 'center',
     marginBottom: 8,
   },
   errorSubtitle: {
     fontSize: 14,
-    color: theme.colors.text.subtle,
+    color: palette.subText,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -236,30 +339,28 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   introButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
+    backgroundColor: palette.primary,
     paddingVertical: 14,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
   },
   introButtonText: {
-    color: theme.colors.text.inverse,
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
   },
   retryButton: {
-    backgroundColor: theme.colors.bg.input,
+    backgroundColor: palette.softMint,
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
-    paddingHorizontal: 24,
+    borderColor: palette.gray200,
     paddingVertical: 14,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
   },
   retryButtonText: {
-    color: theme.colors.text.secondary,
+    color: palette.deepNavy,
     fontSize: 15,
     fontWeight: '600',
   },

@@ -1,18 +1,15 @@
 /**
  * @file BottomNavBar.tsx
- * @description Shared bottom navigation bar component following Figma UI v1 design.
+ * @description Shared bottom navigation bar component matching project design system.
  * @requirements REQ-11
  * @functional FUN-4
- * @api API-FB-8
  * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { theme } from '../../theme';
-import { UI_STRINGS } from '../../constants';
+import { palette } from '../../theme/colors';
 
 export type NavTab = 'home' | 'explore' | 'create' | 'profile';
 
@@ -28,87 +25,40 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 0);
 
+  const tabs: { id: NavTab; label: string; icon: keyof typeof Feather.glyphMap; size: number }[] = [
+    { id: 'home', label: '홈', icon: 'home', size: 18 },
+    { id: 'explore', label: '탐색', icon: 'compass', size: 20 },
+    { id: 'create', label: '생성', icon: 'plus', size: 22 },
+    { id: 'profile', label: '프로필', icon: 'user', size: 18 },
+  ];
+
   return (
-    <View style={[styles.bottomNav, { height: 64 + bottomInset, paddingBottom: bottomInset }]}>
-      <TouchableOpacity
-        style={styles.navItem}
-        activeOpacity={0.7}
-        onPress={() => onTabPress?.('home')}
-      >
-        <Ionicons
-          name={currentTab === 'home' ? 'home' : 'home-outline'}
-          size={20}
-          color={currentTab === 'home' ? theme.colors.primary : theme.colors.text.muted}
-        />
-        <Text
-          style={[
-            styles.navText,
-            currentTab === 'home' && styles.navTextActive,
-          ]}
-        >
-          {UI_STRINGS.COMPONENTS.NAV_HOME}
-        </Text>
-      </TouchableOpacity>
+    <View
+      style={[
+        styles.bottomNav,
+        { height: 60 + bottomInset, paddingBottom: bottomInset },
+      ]}
+      testID="bottom-nav-bar"
+    >
+      {tabs.map((tab) => {
+        const isActive = currentTab === tab.id;
+        const iconColor = isActive ? palette.primary : '#9CA3AF';
 
-      <TouchableOpacity
-        style={styles.navItem}
-        activeOpacity={0.7}
-        onPress={() => onTabPress?.('explore')}
-      >
-        <Ionicons
-          name={currentTab === 'explore' ? 'compass' : 'compass-outline'}
-          size={20}
-          color={currentTab === 'explore' ? theme.colors.primary : theme.colors.text.muted}
-        />
-        <Text
-          style={[
-            styles.navText,
-            currentTab === 'explore' && styles.navTextActive,
-          ]}
-        >
-          {UI_STRINGS.COMPONENTS.NAV_EXPLORE}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.navItem}
-        activeOpacity={0.7}
-        onPress={() => onTabPress?.('create')}
-      >
-        <Ionicons
-          name={currentTab === 'create' ? 'add-circle' : 'add-circle-outline'}
-          size={22}
-          color={currentTab === 'create' ? theme.colors.primary : theme.colors.text.muted}
-        />
-        <Text
-          style={[
-            styles.navText,
-            currentTab === 'create' && styles.navTextActive,
-          ]}
-        >
-          {UI_STRINGS.COMPONENTS.NAV_CREATE}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.navItem}
-        activeOpacity={0.7}
-        onPress={() => onTabPress?.('profile')}
-      >
-        <Ionicons
-          name={currentTab === 'profile' ? 'person' : 'person-outline'}
-          size={20}
-          color={currentTab === 'profile' ? theme.colors.primary : theme.colors.text.muted}
-        />
-        <Text
-          style={[
-            styles.navText,
-            currentTab === 'profile' && styles.navTextActive,
-          ]}
-        >
-          {UI_STRINGS.COMPONENTS.NAV_PROFILE}
-        </Text>
-      </TouchableOpacity>
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={styles.navItem}
+            activeOpacity={0.7}
+            onPress={() => onTabPress?.(tab.id)}
+            testID={`tab-${tab.id}`}
+          >
+            <Feather name={tab.icon} size={tab.size} color={iconColor} />
+            <Text style={[styles.navText, isActive ? styles.navTextActive : styles.navTextInactive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
@@ -119,33 +69,37 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
-    backgroundColor: theme.colors.bg.card,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 2,
+    borderTopColor: 'rgba(45, 125, 210, 0.3)',
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 8,
     zIndex: 10,
   },
   navItem: {
-    flex: 1,
-    height: '100%',
+    width: 70,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
   },
   navText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: theme.colors.text.muted,
-    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 14,
   },
   navTextActive: {
-    color: theme.colors.primary,
+    color: palette.primary, // #2D7DD2
     fontWeight: '700',
   },
-  centerButtonLabelActive: {
-    color: theme.colors.primary,
+  navTextInactive: {
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
 });

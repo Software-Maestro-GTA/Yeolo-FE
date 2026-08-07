@@ -7,3 +7,5 @@ export * from './ProfileHeader';
 export * from './SettingsSection';
 export * from './TasteAnalysisCard';
 export * from './TermsModal';
+export * from './WithdrawModal';
+export * from './ProfileEditModal';

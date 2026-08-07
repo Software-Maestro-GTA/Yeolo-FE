@@ -1,16 +1,14 @@
 /**
  * @file CreateCourseCtaCard.tsx
- * @description Gradient CTA card for initiating AI course generation flow (FUN-7).
+ * @description Gradient CTA card component for initiating AI course generation flow.
  * @requirements REQ-9
  * @functional FUN-7
- * @api N/A
  * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { theme } from '../../theme';
-import { UI_STRINGS } from '../../constants';
+import { palette } from '../../theme/colors';
 
 export interface CreateCourseCtaCardProps {
   onPress: () => void;
@@ -25,7 +23,7 @@ export function CreateCourseCtaCard({ onPress }: CreateCourseCtaCardProps) {
       style={styles.container}
     >
       <LinearGradient
-        colors={[theme.colors.primary, '#7c3aed', '#ec4899']}
+        colors={[palette.primary, '#7c3aed', palette.accent]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBackground}
@@ -34,11 +32,11 @@ export function CreateCourseCtaCard({ onPress }: CreateCourseCtaCardProps) {
           <View style={styles.iconCircle}>
             <Text style={styles.iconText}>✨</Text>
           </View>
-          <Text style={styles.titleText}>{UI_STRINGS.COMPONENTS.CTA_TITLE}</Text>
-          <Text style={styles.subtitleText}>{UI_STRINGS.COMPONENTS.CTA_SUBTITLE}</Text>
+          <Text style={styles.titleText}>AI와 함께 여로를 만들어보세요</Text>
+          <Text style={styles.subtitleText}>취향과 관심사에 딱 맞는 1:1 맞춤형 추천</Text>
 
           <View style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>{UI_STRINGS.COMPONENTS.CTA_BUTTON}</Text>
+            <Text style={styles.actionButtonText}>새 코스 생성하기</Text>
           </View>
         </View>
       </LinearGradient>
@@ -52,7 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: theme.colors.primary,
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -68,7 +66,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.bg.glass,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -79,7 +77,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: '800',
-    color: theme.colors.text.inverse,
+    color: palette.white,
     marginBottom: 4,
   },
   subtitleText: {
@@ -88,13 +86,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionButton: {
-    backgroundColor: theme.colors.bg.card,
+    backgroundColor: palette.white,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
   },
   actionButtonText: {
-    color: theme.colors.primary,
+    color: palette.primary,
     fontWeight: '800',
     fontSize: 13,
   },

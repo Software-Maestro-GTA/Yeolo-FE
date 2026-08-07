@@ -1,13 +1,14 @@
 /**
  * @file CourseSearchBar.tsx
- * @description Destination search input bar component for course list screen.
+ * @description Destination search input bar component for course list screen matching UI v2 design system.
  * @requirements REQ-9
  * @functional FUN-7
  * @author Antigravity Agent
  */
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { theme } from '../../theme';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface CourseSearchBarProps {
@@ -22,12 +23,12 @@ export const CourseSearchBar: React.FC<CourseSearchBarProps> = ({
   return (
     <View style={styles.searchRow}>
       <View style={styles.searchInputWrapper}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search" size={18} color="#99A1AB" style={styles.searchIcon} />
         <TextInput
           testID="search-input"
           style={styles.searchInput}
-          placeholder={UI_STRINGS.COURSE_LIST.SEARCH_PLACEHOLDER}
-          placeholderTextColor={theme.colors.text.placeholder}
+          placeholder={UI_STRINGS.COURSE_LIST?.SEARCH_PLACEHOLDER || '여행 코스 검색'}
+          placeholderTextColor="#99A1AB"
           value={value}
           onChangeText={onChangeText}
         />
@@ -43,23 +44,20 @@ const styles = StyleSheet.create({
   },
   searchInputWrapper: {
     flex: 1,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 14,
+    backgroundColor: '#F0F2F5',
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
   },
   searchIcon: {
     marginRight: 8,
-    fontSize: 16,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     padding: 0,
   },
 });

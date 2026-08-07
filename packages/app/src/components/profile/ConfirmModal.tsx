@@ -48,7 +48,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               disabled={isLoading}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMPONENTS.CONFIRM_CANCEL}</Text>
+              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMMON.CANCEL}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

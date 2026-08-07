@@ -1,8 +1,8 @@
 /**
  * @file HomeScreen.tsx
- * @description Main dashboard landing screen displaying AI course recommendations, quick feature shortcuts, and user greeting.
- * @requirements REQ-11, REQ-9, REQ-22
- * @functional FUN-1, FUN-3, FUN-4, FUN-GA4
+ * @description Main home screen with hero background, quick feature buttons, recent course card, and booking partner tiles.
+ * @requirements REQ-11, REQ-9
+ * @functional FUN-1, FUN-3, FUN-4
  * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
@@ -13,10 +13,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ImageBackground,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context';
-import { theme } from '../theme';
+import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
@@ -25,6 +29,9 @@ export interface HomeScreenProps {
   onNavigateToExplore?: () => void;
   onNavigateToProfile?: () => void;
 }
+
+const DEFAULT_HERO_BG = 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1000&q=80';
+const MOCK_THUMBNAIL = 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=400&q=80';
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToCreate,
@@ -39,314 +46,377 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="home-screen">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View style={styles.headerTextGroup}>
-            <Text style={styles.greetingTitle}>
-              {UI_STRINGS.HOME.GREETING} <Text style={styles.highlightName}>{displayName}{UI_STRINGS.HOME.HONORIFIC_NIM}</Text> 👋
-            </Text>
-            <Text style={styles.greetingSubtitle}>
-              {UI_STRINGS.HOME.GREETING_SUBTITLE}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.avatarButton}
-            onPress={() => {
-              trackButtonClick('btn_home_profile', 'Profile Avatar');
-              onNavigateToProfile?.();
-            }}
-            activeOpacity={0.8}
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <ImageBackground
+            source={{ uri: DEFAULT_HERO_BG }}
+            style={styles.heroImageBg}
+            resizeMode="cover"
           >
-            {user?.profileImageUrl ? (
-              <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={20} color={theme.colors.primary} />
+            {/* Gradient Overlay */}
+            <LinearGradient
+              colors={[
+                'rgba(13, 33, 55, 0.75)',
+                'rgba(13, 33, 55, 0.35)',
+                'rgba(245, 250, 248, 0.85)',
+                palette.softMint,
+              ]}
+              locations={[0, 0.45, 0.8, 1]}
+              style={styles.gradientOverlay}
+            />
+
+            {/* Top Brand Logo Row */}
+            <View style={styles.heroTopNav}>
+              <Text style={styles.brandTitle}>여로</Text>
+            </View>
+
+            {/* Greeting Stack */}
+            <View style={styles.greetingStack}>
+              <Text style={styles.greetingText}>
+                {displayName}{UI_STRINGS.HOME.HONORIFIC_NIM},
+              </Text>
+              <Text style={styles.greetingSubText}>
+                오늘은 어디로 떠나볼까요?
+              </Text>
+            </View>
+          </ImageBackground>
+        </View>
+
+        {/* Main Content Body */}
+        <View style={styles.mainContentBody}>
+          {/* Quick Feature Shortcut Buttons */}
+          <View style={styles.quickIconsRow} testID="quick-icons">
+            {/* 1. 코스 생성하기 */}
+            <TouchableOpacity
+              style={styles.shortcutBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                trackButtonClick('btn_home_create_course', 'Create Course Quick Button');
+                onNavigateToCreate?.();
+              }}
+            >
+              <View style={[styles.iconBadge, { backgroundColor: palette.primary }]}>
+                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
               </View>
-            )}
-          </TouchableOpacity>
-        </View>
+              <Text style={styles.shortcutBtnText}>코스 생성하기</Text>
+            </TouchableOpacity>
 
-        {/* Hero Banner Card: AI Course Generation CTA */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
-            <Text style={styles.heroBadgeText}>{UI_STRINGS.HOME.HERO_BADGE}</Text>
+            {/* 2. 코스 둘러보기 */}
+            <TouchableOpacity
+              style={styles.shortcutBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                trackButtonClick('btn_home_explore', 'Explore Courses Quick Button');
+                onNavigateToExplore?.();
+              }}
+            >
+              <View style={[styles.iconBadge, { backgroundColor: '#E0F7F1' }]}>
+                <Ionicons name="compass-outline" size={18} color={palette.accent} />
+              </View>
+              <Text style={styles.shortcutBtnText}>코스 둘러보기</Text>
+            </TouchableOpacity>
+
+            {/* 3. 내 여행 취향 */}
+            <TouchableOpacity
+              style={styles.shortcutBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                trackButtonClick('btn_home_taste', 'Taste Profile Quick Button');
+                onNavigateToProfile?.();
+              }}
+            >
+              <View style={[styles.iconBadge, { backgroundColor: '#E0F7F1' }]}>
+                <Ionicons name="options-outline" size={18} color={palette.accent} />
+              </View>
+              <Text style={styles.shortcutBtnText}>내 여행 취향</Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.heroTitle}>{UI_STRINGS.HOME.CREATE_BUTTON}</Text>
-          <Text style={styles.heroDescription}>
-            {UI_STRINGS.HOME.HERO_DESCRIPTION}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.heroButton}
-            onPress={() => {
-              trackButtonClick('btn_home_create_course', 'Create Course Hero Button');
-              onNavigateToCreate?.();
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add-circle" size={18} color={theme.colors.text.inverse} style={styles.heroButtonIcon} />
-            <Text style={styles.heroButtonText}>{UI_STRINGS.HOME.HERO_BUTTON}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Shortcut Buttons Grid */}
-        <Text style={styles.sectionTitle}>{UI_STRINGS.HOME.SECTION_TITLE}</Text>
-        <View style={styles.shortcutGrid}>
-          {/* 1. AI 코스 탐색 */}
-          <TouchableOpacity
-            style={styles.shortcutCard}
-            onPress={() => {
-              trackButtonClick('btn_home_explore', 'Explore Shortcut');
-              onNavigateToExplore?.();
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
-              <Ionicons name="compass-outline" size={24} color={theme.colors.primary} />
+          {/* Recent Course Section */}
+          <View style={styles.sectionContainer} testID="recent-course-section">
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>최근 확인한 여행 코스</Text>
             </View>
-            <Text style={styles.shortcutTitle}>{UI_STRINGS.HOME.SHORTCUT_EXPLORE_TITLE}</Text>
-            <Text style={styles.shortcutSub}>{UI_STRINGS.HOME.SHORTCUT_EXPLORE_SUB}</Text>
-          </TouchableOpacity>
 
-          {/* 2. 내 취향 프로필 */}
-          <TouchableOpacity
-            style={styles.shortcutCard}
-            onPress={() => {
-              trackButtonClick('btn_home_shortcut_profile', 'Profile Shortcut');
-              onNavigateToProfile?.();
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.shortcutIconWrap, { backgroundColor: theme.colors.primaryContainer }]}>
-              <Ionicons name="options-outline" size={24} color={theme.colors.primary} />
+            <TouchableOpacity
+              style={styles.compactRouteCard}
+              activeOpacity={0.85}
+              onPress={() => {
+                trackButtonClick('btn_home_recent_course', 'Recent Course Card Click');
+                onNavigateToExplore?.();
+              }}
+            >
+              <Image source={{ uri: MOCK_THUMBNAIL }} style={styles.cardThumbnail} />
+              <View style={styles.cardInfoStack}>
+                <Text style={styles.cardTitle} numberOfLines={1}>서울 힐링 여행</Text>
+                <Text style={styles.cardMeta}>대한민국 서울 • 3일</Text>
+                <Text style={styles.cardDesc} numberOfLines={1}>
+                  도심 속 자연과 전통을 동시에 즐기는 코스
+                </Text>
+                <View style={styles.tagsRow}>
+                  <Text style={styles.tagText}>#힐링</Text>
+                  <Text style={styles.tagText}>#나홀로여행</Text>
+                  <Text style={styles.tagText}>#교육깊은여행</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Booking Partner Section */}
+          <View style={styles.sectionContainer} testID="booking-section">
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>여행 예약</Text>
+              <Text style={styles.partnerSourceText}>Trip.com</Text>
             </View>
-            <Text style={styles.shortcutTitle}>{UI_STRINGS.HOME.SHORTCUT_PROFILE_TITLE}</Text>
-            <Text style={styles.shortcutSub}>{UI_STRINGS.HOME.SHORTCUT_PROFILE_SUB}</Text>
-          </TouchableOpacity>
+
+            <View style={styles.bookingTilesRow}>
+              {/* ✈️ 항공 */}
+              <TouchableOpacity
+                style={[styles.bookingTile, { backgroundColor: 'rgba(45,125,210,0.08)' }]}
+                activeOpacity={0.8}
+                onPress={() => trackButtonClick('btn_home_booking_flight', 'Booking Flight Click')}
+              >
+                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(45,125,210,0.18)' }]}>
+                  <Text style={styles.bookingEmoji}>✈️</Text>
+                </View>
+                <Text style={styles.bookingLabel}>항공</Text>
+              </TouchableOpacity>
+
+              {/* 🏨 숙소 */}
+              <TouchableOpacity
+                style={[styles.bookingTile, { backgroundColor: 'rgba(0,201,167,0.08)' }]}
+                activeOpacity={0.8}
+                onPress={() => trackButtonClick('btn_home_booking_hotel', 'Booking Hotel Click')}
+              >
+                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(0,201,167,0.18)' }]}>
+                  <Text style={styles.bookingEmoji}>🏨</Text>
+                </View>
+                <Text style={styles.bookingLabel}>숙소</Text>
+              </TouchableOpacity>
+
+              {/* 🚄 기차 */}
+              <TouchableOpacity
+                style={[styles.bookingTile, { backgroundColor: 'rgba(242,153,51,0.08)' }]}
+                activeOpacity={0.8}
+                onPress={() => trackButtonClick('btn_home_booking_train', 'Booking Train Click')}
+              >
+                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(242,153,51,0.18)' }]}>
+                  <Text style={styles.bookingEmoji}>🚄</Text>
+                </View>
+                <Text style={styles.bookingLabel}>기차</Text>
+              </TouchableOpacity>
+
+              {/* 🎫 투어·티켓 */}
+              <TouchableOpacity
+                style={[styles.bookingTile, { backgroundColor: 'rgba(153,102,204,0.08)' }]}
+                activeOpacity={0.8}
+                onPress={() => trackButtonClick('btn_home_booking_ticket', 'Booking Ticket Click')}
+              >
+                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(153,102,204,0.18)' }]}>
+                  <Text style={styles.bookingEmoji}>🎫</Text>
+                </View>
+                <Text style={styles.bookingLabel}>투어·티켓</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 };
 
+const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg.input,
+    backgroundColor: palette.softMint, // #F5FAF8
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,
+    paddingTop: 0,
+    paddingBottom: 76,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+  heroSection: {
+    width: '100%',
+    height: 310,
+    backgroundColor: '#0D2137',
   },
-  headerTextGroup: {
+  heroImageBg: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: STATUS_BAR_HEIGHT + 12,
+    paddingBottom: 24,
+    justifyContent: 'space-between',
   },
-  greetingTitle: {
+  gradientOverlay: {
+    ...StyleSheet.absoluteFill,
+  },
+  heroTopNav: {
+    zIndex: 2,
+  },
+  brandTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.64,
+  },
+  greetingStack: {
+    gap: 4,
+    zIndex: 2,
+    marginBottom: 8,
+  },
+  greetingText: {
     fontSize: 22,
     fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 4,
+    color: '#FFFFFF',
+    lineHeight: 28,
   },
-  highlightName: {
-    color: theme.colors.primary,
+  greetingSubText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 28,
   },
-  greetingSubtitle: {
-    fontSize: 14,
-    color: theme.colors.text.subtle,
-    fontWeight: '500',
+  mainContentBody: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 24,
   },
-  avatarButton: {
-    marginLeft: 12,
-  },
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primaryContainer,
-    justifyContent: 'center',
+  quickIconsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.colors.border.active,
+    gap: 8,
   },
-  heroCard: {
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 24,
+  shortcutBtn: {
+    flex: 1,
+    height: 70,
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primaryContainer,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderColor: '#E0E5EB',
     borderRadius: 12,
-    gap: 6,
-    marginBottom: 12,
-  },
-  heroBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primary,
-  },
-  heroTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 6,
-  },
-  heroDescription: {
-    fontSize: 13,
-    color: theme.colors.text.subtle,
-    lineHeight: 19,
-    marginBottom: 18,
-  },
-  heroButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    justifyContent: 'center',
   },
-  heroButtonIcon: {
-    marginRight: 6,
+  shortcutBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: palette.deepNavy, // #0D2137
   },
-  heroButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: 15,
-    fontWeight: '600',
+  sectionContainer: {
+    gap: 14,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 12,
+    color: palette.deepNavy,
   },
-  shortcutGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+  partnerSourceText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#808C99',
   },
-  shortcutCard: {
-    flex: 1,
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 16,
-    padding: 16,
+  compactRouteCard: {
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    borderColor: '#E0E5EB',
+    borderRadius: 16,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
   },
-  shortcutIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
+  cardThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
   },
-  shortcutTitle: {
+  cardInfoStack: {
+    flex: 1,
+    gap: 4,
+  },
+  cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 2,
+    color: palette.deepNavy,
   },
-  shortcutSub: {
+  cardMeta: {
     fontSize: 12,
-    color: theme.colors.text.placeholder,
-  },
-  themeCardList: {
-    gap: 12,
-  },
-  themeCard: {
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border.default,
-  },
-  themeCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  themeTagPrimary: {
-    backgroundColor: theme.colors.primaryContainer,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  themeTagPrimaryText: {
-    color: theme.colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  themeTagSecondary: {
-    backgroundColor: theme.colors.status.successBg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  themeTagSecondaryText: {
-    color: theme.colors.status.success,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  themeDuration: {
-    fontSize: 12,
-    color: theme.colors.text.placeholder,
     fontWeight: '500',
+    color: '#7E8B9B',
   },
-  themeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 4,
+  cardDesc: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#45464C',
   },
-  themeSubtitle: {
-    fontSize: 13,
-    color: theme.colors.text.subtle,
-    lineHeight: 18,
+  tagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: palette.primary, // #2D7DD2
+  },
+  bookingTilesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  bookingTile: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  bookingIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookingEmoji: {
+    fontSize: 20,
+  },
+  bookingLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: palette.deepNavy,
   },
 });

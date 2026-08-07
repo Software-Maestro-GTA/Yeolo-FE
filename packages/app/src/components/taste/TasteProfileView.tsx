@@ -1,6 +1,6 @@
 /**
  * @file TasteProfileView.tsx
- * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI v1 specifications.
+ * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI specifications.
  * @requirements REQ-11
  * @functional FUN-4
  * @api API-FB-8
@@ -20,13 +20,13 @@ export interface TasteProfileViewProps {
   onReanalyze?: () => void;
 }
 
-const PACE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PACE;
-const SPENDING_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SPENDING;
-const COMPANION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.COMPANION;
-const PURPOSE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PURPOSE;
-const LOCATION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.LOCATION;
-const FOOD_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.FOOD;
-const SEASON_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SEASON;
+const PACE_LABELS: Record<string, string> = { RELAXED: '여유로운', BALANCED: '균형잡힌', BUSY: '빽빽한' };
+const SPENDING_LABELS: Record<string, string> = { BUDGET: '가성비', MODERATE: '적정', LUXURY: '럭셔리' };
+const COMPANION_LABELS: Record<string, string> = { SOLO: '혼자', COUPLE: '커플', FAMILY: '가족', FRIENDS: '친구' };
+const PURPOSE_LABELS: Record<string, string> = { GOURMET: '미식형', HEALING: '휴양형', NATURE: '자연 탐방형', CULTURE: '문화 탐방형' };
+const LOCATION_LABELS: Record<string, string> = { BEACH: '해변·휴양지', CITY: '대도시', NATURE: '자연·비경', SMALL_TOWN: '소도시' };
+const FOOD_LABELS: Record<string, string> = { LOCAL: '현지 로컬 푸드', CAFE: '카페·디저트', GOURMET: '유명 맛집' };
+const SEASON_LABELS: Record<string, string> = { WARM: '따뜻한 지역 선호', COOL: '시원한 지역 선호', ALL: '사계절 무관' };
 
 export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onReanalyze }) => {
   const renderTraitBar = (label: string, score: number = 3, index: number) => {
