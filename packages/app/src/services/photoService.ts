@@ -61,7 +61,7 @@ export async function fetchPhotosWithExifData(
         timezone,
       });
     } catch (err) {
-      console.warn(`Failed to fetch location metadata for asset ${asset.id}:`, err);
+      logger.warn(`[PhotoService] Failed to fetch location metadata for asset ${asset.id}:`, err);
     }
   }
 

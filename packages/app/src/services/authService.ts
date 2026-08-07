@@ -96,7 +96,7 @@ export const signOutGoogle = async (): Promise<void> => {
   try {
     await GoogleSignin.signOut();
   } catch (error) {
-    console.warn('Google signout warning:', error);
+    logger.warn('[AuthService] Google signout warning:', error);
   }
 };
 
@@ -132,7 +132,7 @@ export const notifyUnauthorized = async (): Promise<void> => {
     try {
       listener();
     } catch (e) {
-      console.error('[AuthService] Error executing 401 listener:', e);
+      logger.error('[AuthService] Error executing 401 listener:', e);
     }
   });
 };

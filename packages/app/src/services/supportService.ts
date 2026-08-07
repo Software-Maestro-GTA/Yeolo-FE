@@ -4,6 +4,7 @@
  */
 import { Linking } from 'react-native';
 import * as MailComposer from 'expo-mail-composer';
+import { logger } from '@yeolo/common';
 import { APP_CONFIG } from '../constants';
 
 export interface OpenSupportMailOptions {
@@ -29,7 +30,7 @@ export async function openCustomerSupportMail(options: OpenSupportMailOptions = 
       return;
     }
   } catch (composerErr) {
-    console.warn('MailComposer failed or not available:', composerErr);
+    logger.warn('[SupportService] MailComposer failed or not available:', composerErr);
   }
 
   // Fallback to mailto link if MailComposer is unavailable
