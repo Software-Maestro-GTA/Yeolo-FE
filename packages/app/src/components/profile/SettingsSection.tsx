@@ -1,10 +1,6 @@
 /**
  * @file SettingsSection.tsx
  * @description Settings list component displaying options for Terms of Service, Logout, and Account Withdrawal.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';

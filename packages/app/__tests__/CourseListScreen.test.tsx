@@ -1,15 +1,10 @@
 /**
  * @file CourseListScreen.test.tsx
  * @description Unit and integration tests for CourseListScreen and CourseDeleteModal matching Figma UI specifications.
- * @requirements REQ-9
- * @functional FUN-7
- * @api API-FB-10
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseListScreen } from '../src/screens/CourseListScreen';
-import { CourseDeleteModal } from '../src/components/course/CourseDeleteModal';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';

@@ -1,10 +1,6 @@
 /**
  * @file IntroScreen.tsx
  * @description Application introduction screen matching Figma UI design specifications with 3-second auto-cycling carousel, background illustration images, and user touch interaction.
- * @requirements REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Image } from 'react-native';

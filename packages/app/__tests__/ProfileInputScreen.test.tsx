@@ -1,9 +1,6 @@
 /**
  * @file ProfileInputScreen.test.tsx
  * @description Unit tests for ProfileInputScreen component matching Figma UI specifications.
- * @requirements REQ-11, REQ-12
- * @functional FUN-8, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor } from '@testing-library/react-native';

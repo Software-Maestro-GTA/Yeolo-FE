@@ -1,9 +1,6 @@
 /**
  * @file CourseMiniMapView.tsx
  * @description Mini map view component supporting native iOS MapView and Android in-app Leaflet WebView.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';

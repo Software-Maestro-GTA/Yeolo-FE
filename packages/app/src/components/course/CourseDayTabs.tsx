@@ -1,9 +1,6 @@
 /**
  * @file CourseDayTabs.tsx
  * @description Horizontal scrollable day selection tab pills component.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';

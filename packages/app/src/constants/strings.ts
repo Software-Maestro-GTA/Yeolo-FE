@@ -1,9 +1,6 @@
 /**
  * @file strings.ts
  * @description Centralized UI string constants for UI v2 and legacy fallbacks.
- * @requirements REQ-1 ~ REQ-12
- * @functional FUN-1 ~ FUN-8
- * @author Antigravity Agent
  */
 
 /**

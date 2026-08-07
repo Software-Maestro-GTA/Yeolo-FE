@@ -1,9 +1,6 @@
 /**
  * @file ProfileInputScreen.tsx
  * @description Screen component for entering and updating user profile details (nickname, avatar), matching Figma UI specifications.
- * @requirements REQ-11, REQ-12
- * @functional FUN-8, FUN-GA4
- * @author Antigravity Agent
  */
 import React, { useState, useContext } from 'react';
 import {

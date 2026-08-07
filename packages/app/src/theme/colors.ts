@@ -1,9 +1,6 @@
 /**
  * @file colors.ts
  * @description Core color design tokens for Yeolo Mobile App, extracted directly from Figma Design Tokens.
- * @requirements REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
  */
 
 /**

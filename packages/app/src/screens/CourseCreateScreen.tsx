@@ -1,9 +1,6 @@
 /**
  * @file CourseCreateScreen.tsx
  * @description Screen component for entering travel conditions and preferences.
- * @requirements REQ-5, REQ-6, REQ-7, REQ-8
- * @functional FUN-5, FUN-6
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

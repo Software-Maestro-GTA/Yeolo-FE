@@ -1,9 +1,6 @@
 /**
  * @file MainLayout.tsx
  * @description Shell layout component providing persistent bottom navigation bar for main tab screens, with optional noTopEdges for full bleed translucent status bar headers.
- * @requirements REQ-11
- * @functional FUN-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';

@@ -1,9 +1,6 @@
 /**
  * @file NavigationRoot.test.tsx
  * @description Unit test for NavigationRoot showing BottomNavBar on CourseDetailScreen.
- * @requirements REQ-11, REQ-9
- * @functional FUN-4, FUN-7
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';

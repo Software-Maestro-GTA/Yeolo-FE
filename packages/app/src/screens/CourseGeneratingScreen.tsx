@@ -1,9 +1,6 @@
 /**
  * @file CourseGeneratingScreen.tsx
  * @description Screen displaying SSE streaming course generation progress with linear gradient progress bar.
- * @requirements REQ-8
- * @functional FUN-6
- * @author Antigravity Agent
  */
 import React, { useEffect } from 'react';
 import {

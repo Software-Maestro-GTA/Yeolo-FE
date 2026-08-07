@@ -1,10 +1,6 @@
 /**
  * @file CourseCreateScreen.test.tsx
  * @description Unit and integration tests for CourseCreateScreen travel condition input form matching Figma UI specs.
- * @requirements REQ-7
- * @functional FUN-6
- * @api API-FB-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';

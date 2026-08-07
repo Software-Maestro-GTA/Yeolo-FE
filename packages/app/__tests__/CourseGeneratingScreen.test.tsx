@@ -1,10 +1,6 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
  * @description Unit and integration tests for CourseGeneratingScreen matching Figma UI.
- * @requirements REQ-7
- * @functional FUN-6
- * @api API-FB-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';

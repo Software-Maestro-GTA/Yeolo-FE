@@ -1,9 +1,6 @@
 /**
  * @file CourseCard.tsx
  * @description Course card component displaying course summary, travel tags, and destination details in modern UI v2 layout.
- * @requirements REQ-9
- * @functional FUN-7
- * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';

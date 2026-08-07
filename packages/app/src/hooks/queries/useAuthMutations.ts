@@ -1,10 +1,6 @@
 /**
  * @file useAuthMutations.ts
  * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-FB-12).
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
- * @author Antigravity Agent
  */
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';

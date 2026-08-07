@@ -1,9 +1,6 @@
 /**
  * @file TasteAnalysisScreen.tsx
  * @description Taste analysis progress screen with dynamic insights container and step indicators.
- * @requirements REQ-3, REQ-4
- * @functional FUN-2
- * @author Antigravity Agent
  */
 import React, { useEffect, useState, useRef, useContext } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, Animated } from 'react-native';

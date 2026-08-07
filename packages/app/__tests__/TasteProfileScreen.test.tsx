@@ -1,9 +1,6 @@
 /**
  * @file TasteProfileScreen.test.tsx
  * @description Unit test for TasteProfileScreen component matching Figma UI specifications.
- * @requirements REQ-11, REQ-22
- * @functional FUN-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, act } from '@testing-library/react-native';

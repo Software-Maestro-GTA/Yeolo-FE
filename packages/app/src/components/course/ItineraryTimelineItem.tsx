@@ -1,9 +1,6 @@
 /**
  * @file ItineraryTimelineItem.tsx
  * @description Timeline item card displaying itinerary stop details, AI tips, and transport info.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';

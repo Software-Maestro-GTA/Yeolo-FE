@@ -1,9 +1,6 @@
 /**
  * @file CourseDetailScreen.tsx
  * @description Screen component for rendering recommended travel course details and timeline itinerary.
- * @requirements REQ-9, REQ-10
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React, { useEffect, useState } from 'react';
 import {

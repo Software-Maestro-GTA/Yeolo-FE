@@ -1,10 +1,6 @@
 /**
  * @file handlers.ts
  * @description MSW handlers for mocking backend API endpoints in @yeolo/app.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import { http, HttpResponse } from 'msw';
 import type { CourseSummary } from '@yeolo/common';

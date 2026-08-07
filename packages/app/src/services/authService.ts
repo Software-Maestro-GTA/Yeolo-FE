@@ -1,10 +1,6 @@
 /**
  * @file authService.ts
  * @description Google Sign-in helper functions encapsulating native @react-native-google-signin/google-signin SDK.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';

@@ -1,9 +1,6 @@
 /**
  * @file TasteAnalysisScreen.test.tsx
  * @description Unit test for TasteAnalysisScreen component matching Figma UI specifications.
- * @requirements REQ-11, REQ-22
- * @functional FUN-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { renderWithQueryClient as render } from './test-utils';

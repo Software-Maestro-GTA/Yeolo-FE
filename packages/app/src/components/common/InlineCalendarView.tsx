@@ -1,9 +1,6 @@
 /**
  * @file InlineCalendarView.tsx
  * @description Accordion inline calendar view component with UI v2 styling and UI_STRINGS constants.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';

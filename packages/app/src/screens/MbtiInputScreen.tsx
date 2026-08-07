@@ -1,10 +1,6 @@
 /**
  * @file MbtiInputScreen.tsx
  * @description MBTI selection screen matching exact Figma UI specifications with chevron-right icon.
- * @requirements REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, Alert } from 'react-native';

@@ -1,9 +1,6 @@
 /**
  * @file PlaceDetailScreen.tsx
  * @description Screen for displaying detailed place information, AI tips, opening hours, and location.
- * @requirements REQ-9
- * @functional FUN-3, FUN-GA4
- * @author Antigravity Agent
  */
 import React, { useState } from 'react';
 import {

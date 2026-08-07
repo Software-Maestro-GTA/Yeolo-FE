@@ -1,9 +1,6 @@
 /**
  * @file PlaceDetailScreen.test.tsx
  * @description Unit and integration tests for PlaceDetailScreen and OpeningHoursModal matching Figma UI specifications.
- * @requirements REQ-9
- * @functional FUN-3, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';

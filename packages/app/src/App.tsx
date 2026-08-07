@@ -1,9 +1,6 @@
 /**
  * @file App.tsx
  * @description Main mobile application root component initializing providers, analytics, and navigation.
- * @requirements REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @author Antigravity Agent
  */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';

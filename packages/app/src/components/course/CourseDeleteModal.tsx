@@ -1,9 +1,6 @@
 /**
  * @file CourseDeleteModal.tsx
  * @description Bottom sheet modal component for confirming course deletion.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

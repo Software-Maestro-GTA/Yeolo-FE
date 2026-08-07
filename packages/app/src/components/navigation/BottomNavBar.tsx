@@ -1,9 +1,6 @@
 /**
  * @file BottomNavBar.tsx
  * @description Shared bottom navigation bar component matching project design system.
- * @requirements REQ-11
- * @functional FUN-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';

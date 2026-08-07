@@ -1,10 +1,6 @@
 /**
  * @file useCourseListQuery.ts
  * @description Custom TanStack Query hook for fetching generated travel course list (FUN-7, API-FB-10).
- * @requirements REQ-9, REQ-11
- * @functional FUN-7
- * @api API-FB-10
- * @author Antigravity Agent
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';

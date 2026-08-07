@@ -1,10 +1,6 @@
 /**
  * @file LoginScreen.tsx
  * @description Google & Apple login UI screen updated to match Figma UI design context with inline gradient title.
- * @requirements REQ-1, REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @api API-AUTH-1, API-AUTH-2
- * @author Antigravity Agent
  */
 import React, { useContext, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform } from 'react-native';

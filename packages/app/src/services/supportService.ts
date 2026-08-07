@@ -1,10 +1,6 @@
 /**
  * @file supportService.ts
  * @description In-app customer support service supporting In-App MailComposer modal via expo-mail-composer.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api N/A
- * @author Antigravity Agent
  */
 import { Linking } from 'react-native';
 import * as MailComposer from 'expo-mail-composer';

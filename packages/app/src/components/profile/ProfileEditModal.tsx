@@ -1,9 +1,6 @@
 /**
  * @file ProfileEditModal.tsx
  * @description Modal component for editing user nickname and profile details.
- * @requirements REQ-11
- * @functional FUN-8
- * @author Antigravity Agent
  */
 import React, { useState, useEffect } from 'react';
 import {

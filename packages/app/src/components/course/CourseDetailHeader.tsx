@@ -1,9 +1,6 @@
 /**
  * @file CourseDetailHeader.tsx
  * @description Edge-to-edge status bar translucent hero photo container header component.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Platform, StatusBar } from 'react-native';

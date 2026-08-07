@@ -1,9 +1,6 @@
 /**
  * @file TermsModal.tsx
  * @description Modal dialog component for displaying Terms of Service.
- * @requirements REQ-11
- * @functional FUN-4
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

@@ -1,9 +1,6 @@
 /**
  * @file CourseShareScreen.test.tsx
  * @description Unit tests for CourseShareScreen component matching Figma UI specifications.
- * @requirements REQ-9, REQ-10, REQ-11
- * @functional FUN-3, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent } from '@testing-library/react-native';

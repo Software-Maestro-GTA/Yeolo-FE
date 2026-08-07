@@ -1,10 +1,6 @@
 /**
  * @file TasteProfileView.tsx
  * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI specifications.
- * @requirements REQ-11
- * @functional FUN-4
- * @api API-FB-8
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';

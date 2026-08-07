@@ -1,9 +1,6 @@
 /**
  * @file OpeningHoursModal.tsx
  * @description Modal component for displaying weekly opening hours specifications.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

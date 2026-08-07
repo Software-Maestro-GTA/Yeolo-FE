@@ -1,9 +1,6 @@
 /**
  * @file ProfileScreen.test.tsx
  * @description Unit and integration tests for ProfileScreen, ProfileEditModal, and WithdrawModal.
- * @requirements REQ-11, REQ-12
- * @functional FUN-8, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor } from '@testing-library/react-native';

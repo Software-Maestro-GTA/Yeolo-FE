@@ -1,9 +1,6 @@
 /**
  * @file CreateCourseCtaCard.tsx
  * @description Gradient CTA card component for initiating AI course generation flow.
- * @requirements REQ-9
- * @functional FUN-7
- * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';

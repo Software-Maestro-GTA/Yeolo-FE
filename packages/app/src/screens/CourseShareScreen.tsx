@@ -1,9 +1,6 @@
 /**
  * @file CourseShareScreen.tsx
  * @description Screen component for viewing shared travel itineraries, supporting authenticated course saving and guest login prompt bottom sheet.
- * @requirements REQ-9, REQ-10, REQ-11
- * @functional FUN-3, FUN-GA4
- * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
 import {

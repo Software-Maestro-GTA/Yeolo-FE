@@ -1,9 +1,6 @@
 /**
  * @file BudgetTypeSelector.tsx
  * @description Radio selection component for choosing budget and spending preference.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';

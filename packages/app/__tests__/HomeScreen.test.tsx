@@ -1,9 +1,6 @@
 /**
  * @file HomeScreen.test.tsx
  * @description Unit and integration tests for HomeScreen matching Figma UI specifications.
- * @requirements REQ-11, REQ-9
- * @functional FUN-1, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';

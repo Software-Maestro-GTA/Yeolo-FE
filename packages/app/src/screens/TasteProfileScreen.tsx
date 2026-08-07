@@ -1,9 +1,6 @@
 /**
  * @file TasteProfileScreen.tsx
  * @description Taste profile result screen component.
- * @requirements REQ-11, REQ-22
- * @functional FUN-4, FUN-GA4
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

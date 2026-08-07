@@ -1,9 +1,6 @@
 /**
  * @file PhotoConsentScreen.test.tsx
  * @description Unit test for PhotoConsentScreen component matching Figma UI specifications.
- * @requirements REQ-11, REQ-22
- * @functional FUN-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, act } from '@testing-library/react-native';

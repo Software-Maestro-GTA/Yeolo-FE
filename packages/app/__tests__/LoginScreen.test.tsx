@@ -1,10 +1,6 @@
 /**
  * @file LoginScreen.test.tsx
  * @description Unit tests for LoginScreen layout, style parameters, and OAuth login action trigger.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';

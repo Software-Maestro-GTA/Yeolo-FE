@@ -1,9 +1,6 @@
 /**
  * @file HomeScreen.tsx
  * @description Main home screen with hero background, quick feature buttons, recent course card, and booking partner tiles.
- * @requirements REQ-11, REQ-9
- * @functional FUN-1, FUN-3, FUN-4
- * @author Antigravity Agent
  */
 import React, { useContext } from 'react';
 import {

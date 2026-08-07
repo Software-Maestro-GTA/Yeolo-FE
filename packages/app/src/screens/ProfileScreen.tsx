@@ -1,11 +1,7 @@
 /**
  * @file ProfileScreen.tsx
  * @description User profile screen component for managing account preferences, updating nickname, terms viewing, customer support, and executing auth mutations (logout API-FB-11, withdrawal API-FB-12).
- * @requirements REQ-11, REQ-12, REQ-22
- * @functional FUN-4, FUN-8, FUN-GA4
- * @api API-FB-11, API-FB-12
  * @domain DOM-3
- * @author Antigravity Agent
  */
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {

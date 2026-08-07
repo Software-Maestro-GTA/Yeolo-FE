@@ -1,9 +1,6 @@
 /**
  * @file PhotoConsentScreen.tsx
  * @description Photo consent screen with privacy safeguards and start analysis action.
- * @requirements REQ-2, REQ-3
- * @functional FUN-2
- * @author Antigravity Agent
  */
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';

@@ -1,10 +1,6 @@
 /**
  * @file CourseDetailScreen.test.tsx
  * @description Unit and integration tests for CourseDetailScreen & CourseTimeline (FUN-3, REQ-9).
- * @requirements REQ-9
- * @functional FUN-3
- * @api API-FB-7
- * @author Antigravity Agent
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';

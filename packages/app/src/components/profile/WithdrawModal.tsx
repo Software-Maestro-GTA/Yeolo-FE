@@ -1,9 +1,6 @@
 /**
  * @file WithdrawModal.tsx
  * @description Central popup modal component for confirming account withdrawal.
- * @requirements REQ-12
- * @functional FUN-8
- * @author Antigravity Agent
  */
 import React from 'react';
 import {

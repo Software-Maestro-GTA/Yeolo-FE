@@ -1,9 +1,6 @@
 /**
  * @file CourseSearchBar.tsx
  * @description Destination search input bar component for course list screen matching UI v2 design system.
- * @requirements REQ-9
- * @functional FUN-7
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';

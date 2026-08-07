@@ -1,9 +1,6 @@
 /**
  * @file CourseListScreen.tsx
  * @description Screen component for viewing previously generated course list, searching, and managing saved itineraries.
- * @requirements REQ-9, REQ-11
- * @functional FUN-7
- * @author Antigravity Agent
  */
 import React, { useState, useMemo, useCallback } from 'react';
 import {
