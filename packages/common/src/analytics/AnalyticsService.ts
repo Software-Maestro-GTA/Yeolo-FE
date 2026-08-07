@@ -1,10 +1,6 @@
 /**
  * @file AnalyticsService.ts
  * @description Facade service for dispatching GA4 tracking events to registered trackers.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import type { AnalyticsTracker, GA4EventParams } from './types';

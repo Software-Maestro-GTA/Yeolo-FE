@@ -1,10 +1,6 @@
 /**
  * @file course.ts
  * @description API service for initiating course generation SSE stream (API-FB-4) and retrieving course details (API-FB-7).
- * @requirements REQ-7, REQ-9
- * @functional FUN-6, FUN-3
- * @api API-FB-4, API-FB-7
- * @author Antigravity Agent
  */
 import ky from 'ky';
 import { parseServerSentEvents } from 'parse-sse';

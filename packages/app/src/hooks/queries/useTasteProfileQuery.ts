@@ -1,10 +1,6 @@
 /**
  * @file useTasteProfileQuery.ts
  * @description Custom TanStack Query hook for fetching user AI taste profile results (FUN-4, API-FB-8).
- * @requirements REQ-11
- * @functional FUN-4
- * @api API-FB-8
- * @author Antigravity Agent
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';

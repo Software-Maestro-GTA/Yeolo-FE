@@ -1,10 +1,6 @@
 /**
  * @file firebaseTracker.ts
  * @description React Native Firebase Analytics implementation of AnalyticsTracker for @yeolo/app using Modular SDK API.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import analytics, {

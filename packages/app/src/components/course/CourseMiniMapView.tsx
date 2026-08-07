@@ -1,17 +1,13 @@
 /**
  * @file CourseMiniMapView.tsx
  * @description Mini map view component supporting native iOS MapView and Android in-app Leaflet WebView.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import type { MapCoordinate, MapRegion } from '@yeolo/common';
-import { theme } from '../../theme';
-import { UI_STRINGS } from '../../constants';
+import { palette } from '../../theme/colors';
 
 export interface CourseMiniMapViewProps {
   stopCoordinates: MapCoordinate[];
@@ -68,8 +64,8 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
                   latitude: s.latitude,
                   longitude: s.longitude,
                 }))}
-                strokeColor={theme.colors.primary}
-                strokeWidth={4}
+                strokeColor={palette.primary}
+                strokeWidth={3}
               />
             )}
           </MapView>
@@ -88,8 +84,8 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
             startInLoadingState={true}
             renderLoading={() => (
               <View style={styles.webViewLoading}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={styles.webViewLoadingText}>{UI_STRINGS.COURSE_DETAIL.MAP_LOADING}</Text>
+                <ActivityIndicator size="small" color={palette.primary} />
+                <Text style={styles.webViewLoadingText}>지도를 불러오는 중...</Text>
               </View>
             )}
           />
@@ -101,20 +97,22 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
 
 const styles = StyleSheet.create({
   miniMapSection: {
+    width: '100%',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginVertical: 4,
   },
   miniMapCard: {
-    height: 200,
-    borderRadius: 20,
+    height: 192,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.colors.border.light,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    borderColor: 'rgba(198, 198, 204, 0.3)',
+    backgroundColor: palette.softMint,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   mapView: {
     flex: 1,
@@ -128,13 +126,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.bg.input,
+    backgroundColor: palette.softMint,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
   },
   webViewLoadingText: {
     fontSize: 13,
-    color: theme.colors.text.subtle,
+    color: palette.subText,
   },
 });

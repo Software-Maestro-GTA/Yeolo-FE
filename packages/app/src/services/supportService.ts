@@ -1,10 +1,6 @@
 /**
  * @file supportService.ts
  * @description In-app customer support service supporting In-App MailComposer modal via expo-mail-composer.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api N/A
- * @author Antigravity Agent
  */
 import { Linking } from 'react-native';
 import * as MailComposer from 'expo-mail-composer';
@@ -20,18 +16,28 @@ export interface OpenSupportMailOptions {
  * Retains full app focus so users return immediately to Yeolo without restarting.
  */
 export async function openCustomerSupportMail(options: OpenSupportMailOptions = {}): Promise<void> {
-  const isAvailable = await MailComposer.isAvailableAsync();
   const recipient = APP_CONFIG.DEFAULT_SUPPORT_EMAIL;
 
-  if (isAvailable) {
-    await MailComposer.composeAsync({
-      recipients: [recipient],
-      subject: options.subject || '[여로] 고객 지원 및 문의',
-      body: options.body || '여로 서비스 이용 중 문의사항이나 개선 의견을 자유롭게 작성해주세요.\n\n-------------------\n',
-    });
-  } else {
-    // Fallback to mailto link if MailComposer is unavailable
-    const mailtoUrl = `mailto:${recipient}`;
+  try {
+    const isAvailable = await MailComposer.isAvailableAsync();
+    if (isAvailable) {
+      await MailComposer.composeAsync({
+        recipients: [recipient],
+        subject: options.subject || '[여로] 고객 지원 및 문의',
+        body: options.body || '여로 서비스 이용 중 문의사항이나 개선 의견을 자유롭게 작성해주세요.\n\n-------------------\n',
+      });
+      return;
+    }
+  } catch (composerErr) {
+    console.warn('MailComposer failed or not available:', composerErr);
+  }
+
+  // Fallback to mailto link if MailComposer is unavailable
+  const mailtoUrl = `mailto:${recipient}`;
+  const canOpen = await Linking.canOpenURL(mailtoUrl);
+  if (canOpen) {
     await Linking.openURL(mailtoUrl);
+  } else {
+    throw new Error(`Unable to open mailto URL: ${mailtoUrl}`);
   }
 }

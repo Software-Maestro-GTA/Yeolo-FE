@@ -1,10 +1,6 @@
 /**
  * @file user.ts
  * @description Common user management API services shared across Web and Mobile.
- * @requirements REQ-12
- * @functional FUN-1
- * @api API-FB-12
- * @author Antigravity Agent
  */
 import ky from 'ky';
 import type { WithdrawRequest, WithdrawResponse } from '../types/auth';

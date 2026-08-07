@@ -1,9 +1,6 @@
 /**
  * @file config.ts
  * @description Centralized app configuration, limits, and network default constants.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
  */
 
 export const APP_CONFIG = {

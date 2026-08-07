@@ -1,9 +1,6 @@
 /**
  * @file AnalysisProgressStepper.tsx
  * @description Stepper loading view component for taste analysis onboarding progress.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';

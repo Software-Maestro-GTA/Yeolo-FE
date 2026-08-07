@@ -1,10 +1,6 @@
 /**
  * @file SettingsSection.tsx
  * @description Settings list component displaying options for Terms of Service, Logout, and Account Withdrawal.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -30,13 +26,13 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionHeaderTitle}>{UI_STRINGS.COMPONENTS.SETTINGS_TITLE}</Text>
+      <Text style={styles.sectionHeaderTitle}>{UI_STRINGS.PROFILE.SETTINGS_TITLE}</Text>
 
       {/* 이용약관 */}
       <TouchableOpacity style={styles.menuItem} onPress={onPressTerms} activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
           <Ionicons name="document-text-outline" size={20} color={theme.colors.text.secondary} />
-          <Text style={styles.menuItemText}>{UI_STRINGS.COMPONENTS.TERMS_SERVICE}</Text>
+          <Text style={styles.menuItemText}>{UI_STRINGS.PROFILE.TERMS_SERVICE}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
       </TouchableOpacity>
@@ -47,7 +43,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
       <TouchableOpacity style={styles.menuItem} onPress={onPressPrivacy} activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
           <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.text.secondary} />
-          <Text style={styles.menuItemText}>{UI_STRINGS.COMPONENTS.TERMS_PRIVACY}</Text>
+          <Text style={styles.menuItemText}>{UI_STRINGS.PROFILE.TERMS_PRIVACY}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
       </TouchableOpacity>

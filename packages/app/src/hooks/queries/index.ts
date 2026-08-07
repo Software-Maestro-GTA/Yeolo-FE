@@ -1,7 +1,6 @@
 /**
  * @file index.ts
  * @description Barrel export file for custom TanStack Query hooks in app package.
- * @author Antigravity Agent
  */
 export * from './useCourseListQuery';
 export * from './useCourseDetailQuery';

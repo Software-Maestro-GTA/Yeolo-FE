@@ -1,14 +1,11 @@
 /**
  * @file CourseDayTabs.tsx
- * @description Horizontal scrollable day selection tab pills for course itinerary.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
+ * @description Horizontal scrollable day selection tab pills component.
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import type { ItineraryDay } from '@yeolo/common';
-import { theme } from '../../theme';
+import { palette } from '../../theme/colors';
 
 export interface CourseDayTabsProps {
   days?: ItineraryDay[];
@@ -37,6 +34,7 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
             testID={`day-tab-${dayItem.day}`}
             style={[styles.dayPill, isSelected && styles.dayPillSelected]}
             onPress={() => onSelectDay(dayItem.day)}
+            activeOpacity={0.8}
           >
             <Text style={[styles.dayPillText, isSelected && styles.dayPillTextSelected]}>
               Day {dayItem.day}
@@ -52,27 +50,27 @@ const styles = StyleSheet.create({
   dayTabContainer: {
     paddingHorizontal: 20,
     gap: 8,
-    marginBottom: 20,
+    marginVertical: 12,
   },
   dayPill: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 9999,
-    backgroundColor: theme.colors.bg.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
+    borderRadius: 20,
+    backgroundColor: palette.white, // #FFFFFF
+    borderWidth: 1.5,
+    borderColor: palette.gray200, // #E0E5EB
   },
   dayPillSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: palette.primary, // #2D7DD2
+    borderColor: palette.primary,
   },
   dayPillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
+    fontSize: 13,
+    fontWeight: '500',
+    color: palette.subText, // #59616B
   },
   dayPillTextSelected: {
-    color: theme.colors.text.inverse,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

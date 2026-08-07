@@ -1,9 +1,6 @@
 /**
  * @file courseService.ts
  * @description Course detail geocoding helper and location coordinate transformation service.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
  */
 import {
   geocodePlace,

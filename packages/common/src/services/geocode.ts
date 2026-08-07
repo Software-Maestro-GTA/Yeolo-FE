@@ -1,7 +1,6 @@
 /**
  * @file geocode.ts
  * @description Geocoding utility service using OpenStreetMap Nominatim API with in-memory caching.
- * @author Antigravity Agent
  */
 
 import { logger } from '../utils/logger';

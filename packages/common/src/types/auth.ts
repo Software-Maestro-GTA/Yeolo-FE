@@ -1,10 +1,6 @@
 /**
  * @file auth.ts
  * @description Shared authentication types and interfaces across Web and Mobile.
- * @requirements REQ-1, REQ-11
- * @functional FUN-1
- * @api API-AUTH-1, API-AUTH-2
- * @author Antigravity Agent
  */
 
 export interface User {

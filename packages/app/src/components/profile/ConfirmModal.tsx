@@ -1,10 +1,6 @@
 /**
  * @file ConfirmModal.tsx
  * @description Re-confirmation modal component for user logout and account withdrawal actions.
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -48,7 +44,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               disabled={isLoading}
               activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMPONENTS.CONFIRM_CANCEL}</Text>
+              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMMON.CANCEL}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

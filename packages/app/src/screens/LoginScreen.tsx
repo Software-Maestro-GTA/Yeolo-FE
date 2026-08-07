@@ -1,18 +1,15 @@
 /**
  * @file LoginScreen.tsx
- * @description Google & Apple login UI screen matching Figma design context and OAuth flows.
- * @requirements REQ-1, REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @api API-AUTH-1, API-AUTH-2
- * @author Antigravity Agent
+ * @description Google & Apple login UI screen updated to match Figma UI design context with inline gradient title.
  */
 import React, { useContext, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
 import { UI_STRINGS } from '../constants';
-import { theme } from '../theme';
+import { palette } from '../theme/colors';
 import { AuthContext } from '../context';
 import { signInWithGoogle, signInWithApple, isAppleAuthAvailable, openCustomerSupportMail } from '../services';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
@@ -85,40 +82,55 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <LinearGradient
-      colors={theme.colors.gradient.background}
-      style={styles.gradientContainer}
-    >
-      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Bottom Content Area with Top-fading Gradient Background */}
-          <LinearGradient
-            colors={theme.colors.gradient.bottom}
-            style={styles.bottomContentArea}
-          >
+    <View style={styles.screenBackground}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <LinearGradient
+          colors={['rgba(245, 250, 248, 0)', 'rgba(245, 250, 248, 0.8)', palette.softMint]}
+          locations={[0, 0.5, 1]}
+          style={styles.gradientContent}
+        >
+          <View style={styles.innerContainer}>
             {/* Title Section */}
             <View style={styles.titleSection}>
               <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
-              <Text style={styles.mainTitle}>{UI_STRINGS.AUTH.MAIN_TITLE}</Text>
+              
+              {/* Gradient Main Title */}
+              <MaskedView
+                maskElement={
+                  <Text style={[styles.mainTitle, { backgroundColor: 'transparent' }]}>
+                    {UI_STRINGS.AUTH.MAIN_TITLE}
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={[palette.primary, palette.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={[styles.mainTitle, { opacity: 0 }]}>
+                    {UI_STRINGS.AUTH.MAIN_TITLE}
+                  </Text>
+                </LinearGradient>
+              </MaskedView>
             </View>
 
-            {/* Google Login Button */}
+            {/* Google Login Action Button */}
             <TouchableOpacity
-              style={styles.loginButton}
+              style={styles.googleLoginButton}
               activeOpacity={0.8}
               onPress={handleGoogleLogin}
               disabled={isLoggingIn}
             >
               <View style={styles.buttonContent}>
-                <GoogleLogoIcon size={22} style={styles.logoIcon} />
-                <Text style={styles.buttonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
+                <GoogleLogoIcon size={20} style={styles.logoIcon} />
+                <Text style={styles.googleButtonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
               </View>
             </TouchableOpacity>
 
-            {/* Apple Login Button (iOS only) */}
+            {/* Apple Login Action Button */}
             {isAppleAvailable && (
               <TouchableOpacity
-                style={[styles.loginButton, styles.appleLoginButton]}
+                style={styles.appleLoginButton}
                 activeOpacity={0.8}
                 onPress={handleAppleLogin}
                 disabled={isLoggingIn}
@@ -143,38 +155,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 </Text>
               </Text>
             </View>
-          </LinearGradient>
-        </View>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  gradientContainer: {
+  screenBackground: {
     flex: 1,
+    backgroundColor: palette.softMint,
   },
   safeArea: {
     flex: 1,
   },
-  contentContainer: {
+  gradientContent: {
     flex: 1,
     justifyContent: 'flex-end',
-  },
-  bottomContentArea: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingHorizontal: 24,
     paddingBottom: 32,
+  },
+  innerContainer: {
     width: '100%',
+    gap: 12,
   },
   titleSection: {
-    paddingBottom: 32,
+    marginBottom: 20,
     alignItems: 'flex-start',
   },
   subTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     lineHeight: 32,
     letterSpacing: -0.6,
     marginBottom: 4,
@@ -182,30 +195,39 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 40,
     fontWeight: '700',
-    color: theme.colors.primary,
+    color: palette.primary,
     lineHeight: 50,
     letterSpacing: -0.8,
   },
-  loginButton: {
+  googleLoginButton: {
     width: '100%',
-    maxWidth: 320,
-    alignSelf: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
     height: 56,
+    backgroundColor: palette.white,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: palette.lightTeal,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   appleLoginButton: {
-    backgroundColor: '#000000',
-    marginTop: 12,
+    width: '100%',
+    height: 56,
+    backgroundColor: palette.black,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: palette.black,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -215,31 +237,30 @@ const styles = StyleSheet.create({
   logoIcon: {
     marginRight: 10,
   },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
-    letterSpacing: -0.2,
+  googleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.deepNavy,
+    letterSpacing: 0.3,
   },
   appleButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.white,
+    letterSpacing: 0.3,
   },
   footerContainer: {
     marginTop: 16,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
+    fontSize: 14,
+    color: '#59616b',
     lineHeight: 20,
   },
   supportLink: {
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     textDecorationLine: 'underline',
     fontWeight: '500',
   },
 });
-

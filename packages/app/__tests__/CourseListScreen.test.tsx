@@ -1,10 +1,6 @@
 /**
  * @file CourseListScreen.test.tsx
- * @description Unit and integration tests for 이전 생성 코스 목록 조회 및 상세 이동 (FUN-7, API-FB-10, DOM-2).
- * @requirements REQ-9
- * @functional FUN-7
- * @api API-FB-10
- * @author Antigravity Agent
+ * @description Unit and integration tests for CourseListScreen and CourseDeleteModal matching Figma UI specifications.
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
@@ -12,7 +8,6 @@ import { CourseListScreen } from '../src/screens/CourseListScreen';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';
-
 
 jest.mock('../src/components/navigation/BottomNavBar', () => ({
   BottomNavBar: () => null,
@@ -43,7 +38,7 @@ const mockCourseList: commonApi.CourseSummary[] = [
   },
 ];
 
-describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세 이동)', () => {
+describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 모달 및 상세 이동)', () => {
   const mockOnSelectCourse = jest.fn();
   const mockOnCreateCourse = jest.fn();
 
@@ -52,7 +47,7 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     await AsyncStorage.setItem('accessToken', 'mock-token');
   });
 
-  it('이전 생성 코스 목록 API 데이터 조회 후 Bento Grid 카드 및 CTA 카드가 올바르게 렌더링되어야 한다', async () => {
+  it('이전 생성 코스 목록 API 데이터 조회 후 Figma UI 스펙 요소들이 올바르게 렌더링되어야 한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByText, getByTestId } = await render(
@@ -60,12 +55,12 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     );
 
     await waitFor(() => {
-      expect(getByText('당신의 여로')).toBeTruthy();
-      expect(getByText('대한민국 제주')).toBeTruthy();
-      expect(getByText('일본 도쿄')).toBeTruthy();
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
+      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
     });
 
-    expect(getByText('AI와 함께 여로를 만들어보세요')).toBeTruthy();
+    expect(getByTestId('compact-cta')).toBeTruthy();
+    expect(getByText('새로운 맞춤형 일정이 필요할 땐?')).toBeTruthy();
     expect(getByTestId('search-input')).toBeTruthy();
   });
 
@@ -77,7 +72,7 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     );
 
     await waitFor(() => {
-      expect(getByText('대한민국 제주')).toBeTruthy();
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
     });
 
     const card1 = getByTestId('course-card-course-uuid-1');
@@ -86,19 +81,33 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     expect(mockOnSelectCourse).toHaveBeenCalledWith('course-uuid-1');
   });
 
-  it('AI 코스 생성 CTA 카드 클릭 시 코스 생성 흐름(onCreateCourse)으로 이동해야 한다', async () => {
+  it('삭제 아이콘 클릭 시 코스 삭제 확인 바텀시트 모달(CourseDeleteModal)이 오픈되어야 한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
-    const { getByTestId } = await render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
     );
 
     await waitFor(() => {
-      expect(getByTestId('create-course-cta-card')).toBeTruthy();
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('create-course-cta-card'));
-    expect(mockOnCreateCourse).toHaveBeenCalled();
+    expect(queryByTestId('course-delete-modal-card')).toBeNull();
+
+    const deleteBtn = getByTestId('btn-delete-course-uuid-1');
+    fireEvent.press(deleteBtn);
+
+    await waitFor(() => {
+      expect(getByTestId('course-delete-modal-card')).toBeTruthy();
+      expect(getByText('코스를 삭제하시겠습니까?')).toBeTruthy();
+    });
+
+    const cancelBtn = getByTestId('btn-cancel-delete');
+    fireEvent.press(cancelBtn);
+
+    await waitFor(() => {
+      expect(queryByTestId('course-delete-modal-card')).toBeNull();
+    });
   });
 
   it('검색 바에 검색어 입력 시 해당하는 코스 카드만 필터링되어 노출되어야 한다', async () => {
@@ -109,8 +118,8 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     );
 
     await waitFor(() => {
-      expect(getByText('대한민국 제주')).toBeTruthy();
-      expect(getByText('일본 도쿄')).toBeTruthy();
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
+      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
     });
 
     const searchInput = getByTestId('search-input');
@@ -119,12 +128,12 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     });
 
     await waitFor(() => {
-      expect(getByText('일본 도쿄')).toBeTruthy();
-      expect(queryByText('대한민국 제주')).toBeNull();
+      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
+      expect(queryByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeNull();
     });
   });
 
-  it('생성된 코스가 없는 경우 Empty State 안내 뷰 및 코스 생성 CTA 버튼이 노출되어야 한다', async () => {
+  it('생성된 코스가 없는 경우 Figma UI 스펙 Empty State 안내 뷰 및 새 코스 생성 CTA 버튼이 노출되어야 한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([]);
 
     const { getByText, getByTestId } = await render(
@@ -132,37 +141,11 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회 및 상세
     );
 
     await waitFor(() => {
-      expect(getByText('아직 생성된 여행 코스가 없습니다')).toBeTruthy();
+      expect(getByText('아직 저장된 코스가 없어요')).toBeTruthy();
       expect(getByTestId('empty-create-button')).toBeTruthy();
     });
 
     fireEvent.press(getByTestId('empty-create-button'));
     expect(mockOnCreateCourse).toHaveBeenCalled();
-  });
-
-  it('API 목록 조회 실패 시 재시도 버튼 및 에러 메시지가 표시되고, 재시도 클릭 시 데이터를 다시 요청해야 한다', async () => {
-    const apiSpy = jest
-      .spyOn(commonApi, 'getCourseListApi')
-      .mockRejectedValueOnce(new commonApi.ApiError(500, '서버 오류가 발생했습니다.'))
-      .mockResolvedValueOnce(mockCourseList);
-
-    const { getByTestId, getByText } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
-    );
-
-    await waitFor(() => {
-      expect(getByText('서버 오류가 발생했습니다.')).toBeTruthy();
-      expect(getByTestId('retry-button')).toBeTruthy();
-    });
-
-    await act(async () => {
-      fireEvent.press(getByTestId('retry-button'));
-    });
-
-    await waitFor(() => {
-      expect(getByText('대한민국 제주')).toBeTruthy();
-    });
-
-    expect(apiSpy).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,10 +1,6 @@
 /**
  * @file analytics.test.tsx
  * @description Unit tests for AppAnalyticsTracker and hooks in @yeolo/app.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import { AppAnalyticsTracker } from '../src/analytics/firebaseTracker';

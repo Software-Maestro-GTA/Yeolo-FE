@@ -1,10 +1,6 @@
 /**
  * @file course.ts
  * @description Types and interfaces for course recommendation, course list & course detail (DOM-2, API-FB-7, API-FB-10).
- * @requirements REQ-9
- * @functional FUN-3, FUN-7
- * @api API-FB-7, API-FB-10
- * @author Antigravity Agent
  */
 
 export interface CourseSummary {
@@ -27,7 +23,7 @@ export interface CourseListApiResponse {
   };
 }
 
-export type BudgetType = 'cost_effective' | 'standard' | 'luxury';
+export type BudgetType = 'cost_effective' | 'moderate' | 'luxury';
 export type TransportType = 'walking' | 'transit' | 'driving' | 'taxi' | 'none';
 export type PaceType = 'relaxed' | 'balanced' | 'dense';
 

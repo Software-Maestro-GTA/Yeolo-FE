@@ -1,10 +1,6 @@
 /**
  * @file photoService.ts
  * @description Device photo library access and EXIF metadata extraction service.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
- * @api API-FB-2
- * @author Antigravity Agent
  */
 import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
 import type { ImageMetadata } from '@yeolo/common';

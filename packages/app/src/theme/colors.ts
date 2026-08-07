@@ -1,118 +1,94 @@
 /**
  * @file colors.ts
- * @description Centralized design tokens for colors, palettes, and semantic theme values across the app.
- * @requirements REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
+ * @description Core color design tokens for Yeolo Mobile App, extracted directly from Figma Design Tokens.
  */
 
 /**
- * Raw color palette values.
+ * Yeolo Core Figma Design Tokens
  */
 export const palette = {
-  // Brand / Primary (Ocean Sky Blue)
-  blue500: '#0284C7',
-  blue600: '#0369A1',
-  blue50: '#F0F9FF',
-  indigo500: '#6366F1',
-  cyan400: '#38BDF8',
+  // Figma Design Tokens
+  primary: '#2D7DD2',     // Ocean Blue - CTA 버튼, 주요 액션, 브랜드 강조
+  accent: '#00C9A7',      // Teal Green - 그래디언트, 보조 강조, 아이콘 하이라이트
+  lightTeal: '#E0F7F1',   // Tint - 카드 배경, 선택 상태, 태그 배경
+  softMint: '#F5FAF8',    // Background - 페이지 배경, 구분선 영역
+  deepNavy: '#0D2137',    // Text - 제목, 본문 텍스트, 핵심 정보
+  subText: '#59616B',     // SubTitle & Secondary Text - 부제목 및 서브 설명문 텍스트
+  mutedText: '#8C949E',   // Muted SubText - 보조 캡션 및 메타 정보 텍스트
 
-  // Accent & Secondary
-  emerald500: '#10B981',
-  emerald50: '#ECFDF5',
-  green400: '#4EDEA3',
-
-  // Slate / Grays (Neutral scale)
-  slate900: '#0F172A',
-  slate800: '#1E293B',
-  slate700: '#334155',
-  slate600: '#475569',
-  slate500: '#64748B',
-  slate400: '#94A3B8',
-  slate300: '#CBD5E1',
-  slate200: '#E2E8F0',
-  slate100: '#F1F5F9',
-  slate50: '#F8FAFC',
-
-  // Specific grays for legacy screens
-  gray900: '#030612',
-  gray700: '#171C1F',
-  gray500: '#76777C',
-  gray200: '#EAEEF2',
-
-  // Status & Feedback
-  red500: '#EF4444',
-  red600: '#D32F2F',
-  red50: '#FEF2F2',
-  amber500: '#F59E0B',
-
-  // Base
+  // Base Neutrals & Statuses
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
-
-  // Gradients
-  screenBgStart: '#F0F9FF',
-  screenBgEnd: '#FFFFFF',
-  gradientBottomStart: '#F0F9FF',
-  gradientBottomEnd: 'rgba(240, 249, 255, 0)',
-  borderLight: 'rgba(198, 198, 204, 0.5)',
-  buttonGlass: 'rgba(255, 255, 255, 0.7)',
+  gray100: '#F1F5F9',
+  gray200: '#E2E8F0',
+  gray400: '#94A3B8',
+  gray500: '#64748B',
+  gray600: '#59616B',
+  red500: '#EF4444',
 } as const;
 
 /**
- * Semantic theme tokens mapped to palette values for dark/light mode consistency.
+ * Semantic theme tokens
  */
 export const theme = {
   colors: {
-    primary: palette.blue500,
-    primaryDark: palette.blue600,
-    primaryContainer: palette.blue50,
-    secondary: palette.emerald500,
-    aiAccent: palette.indigo500,
+    primary: palette.primary,
+    accent: palette.accent,
+    lightTeal: palette.lightTeal,
+    softMint: palette.softMint,
+    deepNavy: palette.deepNavy,
+    subText: palette.subText,
+    mutedText: palette.mutedText,
+    primaryDark: '#1D4ED8',
+    primaryContainer: palette.lightTeal,
+    secondary: palette.accent,
+    aiAccent: palette.accent,
 
     text: {
-      primary: palette.slate900,
-      secondary: palette.slate700,
-      subtle: palette.slate500,
-      placeholder: palette.slate400,
-      muted: palette.gray500,
+      primary: palette.deepNavy,
+      subTitle: palette.subText,
+      secondary: palette.subText,
+      subtle: palette.mutedText,
+      muted: palette.mutedText,
+      placeholder: '#9CA3AF',
       inverse: palette.white,
       danger: palette.red500,
     },
 
     bg: {
-      screen: palette.screenBgStart,
+      screen: palette.softMint,
       card: palette.white,
-      input: palette.slate50,
-      secondary: palette.slate100,
-      glass: palette.buttonGlass,
-      error: palette.red50,
+      input: palette.white,
+      tint: palette.lightTeal,
+      secondary: '#F1F5F9',
+      glass: 'rgba(255, 255, 255, 0.85)',
+      error: '#FEF2F2',
     },
 
     border: {
-      default: palette.slate200,
-      light: palette.borderLight,
-      active: palette.blue500,
-      error: palette.red500,
+      default: palette.gray200,
+      active: palette.primary,
+      light: palette.lightTeal,
+      error: '#EF4444',
     },
 
     status: {
-      error: palette.red500,
-      errorBg: palette.red50,
-      warning: palette.amber500,
-      success: palette.emerald500,
-      successBg: palette.emerald50,
+      error: '#EF4444',
+      errorBg: '#FEF2F2',
+      warning: '#F59E0B',
+      success: '#10B981',
+      successBg: '#ECFDF5',
     },
 
     gradient: {
-      background: [palette.screenBgStart, palette.gradientBottomEnd] as const,
-      bottom: [palette.gradientBottomStart, palette.gradientBottomEnd] as const,
-      primary: [palette.blue500, palette.cyan400] as const,
-      ai: [palette.indigo500, palette.cyan400] as const,
+      background: [palette.softMint, palette.lightTeal] as const,
+      bottom: [palette.softMint, palette.white] as const,
+      primary: [palette.primary, palette.accent] as const,
+      ai: [palette.primary, palette.accent] as const,
     },
 
-    shadow: palette.black,
+    shadow: palette.deepNavy,
   },
 } as const;
 

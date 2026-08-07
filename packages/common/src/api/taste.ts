@@ -1,10 +1,6 @@
 /**
  * @file taste.ts
  * @description Shared taste analysis API service utilizing ky and parse-sse for progressive SSE streams.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-FB-2
- * @author Antigravity Agent
  */
 import ky from 'ky';
 import { parseServerSentEvents } from 'parse-sse';

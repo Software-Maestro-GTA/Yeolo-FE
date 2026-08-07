@@ -1,11 +1,7 @@
 /**
  * @file ProfileHeader.tsx
  * @description UI component for displaying user avatar, display name, and email according to DOM-3 specification.
- * @requirements REQ-11
- * @functional FUN-4
- * @api API-FB-8
  * @domain DOM-3
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
@@ -24,7 +20,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   onEditAvatar,
 }) => {
-  const displayName = user?.displayName || UI_STRINGS.COMPONENTS.DEFAULT_USER_NAME;
+  const displayName = user?.displayName || UI_STRINGS.PROFILE.DEFAULT_USER_NAME;
   const email = user?.email || APP_CONFIG.DEFAULT_USER_EMAIL;
   const avatarUrl = user?.profileImageUrl;
 

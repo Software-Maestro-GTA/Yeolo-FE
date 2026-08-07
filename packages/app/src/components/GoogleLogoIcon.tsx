@@ -1,9 +1,6 @@
 /**
  * @file GoogleLogoIcon.tsx
  * @description Official Google 4-color "G" brand logo SVG icon component.
- * @requirements REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';

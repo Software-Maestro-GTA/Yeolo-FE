@@ -8,6 +8,6 @@ export * from './CourseDetailHeader';
 export * from './CourseMiniMapView';
 export * from './CourseDayTabs';
 export * from './ItineraryTimelineItem';
-export * from './CourseCreateHeader';
 export * from './BudgetTypeSelector';
 export * from './CourseSearchBar';
+export * from './CourseDeleteModal';

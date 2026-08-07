@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { View, BackHandler, ToastAndroid, Platform } from 'react-native';
+import { BackHandler, ToastAndroid, Platform } from 'react-native';
+import type { ItineraryStop } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout } from '../layouts';
@@ -9,13 +10,17 @@ import {
   HomeScreen,
   CourseListScreen,
   IntroScreen,
-  PhotoAnalysisScreen,
+  MbtiInputScreen,
+  PhotoConsentScreen,
   TasteAnalysisScreen,
   TasteProfileScreen,
   ProfileScreen,
+  ProfileInputScreen,
   CourseCreateScreen,
   CourseGeneratingScreen,
   CourseDetailScreen,
+  CourseShareScreen,
+  PlaceDetailScreen,
 } from '../screens';
 
 const NON_HISTORY_STEPS: NavStep[] = [
@@ -29,6 +34,7 @@ export function NavigationRoot() {
   const auth = useContext(AuthContext);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [selectedPlaceStop, setSelectedPlaceStop] = useState<ItineraryStop | undefined>();
   const [history, setHistory] = useState<NavStep[]>([]);
   const [step, setStep] = useState<NavStep | null>(null);
   const lastBackPressRef = useRef<number>(0);
@@ -113,9 +119,16 @@ export function NavigationRoot() {
         />
       );
     case NAV_STEPS.INTRO:
-      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.PHOTO)} />;
+      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />;
+    case NAV_STEPS.MBTI:
+      return (
+        <MbtiInputScreen
+          onNext={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+          onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
+        />
+      );
     case NAV_STEPS.PHOTO:
-      return <PhotoAnalysisScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
+      return <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
     case NAV_STEPS.TASTE:
       return (
         <TasteAnalysisScreen
@@ -143,6 +156,16 @@ export function NavigationRoot() {
           <ProfileScreen
             onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
             onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
+            onEditProfile={() => navigateTo(NAV_STEPS.PROFILE_INPUT)}
+          />
+        </MainLayout>
+      );
+    case NAV_STEPS.PROFILE_INPUT:
+      return (
+        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
+          <ProfileInputScreen
+            onGoBack={() => navigateTo(NAV_STEPS.PROFILE)}
+            onSaveSuccess={() => navigateTo(NAV_STEPS.PROFILE)}
           />
         </MainLayout>
       );
@@ -185,16 +208,37 @@ export function NavigationRoot() {
       );
     case NAV_STEPS.COURSE_DETAIL:
       return (
-        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress} noTopEdges={true}>
           <CourseDetailScreen
             courseId={selectedCourseId || ''}
+            onSelectPlace={(stop) => {
+              setSelectedPlaceStop(stop);
+              navigateTo(NAV_STEPS.PLACE_DETAIL);
+            }}
+          />
+        </MainLayout>
+      );
+    case NAV_STEPS.COURSE_SHARE:
+      return (
+        <CourseShareScreen
+          courseId={selectedCourseId}
+          onSaveSuccess={() => navigateTo(NAV_STEPS.COURSE_DETAIL)}
+          onDecline={() => navigateTo(NAV_STEPS.COURSE_LIST)}
+          onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
+        />
+      );
+    case NAV_STEPS.PLACE_DETAIL:
+      return (
+        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress} noTopEdges={true}>
+          <PlaceDetailScreen
+            stop={selectedPlaceStop}
           />
         </MainLayout>
       );
     case NAV_STEPS.HOME:
     default:
       return (
-        <MainLayout currentTab={NAV_TABS.HOME} onTabPress={handleTabPress}>
+        <MainLayout currentTab={NAV_TABS.HOME} onTabPress={handleTabPress} noTopEdges={true}>
           <HomeScreen
             onNavigateToCreate={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
             onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}

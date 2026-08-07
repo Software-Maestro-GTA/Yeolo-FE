@@ -1,7 +1,6 @@
 /**
  * @file logger.ts
  * @description Logger utility wrapper that outputs logs only when __DEV__ or development environment is active.
- * @author Antigravity Agent
  */
 
 /**

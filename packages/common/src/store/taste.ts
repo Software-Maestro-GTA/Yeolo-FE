@@ -1,10 +1,6 @@
 /**
  * @file taste.ts
  * @description Zustand global store for managing taste preference SSE streaming analysis states.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-FB-2
- * @author Antigravity Agent
  */
 import { create } from 'zustand';
 import type { AnalyzeTastePayload, TasteAnalysisState } from '../types/taste';

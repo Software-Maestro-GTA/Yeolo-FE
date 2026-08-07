@@ -1,10 +1,6 @@
 /**
  * @file types.ts
  * @description Analytics tracking interfaces and GA4 event data models for Yeolo platform.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 export interface GA4ScreenViewEvent {

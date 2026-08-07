@@ -1,10 +1,6 @@
 /**
  * @file AuthContext.test.tsx
  * @description Unit tests for AuthContext state management and auto-login restore.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';

@@ -1,9 +1,6 @@
 /**
  * @file useCourseCreateForm.ts
  * @description Custom hook for managing travel course creation form inputs and inline calendar state.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 import { useState, useRef, useEffect } from 'react';
 import { ScrollView } from 'react-native';

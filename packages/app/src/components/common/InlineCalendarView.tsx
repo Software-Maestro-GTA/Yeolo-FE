@@ -1,15 +1,11 @@
 /**
  * @file InlineCalendarView.tsx
- * @description Accordion inline calendar view component with 7-column row-grouped week layout.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
+ * @description Accordion inline calendar view component with UI v2 styling and UI_STRINGS constants.
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-import { theme } from '../../theme';
+import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface InlineCalendarViewProps {
@@ -60,14 +56,14 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   return (
     <View style={styles.inlineCalendarCard}>
       <View style={styles.calendarHeader}>
-        <TouchableOpacity onPress={onPrevMonth} style={styles.monthNavBtn}>
-          <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
+        <TouchableOpacity onPress={onPrevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={18} color={palette.deepNavy} />
         </TouchableOpacity>
         <Text style={styles.calendarMonthText}>
           {currentYearMonth.year}{UI_STRINGS.COMPONENTS.CALENDAR_YEAR_SUFFIX} {currentYearMonth.month}{UI_STRINGS.COMPONENTS.CALENDAR_MONTH_SUFFIX}
         </Text>
-        <TouchableOpacity onPress={onNextMonth} style={styles.monthNavBtn}>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
+        <TouchableOpacity onPress={onNextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+          <Ionicons name="chevron-forward" size={18} color={palette.deepNavy} />
         </TouchableOpacity>
       </View>
 
@@ -78,8 +74,8 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
             key={dayName}
             style={[
               styles.weekHeaderText,
-              idx === 0 && { color: theme.colors.status.error },
-              idx === 6 && { color: theme.colors.primary },
+              idx === 0 && { color: '#EF4444' },
+              idx === 6 && { color: palette.primary },
             ]}
           >
             {dayName}
@@ -153,43 +149,48 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
 
 const styles = StyleSheet.create({
   inlineCalendarCard: {
-    backgroundColor: theme.colors.bg.input,
+    backgroundColor: palette.softMint, // #F5FAF8
     borderWidth: 1,
-    borderColor: theme.colors.border.default,
+    borderColor: '#E0E8E5',
     borderRadius: 16,
-    padding: 14,
-    marginTop: 4,
+    padding: 16,
+    marginTop: 8,
   },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   monthNavBtn: {
-    padding: 6,
-    backgroundColor: theme.colors.primaryContainer,
+    width: 32,
+    height: 32,
     borderRadius: 8,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   calendarMonthText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: theme.colors.text.primary,
+    color: palette.deepNavy, // #0D2137
   },
   weekHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.default,
-    paddingBottom: 6,
+    borderBottomColor: '#EBEDF2',
+    paddingBottom: 8,
   },
   weekHeaderText: {
     flex: 1,
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '700',
-    color: theme.colors.text.subtle,
+    color: palette.subText,
   },
   calendarBody: {
     gap: 4,
@@ -208,16 +209,20 @@ const styles = StyleSheet.create({
   rangeTrack: {
     position: 'absolute',
     height: 32,
-    backgroundColor: theme.colors.primaryContainer,
+    backgroundColor: 'rgba(0, 201, 167, 0.15)', // #00C9A7 15% opacity
     top: 3,
   },
   rangeTrackStart: {
     left: '50%',
     right: 0,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   rangeTrackEnd: {
     left: 0,
     right: '50%',
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
   },
   rangeTrackMiddle: {
     left: 0,
@@ -232,22 +237,22 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   dayBubbleSelected: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: palette.primary, // #2D7DD2
   },
   dayCellText: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.text.secondary,
+    color: palette.deepNavy,
   },
   dayCellTextInRange: {
-    color: theme.colors.primary,
+    color: palette.accent, // #00C9A7
     fontWeight: '800',
   },
   dayTextDisabled: {
-    color: theme.colors.border.default,
+    color: palette.gray200,
   },
   dayCellTextSelected: {
-    color: theme.colors.text.inverse,
+    color: '#FFFFFF',
     fontWeight: '800',
   },
 });

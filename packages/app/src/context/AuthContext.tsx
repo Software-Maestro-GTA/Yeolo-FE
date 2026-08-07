@@ -1,10 +1,6 @@
 /**
  * @file AuthContext.tsx
  * @description Context provider for managing user authentication state, Google/Apple Sign-In, and automatic session restore.
- * @requirements REQ-1, REQ-11
- * @functional FUN-1
- * @api API-AUTH-1, API-AUTH-2
- * @author Antigravity Agent
  */
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';

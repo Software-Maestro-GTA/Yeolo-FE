@@ -1,7 +1,6 @@
 /**
  * @file test-utils.tsx
  * @description Testing utility helpers providing QueryClientProvider wrapper for unit tests.
- * @author Antigravity Agent
  */
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
