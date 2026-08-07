@@ -26,6 +26,7 @@ export interface GoogleLoginResponse {
   message: string;
   data: {
     user: User;
+    doOnboarding: boolean;
     accessToken: string;
     refreshToken: string;
   };
@@ -42,7 +43,7 @@ export interface AppleLoginResponse {
   message: string;
   data: {
     user: User;
-    doOnboarding?: boolean;
+    doOnboarding: boolean;
     accessToken: string;
     refreshToken: string;
   };

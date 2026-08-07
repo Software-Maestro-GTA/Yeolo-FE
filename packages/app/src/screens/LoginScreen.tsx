@@ -3,10 +3,11 @@
  * @description Google & Apple login UI screen updated to match Figma UI design context with inline gradient title.
  */
 import React, { useContext, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { logger } from '@yeolo/common';
 import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
 import { UI_STRINGS } from '../constants';
 import { palette } from '../theme/colors';
@@ -15,8 +16,15 @@ import { signInWithGoogle, signInWithApple, isAppleAuthAvailable, openCustomerSu
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface LoginScreenProps {
-  onLoginSuccess?: (isNewUser: boolean) => void;
+  onLoginSuccess?: (doOnboarding: boolean) => void;
 }
+
+const getAuthErrorMessage = (err: any, defaultMessage: string): string => {
+  if (err?.name === 'ApiError' && err?.message) {
+    return err.message;
+  }
+  return defaultMessage;
+};
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   useGA4ScreenTracking('LoginScreen');
@@ -42,12 +50,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const code = await signInWithGoogle();
       if (loginWithGoogle) {
         const result = await loginWithGoogle(code);
-        onLoginSuccess?.(result?.isNewUser ?? false);
+        onLoginSuccess?.(result.doOnboarding);
       }
     } catch (err: any) {
-      console.error('[DEV] Google login error detail:', err?.code, err?.message, JSON.stringify(err));
+      if (err?.code === 'ERR_REQUEST_CANCELED' || err?.code === 'SIGN_IN_CANCELLED') {
+        return;
+      }
+      logger.error('[LoginScreen] Google login error detail:', err?.code, err?.message, err);
+      const userMessage = getAuthErrorMessage(err, 'Google 로그인에 실패했습니다. 다시 시도해 주세요.');
       if (Platform.OS === 'android') {
-        ToastAndroid.show('로그인에 실패했습니다.', ToastAndroid.SHORT);
+        ToastAndroid.show(userMessage, ToastAndroid.SHORT);
+      } else {
+        Alert.alert('로그인 오류', userMessage);
       }
     }
   };
@@ -59,15 +73,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const { code, idToken } = await signInWithApple();
       if (loginWithApple) {
         const result = await loginWithApple({ code, idToken });
-        onLoginSuccess?.(result?.isNewUser ?? false);
+        onLoginSuccess?.(result.doOnboarding);
       }
     } catch (err: any) {
-      if (err?.code === 'ERR_REQUEST_CANCELED') {
+      if (err?.code === 'ERR_REQUEST_CANCELED' || err?.code === 'SIGN_IN_CANCELLED') {
         return;
       }
-      console.error('[DEV] Apple login error detail:', err?.code, err?.message, JSON.stringify(err));
+      logger.error('[LoginScreen] Apple login error detail:', err?.code, err?.message, err);
+      const userMessage = getAuthErrorMessage(err, 'Apple 로그인에 실패했습니다. 다시 시도해 주세요.');
       if (Platform.OS === 'android') {
-        ToastAndroid.show('Apple 로그인에 실패했습니다.', ToastAndroid.SHORT);
+        ToastAndroid.show(userMessage, ToastAndroid.SHORT);
+      } else {
+        Alert.alert('로그인 오류', userMessage);
       }
     }
   };
@@ -77,7 +94,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     try {
       await openCustomerSupportMail();
     } catch (err) {
-      console.error('Failed to open customer support mail modal:', err);
+      logger.error('[LoginScreen] Failed to open customer support mail modal:', err);
     }
   };
 
@@ -116,14 +133,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
             {/* Google Login Action Button */}
             <TouchableOpacity
-              style={styles.googleLoginButton}
+              style={[styles.googleLoginButton, isLoggingIn && styles.disabledButton]}
               activeOpacity={0.8}
               onPress={handleGoogleLogin}
               disabled={isLoggingIn}
             >
               <View style={styles.buttonContent}>
-                <GoogleLogoIcon size={20} style={styles.logoIcon} />
-                <Text style={styles.googleButtonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
+                {isLoggingIn ? (
+                  <ActivityIndicator size="small" color={palette.primary} />
+                ) : (
+                  <>
+                    <GoogleLogoIcon size={20} style={styles.logoIcon} />
+                    <Text style={styles.googleButtonText}>{UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}</Text>
+                  </>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -262,5 +285,8 @@ const styles = StyleSheet.create({
     color: palette.deepNavy,
     textDecorationLine: 'underline',
     fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
