@@ -94,7 +94,7 @@ export function NavigationRoot() {
     return () => subscription.remove();
   }, [step, history]);
 
-  if (auth?.isLoading || step === null) {
+  if (step === null) {
     return null;
   }
 

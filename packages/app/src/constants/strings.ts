@@ -18,6 +18,9 @@ export const UI_STRINGS = {
     APPLE_BUTTON_TEXT: 'Apple 계정으로 계속하기',
     MISSING_AUTH_CODE_ERROR: '인증 코드가 누락되었습니다.',
     MISSING_APPLE_CODE_ERROR: 'Apple 인증 코드가 누락되었습니다.',
+    GOOGLE_LOGIN_FAIL_DEFAULT: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
+    APPLE_LOGIN_FAIL_DEFAULT: 'Apple 로그인에 실패했습니다. 다시 시도해 주세요.',
+    LOGIN_ERROR_TITLE: '로그인 오류',
   },
   HOME: {
     RECOMMENDED_TITLE: '추천 여행 코스',
@@ -273,6 +276,10 @@ export const UI_STRINGS = {
   COMMON: {
     CUSTOMER_SUPPORT_TEXT: '도움이 필요하신가요? ',
     CUSTOMER_SUPPORT_LINK: '고객 지원',
+    SUPPORT_EMAIL_TITLE: '고객지원 이메일 안내',
+    SUPPORT_EMAIL_FAIL_ALERT: '기기에서 메일 앱을 실행할 수 없습니다.\n아래 이메일 주소로 문의해 주세요:\n\n',
+    SUPPORT_MAIL_DEFAULT_SUBJECT: '[여로] 고객 지원 및 문의',
+    SUPPORT_MAIL_DEFAULT_BODY: '여로 서비스 이용 중 문의사항이나 개선 의견을 자유롭게 작성해주세요.\n\n-------------------\n',
     CONFIRM: '확인',
     CONFIRM_CANCEL: '취소',
     CANCEL: '취소',

@@ -29,6 +29,17 @@ export const palette = {
 } as const;
 
 /**
+ * Convert a 6-digit hex color string to an RGBA string with the given alpha opacity.
+ */
+export const hexToRgba = (hex: string, alpha: number): string => {
+  const cleanHex = hex.replace('#', '');
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+/**
  * Semantic theme tokens
  */
 export const theme = {
@@ -63,6 +74,7 @@ export const theme = {
       tint: palette.lightTeal,
       secondary: '#F1F5F9',
       glass: 'rgba(255, 255, 255, 0.85)',
+      overlay: hexToRgba(palette.deepNavy, 0.45),
       error: '#FEF2F2',
     },
 
@@ -86,6 +98,11 @@ export const theme = {
       bottom: [palette.softMint, palette.white] as const,
       primary: [palette.primary, palette.accent] as const,
       ai: [palette.primary, palette.accent] as const,
+      loginBackground: [
+        hexToRgba(palette.softMint, 0),
+        hexToRgba(palette.softMint, 0.8),
+        palette.softMint,
+      ] as const,
     },
 
     shadow: palette.deepNavy,
