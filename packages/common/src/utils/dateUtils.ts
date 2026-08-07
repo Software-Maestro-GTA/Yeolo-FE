@@ -1,9 +1,6 @@
 /**
  * @file dateUtils.ts
  * @description Shared date validation, auto-hyphen formatting, and itinerary day calculation utilities.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 
 export const DATE_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;

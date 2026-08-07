@@ -1,10 +1,6 @@
 /**
  * @file taste.ts
  * @description Shared taste preference analysis types and interfaces across Web and Mobile.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-FB-2
- * @author Antigravity Agent
  */
 
 export interface ImageMetadata {

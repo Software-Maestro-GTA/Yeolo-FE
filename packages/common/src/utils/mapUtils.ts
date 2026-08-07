@@ -1,7 +1,6 @@
 /**
  * @file mapUtils.ts
  * @description Common map calculations and Leaflet HTML generator utilities shared between web and app.
- * @author Antigravity Agent
  */
 
 export interface MapCoordinate {

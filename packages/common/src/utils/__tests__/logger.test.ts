@@ -1,7 +1,6 @@
 /**
  * @file logger.test.ts
  * @description Unit tests for logger utility and isDev environment check.
- * @author Antigravity Agent
  */
 
 import { isDev, logger } from '../logger';

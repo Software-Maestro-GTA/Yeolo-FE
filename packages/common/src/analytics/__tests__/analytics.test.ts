@@ -1,10 +1,6 @@
 /**
  * @file analytics.test.ts
  * @description Unit tests for AnalyticsService in @yeolo/common.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import { analyticsService, AnalyticsService, AnalyticsTracker } from '../index';
