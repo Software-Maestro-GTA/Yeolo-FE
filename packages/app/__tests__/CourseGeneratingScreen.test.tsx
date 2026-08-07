@@ -1,6 +1,6 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
- * @description Unit and integration tests for CourseGeneratingScreen SSE progress display and navigation.
+ * @description Unit and integration tests for CourseGeneratingScreen matching Figma UI.
  * @requirements REQ-7
  * @functional FUN-6
  * @api API-FB-4
@@ -10,7 +10,6 @@ import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
-import { UI_STRINGS } from '../src/constants';
 import { renderWithQueryClient as render } from './test-utils';
 
 describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 바인딩)', () => {
@@ -24,6 +23,22 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
       error: null,
       errorCode: null,
     });
+  });
+
+  it('Figma UI 메인 타이틀, 체크리스트 카드 및 프로그레스 바가 정상 렌더링되어야 한다', async () => {
+    const mockOnComplete = jest.fn();
+
+    const { getByText, getByTestId } = await render(
+      <CourseGeneratingScreen
+        onComplete={mockOnComplete}
+      />
+    );
+
+    expect(getByText('당신만을 위한 여행 코스 생성 중')).toBeTruthy();
+    expect(getByText('여정이 완성되기까지 조금만 기다려주세요.')).toBeTruthy();
+    expect(getByText('사용자 취향 불러오기')).toBeTruthy();
+    expect(getByText('여행 코스 생성 중')).toBeTruthy();
+    expect(getByTestId('progress-bar-container')).toBeTruthy();
   });
 
   it('SSE progress 이벤트 메시지를 실시간으로 렌더링해야 한다', async () => {
@@ -75,7 +90,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
       />
     );
 
-    expect(getByText('코스 생성 중 오류가 발생했습니다.')).toBeTruthy();
+    expect(getByText('코스 생성 중 오류가 발생했습니다')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(getByTestId('retry-btn'));
@@ -84,7 +99,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
     expect(mockOnRetry).toHaveBeenCalled();
   });
 
-  it('코스 생성 중 에러 발생 시 취향 분석하기 버튼(go-intro-btn)이 노출되고 클릭 시 Intro 화면(onNavigateToIntro)으로 이동해야 한다', async () => {
+  it('코스 생성 중 에러 발생 시 시작 화면으로 이동 버튼(go-intro-btn)이 노출되고 클릭 시 Intro 화면(onNavigateToIntro)으로 이동해야 한다', async () => {
     const mockOnNavigateToIntro = jest.fn();
     const mockOnRetry = jest.fn();
 
@@ -100,7 +115,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
       />
     );
 
-    expect(getByText(UI_STRINGS.TASTE_PROFILE.START_ANALYSIS)).toBeTruthy();
+    expect(getByText('시작 화면으로 이동')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(getByTestId('go-intro-btn'));

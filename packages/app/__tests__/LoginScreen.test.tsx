@@ -46,10 +46,10 @@ describe('LoginScreen UI & Interaction', () => {
   });
 
   it('기본 UI 문구 및 로그인 버튼이 정상적으로 렌더링되어야 한다', async () => {
-    const { getByText } = await renderLoginScreen();
+    const { getByText, getAllByText } = await renderLoginScreen();
 
     expect(getByText('당신의 여행을 데이터로 그리다,')).toBeTruthy();
-    expect(getByText('여로')).toBeTruthy();
+    expect(getAllByText('여로')[0]).toBeTruthy();
     expect(getByText('Google 계정으로 계속하기')).toBeTruthy();
   });
 

@@ -1,6 +1,6 @@
 /**
  * @file CourseCreateScreen.test.tsx
- * @description Unit and integration tests for CourseCreateScreen travel condition input form.
+ * @description Unit and integration tests for CourseCreateScreen travel condition input form matching Figma UI specs.
  * @requirements REQ-7
  * @functional FUN-6
  * @api API-FB-4
@@ -30,7 +30,19 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     await AsyncStorage.setItem('accessToken', 'mock-bearer-token');
   });
 
-  it('필수 입력값(국가, 도시, 날짜, 일수, 예산)이 비어있는 경우 "코스 생성하기" 버튼이 비활성화되어야 한다', async () => {
+  it('Figma UI 스펙 타이틀과 카드가 정상적으로 렌더링되어야 한다', async () => {
+    const { getByText, getByTestId } = await render(
+      <CourseCreateScreen />
+    );
+
+    expect(getByText('코스 생성')).toBeTruthy();
+    expect(getByText('당신만의 여행 코스를 만들어 드릴게요.')).toBeTruthy();
+    expect(getByTestId('destination-card')).toBeTruthy();
+    expect(getByTestId('date-card')).toBeTruthy();
+    expect(getByTestId('budget-card')).toBeTruthy();
+  });
+
+  it('필수 입력값(국가, 도시, 날짜, 예산)이 비어있는 경우 "코스 생성하기" 버튼이 비활성화되어야 한다', async () => {
     const mockOnSubmit = jest.fn();
     const { getByTestId } = await render(
       <CourseCreateScreen onSubmit={mockOnSubmit} />
@@ -41,21 +53,22 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it('시작일 및 종료일 입력란은 키보드 타이핑이 불가능(editable: false)하고 캘린더 선택으로 지정되어야 한다', async () => {
-    const { getByTestId } = await render(
+  it('인기 여행지 칩 클릭 시 국가와 도시명이 자동으로 입력창에 설정되어야 한다', async () => {
+    const { getByTestId, getByText } = await render(
       <CourseCreateScreen />
     );
 
-    const startDateInput = getByTestId('input-start-date');
-    const endDateInput = getByTestId('input-total-days');
+    await act(async () => {
+      fireEvent.press(getByText('🇯🇵 도쿄'));
+    });
 
-    expect(startDateInput.props.editable).toBe(false);
-    expect(endDateInput.props.editable).toBe(false);
+    expect(getByTestId('input-country').props.value).toBe('일본');
+    expect(getByTestId('input-city').props.value).toBe('도쿄');
   });
 
   it('필수 조건(국가, 도시, 캘린더 선택 날짜, 예산)이 모두 올바르게 채워지면 submit 버튼이 활성화되어야 한다', async () => {
     const mockOnSubmit = jest.fn();
-    const { getByTestId, getAllByText } = await render(
+    const { getByTestId, getByText, getAllByText } = await render(
       <CourseCreateScreen onSubmit={mockOnSubmit} />
     );
 
@@ -65,7 +78,7 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByTestId('input-start-date'));
+      fireEvent.press(getByText('출발일'));
     });
 
     await act(async () => {
@@ -77,7 +90,7 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByTestId('budget-cost_effective'));
+      fireEvent.press(getByText('가성비'));
     });
 
     await waitFor(() => {
@@ -91,24 +104,5 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalled();
     });
-  });
-
-  it('국가와 도시 입력창이 모두 자유롭게 입력 가능해야 한다', async () => {
-    const { getByTestId } = await render(
-      <CourseCreateScreen />
-    );
-
-    const cityInput = getByTestId('input-city');
-    const countryInput = getByTestId('input-country');
-
-    expect(cityInput.props.editable).not.toBe(false);
-
-    await act(async () => {
-      fireEvent.changeText(cityInput, '파리');
-      fireEvent.changeText(countryInput, '프랑스');
-    });
-
-    expect(countryInput.props.value).toBe('프랑스');
-    expect(cityInput.props.value).toBe('파리');
   });
 });

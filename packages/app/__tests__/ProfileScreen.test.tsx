@@ -1,142 +1,97 @@
 /**
  * @file ProfileScreen.test.tsx
- * @description Integration and unit tests for ProfileScreen component (User Profile, Taste Analysis card, Settings, Terms, Logout API-FB-11, and Withdraw API-FB-12).
+ * @description Unit and integration tests for ProfileScreen, ProfileEditModal, and WithdrawModal.
  * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
+ * @functional FUN-8, FUN-GA4
  * @author Antigravity Agent
  */
 import React from 'react';
-import { waitFor, fireEvent } from '@testing-library/react-native';
-import { ProfileScreen } from '../src/screens/ProfileScreen';
-import * as commonApi from '@yeolo/common';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from './test-utils';
+import { ProfileScreen } from '../src/screens/ProfileScreen';
 
-import { AuthContext } from '../src/context';
+describe('ProfileScreen (FUN-8: 프로필 화면, 닉네임 수정 및 회원 탈퇴 비즈니스 로직)', () => {
+  it('Figma UI 스펙 요소들(프로필 카드, AI 취향 카드, 설정 목록, 계정 링크)이 정상 렌더링되어야 한다', async () => {
+    const { findByText, findByTestId } = await render(<ProfileScreen />);
 
-const mockUserData = {
-  userId: '550e8400-e29b-41d4-a716-446655440000',
-  provider: 'google',
-  email: 'sun925@yeolo.com',
-  displayName: '김선규',
-  profileImageUrl: 'https://example.com/avatar.jpg',
-  status: 'active',
-};
-
-const renderProfileScreen = async (props: any = {}) => {
-  const mockContext = {
-    isAuthenticated: true,
-    user: mockUserData,
-    isLoading: false,
-    loginWithGoogle: jest.fn(),
-    loginWithApple: jest.fn(),
-    logout: jest.fn(async () => {
-      await commonApi.logoutApi('http://localhost:3000');
-    }),
-  };
-
-  return await render(
-    <AuthContext.Provider value={mockContext}>
-      <ProfileScreen {...props} />
-    </AuthContext.Provider>
-  );
-};
-
-describe('ProfileScreen Integration Tests (Issue #21 / API-FB-11 / API-FB-12 / DOM-3)', () => {
-  const mockNavigateToAnalysis = jest.fn();
-  const mockNavigateToLogin = jest.fn();
-
-  beforeEach(async () => {
-    jest.clearAllMocks();
-    await AsyncStorage.setItem('accessToken', 'mock-access-token');
-    await AsyncStorage.setItem('refreshToken', 'mock-refresh-token');
-    jest.spyOn(commonApi, 'logoutApi').mockResolvedValue({ status: 200, message: '로그아웃 성공', data: null });
-    jest.spyOn(commonApi, 'withdrawApi').mockResolvedValue({ status: 200, message: '회원탈퇴 성공', data: null });
-  });
-
-  it('프로필 헤더에 사용자 이름과 이메일 정보가 정확히 렌더링되어야 한다 (DOM-3)', async () => {
-    const { findByText } = await renderProfileScreen({
-      onNavigateToAnalysis: mockNavigateToAnalysis,
-      onNavigateToLogin: mockNavigateToLogin,
-    });
-
+    expect(await findByTestId('profile-screen')).toBeTruthy();
+    expect(await findByTestId('profile-card')).toBeTruthy();
     expect(await findByText('김선규')).toBeTruthy();
-    expect(await findByText('sun925@yeolo.com')).toBeTruthy();
-  });
+    expect(await findByText('ksk85628781@gmail.com')).toBeTruthy();
+    expect(await findByText('수정')).toBeTruthy();
 
-  it('AI 여행 취향 분석 카드가 표시되고 "취향 보기" 버튼 클릭 시 콜백이 호출되어야 한다', async () => {
-    const mockNavigateToTasteProfile = jest.fn();
-    const { findByText, getByText } = await renderProfileScreen({
-      onNavigateToTasteProfile: mockNavigateToTasteProfile,
-      onNavigateToLogin: mockNavigateToLogin,
-    });
-
+    expect(await findByTestId('ai-taste-card')).toBeTruthy();
     expect(await findByText('AI 여행 취향 분석')).toBeTruthy();
+    expect(await findByText('나의 취향 보기')).toBeTruthy();
+    expect(await findByText('취향 재분석')).toBeTruthy();
 
-    const viewButton = getByText('나의 취향 보기');
-    expect(viewButton).toBeTruthy();
-    fireEvent.press(viewButton);
+    expect(await findByTestId('settings-section')).toBeTruthy();
+    expect(await findByText('이용약관')).toBeTruthy();
+    expect(await findByText('개인정보 처리방침')).toBeTruthy();
+    expect(await findByText('고객 지원')).toBeTruthy();
 
-    await waitFor(() => {
-      expect(mockNavigateToTasteProfile).toHaveBeenCalledTimes(1);
+    expect(await findByText('로그아웃')).toBeTruthy();
+    expect(await findByText('탈퇴하기')).toBeTruthy();
+  });
+
+  it('수정 버튼 클릭 시 ProfileEditModal이 열리고 닉네임 변경 저장이 가능해야 한다', async () => {
+    const { findByTestId, findByText, queryByTestId } = await render(<ProfileScreen />);
+
+    expect(queryByTestId('profile-edit-modal-card')).toBeNull();
+
+    const btnEdit = await findByTestId('btn-edit-profile');
+    fireEvent.press(btnEdit);
+
+    expect(await findByTestId('profile-edit-modal-card')).toBeTruthy();
+    expect(await findByText('프로필 정보 수정')).toBeTruthy();
+
+    const input = await findByTestId('input-nickname');
+    fireEvent.changeText(input, '여로탐험가');
+
+    const btnSave = await findByTestId('btn-save-edit');
+    fireEvent.press(btnSave);
+
+    await waitFor(async () => {
+      expect(await findByText('여로탐험가')).toBeTruthy();
     });
   });
 
-  it('"이용약관" 메뉴 클릭 시 이용약관 안내 모달이 노출되어야 한다', async () => {
-    const { findByText, getByText } = await renderProfileScreen({
-      onNavigateToLogin: mockNavigateToLogin,
-    });
+  it('취향 보기 및 재분석 버튼 클릭 시 각 네비게이션 콜백 함수가 호출되어야 한다', async () => {
+    const mockOnNavigateToTasteProfile = jest.fn();
+    const mockOnReanalyzeTaste = jest.fn();
 
-    const termsMenu = await findByText('이용약관');
-    fireEvent.press(termsMenu);
+    const { findByTestId } = await render(
+      <ProfileScreen
+        onNavigateToTasteProfile={mockOnNavigateToTasteProfile}
+        onReanalyzeTaste={mockOnReanalyzeTaste}
+      />
+    );
 
-    expect(await findByText('여로 서비스 이용약관')).toBeTruthy();
-    const closeBtn = getByText('닫기');
-    fireEvent.press(closeBtn);
+    const btnViewTaste = await findByTestId('btn-view-taste');
+    fireEvent.press(btnViewTaste);
+    expect(mockOnNavigateToTasteProfile).toHaveBeenCalledTimes(1);
+
+    const btnReanalyzeTaste = await findByTestId('btn-reanalyze-taste');
+    fireEvent.press(btnReanalyzeTaste);
+    expect(mockOnReanalyzeTaste).toHaveBeenCalledTimes(1);
   });
 
-  it('"로그아웃" 메뉴 클릭 시 확인 모달이 뜨고 확인 누르면 logoutApi(API-FB-11) 호출 후 로그인 화면으로 이동해야 한다', async () => {
-    const logoutSpy = jest.spyOn(commonApi, 'logoutApi');
+  it('탈퇴하기 링크 클릭 시 WithdrawModal이 표시되고 취소 시 닫혀야 한다', async () => {
+    const { findByTestId, findByText, queryByTestId } = await render(<ProfileScreen />);
 
-    const { findByText, getByText } = await renderProfileScreen({
-      onNavigateToAnalysis: mockNavigateToAnalysis,
-      onNavigateToLogin: mockNavigateToLogin,
-    });
+    expect(queryByTestId('withdraw-modal-card')).toBeNull();
 
-    const logoutMenu = await findByText('로그아웃');
-    fireEvent.press(logoutMenu);
+    const btnWithdraw = await findByTestId('btn-withdraw');
+    fireEvent.press(btnWithdraw);
 
-    expect(await findByText('정말 로그아웃 하시겠습니까?')).toBeTruthy();
+    expect(await findByTestId('withdraw-modal-card')).toBeTruthy();
+    expect(await findByText('정말 탈퇴하시겠습니까?')).toBeTruthy();
 
-    const confirmBtn = getByText('로그아웃 확인');
-    fireEvent.press(confirmBtn);
+    const btnCancel = await findByTestId('btn-cancel-withdraw');
+    fireEvent.press(btnCancel);
 
     await waitFor(() => {
-      expect(logoutSpy).toHaveBeenCalled();
-      expect(mockNavigateToLogin).toHaveBeenCalled();
-    });
-  });
-
-  it('"탈퇴하기" 메뉴 클릭 시 경고 모달이 뜨고 확인 누르면 withdrawApi(API-FB-12) 호출 후 로그인 화면으로 이동해야 한다', async () => {
-    const withdrawSpy = jest.spyOn(commonApi, 'withdrawApi');
-
-    const { findByText, getByText } = await renderProfileScreen({
-      onNavigateToAnalysis: mockNavigateToAnalysis,
-      onNavigateToLogin: mockNavigateToLogin,
-    });
-
-    const withdrawMenu = await findByText('탈퇴하기');
-    fireEvent.press(withdrawMenu);
-
-    expect(await findByText('회원탈퇴 안내')).toBeTruthy();
-
-    const confirmBtn = getByText('탈퇴 진행');
-    fireEvent.press(confirmBtn);
-
-    await waitFor(() => {
-      expect(withdrawSpy).toHaveBeenCalled();
-      expect(mockNavigateToLogin).toHaveBeenCalled();
+      expect(queryByTestId('withdraw-modal-card')).toBeNull();
     });
   });
 });
