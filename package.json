@@ -21,8 +21,14 @@
     "common:build": "yarn workspace @yeolo/common build",
     "common:test": "yarn workspace @yeolo/common test",
     "common:lint": "yarn workspace @yeolo/common lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx}\"",
+
     "test": "yarn web:test && yarn app:test && yarn common:test",
     "lint": "yarn web:lint && yarn app:lint && yarn common:lint"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
   },
   "repository": {
     "type": "git",
