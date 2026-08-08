@@ -1,6 +1,6 @@
 /**
  * @file IntroScreen.test.tsx
- * @description Unit test for IntroScreen UI v2 components and interaction.
+ * @description Unit test for IntroScreen UI components and interaction.
  */
 import React from 'react';
 import { fireEvent, act } from '@testing-library/react-native';

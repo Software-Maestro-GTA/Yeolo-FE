@@ -1,14 +1,15 @@
 /**
  * @file MbtiInputScreen.test.tsx
- * @description Unit test for MbtiInputScreen component matching Figma UI specifications.
+ * @description Unit test for MbtiInputScreen component matching Figma UI specifications and API-PREF-1 integration.
  */
 import React from 'react';
-import { fireEvent, act } from '@testing-library/react-native';
+import { fireEvent, act, waitFor } from '@testing-library/react-native';
+import * as yeoloCommon from '@yeolo/common';
 import { MbtiInputScreen } from '../src/screens/MbtiInputScreen';
 import { UI_STRINGS } from '../src/constants';
 import { renderWithQueryClient as render } from './test-utils';
 
-describe('MbtiInputScreen UI & Navigation', () => {
+describe('MbtiInputScreen UI & Navigation & API', () => {
   const mockOnNext = jest.fn();
   const mockOnDetailRecommend = jest.fn();
 
@@ -62,7 +63,15 @@ describe('MbtiInputScreen UI & Navigation', () => {
     expect(mockOnNext).not.toHaveBeenCalled();
   });
 
-  it('MBTI 4개 항목(E/I, S/N, T/F, J/P)을 모두 선택 후 다음으로 버튼 클릭 시 onNext가 호출되어야 한다', async () => {
+  it('MBTI 4개 항목(E/I, S/N, T/F, J/P) 선택 후 API 저장 성공 시 onNext가 호출되어야 한다 (API-PREF-1)', async () => {
+    const spyUpdatePref = jest
+      .spyOn(yeoloCommon, 'updatePreferencesApi')
+      .mockResolvedValueOnce({
+        status: 200,
+        message: '사용자 MBTI 수정 성공',
+        data: null,
+      });
+
     const { getByTestId } = await render(
       <MbtiInputScreen
         onNext={mockOnNext}
@@ -86,8 +95,52 @@ describe('MbtiInputScreen UI & Navigation', () => {
       fireEvent.press(getByTestId('next-button'));
     });
 
-    expect(mockOnNext).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(spyUpdatePref).toHaveBeenCalledWith(
+        expect.any(String),
+        undefined,
+        { mbti: 'ENFP' },
+      );
+      expect(mockOnNext).toHaveBeenCalledTimes(1);
+    });
     expect(mockOnDetailRecommend).not.toHaveBeenCalled();
+  });
+
+  it('API 저장 실패 시 (500 에러) onNext가 호출되지 않아야 한다', async () => {
+    jest
+      .spyOn(yeoloCommon, 'updatePreferencesApi')
+      .mockRejectedValueOnce(
+        new yeoloCommon.ApiError(500, '서버 오류가 발생했습니다.'),
+      );
+
+    const { getByTestId } = await render(
+      <MbtiInputScreen
+        onNext={mockOnNext}
+        onDetailRecommend={mockOnDetailRecommend}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('mbti-option-I'));
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('mbti-option-S'));
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('mbti-option-T'));
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('mbti-option-J'));
+    });
+    await act(async () => {
+      fireEvent.press(getByTestId('next-button'));
+    });
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    expect(mockOnNext).not.toHaveBeenCalled();
   });
 
   it('더 정확한 추천 받기 버튼 클릭 시 onDetailRecommend가 호출되어야 한다', async () => {
