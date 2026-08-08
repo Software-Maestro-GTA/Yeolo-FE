@@ -7,12 +7,14 @@ import type { WithdrawRequest, WithdrawResponse } from '../types/auth';
 import type {
   UpdatePreferencesPayload,
   UpdatePreferencesResponse,
+  SavePhotoConsentPayload,
+  SavePhotoConsentResponse,
 } from '../types/user';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
 
 /**
- * Permanently delete user account and invalidate session (API-FB-12)
+ * Permanently delete user account and invalidate session (API-USER-2)
  */
 export async function withdrawApi(
   apiUrl: string,
@@ -78,6 +80,45 @@ export async function updatePreferencesApi(
     const errorMessage = result.message || '사용자 MBTI 수정 실패';
     logger.error(
       `[UserAPI] updatePreferencesApi error (${errorStatus}):`,
+      errorMessage,
+    );
+    throw new ApiError(errorStatus, errorMessage);
+  }
+
+  return result;
+}
+
+/**
+ * Save user consent for photo data analysis (API-PREF-2)
+ *
+ * @param apiUrl Base backend URL
+ * @param token Optional JWT Access token
+ * @param payload Consent status and version payload
+ */
+export async function savePhotoConsentApi(
+  apiUrl: string,
+  token?: string,
+  payload?: SavePhotoConsentPayload,
+): Promise<SavePhotoConsentResponse> {
+  logger.info('[UserAPI] savePhotoConsentApi request:', payload);
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const client = createHttpClient(apiUrl);
+  const response = await client.post('api/users/me/consents/photo', {
+    headers,
+    json: payload,
+  });
+
+  const result = await response.json<SavePhotoConsentResponse>();
+
+  if (!response.ok || result.status !== 200) {
+    const errorStatus = result.status || response.status;
+    const errorMessage = result.message || '사진 데이터 분석 동의 저장 실패';
+    logger.error(
+      `[UserAPI] savePhotoConsentApi error (${errorStatus}):`,
       errorMessage,
     );
     throw new ApiError(errorStatus, errorMessage);

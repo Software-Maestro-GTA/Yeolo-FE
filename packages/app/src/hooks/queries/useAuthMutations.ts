@@ -1,6 +1,6 @@
 /**
  * @file useAuthMutations.ts
- * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-FB-12).
+ * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-USER-2).
  */
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,11 +10,14 @@ import {
   logoutApi,
   withdrawApi,
   updatePreferencesApi,
+  savePhotoConsentApi,
   type User,
   type LogoutResponse,
   type WithdrawResponse,
   type UpdatePreferencesPayload,
   type UpdatePreferencesResponse,
+  type SavePhotoConsentPayload,
+  type SavePhotoConsentResponse,
 } from '@yeolo/common';
 import { APP_CONFIG, UI_STRINGS } from '../../constants';
 
@@ -159,6 +162,28 @@ export function useUpdatePreferencesMutation({
     mutationFn: async (payload: UpdatePreferencesPayload) => {
       const token = await AsyncStorage.getItem('accessToken');
       return await updatePreferencesApi(apiUrl, token || undefined, payload);
+    },
+    ...options,
+  });
+}
+
+export interface UseSavePhotoConsentMutationOptions {
+  options?: UseMutationOptions<
+    SavePhotoConsentResponse,
+    Error,
+    SavePhotoConsentPayload
+  >;
+}
+
+export function useSavePhotoConsentMutation({
+  options,
+}: UseSavePhotoConsentMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+
+  return useMutation<SavePhotoConsentResponse, Error, SavePhotoConsentPayload>({
+    mutationFn: async (payload: SavePhotoConsentPayload) => {
+      const token = await AsyncStorage.getItem('accessToken');
+      return await savePhotoConsentApi(apiUrl, token || undefined, payload);
     },
     ...options,
   });

@@ -3,12 +3,13 @@
  * @description Photo consent screen with privacy safeguards and start analysis action.
  */
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { useSavePhotoConsentMutation } from '../hooks/queries/useAuthMutations';
 
 interface PhotoConsentScreenProps {
   onNext: () => void; // "동의하고 시작하기" 클릭 시 취향 분석 중 화면(TasteAnalysisScreen)으로 이동
@@ -19,13 +20,30 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
 }) => {
   useGA4ScreenTracking('PhotoConsentScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const saveConsentMutation = useSavePhotoConsentMutation();
 
   const handlePressConsent = () => {
     trackButtonClick(
       'btn_photo_consent_start',
       'Photo Analysis Consent & Start',
     );
-    onNext();
+    saveConsentMutation.mutate(
+      {
+        agreed: true,
+        consentVersion: 'v1.0',
+      },
+      {
+        onSuccess: () => {
+          onNext();
+        },
+        onError: () => {
+          Alert.alert(
+            '오류',
+            '사진 데이터 분석 동의 저장 중 오류가 발생했습니다.',
+          );
+        },
+      },
+    );
   };
 
   return (
@@ -96,6 +114,7 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
+              disabled={saveConsentMutation.isPending}
               onPress={handlePressConsent}
               testID='consent-start-button'>
               <Text style={styles.primaryButtonText}>
@@ -104,7 +123,7 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
               <Ionicons
                 name='shield-checkmark'
                 size={18}
-                color='#FFFFFF'
+                color={palette.white}
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
@@ -162,9 +181,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: palette.lightTeal, // #E0F7F1
+    backgroundColor: palette.lightTeal,
     borderWidth: 1.5,
-    borderColor: palette.accent, // #00C9A7
+    borderColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -173,9 +192,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   infoCard: {
-    backgroundColor: palette.white, // #FFFFFF
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: palette.gray200, // #E0E5EB
+    borderColor: palette.gray200,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -208,7 +227,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
@@ -223,7 +242,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: palette.white,
   },
   buttonIcon: {
     marginLeft: 8,

@@ -1,6 +1,6 @@
 /**
  * @file ProfileScreen.tsx
- * @description User profile screen component for managing account preferences, updating nickname, terms viewing, customer support, and executing auth mutations (logout API-FB-11, withdrawal API-FB-12).
+ * @description User profile screen component for managing account preferences, updating nickname, terms viewing, customer support, and executing auth mutations (logout API-FB-11, withdrawal API-USER-2).
  * @domain DOM-3
  */
 import React, { useState, useContext, useEffect, useRef } from 'react';
