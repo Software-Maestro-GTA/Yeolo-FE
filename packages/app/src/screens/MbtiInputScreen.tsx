@@ -17,6 +17,8 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { useUpdatePreferencesMutation } from '../hooks/queries/useAuthMutations';
+import { getAuthErrorMessage } from '../utils/errorUtils';
 
 interface MbtiInputScreenProps {
   onNext: () => void; // "다음으로" 클릭 시 코스 생성 화면으로 이동
@@ -34,6 +36,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
 }) => {
   useGA4ScreenTracking('MbtiInputScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const updatePreferencesMutation = useUpdatePreferencesMutation();
 
   // 초기 상태: 아무것도 선택되지 않은 unselected 상태 (null)
   const [ei, setEi] = useState<EI | null>(null);
@@ -45,7 +48,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
   const isComplete = Boolean(ei && sn && tf && jp);
   const selectedMbti = `${ei || '_'}${sn || '_'}${tf || '_'}${jp || '_'}`;
 
-  const handlePressNext = () => {
+  const handlePressNext = async () => {
     if (!isComplete) {
       if (Platform.OS === 'android') {
         ToastAndroid.show(
@@ -57,8 +60,22 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
       }
       return;
     }
-    trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
-    onNext();
+
+    try {
+      await updatePreferencesMutation.mutateAsync({ mbti: selectedMbti });
+      trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
+      onNext();
+    } catch (err: any) {
+      const errorMessage = getAuthErrorMessage(
+        err,
+        'MBTI 저장에 실패했습니다. 다시 시도해 주세요.',
+      );
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(errorMessage, ToastAndroid.SHORT);
+      } else {
+        Alert.alert('오류', errorMessage);
+      }
+    }
   };
 
   const handlePressAccurate = () => {
@@ -334,8 +351,12 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
           <View style={styles.bottomContainer} testID='bottom-container'>
             {/* Primary Button */}
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[
+                styles.primaryButton,
+                updatePreferencesMutation.isPending && styles.disabledButton,
+              ]}
               activeOpacity={0.8}
+              disabled={updatePreferencesMutation.isPending}
               onPress={handlePressNext}
               testID='next-button'>
               <Text style={styles.primaryButtonText}>
@@ -344,7 +365,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
               <Feather
                 name='chevron-right'
                 size={18}
-                color='#FFFFFF'
+                color={palette.white}
                 style={styles.arrowIcon}
               />
             </TouchableOpacity>
@@ -359,7 +380,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                 name='camera-outline'
                 size={18}
                 color={palette.accent}
-                style={{ marginRight: 6 }}
+                style={styles.cameraIconMargin}
               />
               <Text style={styles.secondaryButtonText}>
                 {UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON}
@@ -424,56 +445,59 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   activeCard: {
-    backgroundColor: palette.lightTeal, // #E0F7F1
+    backgroundColor: palette.lightTeal,
     borderWidth: 2,
-    borderColor: palette.accent, // #00C9A7
+    borderColor: palette.accent,
   },
   inactiveCard: {
-    backgroundColor: palette.white, // #FFFFFF
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: palette.gray200, // #E0E5EB
+    borderColor: palette.gray200,
   },
   letterText: {
     fontSize: 28,
     fontWeight: '800',
   },
   activeLetterText: {
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
   },
   inactiveLetterText: {
-    color: '#A0AEC0',
+    color: palette.gray400,
   },
   koreanText: {
     fontSize: 12,
     fontWeight: '600',
   },
   activeKoreanText: {
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   inactiveKoreanText: {
-    color: palette.subText, // #59616B
+    color: palette.subText,
   },
   bottomContainer: {
     gap: 16,
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: palette.white,
   },
   arrowIcon: {
     marginLeft: 6,
@@ -483,7 +507,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: palette.accent, // #00C9A7
+    borderColor: palette.accent,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -491,6 +515,9 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
+  },
+  cameraIconMargin: {
+    marginRight: 6,
   },
 });

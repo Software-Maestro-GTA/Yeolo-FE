@@ -9,9 +9,12 @@ import {
   loginWithAppleApi,
   logoutApi,
   withdrawApi,
+  updatePreferencesApi,
   type User,
   type LogoutResponse,
   type WithdrawResponse,
+  type UpdatePreferencesPayload,
+  type UpdatePreferencesResponse,
 } from '@yeolo/common';
 import { APP_CONFIG, UI_STRINGS } from '../../constants';
 
@@ -130,6 +133,32 @@ export function useWithdrawMutation({
           (typeof reason === 'string' && reason) ||
           UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
       });
+    },
+    ...options,
+  });
+}
+
+export interface UseUpdatePreferencesMutationOptions {
+  options?: UseMutationOptions<
+    UpdatePreferencesResponse,
+    Error,
+    UpdatePreferencesPayload
+  >;
+}
+
+export function useUpdatePreferencesMutation({
+  options,
+}: UseUpdatePreferencesMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+
+  return useMutation<
+    UpdatePreferencesResponse,
+    Error,
+    UpdatePreferencesPayload
+  >({
+    mutationFn: async (payload: UpdatePreferencesPayload) => {
+      const token = await AsyncStorage.getItem('accessToken');
+      return await updatePreferencesApi(apiUrl, token || undefined, payload);
     },
     ...options,
   });
