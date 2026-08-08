@@ -427,4 +427,27 @@ export const handlers = [
       { status: 200 },
     );
   }),
+
+  // Mock User Preferences PATCH API-PREF-1
+  http.patch('*/api/users/me/preferences', async ({ request }) => {
+    const body = (await request.json()) as { mbti?: string };
+    if (!body.mbti || body.mbti.length !== 4) {
+      return HttpResponse.json(
+        {
+          status: 400,
+          message: 'MBTI 입력값을 확인해주세요.',
+          data: null,
+        },
+        { status: 400 },
+      );
+    }
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '사용자 MBTI 수정 성공',
+        data: null,
+      },
+      { status: 200 },
+    );
+  }),
 ];
