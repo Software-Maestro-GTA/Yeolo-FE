@@ -139,6 +139,46 @@ export const handlers = [
     );
   }),
 
+  // Mock Refresh Token API-AUTH-3
+  http.post('*/api/auth/refresh', async ({ request }) => {
+    const authHeader = request.headers.get('Authorization');
+    let refreshToken: string | undefined;
+
+    try {
+      const body = (await request.json()) as { refreshToken?: string };
+      refreshToken = body.refreshToken;
+    } catch (_) {
+      // Body might be empty, check Authorization header
+    }
+
+    if (!refreshToken && authHeader && authHeader.startsWith('Bearer ')) {
+      refreshToken = authHeader.replace('Bearer ', '');
+    }
+
+    if (!refreshToken || refreshToken === 'mock-expired-refresh-token' || refreshToken === 'invalid-refresh-token') {
+      return HttpResponse.json(
+        {
+          status: 401,
+          message: 'Refresh Token이 유효하지 않거나 만료되었습니다.',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '토큰 재발급 성공',
+        data: {
+          accessToken: 'new-refreshed-access-token',
+          refreshToken: 'new-refreshed-refresh-token',
+        },
+      },
+      { status: 200 }
+    );
+  }),
+
   // Mock Taste Profile GET API-FB-8
   http.get('https://api.yeolo.com/api/me/taste-profile', () => {
 

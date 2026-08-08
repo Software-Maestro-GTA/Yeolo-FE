@@ -48,7 +48,21 @@ beforeAll(() => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/refresh')) {
+      return new Response(JSON.stringify({
+        status: 200,
+        message: '토큰 재발급 성공',
+        data: {
+          accessToken: 'new-refreshed-access-token',
+          refreshToken: 'new-refreshed-refresh-token',
+        },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/google')) {
+
       if (shouldFail) {
         return new Response(JSON.stringify({
           status: 400,
@@ -177,7 +191,9 @@ describe('AuthContext', () => {
 
   it('401 Unauthorized 이벤트(notifyUnauthorized) 발생 시 토큰을 비우고 비인증 상태로 초기화되어야 한다', async () => {
     await AsyncStorage.setItem('accessToken', 'mock-expired-token');
+    await AsyncStorage.setItem('refreshToken', 'mock-refresh-token');
     await AsyncStorage.setItem('user', JSON.stringify({ userId: 'u1', email: 'test@example.com' }));
+
 
     const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
 
