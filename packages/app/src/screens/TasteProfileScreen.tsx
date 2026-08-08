@@ -1,6 +1,6 @@
 /**
  * @file TasteProfileScreen.tsx
- * @description Taste profile result screen component.
+ * @description Taste profile result screen component matching Figma UI and DOM-2 specifications.
  */
 import React from 'react';
 import {
@@ -11,9 +11,19 @@ import {
   ScrollView,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { palette } from '../theme/colors';
+import {
+  TRAVEL_PACE_DENSITY_MAP,
+  ACTIVITY_PREFERENCE_MAP,
+  SEASONAL_ENVIRONMENT_MAP,
+  TRAVEL_PURPOSE_MAP,
+  FOOD_PREFERENCE_MAP,
+  PREFERRED_LOCATION_TYPE_MAP,
+  getTopScoredItems,
+} from '@yeolo/common';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { useTasteProfileQuery } from '../hooks/queries/useTasteProfileQuery';
 
 export interface TasteProfileScreenProps {
   tasteProfileId?: string;
@@ -23,10 +33,48 @@ export interface TasteProfileScreenProps {
 }
 
 export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
+  tasteProfileId,
   onGenerateCourse,
 }) => {
   useGA4ScreenTracking('TasteProfileScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+
+  // Query taste profile via React Query hook
+  const { data: fetchedProfile } = useTasteProfileQuery({
+    tasteProfileId,
+  });
+
+  const activeProfile = fetchedProfile;
+
+  // 1. PACING (travelPaceDensity)
+  const pacingKey = activeProfile?.travelPaceDensity;
+  const pacingLabel = pacingKey
+    ? TRAVEL_PACE_DENSITY_MAP[pacingKey]?.label || pacingKey
+    : '';
+
+  // 2. ACTIVITY (highest score in activityPreference)
+  const topActivityItem = getTopScoredItems(
+    activeProfile?.activityPreference,
+    1,
+  )[0];
+  const activityLabel = topActivityItem
+    ? ACTIVITY_PREFERENCE_MAP[topActivityItem.key]?.label || topActivityItem.key
+    : '';
+
+  // 3. SEASON (first index in seasonalEnvironmentPreference)
+  const firstSeasonKey = activeProfile?.seasonalEnvironmentPreference?.[0];
+  const seasonLabel = firstSeasonKey
+    ? SEASONAL_ENVIRONMENT_MAP[firstSeasonKey]?.label || firstSeasonKey
+    : '';
+
+  // 4. RANKED PURPOSES (top 3 in travelPurpose)
+  const topPurposes = getTopScoredItems(activeProfile?.travelPurpose, 3);
+
+  // 5. FAVORITE FOODS (top 3 in foodPreference)
+  const topFoods = getTopScoredItems(activeProfile?.foodPreference, 3);
+
+  // 6. BEST SPACES (top 3 in preferredLocationType with icons)
+  const topSpaces = getTopScoredItems(activeProfile?.preferredLocationType, 3);
 
   const handlePressGenerateCourse = () => {
     trackButtonClick(
@@ -34,6 +82,11 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
       'Generate Course from Taste Profile',
     );
     onGenerateCourse?.();
+  };
+
+  const getDotRating = (score: number = 3) => {
+    const filled = Math.min(Math.max(Math.round(score), 1), 5);
+    return '●'.repeat(filled) + '○'.repeat(5 - filled);
   };
 
   return (
@@ -49,35 +102,31 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         </View>
 
         <View style={styles.mainBody} testID='main-content'>
+          {/* 6 Key Trait Summary Chips */}
           <View style={styles.summaryChipsFrame} testID='summary-chips-row'>
             <View style={styles.chipColumn}>
               <Text style={styles.chipCategory}>
                 {UI_STRINGS.TASTE_PROFILE.PACING_LABEL}
               </Text>
-              <Text style={styles.chipValueText}>
-                {UI_STRINGS.TASTE_PROFILE.PACING_DEFAULT}
-              </Text>
+              <Text style={styles.chipValueText}>{pacingLabel}</Text>
             </View>
 
             <View style={styles.chipColumn}>
               <Text style={styles.chipCategory}>
                 {UI_STRINGS.TASTE_PROFILE.ACTIVITY_LABEL}
               </Text>
-              <Text style={styles.chipValueText}>
-                {UI_STRINGS.TASTE_PROFILE.ACTIVITY_DEFAULT}
-              </Text>
+              <Text style={styles.chipValueText}>{activityLabel}</Text>
             </View>
 
             <View style={styles.chipColumn}>
               <Text style={styles.chipCategory}>
                 {UI_STRINGS.TASTE_PROFILE.SEASON_LABEL}
               </Text>
-              <Text style={styles.chipValueText}>
-                {UI_STRINGS.TASTE_PROFILE.SEASON_DEFAULT}
-              </Text>
+              <Text style={styles.chipValueText}>{seasonLabel}</Text>
             </View>
           </View>
 
+          {/* RANKED PURPOSES Section */}
           <View
             style={styles.rankedPurposesSection}
             testID='ranked-purposes-section'>
@@ -86,126 +135,123 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
             </Text>
 
             <View style={styles.rankedPurposesList}>
-              <View style={styles.rankedItemRow} testID='purpose-1'>
-                <Text style={styles.rankNumberText}>01</Text>
-                <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_1_TITLE}
-                  </Text>
-                  <Text style={styles.rankedItemDesc}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_1_DESC}
-                  </Text>
-                </View>
-                <Text style={styles.dotRatingText}>●●●●●</Text>
-              </View>
+              {topPurposes.length > 0 ? (
+                topPurposes.map((item, idx) => {
+                  const meta = TRAVEL_PURPOSE_MAP[item.key];
+                  const title = meta?.label || item.key;
+                  const desc = meta?.description || '';
 
-              <View style={styles.rankedItemRow} testID='purpose-2'>
-                <Text style={styles.rankNumberText}>02</Text>
-                <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_2_TITLE}
-                  </Text>
-                  <Text style={styles.rankedItemDesc}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_2_DESC}
-                  </Text>
-                </View>
-                <Text style={styles.dotRatingText}>●●●●○</Text>
-              </View>
-
-              <View style={styles.rankedItemRow} testID='purpose-3'>
-                <Text style={styles.rankNumberText}>03</Text>
-                <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_3_TITLE}
-                  </Text>
-                  <Text style={styles.rankedItemDesc}>
-                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_3_DESC}
-                  </Text>
-                </View>
-                <Text style={styles.dotRatingText}>●●●●○</Text>
-              </View>
+                  return (
+                    <View
+                      key={item.key}
+                      style={styles.rankedItemRow}
+                      testID={`purpose-${idx + 1}`}>
+                      <Text style={styles.rankNumberText}>{`0${idx + 1}`}</Text>
+                      <View style={styles.rankedTextFrame}>
+                        <Text style={styles.rankedItemTitle}>{title}</Text>
+                        {desc ? (
+                          <Text style={styles.rankedItemDesc}>{desc}</Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.dotRatingText}>
+                        {getDotRating(item.score)}
+                      </Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyText}>
+                  {UI_STRINGS.TASTE_PROFILE.EMPTY_PURPOSES}
+                </Text>
+              )}
             </View>
           </View>
 
+          {/* FAVORITE FOODS Section */}
           <View style={styles.foodRankingCard} testID='favorite-foods-section'>
             <Text style={styles.sectionHeading}>
               {UI_STRINGS.TASTE_PROFILE.FOODS_TITLE}
             </Text>
 
             <View style={styles.foodRankingList}>
-              <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.FOOD_1}
-                </Text>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '100%' }]} />
-                </View>
-              </View>
+              {topFoods.length > 0 ? (
+                topFoods.map((item) => {
+                  const meta = FOOD_PREFERENCE_MAP[item.key];
+                  const label = meta?.label || item.key;
+                  const fillPercent = Math.min(
+                    Math.max((item.score / 5) * 100, 20),
+                    100,
+                  );
 
-              <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.FOOD_2}
+                  return (
+                    <View key={item.key} style={styles.foodItemRow}>
+                      <Text style={styles.foodItemLabel}>{label}</Text>
+                      <View style={styles.barTrack}>
+                        <View
+                          style={[styles.barFill, { width: `${fillPercent}%` }]}
+                        />
+                      </View>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyText}>
+                  {UI_STRINGS.TASTE_PROFILE.EMPTY_FOODS}
                 </Text>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '100%' }]} />
-                </View>
-              </View>
-
-              <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.FOOD_3}
-                </Text>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: '80%' }]} />
-                </View>
-              </View>
+              )}
             </View>
           </View>
 
+          {/* BEST SPACES Section */}
           <View style={styles.bestSpacesSection} testID='best-spaces-section'>
             <Text style={styles.sectionHeading}>
               {UI_STRINGS.TASTE_PROFILE.SPACES_TITLE}
             </Text>
 
             <View style={styles.bestSpacesGrid}>
-              <View style={styles.spaceCardItem} testID='space-card-1'>
-                <View
-                  style={[
-                    styles.spaceIconBox,
-                    { backgroundColor: 'rgba(245, 158, 11, 0.1)' },
-                  ]}>
-                  <Feather name='sun' size={20} color='#F59E0B' />
-                </View>
-                <Text style={styles.spaceCardLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.SPACE_1}
-                </Text>
-              </View>
+              {topSpaces.length > 0 ? (
+                topSpaces.map((item, idx) => {
+                  const meta = PREFERRED_LOCATION_TYPE_MAP[item.key];
+                  const label = meta?.label || item.key;
+                  const iconName = (meta?.icon || 'sun') as any;
 
-              <View style={styles.spaceCardItem} testID='space-card-2'>
-                <View
-                  style={[
-                    styles.spaceIconBox,
-                    { backgroundColor: 'rgba(0, 201, 167, 0.1)' },
-                  ]}>
-                  <Feather name='eye' size={20} color={palette.accent} />
-                </View>
-                <Text style={styles.spaceCardLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.SPACE_2}
-                </Text>
-              </View>
+                  const bgColors = [
+                    hexToRgba(palette.warning, 0.1),
+                    hexToRgba(palette.accent, 0.1),
+                    hexToRgba(palette.primary, 0.1),
+                  ];
+                  const iconColors = [
+                    palette.warning,
+                    palette.accent,
+                    palette.primary,
+                  ];
 
-              <View style={styles.spaceCardItem} testID='space-card-3'>
-                <View
-                  style={[
-                    styles.spaceIconBox,
-                    { backgroundColor: 'rgba(45, 125, 210, 0.1)' },
-                  ]}>
-                  <Feather name='map-pin' size={20} color={palette.primary} />
-                </View>
-                <Text style={styles.spaceCardLabel}>
-                  {UI_STRINGS.TASTE_PROFILE.SPACE_3}
+                  return (
+                    <View
+                      key={item.key}
+                      style={styles.spaceCardItem}
+                      testID={`space-card-${idx + 1}`}>
+                      <View
+                        style={[
+                          styles.spaceIconBox,
+                          { backgroundColor: bgColors[idx % 3] },
+                        ]}
+                        testID='space-icon-box'>
+                        <Feather
+                          name={iconName}
+                          size={20}
+                          color={iconColors[idx % 3]}
+                        />
+                      </View>
+                      <Text style={styles.spaceCardLabel}>{label}</Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyText}>
+                  {UI_STRINGS.TASTE_PROFILE.EMPTY_SPACES}
                 </Text>
-              </View>
+              )}
             </View>
           </View>
 
@@ -218,10 +264,12 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
               <Ionicons
                 name='sparkles'
                 size={18}
-                color='#FFFFFF'
+                color={palette.white}
                 style={styles.ctaIconLeft}
               />
-              <Text style={styles.ctaButtonText}>여행 코스 생성하기</Text>
+              <Text style={styles.ctaButtonText}>
+                {UI_STRINGS.TASTE_PROFILE.GENERATE_COURSE_BUTTON}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -401,7 +449,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2D7DD2',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -410,9 +458,15 @@ const styles = StyleSheet.create({
   ctaButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: palette.white,
   },
   ctaIconLeft: {
     marginRight: 8,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: palette.subText,
+    paddingVertical: 12,
+    textAlign: 'center',
   },
 });

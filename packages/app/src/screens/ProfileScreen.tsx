@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { logger } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { palette } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
@@ -96,7 +97,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           try {
             await logoutMutation.mutateAsync();
           } catch (err) {
-            console.error('Logout mutation failed:', err);
+            logger.error('Logout mutation failed:', err);
           } finally {
             if (auth?.logout) {
               await auth.logout();
@@ -113,7 +114,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     try {
       await withdrawMutation.mutateAsync('사용자 요청 회원 탈퇴');
     } catch (err) {
-      console.error('Withdraw mutation failed:', err);
+      logger.error('Withdraw mutation failed:', err);
     } finally {
       if (auth?.logout) {
         await auth.logout();
@@ -143,7 +144,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       try {
         await Linking.openURL(APP_CONFIG.PRIVACY_POLICY_URL);
       } catch (err) {
-        console.error('Failed to open privacy policy notion url:', err);
+        logger.error('Failed to open privacy policy notion url:', err);
         setTermsModalType('privacy');
         setShowTermsModal(true);
       }
@@ -158,7 +159,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       try {
         await openCustomerSupportMail();
       } catch (err) {
-        console.warn(
+        logger.warn(
           'MailComposer/mailto failed, checking fallback canOpenURL:',
           err,
         );
@@ -174,7 +175,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             );
           }
         } catch (linkErr) {
-          console.error('Direct mailto opening failed:', linkErr);
+          logger.error('Direct mailto opening failed:', linkErr);
           Alert.alert(
             '고객 지원 문의',
             `메일 앱을 열 수 없습니다.\n아래 이메일로 직접 문의해주세요.\n\n문의처: ${supportEmail}`,

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { CourseCreateRequest } from '@yeolo/common';
+import { logger } from '@yeolo/common';
 import { InlineCalendarView } from '../components/common';
 import {
   useCourseCreateForm,
@@ -76,7 +77,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
       useCourseStore.getState().createCourse(apiUrl, data, token);
     } catch (err) {
-      console.error('Failed to trigger createCourse store action:', err);
+      logger.error('Failed to trigger createCourse store action:', err);
     }
     onSubmit?.(data);
   });

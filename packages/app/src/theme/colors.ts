@@ -25,7 +25,13 @@ export const palette = {
   gray400: '#94A3B8',
   gray500: '#64748B',
   gray600: '#59616B',
+  warning: '#F59E0B',
+  red50: '#FEF2F2',
+  red100: '#FEE2E2',
+  red200: '#FCA5A5',
   red500: '#EF4444',
+  red700: '#B91C1C',
+  red800: '#991B1B',
 } as const;
 
 /**
