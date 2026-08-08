@@ -207,11 +207,12 @@ export function createHttpClient(
                 );
 
                 // Retry original request with new access token
-                request.headers.set(
-                  'Authorization',
-                  `Bearer ${newTokens.accessToken}`,
-                );
-                return ky(request);
+                const newHeaders = new Headers(request.headers);
+                newHeaders.set('Authorization', `Bearer ${newTokens.accessToken}`);
+                return ky(request.url, {
+                  method: request.method,
+                  headers: newHeaders,
+                });
               } else {
                 logger.warn(
                   '[HttpClient] No Refresh Token available for silent refresh.',
