@@ -48,7 +48,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
   const isComplete = Boolean(ei && sn && tf && jp);
   const selectedMbti = `${ei || '_'}${sn || '_'}${tf || '_'}${jp || '_'}`;
 
-  const handlePressNext = async () => {
+  const handlePressNext = () => {
     if (!isComplete) {
       if (Platform.OS === 'android') {
         ToastAndroid.show(
@@ -61,21 +61,26 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
       return;
     }
 
-    try {
-      await updatePreferencesMutation.mutateAsync({ mbti: selectedMbti });
-      trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
-      onNext();
-    } catch (err: any) {
-      const errorMessage = getAuthErrorMessage(
-        err,
-        'MBTI 저장에 실패했습니다. 다시 시도해 주세요.',
-      );
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(errorMessage, ToastAndroid.SHORT);
-      } else {
-        Alert.alert('오류', errorMessage);
-      }
-    }
+    updatePreferencesMutation.mutate(
+      { mbti: selectedMbti },
+      {
+        onSuccess: () => {
+          trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
+          onNext();
+        },
+        onError: (err: any) => {
+          const errorMessage = getAuthErrorMessage(
+            err,
+            'MBTI 저장에 실패했습니다. 다시 시도해 주세요.',
+          );
+          if (Platform.OS === 'android') {
+            ToastAndroid.show(errorMessage, ToastAndroid.SHORT);
+          } else {
+            Alert.alert('오류', errorMessage);
+          }
+        },
+      },
+    );
   };
 
   const handlePressAccurate = () => {
