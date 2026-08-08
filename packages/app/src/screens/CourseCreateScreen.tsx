@@ -22,9 +22,9 @@ import {
 } from '../hooks';
 import type { NavTab } from '../components/navigation';
 import { palette } from '../theme/colors';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCourseStore, DEFAULT_API_URL } from '@yeolo/common';
+import { useCourseStore } from '@yeolo/common';
 
 export interface CourseCreateScreenProps {
   onSubmit?: (data: CourseCreateRequest) => void;
@@ -74,7 +74,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     });
     try {
       const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
       useCourseStore.getState().createCourse(apiUrl, data, token);
     } catch (err) {
       logger.error('Failed to trigger createCourse store action:', err);

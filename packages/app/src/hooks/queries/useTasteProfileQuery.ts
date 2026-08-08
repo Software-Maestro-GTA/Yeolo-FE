@@ -6,7 +6,6 @@ import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   fetchTasteProfileApi,
-  DEFAULT_API_URL,
   type TasteProfile,
   ApiError,
 } from '@yeolo/common';
@@ -29,7 +28,7 @@ export function useTasteProfileQuery({
   tasteProfileId,
   options,
 }: UseTasteProfileQueryOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useQuery<TasteProfile, ApiError>({
     queryKey: getTasteProfileQueryKey(tasteProfileId),

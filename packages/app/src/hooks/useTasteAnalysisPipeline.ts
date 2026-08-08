@@ -4,8 +4,9 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTasteStore, DEFAULT_API_URL } from '@yeolo/common';
+import { useTasteStore } from '@yeolo/common';
 import { fetchPhotosWithExifData } from '../services/photoService';
+import { APP_CONFIG } from '../constants';
 
 export type StepStatus = 'IDLE' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -90,7 +91,7 @@ export function useTasteAnalysisPipeline(): UseTasteAnalysisPipelineResult {
 
       // 2. JWT 토큰 및 API URL 준비
       const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
       // 3. 백엔드 SSE 취향 분석 실행
       const profileId = await useTasteStore

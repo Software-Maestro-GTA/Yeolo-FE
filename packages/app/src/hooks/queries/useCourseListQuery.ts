@@ -6,7 +6,6 @@ import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getCourseListApi,
-  DEFAULT_API_URL,
   type CourseSummary,
   ApiError,
 } from '@yeolo/common';
@@ -24,7 +23,7 @@ export interface UseCourseListQueryOptions {
 export function useCourseListQuery({
   options,
 }: UseCourseListQueryOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useQuery<CourseSummary[], Error>({
     queryKey: COURSE_LIST_QUERY_KEY,
