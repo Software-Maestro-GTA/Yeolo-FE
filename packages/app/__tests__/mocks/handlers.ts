@@ -195,8 +195,8 @@ export const handlers = [
     );
   }),
 
-  // Mock Taste Profile GET API-FB-8
-  http.get('https://api.yeolo.com/api/me/taste-profile', () => {
+  // Mock Taste Profile GET API-PREF-4
+  http.get('*/api/users/me/taste-profile', () => {
     return HttpResponse.json(
       {
         status: 200,
@@ -264,6 +264,88 @@ export const handlers = [
       },
       { status: 200 },
     );
+  }),
+  http.get('*/api/me/taste-profile', () => {
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '성향 프로필 조회 성공',
+        data: {
+          tasteProfile: {
+            tasteProfileId: '550e8400-e29b-41d4-a716-446655440001',
+            userId: '550e8400-e29b-41d4-a716-446655440000',
+            sourceType: 'mixed',
+            updatedAt: '2026-07-13',
+            travelPurpose: {
+              relaxation: 4,
+              sightseeing: 3,
+              culturalExperience: 3,
+              gourmet: 5,
+              natureExploration: 4,
+              activity: 2,
+              shopping: 2,
+              festivalEvent: 1,
+              wellness: 3,
+              selfDevelopment: 1,
+            },
+            travelPaceDensity: 'balanced',
+            preferredLocationType: {
+              bigCity: 3,
+              smallTownAlley: 4,
+              natureHinterland: 4,
+              beachResort: 5,
+              mountainPlateau: 2,
+              historicalCity: 3,
+              themeParkResort: 1,
+              famousSpotPreferred: 3,
+              hiddenSpotPreferred: 5,
+            },
+            activityPreference: {
+              viewing: 3,
+              experience: 4,
+              adventure: 2,
+              photographyVideo: 5,
+              gourmetExploration: 5,
+              nightlife: 2,
+              shopping: 2,
+              relaxation: 4,
+              localInteraction: 3,
+            },
+            spendingTendency: 'cost_effective',
+            companionType: 'friends',
+            foodPreference: {
+              localFoodActive: 5,
+              famousRestaurantCentered: 4,
+              streetFood: 4,
+              cafeDessert: 5,
+              fineDining: 2,
+              familiarFoodPreferred: 2,
+              dietaryRestriction: 1,
+              sightseeingOverFood: 2,
+            },
+            seasonalEnvironmentPreference: [
+              'warm_region',
+              'spring_flower_autumn_foliage',
+              'off_season',
+            ],
+          },
+        },
+      },
+      { status: 200 },
+    );
+  }),
+  // Mock Taste Analysis SSE API-PREF-3
+  http.post('*/api/users/me/taste-profile/analysis', () => {
+    const ssePayload = [
+      `event: progress\ndata: ${JSON.stringify({ step: 'PREPROCESSING_IMAGE_METADATA', message: '이미지 위치·시간 정보를 전처리 중입니다.' })}\n\n`,
+      `event: progress\ndata: ${JSON.stringify({ step: 'ANALYZING_PREFERENCE', message: '여행 취향을 분석 중입니다.' })}\n\n`,
+      `event: complete\ndata: ${JSON.stringify({ status: 200, message: '행동 데이터 기반 취향 분석 생성 성공', data: { tasteProfileId: '550e8400-e29b-41d4-a716-446655440001' } })}\n\n`,
+    ].join('');
+    return new Response(ssePayload, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+      },
+    });
   }),
 
   // Mock SSE Course Generation API-FB-4
