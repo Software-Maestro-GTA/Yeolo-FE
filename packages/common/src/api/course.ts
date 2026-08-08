@@ -34,12 +34,15 @@ export async function createCourseStreamApi(
   apiUrl: string,
   accessToken: string,
   payload: CourseCreateRequest,
-  callbacks?: CourseStreamCallbacks
+  callbacks?: CourseStreamCallbacks,
 ): Promise<string> {
   let courseId: string | undefined;
 
   try {
-    logger.info('[CourseAPI] createCourseStreamApi request:', payload.destinationCity);
+    logger.info(
+      '[CourseAPI] createCourseStreamApi request:',
+      payload.destinationCity,
+    );
     const client = createHttpClient(apiUrl);
     const response = await client.post('api/courses', {
       json: payload,
@@ -70,7 +73,7 @@ export async function createCourseStreamApi(
       } else {
         throw new ApiError(
           response.status || 400,
-          json?.message || '여행 코스 생성에 실패했습니다.'
+          json?.message || '여행 코스 생성에 실패했습니다.',
         );
       }
     }
@@ -88,7 +91,10 @@ export async function createCourseStreamApi(
           courseId = parsed.data?.courseId;
         }
       } catch (jsonError) {
-        logger.error('[CourseAPI] Error parsing SSE event in course generation:', jsonError);
+        logger.error(
+          '[CourseAPI] Error parsing SSE event in course generation:',
+          jsonError,
+        );
       }
     }
   } catch (error: any) {
@@ -113,7 +119,10 @@ export async function createCourseStreamApi(
 
   if (!courseId) {
     logger.error('[CourseAPI] Course generation finished without courseId');
-    throw new ApiError(400, '여행 코스 생성 중 Course ID를 수신하지 못했습니다.');
+    throw new ApiError(
+      400,
+      '여행 코스 생성 중 Course ID를 수신하지 못했습니다.',
+    );
   }
 
   return courseId;
@@ -130,7 +139,7 @@ export async function createCourseStreamApi(
 export async function getCourseDetailApi(
   apiUrl: string,
   accessToken: string,
-  courseId: string
+  courseId: string,
 ): Promise<CourseDetail> {
   try {
     logger.info('[CourseAPI] getCourseDetailApi request, courseId:', courseId);
@@ -144,8 +153,15 @@ export async function getCourseDetailApi(
       headers,
     });
 
-    const json = (await response.json().catch(() => null)) as CourseDetailApiResponse | null;
-    logger.info('[CourseAPI] getCourseDetailApi response status:', response.status, 'body:', json);
+    const json = (await response
+      .json()
+      .catch(() => null)) as CourseDetailApiResponse | null;
+    logger.info(
+      '[CourseAPI] getCourseDetailApi response status:',
+      response.status,
+      'body:',
+      json,
+    );
 
     if (response.ok && json && json.data && json.data.course) {
       return json.data.course;
@@ -155,7 +171,10 @@ export async function getCourseDetailApi(
     const errorMessage = json?.message || '여행 코스 정보를 찾을 수 없습니다.';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
-    logger.error(`[CourseAPI] getCourseDetailApi error (courseId: ${courseId}):`, error);
+    logger.error(
+      `[CourseAPI] getCourseDetailApi error (courseId: ${courseId}):`,
+      error,
+    );
     if (error instanceof ApiError) {
       throw error;
     }
@@ -183,7 +202,7 @@ export async function getCourseDetailApi(
  */
 export async function getCourseListApi(
   apiUrl: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<CourseSummary[]> {
   try {
     logger.info('[CourseAPI] getCourseListApi request');
@@ -197,8 +216,15 @@ export async function getCourseListApi(
       headers,
     });
 
-    const json = (await response.json().catch(() => null)) as CourseListApiResponse | null;
-    logger.info('[CourseAPI] getCourseListApi response status:', response.status, 'body:', json);
+    const json = (await response
+      .json()
+      .catch(() => null)) as CourseListApiResponse | null;
+    logger.info(
+      '[CourseAPI] getCourseListApi response status:',
+      response.status,
+      'body:',
+      json,
+    );
 
     if (response.ok && (json?.status === 200 || response.status === 200)) {
       if (Array.isArray(json?.data?.courses)) {

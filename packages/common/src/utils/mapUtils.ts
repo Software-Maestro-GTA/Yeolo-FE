@@ -20,7 +20,9 @@ export interface MapRegion {
 /**
  * 인접한 장소 간의 노드 포개짐을 원천 방지하는 겹침 방지 알고리즘 (실제 좌표 오차 최소화)
  */
-export function getAdjustedCoordinates(stops: MapCoordinate[]): MapCoordinate[] {
+export function getAdjustedCoordinates(
+  stops: MapCoordinate[],
+): MapCoordinate[] {
   const result: MapCoordinate[] = [];
   const THRESHOLD = 0.0003; // 약 30m 이내 극인접 감지 기준
 
@@ -63,7 +65,9 @@ export function getAdjustedCoordinates(stops: MapCoordinate[]): MapCoordinate[] 
 /**
  * 주어진 마커 좌표들의 바운딩 박스(Bounding Box) 및 중앙 카메라 뷰포트 계산 유틸
  */
-export function calculateRegion(stopCoordinates: MapCoordinate[]): MapRegion | undefined {
+export function calculateRegion(
+  stopCoordinates: MapCoordinate[],
+): MapRegion | undefined {
   if (!stopCoordinates || stopCoordinates.length === 0) {
     return undefined;
   }

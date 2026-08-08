@@ -25,7 +25,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   style,
   contentStyle,
 }) => {
-  const edges: Edge[] = noTopEdges ? ['left', 'right'] : ['top', 'left', 'right'];
+  const edges: Edge[] = noTopEdges
+    ? ['left', 'right']
+    : ['top', 'left', 'right'];
 
   return (
     <SafeAreaView style={[styles.mainLayout, style]} edges={edges}>

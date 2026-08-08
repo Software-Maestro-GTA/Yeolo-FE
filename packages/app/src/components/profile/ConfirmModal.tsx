@@ -3,7 +3,14 @@
  * @description Re-confirmation modal component for user logout and account withdrawal actions.
  */
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 
 import { theme } from '../../theme';
 import { UI_STRINGS } from '../../constants';
@@ -24,14 +31,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
 }) => {
   const isLogout = type === 'logout';
-  const title = isLogout ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM : UI_STRINGS.PROFILE.WITHDRAW_NOTICE;
+  const title = isLogout
+    ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM
+    : UI_STRINGS.PROFILE.WITHDRAW_NOTICE;
   const description = isLogout
     ? UI_STRINGS.PROFILE.LOGOUT_DESC
     : UI_STRINGS.PROFILE.WITHDRAW_CONFIRM;
-  const confirmText = isLogout ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM_BTN : UI_STRINGS.PROFILE.WITHDRAW_CONFIRM_BTN;
+  const confirmText = isLogout
+    ? UI_STRINGS.PROFILE.LOGOUT_CONFIRM_BTN
+    : UI_STRINGS.PROFILE.WITHDRAW_CONFIRM_BTN;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onCancel}>
+    <Modal
+      visible={visible}
+      animationType='fade'
+      transparent={true}
+      onRequestClose={onCancel}>
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
           <Text style={styles.title}>{title}</Text>
@@ -42,19 +57,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               style={styles.cancelButton}
               onPress={onCancel}
               disabled={isLoading}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cancelButtonText}>{UI_STRINGS.COMMON.CANCEL}</Text>
+              activeOpacity={0.7}>
+              <Text style={styles.cancelButtonText}>
+                {UI_STRINGS.COMMON.CANCEL}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.confirmButton, !isLogout && styles.dangerButton]}
               onPress={onConfirm}
               disabled={isLoading}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               {isLoading ? (
-                <ActivityIndicator size="small" color={theme.colors.text.inverse} />
+                <ActivityIndicator
+                  size='small'
+                  color={theme.colors.text.inverse}
+                />
               ) : (
                 <Text style={styles.confirmButtonText}>{confirmText}</Text>
               )}

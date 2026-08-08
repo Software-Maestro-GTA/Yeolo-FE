@@ -20,7 +20,7 @@ import { logger } from '../utils/logger';
  */
 export async function loginWithGoogleApi(
   apiUrl: string,
-  payload: GoogleLoginPayload
+  payload: GoogleLoginPayload,
 ): Promise<GoogleLoginResponse> {
   logger.info('[AuthAPI] loginWithGoogleApi request:', payload);
   const client = createHttpClient(apiUrl);
@@ -33,7 +33,10 @@ export async function loginWithGoogleApi(
   if (!response.ok || result.status !== 200) {
     const errorStatus = result.status || response.status;
     const errorMessage = result.message || '인가 코드가 유효하지 않습니다.';
-    logger.error(`[AuthAPI] loginWithGoogleApi error (${errorStatus}):`, errorMessage);
+    logger.error(
+      `[AuthAPI] loginWithGoogleApi error (${errorStatus}):`,
+      errorMessage,
+    );
     throw new ApiError(errorStatus, errorMessage);
   }
 
@@ -45,7 +48,7 @@ export async function loginWithGoogleApi(
  */
 export async function loginWithAppleApi(
   apiUrl: string,
-  payload: AppleLoginPayload
+  payload: AppleLoginPayload,
 ): Promise<AppleLoginResponse> {
   logger.info('[AuthAPI] loginWithAppleApi request:', payload);
   const client = createHttpClient(apiUrl);
@@ -57,8 +60,12 @@ export async function loginWithAppleApi(
 
   if (!response.ok || result.status !== 200) {
     const errorStatus = result.status || response.status;
-    const errorMessage = result.message || '유효하지 않은 Apple OAuth 인가 코드입니다.';
-    logger.error(`[AuthAPI] loginWithAppleApi error (${errorStatus}):`, errorMessage);
+    const errorMessage =
+      result.message || '유효하지 않은 Apple OAuth 인가 코드입니다.';
+    logger.error(
+      `[AuthAPI] loginWithAppleApi error (${errorStatus}):`,
+      errorMessage,
+    );
     throw new ApiError(errorStatus, errorMessage);
   }
 
@@ -71,7 +78,7 @@ export async function loginWithAppleApi(
 export async function logoutApi(
   apiUrl: string,
   token?: string,
-  payload?: LogoutRequest
+  payload?: LogoutRequest,
 ): Promise<LogoutResponse> {
   logger.info('[AuthAPI] logoutApi request:', payload);
   const headers: Record<string, string> = {};

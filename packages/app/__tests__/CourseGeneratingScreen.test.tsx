@@ -25,9 +25,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
     const mockOnComplete = jest.fn();
 
     const { getByText, getByTestId } = await render(
-      <CourseGeneratingScreen
-        onComplete={mockOnComplete}
-      />
+      <CourseGeneratingScreen onComplete={mockOnComplete} />,
     );
 
     expect(getByText('당신만을 위한 여행 코스 생성 중')).toBeTruthy();
@@ -40,38 +38,44 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
   it('SSE progress 이벤트 메시지를 실시간으로 렌더링해야 한다', async () => {
     const mockOnComplete = jest.fn();
 
-    useCourseStore.setState({ progressMessage: '사용자 취향 프로필을 불러오는 중입니다.' });
+    useCourseStore.setState({
+      progressMessage: '사용자 취향 프로필을 불러오는 중입니다.',
+    });
 
     const { getByTestId } = await render(
-      <CourseGeneratingScreen
-        onComplete={mockOnComplete}
-      />
+      <CourseGeneratingScreen onComplete={mockOnComplete} />,
     );
 
-    expect(getByTestId('progress-text').props.children).toBe('사용자 취향 프로필을 불러오는 중입니다.');
+    expect(getByTestId('progress-text').props.children).toBe(
+      '사용자 취향 프로필을 불러오는 중입니다.',
+    );
 
     await act(async () => {
-      useCourseStore.setState({ progressMessage: '개인 맞춤형 여행 코스를 생성 중입니다.' });
+      useCourseStore.setState({
+        progressMessage: '개인 맞춤형 여행 코스를 생성 중입니다.',
+      });
     });
 
     await waitFor(() => {
-      expect(getByTestId('progress-text').props.children).toBe('개인 맞춤형 여행 코스를 생성 중입니다.');
+      expect(getByTestId('progress-text').props.children).toBe(
+        '개인 맞춤형 여행 코스를 생성 중입니다.',
+      );
     });
   });
 
   it('complete 이벤트 완료 시 전달된 courseId로 onComplete 네비게이션이 실행되어야 한다', async () => {
     const mockOnComplete = jest.fn();
 
-    useCourseStore.setState({ createdCourseId: '550e8400-e29b-41d4-a716-446655440030' });
+    useCourseStore.setState({
+      createdCourseId: '550e8400-e29b-41d4-a716-446655440030',
+    });
 
-    await render(
-      <CourseGeneratingScreen
-        onComplete={mockOnComplete}
-      />
-    );
+    await render(<CourseGeneratingScreen onComplete={mockOnComplete} />);
 
     await waitFor(() => {
-      expect(mockOnComplete).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440030');
+      expect(mockOnComplete).toHaveBeenCalledWith(
+        '550e8400-e29b-41d4-a716-446655440030',
+      );
     });
   });
 
@@ -81,9 +85,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
     useCourseStore.setState({ error: '여행 조건 입력값이 올바르지 않습니다.' });
 
     const { getByTestId, getByText } = await render(
-      <CourseGeneratingScreen
-        onRetry={mockOnRetry}
-      />
+      <CourseGeneratingScreen onRetry={mockOnRetry} />,
     );
 
     expect(getByText('코스 생성 중 오류가 발생했습니다')).toBeTruthy();
@@ -108,7 +110,7 @@ describe('CourseGeneratingScreen (API-FB-4: SSE 스트리밍 로딩 및 상태 �
       <CourseGeneratingScreen
         onRetry={mockOnRetry}
         onNavigateToIntro={mockOnNavigateToIntro}
-      />
+      />,
     );
 
     expect(getByText('시작 화면으로 이동')).toBeTruthy();

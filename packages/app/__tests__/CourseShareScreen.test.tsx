@@ -21,7 +21,7 @@ describe('CourseShareScreen (Figma 공유 수신 및 로그인 요청)', () => {
     const { findByTestId, findByText, queryByTestId } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <CourseShareScreen />
-      </AuthContext.Provider>
+      </AuthContext.Provider>,
     );
 
     expect(await findByTestId('course-share-screen')).toBeTruthy();
@@ -45,7 +45,7 @@ describe('CourseShareScreen (Figma 공유 수신 및 로그인 요청)', () => {
     const { findByTestId, findByText } = await render(
       <AuthContext.Provider value={mockGuestAuthContext as any}>
         <CourseShareScreen />
-      </AuthContext.Provider>
+      </AuthContext.Provider>,
     );
 
     expect(await findByTestId('dim-overlay')).toBeTruthy();
@@ -66,8 +66,11 @@ describe('CourseShareScreen (Figma 공유 수신 및 로그인 요청)', () => {
 
     const { findByTestId } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
-        <CourseShareScreen onSaveSuccess={mockSaveSuccess} onDecline={mockDecline} />
-      </AuthContext.Provider>
+        <CourseShareScreen
+          onSaveSuccess={mockSaveSuccess}
+          onDecline={mockDecline}
+        />
+      </AuthContext.Provider>,
     );
 
     const btnSave = await findByTestId('btn-save-course');

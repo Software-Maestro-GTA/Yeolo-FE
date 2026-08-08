@@ -26,7 +26,8 @@ export interface ProfileInputScreenProps {
   onSaveSuccess?: () => void;
 }
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+const DEFAULT_AVATAR =
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
 export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   onGoBack,
@@ -38,9 +39,13 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   const auth = useContext(AuthContext);
   const user = auth?.user;
 
-  const [displayName, setDisplayName] = useState<string>(user?.displayName || '김선규');
+  const [displayName, setDisplayName] = useState<string>(
+    user?.displayName || '김선규',
+  );
   const email = user?.email || 'ksk85628781@gmail.com';
-  const [avatarUrl, setAvatarUrl] = useState<string>((user as any)?.photoUrl || DEFAULT_AVATAR);
+  const [avatarUrl, setAvatarUrl] = useState<string>(
+    (user as any)?.photoUrl || DEFAULT_AVATAR,
+  );
 
   const handleSave = () => {
     if (!displayName.trim()) {
@@ -48,7 +53,9 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
       return;
     }
 
-    trackButtonClick('btn_save_profile_input', 'Save Profile Input', { nickname: displayName });
+    trackButtonClick('btn_save_profile_input', 'Save Profile Input', {
+      nickname: displayName,
+    });
 
     if (onSaveSuccess) {
       onSaveSuccess();
@@ -66,7 +73,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -79,39 +86,42 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 
   const handleChangeAvatar = () => {
     trackButtonClick('btn_change_avatar', 'Change Avatar Click');
-    Alert.alert('프로필 이미지', '카메라 또는 갤러리에서 프로필 사진을 변경하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '기본 이미지 적용',
-        onPress: () => setAvatarUrl(DEFAULT_AVATAR),
-      },
-    ]);
+    Alert.alert(
+      '프로필 이미지',
+      '카메라 또는 갤러리에서 프로필 사진을 변경하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '기본 이미지 적용',
+          onPress: () => setAvatarUrl(DEFAULT_AVATAR),
+        },
+      ],
+    );
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      testID="profile-input-screen"
-    >
+      testID='profile-input-screen'>
       <View style={styles.auraGlow} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps='handled'>
         {/* Header Section */}
         <View style={styles.headerSection}>
           <TouchableOpacity
-            testID="btn-back"
+            testID='btn-back'
             style={styles.backBtn}
             onPress={onGoBack}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={24} color={palette.deepNavy} />
+            activeOpacity={0.7}>
+            <Ionicons name='chevron-back' size={24} color={palette.deepNavy} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{UI_STRINGS.PROFILE_INPUT.HEADER_TITLE}</Text>
+          <Text style={styles.headerTitle}>
+            {UI_STRINGS.PROFILE_INPUT.HEADER_TITLE}
+          </Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -120,14 +130,13 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
           {/* Avatar Picker Section */}
           <View style={styles.avatarPickerSection}>
             <TouchableOpacity
-              testID="btn-avatar-picker"
+              testID='btn-avatar-picker'
               style={styles.avatarContainer}
               activeOpacity={0.85}
-              onPress={handleChangeAvatar}
-            >
+              onPress={handleChangeAvatar}>
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               <View style={styles.cameraBadge}>
-                <Ionicons name="camera" size={14} color={palette.white} />
+                <Ionicons name='camera' size={14} color={palette.white} />
               </View>
             </TouchableOpacity>
           </View>
@@ -136,10 +145,12 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
           <View style={styles.formFields}>
             {/* Nickname Field */}
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>{UI_STRINGS.PROFILE_INPUT.NICKNAME_LABEL}</Text>
+              <Text style={styles.fieldLabel}>
+                {UI_STRINGS.PROFILE_INPUT.NICKNAME_LABEL}
+              </Text>
               <View style={styles.inputWrapper}>
                 <TextInput
-                  testID="input-profile-nickname"
+                  testID='input-profile-nickname'
                   style={styles.textInput}
                   value={displayName}
                   onChangeText={setDisplayName}
@@ -152,12 +163,18 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 
             {/* Email Field */}
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>{UI_STRINGS.PROFILE_INPUT.EMAIL_LABEL}</Text>
+              <Text style={styles.fieldLabel}>
+                {UI_STRINGS.PROFILE_INPUT.EMAIL_LABEL}
+              </Text>
               <View style={[styles.inputWrapper, styles.inputDisabled]}>
                 <Text style={styles.readOnlyText} numberOfLines={1}>
                   {email}
                 </Text>
-                <Ionicons name="lock-closed" size={16} color={palette.gray400} />
+                <Ionicons
+                  name='lock-closed'
+                  size={16}
+                  color={palette.gray400}
+                />
               </View>
             </View>
           </View>
@@ -166,22 +183,20 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
         {/* Action Container */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
-            testID="btn-save-profile-input"
+            testID='btn-save-profile-input'
             style={styles.primaryButton}
             activeOpacity={0.85}
-            onPress={handleSave}
-          >
+            onPress={handleSave}>
             <Text style={styles.primaryButtonText}>
               {UI_STRINGS.PROFILE_INPUT.SAVE_BUTTON}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            testID="btn-skip-profile-input"
+            testID='btn-skip-profile-input'
             style={styles.secondaryButton}
             activeOpacity={0.7}
-            onPress={handleSkip}
-          >
+            onPress={handleSkip}>
             <Text style={styles.secondaryButtonText}>
               {UI_STRINGS.PROFILE_INPUT.SKIP_BUTTON}
             </Text>

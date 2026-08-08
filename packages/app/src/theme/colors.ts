@@ -8,13 +8,13 @@
  */
 export const palette = {
   // Figma Design Tokens
-  primary: '#2D7DD2',     // Ocean Blue - CTA 버튼, 주요 액션, 브랜드 강조
-  accent: '#00C9A7',      // Teal Green - 그래디언트, 보조 강조, 아이콘 하이라이트
-  lightTeal: '#E0F7F1',   // Tint - 카드 배경, 선택 상태, 태그 배경
-  softMint: '#F5FAF8',    // Background - 페이지 배경, 구분선 영역
-  deepNavy: '#0D2137',    // Text - 제목, 본문 텍스트, 핵심 정보
-  subText: '#59616B',     // SubTitle & Secondary Text - 부제목 및 서브 설명문 텍스트
-  mutedText: '#8C949E',   // Muted SubText - 보조 캡션 및 메타 정보 텍스트
+  primary: '#2D7DD2', // Ocean Blue - CTA 버튼, 주요 액션, 브랜드 강조
+  accent: '#00C9A7', // Teal Green - 그래디언트, 보조 강조, 아이콘 하이라이트
+  lightTeal: '#E0F7F1', // Tint - 카드 배경, 선택 상태, 태그 배경
+  softMint: '#F5FAF8', // Background - 페이지 배경, 구분선 영역
+  deepNavy: '#0D2137', // Text - 제목, 본문 텍스트, 핵심 정보
+  subText: '#59616B', // SubTitle & Secondary Text - 부제목 및 서브 설명문 텍스트
+  mutedText: '#8C949E', // Muted SubText - 보조 캡션 및 메타 정보 텍스트
 
   // Base Neutrals & Statuses
   white: '#FFFFFF',

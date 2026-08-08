@@ -4,24 +4,50 @@
  */
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { type User, logger, setTokenGetter, setTokenSetter, setUnauthorizedHandler, refreshTokenApi } from '@yeolo/common';
-import { initializeGoogleSignin, signOutGoogle, onUnauthorized, notifyUnauthorized, clearLocalSession } from '../services';
+import {
+  type User,
+  logger,
+  setTokenGetter,
+  setTokenSetter,
+  setUnauthorizedHandler,
+  refreshTokenApi,
+} from '@yeolo/common';
+import {
+  initializeGoogleSignin,
+  signOutGoogle,
+  onUnauthorized,
+  notifyUnauthorized,
+  clearLocalSession,
+} from '../services';
 import { APP_CONFIG } from '../constants';
 
-import { useGoogleLoginMutation, useAppleLoginMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
+import {
+  useGoogleLoginMutation,
+  useAppleLoginMutation,
+  useLogoutMutation,
+} from '../hooks/queries/useAuthMutations';
 
 export interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   isLoading: boolean;
-  loginWithGoogle: (code: string) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
-  loginWithApple: (payload: { code: string; idToken?: string | null }) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
+  loginWithGoogle: (
+    code: string,
+  ) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
+  loginWithApple: (payload: {
+    code: string;
+    idToken?: string | null;
+  }) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
   logout: () => void;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -47,7 +73,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     const unsubscribe = onUnauthorized(() => {
-      logger.info('[AuthContext] Received 401 Unauthorized event. Resetting auth state...');
+      logger.info(
+        '[AuthContext] Received 401 Unauthorized event. Resetting auth state...',
+      );
       setIsAuthenticated(false);
       setUser(null);
     });
@@ -58,7 +86,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const restoreSession = async () => {
       logger.info('[AuthContext] Restoring and validating session...');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+      const apiUrl =
+        process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
       try {
         const token = await AsyncStorage.getItem('accessToken');
         const refreshToken = await AsyncStorage.getItem('refreshToken');
@@ -67,22 +96,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (token && refreshToken) {
           try {
             const newTokens = await refreshTokenApi(apiUrl, refreshToken);
-            await AsyncStorage.setItem('accessToken', newTokens.data.accessToken);
-            await AsyncStorage.setItem('refreshToken', newTokens.data.refreshToken);
+            await AsyncStorage.setItem(
+              'accessToken',
+              newTokens.data.accessToken,
+            );
+            await AsyncStorage.setItem(
+              'refreshToken',
+              newTokens.data.refreshToken,
+            );
             setIsAuthenticated(true);
             if (savedUser) {
               setUser(JSON.parse(savedUser));
             }
-            logger.info('[AuthContext] Session refreshed and validated successfully on startup');
+            logger.info(
+              '[AuthContext] Session refreshed and validated successfully on startup',
+            );
           } catch (refreshErr: any) {
             const status = refreshErr?.status;
             if (status === 401 || status === 403) {
-              logger.warn('[AuthContext] Refresh token expired or invalid on startup. Resetting local session:', refreshErr);
+              logger.warn(
+                '[AuthContext] Refresh token expired or invalid on startup. Resetting local session:',
+                refreshErr,
+              );
               await clearLocalSession();
               setIsAuthenticated(false);
               setUser(null);
             } else {
-              logger.warn(`[AuthContext] Refresh API returned status ${status || 'network error'}, falling back to existing token session:`, refreshErr?.message || refreshErr);
+              logger.warn(
+                `[AuthContext] Refresh API returned status ${status || 'network error'}, falling back to existing token session:`,
+                refreshErr?.message || refreshErr,
+              );
               setIsAuthenticated(true);
               if (savedUser) {
                 setUser(JSON.parse(savedUser));
@@ -108,8 +151,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
-
-
     restoreSession();
 
     return () => {
@@ -117,8 +158,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-
-  const loginWithGoogle = async (code: string): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
+  const loginWithGoogle = async (
+    code: string,
+  ): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
     logger.info('[AuthContext] Executing loginWithGoogle...');
     try {
       const result = await googleLoginMutation.mutateAsync(code);
@@ -132,7 +174,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const loginWithApple = async (payload: { code: string; idToken?: string | null }): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
+  const loginWithApple = async (payload: {
+    code: string;
+    idToken?: string | null;
+  }): Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }> => {
     logger.info('[AuthContext] Executing loginWithApple...');
     try {
       const result = await appleLoginMutation.mutateAsync(payload);
@@ -152,7 +197,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await logoutMutation.mutateAsync();
       logger.info('[AuthContext] Logout API call completed');
     } catch (error) {
-      logger.warn('[AuthContext] Logout API error encountered (e.g. token expired/invalid), continuing local session cleanup:', error);
+      logger.warn(
+        '[AuthContext] Logout API error encountered (e.g. token expired/invalid), continuing local session cleanup:',
+        error,
+      );
     } finally {
       await signOutGoogle();
       await AsyncStorage.removeItem('accessToken');
@@ -164,7 +212,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const isLoading = isRestoring || googleLoginMutation.isPending || appleLoginMutation.isPending || logoutMutation.isPending;
+  const isLoading =
+    isRestoring ||
+    googleLoginMutation.isPending ||
+    appleLoginMutation.isPending ||
+    logoutMutation.isPending;
 
   return (
     <AuthContext.Provider
@@ -175,10 +227,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loginWithGoogle,
         loginWithApple,
         logout,
-      }}
-    >
+      }}>
       {children}
     </AuthContext.Provider>
   );
 };
-

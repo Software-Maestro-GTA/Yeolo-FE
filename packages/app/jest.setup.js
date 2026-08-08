@@ -47,9 +47,12 @@ jest.mock('expo-apple-authentication', () => ({
 jest.mock('react-native-maps', () => {
   const mockReact = require('react');
   const { View: mockView } = require('react-native');
-  const MockMapView = (props) => mockReact.createElement(mockView, props, props.children);
-  const MockMarker = (props) => mockReact.createElement(mockView, props, props.children);
-  const MockPolyline = (props) => mockReact.createElement(mockView, props, props.children);
+  const MockMapView = (props) =>
+    mockReact.createElement(mockView, props, props.children);
+  const MockMarker = (props) =>
+    mockReact.createElement(mockView, props, props.children);
+  const MockPolyline = (props) =>
+    mockReact.createElement(mockView, props, props.children);
   return {
     __esModule: true,
     default: MockMapView,
@@ -62,7 +65,8 @@ jest.mock('react-native-webview', () => {
   const mockReact = require('react');
   const { View: mockView } = require('react-native');
   return {
-    WebView: (props) => mockReact.createElement(mockView, props, props.children),
+    WebView: (props) =>
+      mockReact.createElement(mockView, props, props.children),
   };
 });
 

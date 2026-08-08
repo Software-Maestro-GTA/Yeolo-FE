@@ -23,7 +23,7 @@ export const createTestQueryClient = () =>
 
 export function renderWithQueryClient(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
+  options?: Omit<RenderOptions, 'wrapper'>,
 ) {
   const testQueryClient = createTestQueryClient();
   const initialMetrics = {
@@ -34,7 +34,7 @@ export function renderWithQueryClient(
     <QueryClientProvider client={testQueryClient}>
       <SafeAreaProvider initialMetrics={initialMetrics}>{ui}</SafeAreaProvider>
     </QueryClientProvider>,
-    options
+    options,
   );
 }
 

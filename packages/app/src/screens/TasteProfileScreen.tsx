@@ -29,94 +29,132 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   const { trackButtonClick } = useGA4ButtonClick();
 
   const handlePressGenerateCourse = () => {
-    trackButtonClick('btn_taste_profile_generate_course', 'Generate Course from Taste Profile');
+    trackButtonClick(
+      'btn_taste_profile_generate_course',
+      'Generate Course from Taste Profile',
+    );
     onGenerateCourse?.();
   };
 
   return (
-    <View style={styles.screenContainer} testID="screen-container">
+    <View style={styles.screenContainer} testID='screen-container'>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerContent} testID="top-content">
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.headerContent} testID='top-content'>
           <Text style={styles.headerTitle}>
             {UI_STRINGS.TASTE_PROFILE.MAIN_TITLE}
           </Text>
         </View>
 
-        <View style={styles.mainBody} testID="main-content">
-          <View style={styles.summaryChipsFrame} testID="summary-chips-row">
+        <View style={styles.mainBody} testID='main-content'>
+          <View style={styles.summaryChipsFrame} testID='summary-chips-row'>
             <View style={styles.chipColumn}>
-              <Text style={styles.chipCategory}>{UI_STRINGS.TASTE_PROFILE.PACING_LABEL}</Text>
-              <Text style={styles.chipValueText}>{UI_STRINGS.TASTE_PROFILE.PACING_DEFAULT}</Text>
+              <Text style={styles.chipCategory}>
+                {UI_STRINGS.TASTE_PROFILE.PACING_LABEL}
+              </Text>
+              <Text style={styles.chipValueText}>
+                {UI_STRINGS.TASTE_PROFILE.PACING_DEFAULT}
+              </Text>
             </View>
 
             <View style={styles.chipColumn}>
-              <Text style={styles.chipCategory}>{UI_STRINGS.TASTE_PROFILE.ACTIVITY_LABEL}</Text>
-              <Text style={styles.chipValueText}>{UI_STRINGS.TASTE_PROFILE.ACTIVITY_DEFAULT}</Text>
+              <Text style={styles.chipCategory}>
+                {UI_STRINGS.TASTE_PROFILE.ACTIVITY_LABEL}
+              </Text>
+              <Text style={styles.chipValueText}>
+                {UI_STRINGS.TASTE_PROFILE.ACTIVITY_DEFAULT}
+              </Text>
             </View>
 
             <View style={styles.chipColumn}>
-              <Text style={styles.chipCategory}>{UI_STRINGS.TASTE_PROFILE.SEASON_LABEL}</Text>
-              <Text style={styles.chipValueText}>{UI_STRINGS.TASTE_PROFILE.SEASON_DEFAULT}</Text>
+              <Text style={styles.chipCategory}>
+                {UI_STRINGS.TASTE_PROFILE.SEASON_LABEL}
+              </Text>
+              <Text style={styles.chipValueText}>
+                {UI_STRINGS.TASTE_PROFILE.SEASON_DEFAULT}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.rankedPurposesSection} testID="ranked-purposes-section">
-            <Text style={styles.sectionHeading}>{UI_STRINGS.TASTE_PROFILE.PURPOSES_TITLE}</Text>
-            
+          <View
+            style={styles.rankedPurposesSection}
+            testID='ranked-purposes-section'>
+            <Text style={styles.sectionHeading}>
+              {UI_STRINGS.TASTE_PROFILE.PURPOSES_TITLE}
+            </Text>
+
             <View style={styles.rankedPurposesList}>
-              <View style={styles.rankedItemRow} testID="purpose-1">
+              <View style={styles.rankedItemRow} testID='purpose-1'>
                 <Text style={styles.rankNumberText}>01</Text>
                 <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_1_TITLE}</Text>
-                  <Text style={styles.rankedItemDesc}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_1_DESC}</Text>
+                  <Text style={styles.rankedItemTitle}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_1_TITLE}
+                  </Text>
+                  <Text style={styles.rankedItemDesc}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_1_DESC}
+                  </Text>
                 </View>
                 <Text style={styles.dotRatingText}>●●●●●</Text>
               </View>
 
-              <View style={styles.rankedItemRow} testID="purpose-2">
+              <View style={styles.rankedItemRow} testID='purpose-2'>
                 <Text style={styles.rankNumberText}>02</Text>
                 <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_2_TITLE}</Text>
-                  <Text style={styles.rankedItemDesc}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_2_DESC}</Text>
+                  <Text style={styles.rankedItemTitle}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_2_TITLE}
+                  </Text>
+                  <Text style={styles.rankedItemDesc}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_2_DESC}
+                  </Text>
                 </View>
                 <Text style={styles.dotRatingText}>●●●●○</Text>
               </View>
 
-              <View style={styles.rankedItemRow} testID="purpose-3">
+              <View style={styles.rankedItemRow} testID='purpose-3'>
                 <Text style={styles.rankNumberText}>03</Text>
                 <View style={styles.rankedTextFrame}>
-                  <Text style={styles.rankedItemTitle}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_3_TITLE}</Text>
-                  <Text style={styles.rankedItemDesc}>{UI_STRINGS.TASTE_PROFILE.PURPOSE_3_DESC}</Text>
+                  <Text style={styles.rankedItemTitle}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_3_TITLE}
+                  </Text>
+                  <Text style={styles.rankedItemDesc}>
+                    {UI_STRINGS.TASTE_PROFILE.PURPOSE_3_DESC}
+                  </Text>
                 </View>
                 <Text style={styles.dotRatingText}>●●●●○</Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.foodRankingCard} testID="favorite-foods-section">
-            <Text style={styles.sectionHeading}>{UI_STRINGS.TASTE_PROFILE.FOODS_TITLE}</Text>
-            
+          <View style={styles.foodRankingCard} testID='favorite-foods-section'>
+            <Text style={styles.sectionHeading}>
+              {UI_STRINGS.TASTE_PROFILE.FOODS_TITLE}
+            </Text>
+
             <View style={styles.foodRankingList}>
               <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>{UI_STRINGS.TASTE_PROFILE.FOOD_1}</Text>
+                <Text style={styles.foodItemLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.FOOD_1}
+                </Text>
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: '100%' }]} />
                 </View>
               </View>
 
               <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>{UI_STRINGS.TASTE_PROFILE.FOOD_2}</Text>
+                <Text style={styles.foodItemLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.FOOD_2}
+                </Text>
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: '100%' }]} />
                 </View>
               </View>
 
               <View style={styles.foodItemRow}>
-                <Text style={styles.foodItemLabel}>{UI_STRINGS.TASTE_PROFILE.FOOD_3}</Text>
+                <Text style={styles.foodItemLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.FOOD_3}
+                </Text>
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: '80%' }]} />
                 </View>
@@ -124,44 +162,66 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
             </View>
           </View>
 
-          <View style={styles.bestSpacesSection} testID="best-spaces-section">
-            <Text style={styles.sectionHeading}>{UI_STRINGS.TASTE_PROFILE.SPACES_TITLE}</Text>
-            
+          <View style={styles.bestSpacesSection} testID='best-spaces-section'>
+            <Text style={styles.sectionHeading}>
+              {UI_STRINGS.TASTE_PROFILE.SPACES_TITLE}
+            </Text>
+
             <View style={styles.bestSpacesGrid}>
-              <View style={styles.spaceCardItem} testID="space-card-1">
-                <View style={[styles.spaceIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                  <Feather name="sun" size={20} color="#F59E0B" />
+              <View style={styles.spaceCardItem} testID='space-card-1'>
+                <View
+                  style={[
+                    styles.spaceIconBox,
+                    { backgroundColor: 'rgba(245, 158, 11, 0.1)' },
+                  ]}>
+                  <Feather name='sun' size={20} color='#F59E0B' />
                 </View>
-                <Text style={styles.spaceCardLabel}>{UI_STRINGS.TASTE_PROFILE.SPACE_1}</Text>
+                <Text style={styles.spaceCardLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.SPACE_1}
+                </Text>
               </View>
 
-              <View style={styles.spaceCardItem} testID="space-card-2">
-                <View style={[styles.spaceIconBox, { backgroundColor: 'rgba(0, 201, 167, 0.1)' }]}>
-                  <Feather name="eye" size={20} color={palette.accent} />
+              <View style={styles.spaceCardItem} testID='space-card-2'>
+                <View
+                  style={[
+                    styles.spaceIconBox,
+                    { backgroundColor: 'rgba(0, 201, 167, 0.1)' },
+                  ]}>
+                  <Feather name='eye' size={20} color={palette.accent} />
                 </View>
-                <Text style={styles.spaceCardLabel}>{UI_STRINGS.TASTE_PROFILE.SPACE_2}</Text>
+                <Text style={styles.spaceCardLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.SPACE_2}
+                </Text>
               </View>
 
-              <View style={styles.spaceCardItem} testID="space-card-3">
-                <View style={[styles.spaceIconBox, { backgroundColor: 'rgba(45, 125, 210, 0.1)' }]}>
-                  <Feather name="map-pin" size={20} color={palette.primary} />
+              <View style={styles.spaceCardItem} testID='space-card-3'>
+                <View
+                  style={[
+                    styles.spaceIconBox,
+                    { backgroundColor: 'rgba(45, 125, 210, 0.1)' },
+                  ]}>
+                  <Feather name='map-pin' size={20} color={palette.primary} />
                 </View>
-                <Text style={styles.spaceCardLabel}>{UI_STRINGS.TASTE_PROFILE.SPACE_3}</Text>
+                <Text style={styles.spaceCardLabel}>
+                  {UI_STRINGS.TASTE_PROFILE.SPACE_3}
+                </Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.bottomContainer} testID="bottom-container">
+          <View style={styles.bottomContainer} testID='bottom-container'>
             <TouchableOpacity
               style={styles.ctaButton}
               activeOpacity={0.8}
               onPress={handlePressGenerateCourse}
-              testID="generate-course-button"
-            >
-              <Ionicons name="sparkles" size={18} color="#FFFFFF" style={styles.ctaIconLeft} />
-              <Text style={styles.ctaButtonText}>
-                여행 코스 생성하기
-              </Text>
+              testID='generate-course-button'>
+              <Ionicons
+                name='sparkles'
+                size={18}
+                color='#FFFFFF'
+                style={styles.ctaIconLeft}
+              />
+              <Text style={styles.ctaButtonText}>여행 코스 생성하기</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -22,7 +22,12 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 0);
 
-  const tabs: { id: NavTab; label: string; icon: keyof typeof Feather.glyphMap; size: number }[] = [
+  const tabs: {
+    id: NavTab;
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    size: number;
+  }[] = [
     { id: 'home', label: '홈', icon: 'home', size: 18 },
     { id: 'explore', label: '탐색', icon: 'compass', size: 20 },
     { id: 'create', label: '생성', icon: 'plus', size: 22 },
@@ -35,8 +40,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         styles.bottomNav,
         { height: 60 + bottomInset, paddingBottom: bottomInset },
       ]}
-      testID="bottom-nav-bar"
-    >
+      testID='bottom-nav-bar'>
       {tabs.map((tab) => {
         const isActive = currentTab === tab.id;
         const iconColor = isActive ? palette.primary : '#9CA3AF';
@@ -47,10 +51,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             style={styles.navItem}
             activeOpacity={0.7}
             onPress={() => onTabPress?.(tab.id)}
-            testID={`tab-${tab.id}`}
-          >
+            testID={`tab-${tab.id}`}>
             <Feather name={tab.icon} size={tab.size} color={iconColor} />
-            <Text style={[styles.navText, isActive ? styles.navTextActive : styles.navTextInactive]}>
+            <Text
+              style={[
+                styles.navText,
+                isActive ? styles.navTextActive : styles.navTextInactive,
+              ]}>
               {tab.label}
             </Text>
           </TouchableOpacity>

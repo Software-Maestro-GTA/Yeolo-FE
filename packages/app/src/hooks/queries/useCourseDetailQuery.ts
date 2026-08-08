@@ -4,10 +4,17 @@
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCourseDetailApi, DEFAULT_API_URL, type CourseDetail } from '@yeolo/common';
+import {
+  getCourseDetailApi,
+  DEFAULT_API_URL,
+  type CourseDetail,
+} from '@yeolo/common';
 import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
-export const getCourseDetailQueryKey = (courseId: string) => ['courseDetail', courseId];
+export const getCourseDetailQueryKey = (courseId: string) => [
+  'courseDetail',
+  courseId,
+];
 
 export interface UseCourseDetailQueryOptions {
   courseId: string;
@@ -28,7 +35,9 @@ export function useCourseDetailQuery({
         return await getCourseDetailApi(apiUrl, token, courseId);
       } catch (err: unknown) {
         const errorObj = err as { message?: string };
-        throw new Error(errorObj?.message || UI_STRINGS.COURSE_DETAIL.ERROR_TITLE);
+        throw new Error(
+          errorObj?.message || UI_STRINGS.COURSE_DETAIL.ERROR_TITLE,
+        );
       }
     },
     enabled: Boolean(courseId),

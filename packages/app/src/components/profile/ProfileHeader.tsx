@@ -31,7 +31,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={36} color={theme.colors.primary} />
+            <Ionicons name='person' size={36} color={theme.colors.primary} />
           </View>
         )}
       </View>

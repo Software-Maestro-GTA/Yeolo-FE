@@ -38,7 +38,8 @@ export interface PlaceDetailScreenProps {
   heroImageUrl?: string;
 }
 
-const DEFAULT_PLACE_IMAGE = 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1000&q=80';
+const DEFAULT_PLACE_IMAGE =
+  'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1000&q=80';
 
 export function PlaceDetailScreen({
   stop,
@@ -60,23 +61,32 @@ export function PlaceDetailScreen({
 
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
 
-  const displayPlaceName = placeName || stop?.placeName || UI_STRINGS.PLACE_DETAIL.DEFAULT_NAME;
-  const displayCategory = category || stop?.category || UI_STRINGS.PLACE_DETAIL.DEFAULT_CATEGORY;
+  const displayPlaceName =
+    placeName || stop?.placeName || UI_STRINGS.PLACE_DETAIL.DEFAULT_NAME;
+  const displayCategory =
+    category || stop?.category || UI_STRINGS.PLACE_DETAIL.DEFAULT_CATEGORY;
   const displayRating = rating || UI_STRINGS.PLACE_DETAIL.DEFAULT_RATING;
   const displayAddress = address || UI_STRINGS.PLACE_DETAIL.DEFAULT_ADDRESS;
-  const displayTime = arrivalTime || stop?.arrivalTime || UI_STRINGS.PLACE_DETAIL.DEFAULT_TIME;
+  const displayTime =
+    arrivalTime || stop?.arrivalTime || UI_STRINGS.PLACE_DETAIL.DEFAULT_TIME;
   const displayStay = stayMinutes
     ? `${stayMinutes}분 소요`
     : stop?.stayMinutes
-    ? `${stop.stayMinutes}분 소요`
-    : UI_STRINGS.PLACE_DETAIL.DEFAULT_STAY;
-  const displayCost = cost !== undefined
-    ? `₩${cost.toLocaleString()}`
-    : stop?.cost !== undefined
-    ? `₩${stop.cost.toLocaleString()}`
-    : UI_STRINGS.PLACE_DETAIL.DEFAULT_COST;
-  const displayAiTip = aiTip || stop?.reason || stop?.memo || UI_STRINGS.PLACE_DETAIL.AI_RECOMMEND_DESC;
-  const displayOpeningHours = openingHours || UI_STRINGS.PLACE_DETAIL.OPENING_HOURS;
+      ? `${stop.stayMinutes}분 소요`
+      : UI_STRINGS.PLACE_DETAIL.DEFAULT_STAY;
+  const displayCost =
+    cost !== undefined
+      ? `₩${cost.toLocaleString()}`
+      : stop?.cost !== undefined
+        ? `₩${stop.cost.toLocaleString()}`
+        : UI_STRINGS.PLACE_DETAIL.DEFAULT_COST;
+  const displayAiTip =
+    aiTip ||
+    stop?.reason ||
+    stop?.memo ||
+    UI_STRINGS.PLACE_DETAIL.AI_RECOMMEND_DESC;
+  const displayOpeningHours =
+    openingHours || UI_STRINGS.PLACE_DETAIL.OPENING_HOURS;
 
   const mockMapCoordinates = [
     {
@@ -87,21 +97,28 @@ export function PlaceDetailScreen({
   ];
 
   return (
-    <View style={styles.screenContainer} testID="place-detail-screen">
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View style={styles.screenContainer} testID='place-detail-screen'>
+      <StatusBar
+        barStyle='dark-content'
+        backgroundColor='transparent'
+        translucent
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContentContainer}
-      >
+        contentContainerStyle={styles.scrollContentContainer}>
         {/* Hero Photo Container Header (Extends into Status Bar) */}
         <View style={styles.heroSection}>
           <ImageBackground
             source={{ uri: heroImageUrl }}
             style={styles.heroImageBackground}
-            resizeMode="cover"
-          >
+            resizeMode='cover'>
             <LinearGradient
-              colors={['rgba(245, 250, 248, 0)', 'rgba(245, 250, 248, 0.35)', 'rgba(245, 250, 248, 0.95)', palette.softMint]}
+              colors={[
+                'rgba(245, 250, 248, 0)',
+                'rgba(245, 250, 248, 0.35)',
+                'rgba(245, 250, 248, 0.95)',
+                palette.softMint,
+              ]}
               locations={[0, 0.4, 0.8, 1]}
               style={styles.heroGradient}
             />
@@ -112,10 +129,12 @@ export function PlaceDetailScreen({
                 <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
                 <View style={styles.tagRow}>
                   <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{displayCategory}</Text>
+                    <Text style={styles.categoryBadgeText}>
+                      {displayCategory}
+                    </Text>
                   </View>
                   <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={12} color="#F97316" />
+                    <Ionicons name='star' size={12} color='#F97316' />
                     <Text style={styles.ratingBadgeText}>{displayRating}</Text>
                   </View>
                 </View>
@@ -123,7 +142,11 @@ export function PlaceDetailScreen({
 
               {/* Address Row */}
               <View style={styles.addressRow}>
-                <Ionicons name="location-outline" size={14} color={palette.subText} />
+                <Ionicons
+                  name='location-outline'
+                  size={14}
+                  color={palette.subText}
+                />
                 <Text style={styles.addressText}>{displayAddress}</Text>
               </View>
             </View>
@@ -133,27 +156,39 @@ export function PlaceDetailScreen({
         {/* Main Body (Node 423:561) */}
         <View style={styles.mainBody}>
           {/* Summary Metric 3-Column Card */}
-          <View style={styles.summaryBarCard} testID="summary-bar-card">
+          <View style={styles.summaryBarCard} testID='summary-bar-card'>
             <View style={styles.metricColumn}>
-              <Ionicons name="time-outline" size={20} color={palette.subText} />
+              <Ionicons name='time-outline' size={20} color={palette.subText} />
               <Text style={styles.metricTimeText}>{displayTime}</Text>
             </View>
             <View style={styles.cardDivider} />
             <View style={styles.metricColumn}>
-              <Ionicons name="timer-outline" size={20} color={palette.subText} />
+              <Ionicons
+                name='timer-outline'
+                size={20}
+                color={palette.subText}
+              />
               <Text style={styles.metricStayText}>{displayStay}</Text>
             </View>
             <View style={styles.cardDivider} />
             <View style={styles.metricColumn}>
-              <Ionicons name="ticket-outline" size={20} color={palette.accent} />
+              <Ionicons
+                name='ticket-outline'
+                size={20}
+                color={palette.accent}
+              />
               <Text style={styles.metricCostText}>{displayCost}</Text>
             </View>
           </View>
 
           {/* Opening Hours Section */}
-          <View style={styles.sectionContainer} testID="opening-hours-section">
+          <View style={styles.sectionContainer} testID='opening-hours-section'>
             <View style={styles.sectionHeaderRow}>
-              <Ionicons name="time-outline" size={18} color={palette.deepNavy} />
+              <Ionicons
+                name='time-outline'
+                size={18}
+                color={palette.deepNavy}
+              />
               <Text style={styles.sectionTitleText}>
                 {UI_STRINGS.PLACE_DETAIL.BUSINESS_HOURS_TITLE}
               </Text>
@@ -168,13 +203,15 @@ export function PlaceDetailScreen({
                 <Text style={styles.hoursValueText}>{displayOpeningHours}</Text>
               </View>
               <TouchableOpacity
-                testID="btn-more-hours"
+                testID='btn-more-hours'
                 onPress={() => {
-                  trackButtonClick('btn_open_hours_modal', 'Open Opening Hours Modal');
+                  trackButtonClick(
+                    'btn_open_hours_modal',
+                    'Open Opening Hours Modal',
+                  );
                   setIsHoursModalOpen(true);
                 }}
-                activeOpacity={0.7}
-              >
+                activeOpacity={0.7}>
                 <Text style={styles.moreButtonText}>
                   {UI_STRINGS.PLACE_DETAIL.MORE_BUTTON}
                 </Text>
@@ -183,9 +220,9 @@ export function PlaceDetailScreen({
           </View>
 
           {/* AI Recommendation Card */}
-          <View style={styles.aiRecommendCard} testID="ai-recommend-card">
+          <View style={styles.aiRecommendCard} testID='ai-recommend-card'>
             <View style={styles.aiRecommendHeader}>
-              <Ionicons name="sparkles" size={18} color={palette.accent} />
+              <Ionicons name='sparkles' size={18} color={palette.accent} />
               <Text style={styles.aiRecommendTitle}>
                 {UI_STRINGS.PLACE_DETAIL.AI_RECOMMEND_TITLE}
               </Text>
@@ -194,9 +231,9 @@ export function PlaceDetailScreen({
           </View>
 
           {/* Location Section */}
-          <View style={styles.sectionContainer} testID="location-section">
+          <View style={styles.sectionContainer} testID='location-section'>
             <View style={styles.sectionHeaderRow}>
-              <Ionicons name="map-outline" size={18} color={palette.deepNavy} />
+              <Ionicons name='map-outline' size={18} color={palette.deepNavy} />
               <Text style={styles.sectionTitleText}>
                 {UI_STRINGS.PLACE_DETAIL.LOCATION_TITLE}
               </Text>
@@ -210,11 +247,15 @@ export function PlaceDetailScreen({
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
-              leafletHtml=""
+              leafletHtml=''
             />
 
             <View style={styles.gpsRow}>
-              <Ionicons name="information-circle-outline" size={14} color={palette.subText} />
+              <Ionicons
+                name='information-circle-outline'
+                size={14}
+                color={palette.subText}
+              />
               <Text style={styles.gpsText}>
                 {`GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`}
               </Text>
@@ -232,7 +273,8 @@ export function PlaceDetailScreen({
   );
 }
 
-const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
+const STATUS_BAR_HEIGHT =
+  Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44;
 
 const styles = StyleSheet.create({
   screenContainer: {

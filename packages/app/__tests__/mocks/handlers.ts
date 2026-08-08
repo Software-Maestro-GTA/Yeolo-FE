@@ -14,7 +14,8 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
     startDate: '2026-08-01',
     totalDays: 3,
     tags: ['힐링', '카페', '자연', '오션뷰'],
-    recommendationReason: '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
+    recommendationReason:
+      '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
     createdAt: '2026-07-20T10:00:00Z',
   },
   {
@@ -25,7 +26,8 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
     startDate: '2026-09-10',
     totalDays: 4,
     tags: ['미식', '쇼핑', '도시', '디저트'],
-    recommendationReason: '도심 미식 탐방 및 긴자·시부야 쇼핑 거리 중심의 알찬 추천 코스입니다.',
+    recommendationReason:
+      '도심 미식 탐방 및 긴자·시부야 쇼핑 거리 중심의 알찬 추천 코스입니다.',
     createdAt: '2026-07-18T14:30:00Z',
   },
   {
@@ -36,7 +38,8 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
     startDate: '2026-10-05',
     totalDays: 5,
     tags: ['미술관', '문화체험', '야경', '와인'],
-    recommendationReason: '루브르·오르세 미술관과 세느강 크루즈, 로맨틱 야경을 만끽하는 감성 예술 코스입니다.',
+    recommendationReason:
+      '루브르·오르세 미술관과 세느강 크루즈, 로맨틱 야경을 만끽하는 감성 예술 코스입니다.',
     createdAt: '2026-07-15T09:20:00Z',
   },
   {
@@ -47,7 +50,8 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
     startDate: '2026-11-12',
     totalDays: 4,
     tags: ['휴양', '스트리트푸드', '야시장', '스파'],
-    recommendationReason: '가성비 높은 호텔 스파와 야시장 스트리트 푸드, 야경 루프탑 바 중심으로 구성된 힐링 일정입니다.',
+    recommendationReason:
+      '가성비 높은 호텔 스파와 야시장 스트리트 푸드, 야경 루프탑 바 중심으로 구성된 힐링 일정입니다.',
     createdAt: '2026-07-10T16:45:00Z',
   },
   {
@@ -58,7 +62,8 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
     startDate: '2026-11-20',
     totalDays: 3,
     tags: ['고즈넉함', '사찰', '자연', '말차'],
-    recommendationReason: '아라시야마 대나무 숲과 기요미즈데라 사찰, 전통 찻집 중심의 아늑하고 조용한 추천 코스입니다.',
+    recommendationReason:
+      '아라시야마 대나무 숲과 기요미즈데라 사찰, 전통 찻집 중심의 아늑하고 조용한 추천 코스입니다.',
     createdAt: '2026-07-05T11:10:00Z',
   },
 ];
@@ -66,7 +71,10 @@ export const MOCK_COURSE_LIST: CourseSummary[] = [
 export const handlers = [
   // Mock Google OAuth login API-AUTH-1
   http.post('*/api/auth/google', async ({ request }) => {
-    const body = (await request.json()) as { code?: string; redirectUri?: string };
+    const body = (await request.json()) as {
+      code?: string;
+      redirectUri?: string;
+    };
 
     if (!body.code) {
       return HttpResponse.json(
@@ -75,7 +83,7 @@ export const handlers = [
           message: '인가 코드가 유효하지 않습니다.',
           data: null,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -97,13 +105,17 @@ export const handlers = [
           refreshToken: 'mock-refresh-token',
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
   // Mock Apple OAuth login API-AUTH-2
   http.post('*/api/auth/apple', async ({ request }) => {
-    const body = (await request.json()) as { code?: string; redirectUri?: string; idToken?: string | null };
+    const body = (await request.json()) as {
+      code?: string;
+      redirectUri?: string;
+      idToken?: string | null;
+    };
 
     if (!body.code) {
       return HttpResponse.json(
@@ -112,7 +124,7 @@ export const handlers = [
           message: '유효하지 않은 Apple OAuth 인가 코드입니다.',
           data: null,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -135,7 +147,7 @@ export const handlers = [
           refreshToken: 'mock-apple-refresh-token',
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -155,14 +167,18 @@ export const handlers = [
       refreshToken = authHeader.replace('Bearer ', '');
     }
 
-    if (!refreshToken || refreshToken === 'mock-expired-refresh-token' || refreshToken === 'invalid-refresh-token') {
+    if (
+      !refreshToken ||
+      refreshToken === 'mock-expired-refresh-token' ||
+      refreshToken === 'invalid-refresh-token'
+    ) {
       return HttpResponse.json(
         {
           status: 401,
           message: 'Refresh Token이 유효하지 않거나 만료되었습니다.',
           data: null,
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -175,13 +191,12 @@ export const handlers = [
           refreshToken: 'new-refreshed-refresh-token',
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
   // Mock Taste Profile GET API-FB-8
   http.get('https://api.yeolo.com/api/me/taste-profile', () => {
-
     return HttpResponse.json(
       {
         status: 200,
@@ -247,7 +262,7 @@ export const handlers = [
           },
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -274,7 +289,7 @@ export const handlers = [
           message: '여행 조건 입력값이 올바르지 않습니다.',
           data: null,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -286,7 +301,7 @@ export const handlers = [
           courseId: '550e8400-e29b-41d4-a716-446655440030',
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -307,7 +322,8 @@ export const handlers = [
             totalDays: 2,
             totalCost: 66000,
             tags: ['힐링', '해변', '카페', '자연'],
-            recommendationReason: '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
+            recommendationReason:
+              '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
             itinerary: {
               days: [
                 {
@@ -394,7 +410,7 @@ export const handlers = [
           },
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -408,11 +424,7 @@ export const handlers = [
           courses: MOCK_COURSE_LIST,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 ];
-
-
-
-

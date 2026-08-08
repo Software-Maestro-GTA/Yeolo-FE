@@ -17,7 +17,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCourseStore } from '@yeolo/common';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
-import { useGA4ScreenTracking, useGA4ButtonClick, COURSE_LIST_QUERY_KEY } from '../hooks';
+import {
+  useGA4ScreenTracking,
+  useGA4ButtonClick,
+  COURSE_LIST_QUERY_KEY,
+} from '../hooks';
 
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
@@ -34,7 +38,8 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   const { trackButtonClick } = useGA4ButtonClick();
   const queryClient = useQueryClient();
 
-  const { createdCourseId, progressMessage, error, resetCourseState } = useCourseStore();
+  const { createdCourseId, progressMessage, error, resetCourseState } =
+    useCourseStore();
 
   useEffect(() => {
     if (createdCourseId) {
@@ -50,7 +55,10 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   };
 
   const handleGoIntro = () => {
-    trackButtonClick('btn_course_generating_go_intro', 'Navigate to Intro from Course Error');
+    trackButtonClick(
+      'btn_course_generating_go_intro',
+      'Navigate to Intro from Course Error',
+    );
     resetCourseState();
     onNavigateToIntro?.();
   };
@@ -58,36 +66,40 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   if (error) {
     return (
       <View style={styles.screenContainer}>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <SafeAreaView
+          style={styles.safeArea}
+          edges={['top', 'bottom', 'left', 'right']}>
           <View style={styles.errorContainer}>
             <View style={styles.errorCard}>
               <Ionicons
-                name="alert-circle-outline"
+                name='alert-circle-outline'
                 size={48}
-                color="#EF4444"
+                color='#EF4444'
                 style={styles.errorIcon}
               />
-              <Text style={styles.errorTitle}>코스 생성 중 오류가 발생했습니다</Text>
+              <Text style={styles.errorTitle}>
+                코스 생성 중 오류가 발생했습니다
+              </Text>
               <Text style={styles.errorSubtitle}>{error}</Text>
 
               <View style={styles.errorButtonContainer}>
                 {onNavigateToIntro && (
                   <TouchableOpacity
-                    testID="go-intro-btn"
+                    testID='go-intro-btn'
                     style={styles.introButton}
                     onPress={handleGoIntro}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.introButtonText}>시작 화면으로 이동</Text>
+                    activeOpacity={0.8}>
+                    <Text style={styles.introButtonText}>
+                      시작 화면으로 이동
+                    </Text>
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
-                  testID="retry-btn"
+                  testID='retry-btn'
                   style={styles.retryButton}
                   onPress={handleRetry}
-                  activeOpacity={0.8}
-                >
+                  activeOpacity={0.8}>
                   <Text style={styles.retryButtonText}>다시 시도하기</Text>
                 </TouchableOpacity>
               </View>
@@ -100,22 +112,28 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Main Body Section */}
-          <View style={styles.mainBodyContainer} testID="main-content">
+          <View style={styles.mainBodyContainer} testID='main-content'>
             {/* Title Group */}
-            <View style={styles.titleGroup} testID="title-group">
-              <Text style={styles.mainTitle}>{UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}</Text>
-              <Text style={styles.subTitle}>{UI_STRINGS.COURSE_GENERATING.SUB_TITLE}</Text>
+            <View style={styles.titleGroup} testID='title-group'>
+              <Text style={styles.mainTitle}>
+                {UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}
+              </Text>
+              <Text style={styles.subTitle}>
+                {UI_STRINGS.COURSE_GENERATING.SUB_TITLE}
+              </Text>
             </View>
 
             {/* Checklist Card */}
-            <View style={styles.checklistCard} testID="checklist-card">
+            <View style={styles.checklistCard} testID='checklist-card'>
               {/* Step 1: 사용자 취향 불러오기 (Completed) */}
-              <View style={styles.stepRow} testID="step-1">
+              <View style={styles.stepRow} testID='step-1'>
                 <View style={styles.completedCircle}>
-                  <Feather name="check" size={12} color="#FFFFFF" />
+                  <Feather name='check' size={12} color='#FFFFFF' />
                 </View>
                 <Text style={styles.completedStepText}>
                   {UI_STRINGS.COURSE_GENERATING.STEP_1}
@@ -126,9 +144,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
               <View style={styles.dividerLine} />
 
               {/* Step 2: 여행 코스 생성 중 (In Progress) */}
-              <View style={styles.stepRow} testID="step-2">
+              <View style={styles.stepRow} testID='step-2'>
                 <View style={styles.loadingCircle}>
-                  <ActivityIndicator size="small" color={palette.primary} />
+                  <ActivityIndicator size='small' color={palette.primary} />
                 </View>
                 <Text style={styles.activeStepText}>
                   {UI_STRINGS.COURSE_GENERATING.STEP_2}
@@ -137,7 +155,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
             </View>
 
             {/* Progress Bar Container */}
-            <View style={styles.progressBarContainer} testID="progress-bar-container">
+            <View
+              style={styles.progressBarContainer}
+              testID='progress-bar-container'>
               <View style={styles.progressTrack}>
                 <LinearGradient
                   colors={[palette.primary, palette.accent]}
@@ -147,8 +167,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
                 />
               </View>
               <View style={styles.progressLabelRow}>
-                <Text style={styles.progressStatusText} testID="progress-text">
-                  {progressMessage || UI_STRINGS.COURSE_GENERATING.PROGRESS_LABEL}
+                <Text style={styles.progressStatusText} testID='progress-text'>
+                  {progressMessage ||
+                    UI_STRINGS.COURSE_GENERATING.PROGRESS_LABEL}
                 </Text>
                 <Text style={styles.progressPercentageText}>60%</Text>
               </View>
@@ -156,8 +177,12 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
             {/* Bottom SubText */}
             <View style={styles.bottomSubTextGroup}>
-              <Text style={styles.bottomSubText}>{UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_1}</Text>
-              <Text style={styles.bottomSubText}>{UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_2}</Text>
+              <Text style={styles.bottomSubText}>
+                {UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_1}
+              </Text>
+              <Text style={styles.bottomSubText}>
+                {UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_2}
+              </Text>
             </View>
           </View>
         </View>

@@ -3,7 +3,13 @@
  * @description Taste analysis progress screen with dynamic insights container and step indicators.
  */
 import React, { useEffect, useState, useRef, useContext } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, Animated } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTasteStore, DEFAULT_API_URL } from '@yeolo/common';
@@ -45,7 +51,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     pulseAnimation.start();
 
@@ -110,25 +116,35 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Header Title Section */}
-          <View style={styles.headerSection} testID="top-content">
-            <Text style={styles.mainTitle}>{UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}</Text>
-            <Text style={styles.subTitle}>{UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}</Text>
+          <View style={styles.headerSection} testID='top-content'>
+            <Text style={styles.mainTitle}>
+              {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
+            </Text>
+            <Text style={styles.subTitle}>
+              {UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}
+            </Text>
           </View>
 
           {/* Main Body Section */}
-          <View style={styles.mainBodyContainer} testID="main-content">
+          <View style={styles.mainBodyContainer} testID='main-content'>
             {/* Checklist Step Container */}
-            <View style={styles.checklistContainer} testID="checklist-container">
-              <Text style={styles.checklistTitle}>{UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}</Text>
-              
+            <View
+              style={styles.checklistContainer}
+              testID='checklist-container'>
+              <Text style={styles.checklistTitle}>
+                {UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}
+              </Text>
+
               <View style={styles.stepsList}>
                 {/* Step 1: 사진 데이터 수집 완료 */}
-                <View style={styles.stepRow} testID="step-1">
+                <View style={styles.stepRow} testID='step-1'>
                   <View style={styles.checkedCircleIcon}>
-                    <Feather name="check" size={14} color="#FFFFFF" />
+                    <Feather name='check' size={14} color='#FFFFFF' />
                   </View>
                   <Text style={styles.activeStepText}>
                     {UI_STRINGS.TASTE_ANALYSIS.STEP_1}
@@ -136,27 +152,37 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                 </View>
 
                 {/* Step 2: 여행 성향 분석 중... */}
-                <View style={styles.stepRow} testID="step-2">
+                <View style={styles.stepRow} testID='step-2'>
                   {stepIndex >= 2 ? (
                     <View style={styles.checkedCircleIcon}>
-                      <Feather name="check" size={14} color="#FFFFFF" />
+                      <Feather name='check' size={14} color='#FFFFFF' />
                     </View>
                   ) : (
                     <View style={styles.loadingCircleIcon}>
-                      <ActivityIndicator size="small" color={palette.primary} />
+                      <ActivityIndicator size='small' color={palette.primary} />
                     </View>
                   )}
-                  <Text style={[styles.stepText, stepIndex >= 1 && styles.activeStepText]}>
+                  <Text
+                    style={[
+                      styles.stepText,
+                      stepIndex >= 1 && styles.activeStepText,
+                    ]}>
                     {UI_STRINGS.TASTE_ANALYSIS.STEP_2}
                   </Text>
                 </View>
 
                 {/* Step 3: 맞춤 코스 생성 대기 */}
-                <View style={styles.stepRow} testID="step-3">
+                <View style={styles.stepRow} testID='step-3'>
                   <View style={styles.pendingCircleIcon}>
                     <View style={styles.pendingDotInner} />
                   </View>
-                  <Text style={[styles.stepText, stepIndex >= 2 ? styles.activeStepText : styles.pendingStepText]}>
+                  <Text
+                    style={[
+                      styles.stepText,
+                      stepIndex >= 2
+                        ? styles.activeStepText
+                        : styles.pendingStepText,
+                    ]}>
                     {UI_STRINGS.TASTE_ANALYSIS.STEP_3}
                   </Text>
                 </View>
@@ -164,13 +190,15 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
             </View>
 
             {/* Insights Live Container */}
-            <View style={styles.insightsContainer} testID="insights-container">
+            <View style={styles.insightsContainer} testID='insights-container'>
               <View style={styles.insightsHeader}>
                 <Text style={styles.insightsTitle}>
                   {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_TITLE}
                 </Text>
                 <View style={styles.liveBadge}>
-                  <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+                  <Animated.View
+                    style={[styles.liveDot, { opacity: pulseAnim }]}
+                  />
                   <Text style={styles.liveBadgeText}>
                     {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_BADGE}
                   </Text>

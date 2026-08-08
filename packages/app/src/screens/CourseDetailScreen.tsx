@@ -30,11 +30,19 @@ export interface CourseDetailScreenProps {
   onSelectPlace?: (stop: ItineraryStop) => void;
 }
 
-export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScreenProps) {
+export function CourseDetailScreen({
+  courseId,
+  onSelectPlace,
+}: CourseDetailScreenProps) {
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
 
-  const { data: course, isLoading, error, refetch } = useCourseDetailQuery({
+  const {
+    data: course,
+    isLoading,
+    error,
+    refetch,
+  } = useCourseDetailQuery({
     courseId,
   });
 
@@ -52,7 +60,9 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
     }
   }, [course]);
 
-  const currentDayData = course?.itinerary?.days?.find((d) => d.day === selectedDay);
+  const currentDayData = course?.itinerary?.days?.find(
+    (d) => d.day === selectedDay,
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -68,7 +78,10 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
         return;
       }
 
-      const processed = await processCourseStopsMapData(currentDayData.stops, course?.destinationCity);
+      const processed = await processCourseStopsMapData(
+        currentDayData.stops,
+        course?.destinationCity,
+      );
       if (isMounted) {
         setMapData(processed);
       }
@@ -83,7 +96,7 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
   if (isLoading) {
     return (
       <View style={[styles.screenContainer, styles.centerContainer]}>
-        <ActivityIndicator size="large" color={palette.primary} />
+        <ActivityIndicator size='large' color={palette.primary} />
         <Text style={styles.loadingText}>코스 정보를 불러오는 중...</Text>
       </View>
     );
@@ -95,31 +108,34 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
         <Text style={styles.errorText}>코스 정보를 불러오지 못했습니다.</Text>
         {error && <Text style={styles.errorSubText}>{error.message}</Text>}
         <TouchableOpacity
-          testID="retry-button"
+          testID='retry-button'
           style={styles.retryButton}
           onPress={() => {
-            trackButtonClick('btn_course_detail_retry', 'Retry Fetch Course Detail');
+            trackButtonClick(
+              'btn_course_detail_retry',
+              'Retry Fetch Course Detail',
+            );
             refetch();
           }}
-          activeOpacity={0.8}
-        >
+          activeOpacity={0.8}>
           <Text style={styles.retryButtonText}>다시 시도하기</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const calculatedTotalCost = course.totalCost || course.itinerary?.days?.reduce((acc, d) => {
-    return acc + (d.stops?.reduce((sAcc, s) => sAcc + (s.cost || 0), 0) || 0);
-  }, 0);
+  const calculatedTotalCost =
+    course.totalCost ||
+    course.itinerary?.days?.reduce((acc, d) => {
+      return acc + (d.stops?.reduce((sAcc, s) => sAcc + (s.cost || 0), 0) || 0);
+    }, 0);
 
   return (
-    <View style={styles.screenContainer} testID="screen-container">
+    <View style={styles.screenContainer} testID='screen-container'>
       <ScrollView
         contentContainerStyle={styles.scrollContentContainer}
         scrollEnabled={!isMapInteracting}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {/* Header Section Component */}
         <CourseDetailHeader
           destinationCountry={course.destinationCountry}
@@ -127,8 +143,12 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
           startDate={course.startDate}
           title={course.title}
           totalCost={calculatedTotalCost}
-          onBack={() => trackButtonClick('btn_course_detail_back', 'Back Button Click')}
-          onShare={() => trackButtonClick('btn_course_detail_share', 'Share Course Click')}
+          onBack={() =>
+            trackButtonClick('btn_course_detail_back', 'Back Button Click')
+          }
+          onShare={() =>
+            trackButtonClick('btn_course_detail_share', 'Share Course Click')
+          }
         />
 
         {/* Main Content Body */}
@@ -147,7 +167,11 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
             days={course.itinerary?.days}
             selectedDay={selectedDay}
             onSelectDay={(day) => {
-              trackButtonClick('btn_course_detail_day_tab', `Select Day ${day}`, { day });
+              trackButtonClick(
+                'btn_course_detail_day_tab',
+                `Select Day ${day}`,
+                { day },
+              );
               setSelectedDay(day);
             }}
           />
@@ -156,14 +180,14 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
           <TouchableOpacity
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={() => trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner')}
-          >
+            onPress={() =>
+              trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner')
+            }>
             <LinearGradient
               colors={['rgba(45,125,210,0.9)', 'rgba(30,95,166,0.9)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.bannerGradient}
-            >
+              style={styles.bannerGradient}>
               <View style={styles.bannerLeft}>
                 <Text style={styles.bannerTitle}>
                   {UI_STRINGS.COURSE_DETAIL.FLIGHT_BANNER_TITLE}
@@ -181,7 +205,7 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
           </TouchableOpacity>
 
           {/* Timeline Itinerary Items Stream */}
-          <View style={styles.timelineSection} testID="timeline-section">
+          <View style={styles.timelineSection} testID='timeline-section'>
             {currentDayData?.stops && currentDayData.stops.length > 0 ? (
               currentDayData.stops.map((stop: ItineraryStop, index: number) => (
                 <ItineraryTimelineItem
@@ -193,7 +217,9 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
               ))
             ) : (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>해당 일차의 일정이 존재하지 않습니다.</Text>
+                <Text style={styles.emptyText}>
+                  해당 일차의 일정이 존재하지 않습니다.
+                </Text>
               </View>
             )}
           </View>
@@ -202,14 +228,14 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
           <TouchableOpacity
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={() => trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner')}
-          >
+            onPress={() =>
+              trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner')
+            }>
             <LinearGradient
               colors={['rgba(0,201,167,0.9)', 'rgba(13,115,97,0.9)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.bannerGradient}
-            >
+              style={styles.bannerGradient}>
               <View style={styles.bannerLeft}>
                 <Text style={styles.bannerTitle}>
                   {UI_STRINGS.COURSE_DETAIL.HOTEL_BANNER_TITLE}
@@ -227,13 +253,16 @@ export function CourseDetailScreen({ courseId, onSelectPlace }: CourseDetailScre
           </TouchableOpacity>
 
           {/* Summary Section (총 예상 경비) */}
-          <View style={styles.summarySection} testID="summary-section">
+          <View style={styles.summarySection} testID='summary-section'>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryTitle}>
                 {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
               </Text>
               <Text style={styles.summaryValue}>
-                ₩{calculatedTotalCost ? calculatedTotalCost.toLocaleString() : '78,000'}
+                ₩
+                {calculatedTotalCost
+                  ? calculatedTotalCost.toLocaleString()
+                  : '78,000'}
               </Text>
             </View>
           </View>

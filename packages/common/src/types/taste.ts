@@ -92,11 +92,7 @@ export interface FoodPreference {
 }
 
 export type TravelPaceDensity =
-  | 'slow_stay'
-  | 'balanced'
-  | 'dense_schedule'
-  | 'spontaneous'
-  | 'long_stay';
+  'slow_stay' | 'balanced' | 'dense_schedule' | 'spontaneous' | 'long_stay';
 
 export type CompanionType =
   | 'solo'

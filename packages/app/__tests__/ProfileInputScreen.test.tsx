@@ -24,7 +24,7 @@ describe('ProfileInputScreen (Figma 프로필 설정 화면)', () => {
   it('저장 버튼 클릭 시 닉네임 유효성 검사 및 저장 콜백 함수가 호출되어야 한다', async () => {
     const mockOnSaveSuccess = jest.fn();
     const { findByTestId } = await render(
-      <ProfileInputScreen onSaveSuccess={mockOnSaveSuccess} />
+      <ProfileInputScreen onSaveSuccess={mockOnSaveSuccess} />,
     );
 
     const input = await findByTestId('input-profile-nickname');
@@ -41,7 +41,7 @@ describe('ProfileInputScreen (Figma 프로필 설정 화면)', () => {
   it('나중에 하기 버튼 클릭 시 뒤로가기 콜백이 호출되어야 한다', async () => {
     const mockOnGoBack = jest.fn();
     const { findByTestId } = await render(
-      <ProfileInputScreen onGoBack={mockOnGoBack} />
+      <ProfileInputScreen onGoBack={mockOnGoBack} />,
     );
 
     const btnSkip = await findByTestId('btn-skip-profile-input');

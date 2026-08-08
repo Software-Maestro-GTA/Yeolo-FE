@@ -11,7 +11,7 @@ export function useGA4ButtonClick() {
     (buttonId: string, buttonName?: string, params?: GA4EventParams) => {
       analyticsService.logButtonClick(buttonId, buttonName, params);
     },
-    []
+    [],
   );
 
   return { trackButtonClick };

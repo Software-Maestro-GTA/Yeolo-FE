@@ -3,7 +3,13 @@
  * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI specifications.
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TasteProfile } from '@yeolo/common';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,18 +22,55 @@ export interface TasteProfileViewProps {
   onReanalyze?: () => void;
 }
 
-const PACE_LABELS: Record<string, string> = { RELAXED: '여유로운', BALANCED: '균형잡힌', BUSY: '빽빽한' };
-const SPENDING_LABELS: Record<string, string> = { BUDGET: '가성비', MODERATE: '적정', LUXURY: '럭셔리' };
-const COMPANION_LABELS: Record<string, string> = { SOLO: '혼자', COUPLE: '커플', FAMILY: '가족', FRIENDS: '친구' };
-const PURPOSE_LABELS: Record<string, string> = { GOURMET: '미식형', HEALING: '휴양형', NATURE: '자연 탐방형', CULTURE: '문화 탐방형' };
-const LOCATION_LABELS: Record<string, string> = { BEACH: '해변·휴양지', CITY: '대도시', NATURE: '자연·비경', SMALL_TOWN: '소도시' };
-const FOOD_LABELS: Record<string, string> = { LOCAL: '현지 로컬 푸드', CAFE: '카페·디저트', GOURMET: '유명 맛집' };
-const SEASON_LABELS: Record<string, string> = { WARM: '따뜻한 지역 선호', COOL: '시원한 지역 선호', ALL: '사계절 무관' };
+const PACE_LABELS: Record<string, string> = {
+  RELAXED: '여유로운',
+  BALANCED: '균형잡힌',
+  BUSY: '빽빽한',
+};
+const SPENDING_LABELS: Record<string, string> = {
+  BUDGET: '가성비',
+  MODERATE: '적정',
+  LUXURY: '럭셔리',
+};
+const COMPANION_LABELS: Record<string, string> = {
+  SOLO: '혼자',
+  COUPLE: '커플',
+  FAMILY: '가족',
+  FRIENDS: '친구',
+};
+const PURPOSE_LABELS: Record<string, string> = {
+  GOURMET: '미식형',
+  HEALING: '휴양형',
+  NATURE: '자연 탐방형',
+  CULTURE: '문화 탐방형',
+};
+const LOCATION_LABELS: Record<string, string> = {
+  BEACH: '해변·휴양지',
+  CITY: '대도시',
+  NATURE: '자연·비경',
+  SMALL_TOWN: '소도시',
+};
+const FOOD_LABELS: Record<string, string> = {
+  LOCAL: '현지 로컬 푸드',
+  CAFE: '카페·디저트',
+  GOURMET: '유명 맛집',
+};
+const SEASON_LABELS: Record<string, string> = {
+  WARM: '따뜻한 지역 선호',
+  COOL: '시원한 지역 선호',
+  ALL: '사계절 무관',
+};
 
-export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onReanalyze }) => {
+export const TasteProfileView: React.FC<TasteProfileViewProps> = ({
+  profile,
+  onReanalyze,
+}) => {
   const renderTraitBar = (label: string, score: number = 3, index: number) => {
     const formattedScore = Math.min(Math.max(score, 1), 5).toFixed(1);
-    const percentage = Math.min(Math.max(Math.round((score / 5) * 100), 0), 100);
+    const percentage = Math.min(
+      Math.max(Math.round((score / 5) * 100), 0),
+      100,
+    );
 
     const gradientColors =
       index % 2 === 0
@@ -39,7 +82,9 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
       <View key={label} style={styles.traitRow}>
         <View style={styles.traitHeader}>
           <View style={styles.labelContainer}>
-            <View style={[styles.bulletDot, { backgroundColor: accentTextColor }]} />
+            <View
+              style={[styles.bulletDot, { backgroundColor: accentTextColor }]}
+            />
             <Text style={styles.traitLabel}>{label}</Text>
           </View>
           <Text style={[styles.traitPercentage, { color: accentTextColor }]}>
@@ -62,7 +107,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
     title: string,
     dataObj: Record<string, number | undefined>,
     labelsMap: Record<string, string>,
-    iconName: keyof typeof Ionicons.glyphMap
+    iconName: keyof typeof Ionicons.glyphMap,
   ) => {
     const entries = Object.entries(dataObj || {})
       .filter(([, val]) => typeof val === 'number' && val > 0)
@@ -80,7 +125,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
         {entries.map(([key, score], idx) =>
-          renderTraitBar(labelsMap[key] || key, score, idx)
+          renderTraitBar(labelsMap[key] || key, score, idx),
         )}
       </View>
     );
@@ -90,24 +135,25 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
+      showsVerticalScrollIndicator={false}>
       {/* 1. Premium Hero Persona Card with Natural Top-Right Reanalyze Button */}
       <View style={styles.heroWrapper}>
         <LinearGradient
           colors={['#EEF2FF', '#F5F3FF', '#F0FDFA']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
+          style={styles.heroCard}>
           {onReanalyze && (
             <TouchableOpacity
-              testID="btn-reanalyze-icon"
+              testID='btn-reanalyze-icon'
               style={styles.topRightScrollButton}
               onPress={onReanalyze}
-              activeOpacity={0.75}
-            >
-              <Ionicons name="refresh-outline" size={18} color={theme.colors.primary} />
+              activeOpacity={0.75}>
+              <Ionicons
+                name='refresh-outline'
+                size={18}
+                color={theme.colors.primary}
+              />
             </TouchableOpacity>
           )}
 
@@ -116,9 +162,8 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
               colors={theme.colors.gradient.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.heroIconGradient}
-            >
-              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              style={styles.heroIconGradient}>
+              <Ionicons name='sparkles' size={24} color='#FFFFFF' />
             </LinearGradient>
           </View>
 
@@ -130,8 +175,12 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
       {/* 2. Unified Core Travel Keywords Section (Friendly Title) */}
       {(() => {
         const EXCLUDED_KEYS = [
-          'solo', 'moderate', 'medium',
-          '혼자 여행형', '중간소비형', '중간 소비형'
+          'solo',
+          'moderate',
+          'medium',
+          '혼자 여행형',
+          '중간소비형',
+          '중간 소비형',
         ];
 
         const rawKeywords: { key: string; label: string }[] = [];
@@ -139,19 +188,24 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         if (profile.travelPaceDensity) {
           rawKeywords.push({
             key: profile.travelPaceDensity,
-            label: PACE_LABELS[profile.travelPaceDensity] || profile.travelPaceDensity,
+            label:
+              PACE_LABELS[profile.travelPaceDensity] ||
+              profile.travelPaceDensity,
           });
         }
         if (profile.companionType) {
           rawKeywords.push({
             key: profile.companionType,
-            label: COMPANION_LABELS[profile.companionType] || profile.companionType,
+            label:
+              COMPANION_LABELS[profile.companionType] || profile.companionType,
           });
         }
         if (profile.spendingTendency) {
           rawKeywords.push({
             key: profile.spendingTendency,
-            label: SPENDING_LABELS[profile.spendingTendency] || profile.spendingTendency,
+            label:
+              SPENDING_LABELS[profile.spendingTendency] ||
+              profile.spendingTendency,
           });
         }
         if (Array.isArray(profile.seasonalEnvironmentPreference)) {
@@ -164,7 +218,8 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         }
 
         const validKeywords = rawKeywords.filter(
-          (k) => !EXCLUDED_KEYS.includes(k.key) && !EXCLUDED_KEYS.includes(k.label)
+          (k) =>
+            !EXCLUDED_KEYS.includes(k.key) && !EXCLUDED_KEYS.includes(k.label),
         );
 
         if (validKeywords.length === 0) return null;
@@ -173,7 +228,11 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
           <View style={styles.summaryCard}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardTitleIconContainer}>
-                <Ionicons name="sparkles-outline" size={18} color={theme.colors.primary} />
+                <Ionicons
+                  name='sparkles-outline'
+                  size={18}
+                  color={theme.colors.primary}
+                />
               </View>
               <Text style={styles.cardTitle}>한눈에 보는 나의 취향</Text>
             </View>
@@ -187,8 +246,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
                       colors={['#8B5CF6', '#6366F1']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.badgePillGradientPrimary}
-                    >
+                      style={styles.badgePillGradientPrimary}>
                       <Text style={styles.badgeTextLight}>{item.label}</Text>
                     </LinearGradient>
                   );
@@ -200,14 +258,15 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
                       colors={['#10B981', '#059669']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.badgePillGradientSecondary}
-                    >
+                      style={styles.badgePillGradientSecondary}>
                       <Text style={styles.badgeTextLight}>{item.label}</Text>
                     </LinearGradient>
                   );
                 }
                 return (
-                  <View key={`${item.key}-${idx}`} style={styles.badgeOutlinePill}>
+                  <View
+                    key={`${item.key}-${idx}`}
+                    style={styles.badgeOutlinePill}>
                     <Text style={styles.badgeOutlineText}>{item.label}</Text>
                   </View>
                 );
@@ -222,23 +281,22 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         '내가 여행을 떠나는 이유',
         profile.travelPurpose as Record<string, number | undefined>,
         PURPOSE_LABELS,
-        'flag-outline'
+        'flag-outline',
       )}
 
       {renderSection(
         '마음이 끌리는 공간',
         profile.preferredLocationType as Record<string, number | undefined>,
         LOCATION_LABELS,
-        'map-outline'
+        'map-outline',
       )}
 
       {renderSection(
         '즐거운 미식 스펙트럼',
         profile.foodPreference as Record<string, number | undefined>,
         FOOD_LABELS,
-        'restaurant-outline'
+        'restaurant-outline',
       )}
-
     </ScrollView>
   );
 };

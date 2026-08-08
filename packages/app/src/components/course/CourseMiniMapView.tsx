@@ -3,7 +3,13 @@
  * @description Mini map view component supporting native iOS MapView and Android in-app Leaflet WebView.
  */
 import React from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import type { MapCoordinate, MapRegion } from '@yeolo/common';
@@ -39,22 +45,23 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
       style={styles.miniMapSection}
       onTouchStart={onInteractionStart}
       onTouchEnd={onInteractionEnd}
-      onTouchCancel={onInteractionEnd}
-    >
+      onTouchCancel={onInteractionEnd}>
       {Platform.OS === 'ios' ? (
-        <View style={styles.miniMapCard} testID="mini-map-card">
+        <View style={styles.miniMapCard} testID='mini-map-card'>
           <MapView
             ref={mapRef}
-            testID="in-app-map-view"
+            testID='in-app-map-view'
             style={styles.mapView}
             region={mapRegion}
             scrollEnabled={true}
-            zoomEnabled={true}
-          >
+            zoomEnabled={true}>
             {stopCoordinates.map((stop, idx) => (
               <Marker
                 key={`${stop.placeName}-${idx}`}
-                coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
+                coordinate={{
+                  latitude: stop.latitude,
+                  longitude: stop.longitude,
+                }}
                 title={`${idx + 1}. ${stop.placeName}`}
               />
             ))}
@@ -71,21 +78,23 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
           </MapView>
         </View>
       ) : (
-        <View style={styles.miniMapCard} testID="mini-map-webview-card">
+        <View style={styles.miniMapCard} testID='mini-map-webview-card'>
           <WebView
             key={leafletHtml}
-            testID="in-app-webview"
+            testID='in-app-webview'
             source={{ html: leafletHtml }}
             style={styles.webView}
             javaScriptEnabled={true}
             domStorageEnabled={true}
             nestedScrollEnabled={true}
-            overScrollMode="never"
+            overScrollMode='never'
             startInLoadingState={true}
             renderLoading={() => (
               <View style={styles.webViewLoading}>
-                <ActivityIndicator size="small" color={palette.primary} />
-                <Text style={styles.webViewLoadingText}>지도를 불러오는 중...</Text>
+                <ActivityIndicator size='small' color={palette.primary} />
+                <Text style={styles.webViewLoadingText}>
+                  지도를 불러오는 중...
+                </Text>
               </View>
             )}
           />

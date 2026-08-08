@@ -15,18 +15,23 @@ import { UI_STRINGS } from '../constants';
  */
 export const initializeGoogleSignin = (
   webClientId?: string,
-  iosClientId?: string
+  iosClientId?: string,
 ): void => {
-  logger.info('[AuthService] Initializing GoogleSignin with webClientId:', webClientId);
+  logger.info(
+    '[AuthService] Initializing GoogleSignin with webClientId:',
+    webClientId,
+  );
   try {
     if (!webClientId) {
-      logger.warn('[AuthService] webClientId가 설정되지 않아 GoogleSignin 구성을 건너뜁니다.');
+      logger.warn(
+        '[AuthService] webClientId가 설정되지 않아 GoogleSignin 구성을 건너뜁니다.',
+      );
       return;
     }
     GoogleSignin.configure({
       webClientId,
       iosClientId,
-      offlineAccess: true
+      offlineAccess: true,
     });
   } catch (error) {
     logger.error('[AuthService] GoogleSignin initialize error:', error);
@@ -65,7 +70,10 @@ export const isAppleAuthAvailable = async (): Promise<boolean> => {
  * Execute native Apple login and extract authorization code & identity token.
  * @returns Promise<{ code: string; idToken: string | null }> representing authorization credentials.
  */
-export const signInWithApple = async (): Promise<{ code: string; idToken: string | null }> => {
+export const signInWithApple = async (): Promise<{
+  code: string;
+  idToken: string | null;
+}> => {
   logger.info('[AuthService] Executing signInWithApple...');
   const isAvailable = await isAppleAuthAvailable();
   if (!isAvailable) {
@@ -115,7 +123,9 @@ const unauthorizedListeners = new Set<UnauthorizedListener>();
 /**
  * Register a listener to be called when 401 Unauthorized occurs.
  */
-export const onUnauthorized = (listener: UnauthorizedListener): (() => void) => {
+export const onUnauthorized = (
+  listener: UnauthorizedListener,
+): (() => void) => {
   unauthorizedListeners.add(listener);
   return () => {
     unauthorizedListeners.delete(listener);
@@ -126,7 +136,9 @@ export const onUnauthorized = (listener: UnauthorizedListener): (() => void) => 
  * Trigger session cleanup and notify all registered listeners to redirect to login.
  */
 export const notifyUnauthorized = async (): Promise<void> => {
-  logger.warn('[AuthService] 401 Unauthorized detected! Clearing local session and redirecting to login...');
+  logger.warn(
+    '[AuthService] 401 Unauthorized detected! Clearing local session and redirecting to login...',
+  );
   await clearLocalSession();
   unauthorizedListeners.forEach((listener) => {
     try {

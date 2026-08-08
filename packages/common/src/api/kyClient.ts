@@ -7,15 +7,24 @@ import type { RefreshTokenResponse } from '../types/auth';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
 
-export type TokenGetter = () => Promise<{ accessToken?: string | null; refreshToken?: string | null }>;
-export type TokenSetter = (accessToken: string, refreshToken: string) => Promise<void>;
+export type TokenGetter = () => Promise<{
+  accessToken?: string | null;
+  refreshToken?: string | null;
+}>;
+export type TokenSetter = (
+  accessToken: string,
+  refreshToken: string,
+) => Promise<void>;
 export type UnauthorizedHandler = () => void | Promise<void>;
 
 let globalTokenGetter: TokenGetter | null = null;
 let globalTokenSetter: TokenSetter | null = null;
 let globalUnauthorizedHandler: UnauthorizedHandler | null = null;
 
-let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null;
+let refreshPromise: Promise<{
+  accessToken: string;
+  refreshToken: string;
+}> | null = null;
 
 /**
  * Configure global token getter callback.
@@ -50,7 +59,7 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler): void {
  */
 export async function refreshTokenApi(
   apiUrl: string,
-  refreshToken: string
+  refreshToken: string,
 ): Promise<RefreshTokenResponse> {
   const normalizedApiUrl = apiUrl.replace(/\/$/, '');
   const targetUrl = `${normalizedApiUrl}/api/auth/refresh`;
@@ -65,7 +74,9 @@ export async function refreshTokenApi(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${refreshToken ? `${refreshToken.slice(0, 15)}...` : 'none'}`,
     },
-    body: { refreshToken: refreshToken ? `${refreshToken.slice(0, 15)}...` : 'none' },
+    body: {
+      refreshToken: refreshToken ? `${refreshToken.slice(0, 15)}...` : 'none',
+    },
   });
 
   const response = await ky.post(targetUrl, {
@@ -74,24 +85,36 @@ export async function refreshTokenApi(
     throwHttpErrors: false,
   });
 
-  const result = (await response.json().catch(() => null)) as RefreshTokenResponse | null;
+  const result = (await response
+    .json()
+    .catch(() => null)) as RefreshTokenResponse | null;
 
-  logger.info(`[AuthAPI] refreshTokenApi <- Response Status: ${response.status}`, {
-    status: response.status,
-    ok: response.ok,
-    body: result,
-  });
+  logger.info(
+    `[AuthAPI] refreshTokenApi <- Response Status: ${response.status}`,
+    {
+      status: response.status,
+      ok: response.ok,
+      body: result,
+    },
+  );
 
   if (!response.ok || !result || result.status !== 200) {
     const errorStatus = result?.status || response.status;
-    const errorMessage = result?.message || (result as any)?.error || 'Refresh Token이 유효하지 않거나 만료되었습니다.';
-    logger.error(`[AuthAPI] refreshTokenApi error (${errorStatus}):`, errorMessage, 'body:', result);
+    const errorMessage =
+      result?.message ||
+      (result as any)?.error ||
+      'Refresh Token이 유효하지 않거나 만료되었습니다.';
+    logger.error(
+      `[AuthAPI] refreshTokenApi error (${errorStatus}):`,
+      errorMessage,
+      'body:',
+      result,
+    );
     throw new ApiError(errorStatus, errorMessage);
   }
 
   return result;
 }
-
 
 /**
  * Executes a single-flight token refresh process to prevent concurrent duplicate refresh requests.
@@ -102,13 +125,14 @@ export async function refreshTokenApi(
  */
 async function executeTokenRefresh(
   apiUrl: string,
-  refreshToken: string
+  refreshToken: string,
 ): Promise<{ accessToken: string; refreshToken: string }> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
         const refreshResponse = await refreshTokenApi(apiUrl, refreshToken);
-        const { accessToken: newAccess, refreshToken: newRefresh } = refreshResponse.data;
+        const { accessToken: newAccess, refreshToken: newRefresh } =
+          refreshResponse.data;
 
         if (globalTokenSetter) {
           await globalTokenSetter(newAccess, newRefresh);
@@ -131,7 +155,10 @@ async function executeTokenRefresh(
  * @param customOptions Additional ky configuration options
  * @returns KyInstance
  */
-export function createHttpClient(baseUrl?: string, customOptions?: Options): KyInstance {
+export function createHttpClient(
+  baseUrl?: string,
+  customOptions?: Options,
+): KyInstance {
   const options: Options = {
     throwHttpErrors: false,
     ...customOptions,
@@ -142,7 +169,10 @@ export function createHttpClient(baseUrl?: string, customOptions?: Options): KyI
             try {
               const tokens = await globalTokenGetter();
               if (tokens.accessToken) {
-                request.headers.set('Authorization', `Bearer ${tokens.accessToken}`);
+                request.headers.set(
+                  'Authorization',
+                  `Bearer ${tokens.accessToken}`,
+                );
               }
             } catch (err) {
               logger.error('[HttpClient] Error getting access token:', err);
@@ -152,8 +182,13 @@ export function createHttpClient(baseUrl?: string, customOptions?: Options): KyI
       ],
       afterResponse: [
         async ({ request, response }) => {
-          if (response.status === 401 && !request.url.includes('/api/auth/refresh')) {
-            logger.warn('[HttpClient] 401 Unauthorized detected! Attempting Silent Refresh...');
+          if (
+            response.status === 401 &&
+            !request.url.includes('/api/auth/refresh')
+          ) {
+            logger.warn(
+              '[HttpClient] 401 Unauthorized detected! Attempting Silent Refresh...',
+            );
 
             try {
               let currentRefreshToken: string | null | undefined;
@@ -163,14 +198,24 @@ export function createHttpClient(baseUrl?: string, customOptions?: Options): KyI
               }
 
               if (currentRefreshToken) {
-                const targetApiUrl = (baseUrl && baseUrl.replace(/\/$/, '')) || new URL(request.url).origin;
-                const newTokens = await executeTokenRefresh(targetApiUrl, currentRefreshToken);
+                const targetApiUrl =
+                  (baseUrl && baseUrl.replace(/\/$/, '')) ||
+                  new URL(request.url).origin;
+                const newTokens = await executeTokenRefresh(
+                  targetApiUrl,
+                  currentRefreshToken,
+                );
 
                 // Retry original request with new access token
-                request.headers.set('Authorization', `Bearer ${newTokens.accessToken}`);
+                request.headers.set(
+                  'Authorization',
+                  `Bearer ${newTokens.accessToken}`,
+                );
                 return ky(request);
               } else {
-                logger.warn('[HttpClient] No Refresh Token available for silent refresh.');
+                logger.warn(
+                  '[HttpClient] No Refresh Token available for silent refresh.',
+                );
               }
             } catch (refreshError) {
               logger.error('[HttpClient] Silent Refresh failed:', refreshError);
@@ -181,7 +226,10 @@ export function createHttpClient(baseUrl?: string, customOptions?: Options): KyI
               try {
                 await globalUnauthorizedHandler();
               } catch (e) {
-                logger.error('[HttpClient] Error executing unauthorized handler:', e);
+                logger.error(
+                  '[HttpClient] Error executing unauthorized handler:',
+                  e,
+                );
               }
             }
           }
@@ -198,4 +246,3 @@ export function createHttpClient(baseUrl?: string, customOptions?: Options): KyI
 
   return ky.create(options);
 }
-

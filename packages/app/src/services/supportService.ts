@@ -16,10 +16,14 @@ export interface OpenSupportMailOptions {
  * Open In-App MailComposer modal for customer support.
  * Retains full app focus so users return immediately to Yeolo without restarting.
  */
-export async function openCustomerSupportMail(options: OpenSupportMailOptions = {}): Promise<void> {
+export async function openCustomerSupportMail(
+  options: OpenSupportMailOptions = {},
+): Promise<void> {
   const recipient = APP_CONFIG.DEFAULT_SUPPORT_EMAIL;
-  const defaultSubject = options.subject || UI_STRINGS.COMMON.SUPPORT_MAIL_DEFAULT_SUBJECT;
-  const defaultBody = options.body || UI_STRINGS.COMMON.SUPPORT_MAIL_DEFAULT_BODY;
+  const defaultSubject =
+    options.subject || UI_STRINGS.COMMON.SUPPORT_MAIL_DEFAULT_SUBJECT;
+  const defaultBody =
+    options.body || UI_STRINGS.COMMON.SUPPORT_MAIL_DEFAULT_BODY;
 
   try {
     const isAvailable = await MailComposer.isAvailableAsync();
@@ -32,7 +36,10 @@ export async function openCustomerSupportMail(options: OpenSupportMailOptions = 
       return;
     }
   } catch (composerErr) {
-    logger.warn('[SupportService] MailComposer failed or not available:', composerErr);
+    logger.warn(
+      '[SupportService] MailComposer failed or not available:',
+      composerErr,
+    );
   }
 
   // Fallback to mailto link if MailComposer is unavailable
@@ -54,7 +61,7 @@ export async function openCustomerSupportMail(options: OpenSupportMailOptions = 
     logger.warn('[SupportService] Final mailto openURL failed:', err);
     Alert.alert(
       UI_STRINGS.COMMON.SUPPORT_EMAIL_TITLE,
-      `${UI_STRINGS.COMMON.SUPPORT_EMAIL_FAIL_ALERT}${recipient}`
+      `${UI_STRINGS.COMMON.SUPPORT_EMAIL_FAIL_ALERT}${recipient}`,
     );
   }
 }

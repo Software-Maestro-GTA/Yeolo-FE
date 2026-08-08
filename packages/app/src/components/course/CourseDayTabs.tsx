@@ -24,8 +24,7 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.dayTabContainer}
-    >
+      contentContainerStyle={styles.dayTabContainer}>
       {days.map((dayItem) => {
         const isSelected = dayItem.day === selectedDay;
         return (
@@ -34,9 +33,12 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
             testID={`day-tab-${dayItem.day}`}
             style={[styles.dayPill, isSelected && styles.dayPillSelected]}
             onPress={() => onSelectDay(dayItem.day)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.dayPillText, isSelected && styles.dayPillTextSelected]}>
+            activeOpacity={0.8}>
+            <Text
+              style={[
+                styles.dayPillText,
+                isSelected && styles.dayPillTextSelected,
+              ]}>
               Day {dayItem.day}
             </Text>
           </TouchableOpacity>

@@ -26,59 +26,124 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionHeaderTitle}>{UI_STRINGS.PROFILE.SETTINGS_TITLE}</Text>
+      <Text style={styles.sectionHeaderTitle}>
+        {UI_STRINGS.PROFILE.SETTINGS_TITLE}
+      </Text>
 
       {/* 이용약관 */}
-      <TouchableOpacity style={styles.menuItem} onPress={onPressTerms} activeOpacity={0.6}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={onPressTerms}
+        activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
-          <Ionicons name="document-text-outline" size={20} color={theme.colors.text.secondary} />
-          <Text style={styles.menuItemText}>{UI_STRINGS.PROFILE.TERMS_SERVICE}</Text>
+          <Ionicons
+            name='document-text-outline'
+            size={20}
+            color={theme.colors.text.secondary}
+          />
+          <Text style={styles.menuItemText}>
+            {UI_STRINGS.PROFILE.TERMS_SERVICE}
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+        <Ionicons
+          name='chevron-forward'
+          size={18}
+          color={theme.colors.text.placeholder}
+        />
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
       {/* 개인정보 처리방침 */}
-      <TouchableOpacity style={styles.menuItem} onPress={onPressPrivacy} activeOpacity={0.6}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={onPressPrivacy}
+        activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.text.secondary} />
-          <Text style={styles.menuItemText}>{UI_STRINGS.PROFILE.TERMS_PRIVACY}</Text>
+          <Ionicons
+            name='shield-checkmark-outline'
+            size={20}
+            color={theme.colors.text.secondary}
+          />
+          <Text style={styles.menuItemText}>
+            {UI_STRINGS.PROFILE.TERMS_PRIVACY}
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+        <Ionicons
+          name='chevron-forward'
+          size={18}
+          color={theme.colors.text.placeholder}
+        />
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
       {/* 고객 지원 */}
-      <TouchableOpacity style={styles.menuItem} onPress={onPressSupport} activeOpacity={0.6}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={onPressSupport}
+        activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
-          <Ionicons name="help-circle-outline" size={20} color={theme.colors.text.secondary} />
-          <Text style={styles.menuItemText}>{UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}</Text>
+          <Ionicons
+            name='help-circle-outline'
+            size={20}
+            color={theme.colors.text.secondary}
+          />
+          <Text style={styles.menuItemText}>
+            {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+        <Ionicons
+          name='chevron-forward'
+          size={18}
+          color={theme.colors.text.placeholder}
+        />
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
       {/* 로그아웃 */}
-      <TouchableOpacity style={styles.menuItem} onPress={onPressLogout} activeOpacity={0.6}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={onPressLogout}
+        activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
-          <Ionicons name="log-out-outline" size={20} color={theme.colors.text.secondary} />
+          <Ionicons
+            name='log-out-outline'
+            size={20}
+            color={theme.colors.text.secondary}
+          />
           <Text style={styles.menuItemText}>{UI_STRINGS.PROFILE.LOGOUT}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.text.placeholder} />
+        <Ionicons
+          name='chevron-forward'
+          size={18}
+          color={theme.colors.text.placeholder}
+        />
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
       {/* 탈퇴하기 */}
-      <TouchableOpacity style={styles.menuItem} onPress={onPressWithdraw} activeOpacity={0.6}>
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={onPressWithdraw}
+        activeOpacity={0.6}>
         <View style={styles.menuItemLeft}>
-          <Ionicons name="trash-outline" size={20} color={theme.colors.status.error} />
-          <Text style={[styles.menuItemText, styles.dangerText]}>{UI_STRINGS.PROFILE.WITHDRAW}</Text>
+          <Ionicons
+            name='trash-outline'
+            size={20}
+            color={theme.colors.status.error}
+          />
+          <Text style={[styles.menuItemText, styles.dangerText]}>
+            {UI_STRINGS.PROFILE.WITHDRAW}
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={theme.colors.status.error} />
+        <Ionicons
+          name='chevron-forward'
+          size={18}
+          color={theme.colors.status.error}
+        />
       </TouchableOpacity>
     </View>
   );

@@ -13,7 +13,7 @@ import { logger } from '../utils/logger';
 export async function withdrawApi(
   apiUrl: string,
   token?: string,
-  payload?: WithdrawRequest
+  payload?: WithdrawRequest,
 ): Promise<WithdrawResponse> {
   logger.info('[UserAPI] withdrawApi request:', payload);
   const headers: Record<string, string> = {};

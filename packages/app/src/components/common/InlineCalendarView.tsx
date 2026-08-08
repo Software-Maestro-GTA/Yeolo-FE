@@ -50,20 +50,31 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
     return rows;
   };
 
-  const calendarDays = getDaysInMonth(currentYearMonth.year, currentYearMonth.month);
+  const calendarDays = getDaysInMonth(
+    currentYearMonth.year,
+    currentYearMonth.month,
+  );
   const weekRows = getWeekRows(calendarDays);
 
   return (
     <View style={styles.inlineCalendarCard}>
       <View style={styles.calendarHeader}>
-        <TouchableOpacity onPress={onPrevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={18} color={palette.deepNavy} />
+        <TouchableOpacity
+          onPress={onPrevMonth}
+          style={styles.monthNavBtn}
+          activeOpacity={0.7}>
+          <Ionicons name='chevron-back' size={18} color={palette.deepNavy} />
         </TouchableOpacity>
         <Text style={styles.calendarMonthText}>
-          {currentYearMonth.year}{UI_STRINGS.COMPONENTS.CALENDAR_YEAR_SUFFIX} {currentYearMonth.month}{UI_STRINGS.COMPONENTS.CALENDAR_MONTH_SUFFIX}
+          {currentYearMonth.year}
+          {UI_STRINGS.COMPONENTS.CALENDAR_YEAR_SUFFIX} {currentYearMonth.month}
+          {UI_STRINGS.COMPONENTS.CALENDAR_MONTH_SUFFIX}
         </Text>
-        <TouchableOpacity onPress={onNextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-          <Ionicons name="chevron-forward" size={18} color={palette.deepNavy} />
+        <TouchableOpacity
+          onPress={onNextMonth}
+          style={styles.monthNavBtn}
+          activeOpacity={0.7}>
+          <Ionicons name='chevron-forward' size={18} color={palette.deepNavy} />
         </TouchableOpacity>
       </View>
 
@@ -76,8 +87,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
               styles.weekHeaderText,
               idx === 0 && { color: '#EF4444' },
               idx === 6 && { color: palette.primary },
-            ]}
-          >
+            ]}>
             {dayName}
           </Text>
         ))}
@@ -89,7 +99,12 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
           <View key={`week-${weekIdx}`} style={styles.weekRow}>
             {weekRow.map((dayNum, dayIdx) => {
               if (dayNum === null) {
-                return <View key={`empty-${weekIdx}-${dayIdx}`} style={styles.dayCellContainer} />;
+                return (
+                  <View
+                    key={`empty-${weekIdx}-${dayIdx}`}
+                    style={styles.dayCellContainer}
+                  />
+                );
               }
 
               const mm = String(currentYearMonth.month).padStart(2, '0');
@@ -101,9 +116,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
               const hasBoth = Boolean(startDate) && Boolean(endDate);
               const isSameDate = isStart && isEnd;
               const isInRange =
-                hasBoth &&
-                startDate < dateStr &&
-                dateStr < endDate;
+                hasBoth && startDate < dateStr && dateStr < endDate;
 
               const showStartTrack = hasBoth && !isSameDate && isStart;
               const showEndTrack = hasBoth && !isSameDate && isEnd;
@@ -113,27 +126,32 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
                   key={`day-${dayNum}`}
                   style={styles.dayCellContainer}
                   activeOpacity={0.7}
-                  onPress={() => onSelectDay(dayNum)}
-                >
+                  onPress={() => onSelectDay(dayNum)}>
                   {/* Connected Ribbon Background Track */}
-                  {showStartTrack && <View style={[styles.rangeTrack, styles.rangeTrackStart]} />}
-                  {showEndTrack && <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />}
-                  {isInRange && <View style={[styles.rangeTrack, styles.rangeTrackMiddle]} />}
+                  {showStartTrack && (
+                    <View style={[styles.rangeTrack, styles.rangeTrackStart]} />
+                  )}
+                  {showEndTrack && (
+                    <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />
+                  )}
+                  {isInRange && (
+                    <View
+                      style={[styles.rangeTrack, styles.rangeTrackMiddle]}
+                    />
+                  )}
 
                   {/* Day Content Bubble */}
                   <View
                     style={[
                       styles.dayBubble,
                       (isStart || isEnd) && styles.dayBubbleSelected,
-                    ]}
-                  >
+                    ]}>
                     <Text
                       style={[
                         styles.dayCellText,
                         isInRange && styles.dayCellTextInRange,
                         (isStart || isEnd) && styles.dayCellTextSelected,
-                      ]}
-                    >
+                      ]}>
                       {dayNum}
                     </Text>
                   </View>

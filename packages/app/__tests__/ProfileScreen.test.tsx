@@ -32,7 +32,9 @@ describe('ProfileScreen (FUN-8: 프로필 화면, 닉네임 수정 및 회원 �
   });
 
   it('수정 버튼 클릭 시 ProfileEditModal이 열리고 닉네임 변경 저장이 가능해야 한다', async () => {
-    const { findByTestId, findByText, queryByTestId } = await render(<ProfileScreen />);
+    const { findByTestId, findByText, queryByTestId } = await render(
+      <ProfileScreen />,
+    );
 
     expect(queryByTestId('profile-edit-modal-card')).toBeNull();
 
@@ -61,7 +63,7 @@ describe('ProfileScreen (FUN-8: 프로필 화면, 닉네임 수정 및 회원 �
       <ProfileScreen
         onNavigateToTasteProfile={mockOnNavigateToTasteProfile}
         onReanalyzeTaste={mockOnReanalyzeTaste}
-      />
+      />,
     );
 
     const btnViewTaste = await findByTestId('btn-view-taste');
@@ -74,7 +76,9 @@ describe('ProfileScreen (FUN-8: 프로필 화면, 닉네임 수정 및 회원 �
   });
 
   it('탈퇴하기 링크 클릭 시 WithdrawModal이 표시되고 취소 시 닫혀야 한다', async () => {
-    const { findByTestId, findByText, queryByTestId } = await render(<ProfileScreen />);
+    const { findByTestId, findByText, queryByTestId } = await render(
+      <ProfileScreen />,
+    );
 
     expect(queryByTestId('withdraw-modal-card')).toBeNull();
 

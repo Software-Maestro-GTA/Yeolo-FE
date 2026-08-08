@@ -14,75 +14,97 @@ interface PhotoConsentScreenProps {
   onNext: () => void; // "동의하고 시작하기" 클릭 시 취향 분석 중 화면(TasteAnalysisScreen)으로 이동
 }
 
-export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({ onNext }) => {
+export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
+  onNext,
+}) => {
   useGA4ScreenTracking('PhotoConsentScreen');
   const { trackButtonClick } = useGA4ButtonClick();
 
   const handlePressConsent = () => {
-    trackButtonClick('btn_photo_consent_start', 'Photo Analysis Consent & Start');
+    trackButtonClick(
+      'btn_photo_consent_start',
+      'Photo Analysis Consent & Start',
+    );
     onNext();
   };
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Header Title Section */}
-          <View style={styles.headerSection} testID="top-content">
-            <Text style={styles.mainTitle}>{UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}</Text>
-            <Text style={styles.subTitle}>{UI_STRINGS.PHOTO_CONSENT.SUB_TITLE}</Text>
+          <View style={styles.headerSection} testID='top-content'>
+            <Text style={styles.mainTitle}>
+              {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
+            </Text>
+            <Text style={styles.subTitle}>
+              {UI_STRINGS.PHOTO_CONSENT.SUB_TITLE}
+            </Text>
           </View>
 
           {/* Main Body Section */}
-          <View style={styles.mainBodyContainer} testID="main-content">
+          <View style={styles.mainBodyContainer} testID='main-content'>
             {/* Hero Lock Illustration Graphic */}
-            <View style={styles.heroIllustration} testID="hero-illustration">
+            <View style={styles.heroIllustration} testID='hero-illustration'>
               <View style={styles.iconCircleBg}>
-                <Feather name="lock" size={44} color={palette.accent} />
+                <Feather name='lock' size={44} color={palette.accent} />
               </View>
             </View>
 
             {/* Security & Data Privacy Assurance Cards */}
             <View style={styles.assuranceCardsContainer}>
               {/* Card 1: 메타데이터만 안전하게 가공 */}
-              <View style={styles.infoCard} testID="info-card-1">
+              <View style={styles.infoCard} testID='info-card-1'>
                 <View style={styles.cardIconWrapper}>
-                  <Ionicons name="shield-checkmark-outline" size={22} color={palette.accent} />
+                  <Ionicons
+                    name='shield-checkmark-outline'
+                    size={22}
+                    color={palette.accent}
+                  />
                 </View>
                 <View style={styles.cardTextGroup}>
-                  <Text style={styles.cardTitle}>{UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE}</Text>
-                  <Text style={styles.cardDescription}>{UI_STRINGS.PHOTO_CONSENT.CARD_1_DESC}</Text>
+                  <Text style={styles.cardTitle}>
+                    {UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE}
+                  </Text>
+                  <Text style={styles.cardDescription}>
+                    {UI_STRINGS.PHOTO_CONSENT.CARD_1_DESC}
+                  </Text>
                 </View>
               </View>
 
               {/* Card 2: 분석 즉시 데이터 파기 */}
-              <View style={styles.infoCard} testID="info-card-2">
+              <View style={styles.infoCard} testID='info-card-2'>
                 <View style={styles.cardIconWrapper}>
-                  <Feather name="trash-2" size={22} color={palette.accent} />
+                  <Feather name='trash-2' size={22} color={palette.accent} />
                 </View>
                 <View style={styles.cardTextGroup}>
-                  <Text style={styles.cardTitle}>{UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE}</Text>
-                  <Text style={styles.cardDescription}>{UI_STRINGS.PHOTO_CONSENT.CARD_2_DESC}</Text>
+                  <Text style={styles.cardTitle}>
+                    {UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE}
+                  </Text>
+                  <Text style={styles.cardDescription}>
+                    {UI_STRINGS.PHOTO_CONSENT.CARD_2_DESC}
+                  </Text>
                 </View>
               </View>
             </View>
           </View>
 
           {/* Bottom Container Action Button */}
-          <View style={styles.bottomContainer} testID="bottom-container">
+          <View style={styles.bottomContainer} testID='bottom-container'>
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
               onPress={handlePressConsent}
-              testID="consent-start-button"
-            >
+              testID='consent-start-button'>
               <Text style={styles.primaryButtonText}>
                 {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
               </Text>
               <Ionicons
-                name="shield-checkmark"
+                name='shield-checkmark'
                 size={18}
-                color="#FFFFFF"
+                color='#FFFFFF'
                 style={styles.buttonIcon}
               />
             </TouchableOpacity>
@@ -92,8 +114,6 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({ onNext }
     </View>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   screenContainer: {

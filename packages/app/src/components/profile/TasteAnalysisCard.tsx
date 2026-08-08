@@ -15,8 +15,10 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.titleWithIcon}>
-        <Ionicons name="sparkles" size={22} color={theme.colors.primary} />
-        <Text style={styles.cardTitle}>{UI_STRINGS.PROFILE.AI_TASTE_TITLE}</Text>
+        <Ionicons name='sparkles' size={22} color={theme.colors.primary} />
+        <Text style={styles.cardTitle}>
+          {UI_STRINGS.PROFILE.AI_TASTE_TITLE}
+        </Text>
       </View>
       <Text style={styles.descriptionText}>
         AI가 분석한 나의 독창적인 여행 스타일과 성향 키워드를 확인해보세요!
@@ -25,10 +27,16 @@ export const TasteAnalysisCard: React.FC<TasteAnalysisCardProps> = ({
       <TouchableOpacity
         style={styles.largeButton}
         onPress={onNavigateToTasteProfile}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="eye-outline" size={18} color={theme.colors.text.inverse} style={styles.buttonIcon} />
-        <Text style={styles.largeButtonText}>{UI_STRINGS.PROFILE.VIEW_TASTE_BUTTON}</Text>
+        activeOpacity={0.8}>
+        <Ionicons
+          name='eye-outline'
+          size={18}
+          color={theme.colors.text.inverse}
+          style={styles.buttonIcon}
+        />
+        <Text style={styles.largeButtonText}>
+          {UI_STRINGS.PROFILE.VIEW_TASTE_BUTTON}
+        </Text>
       </TouchableOpacity>
     </View>
   );

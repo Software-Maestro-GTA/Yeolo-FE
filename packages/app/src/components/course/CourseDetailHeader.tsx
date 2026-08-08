@@ -3,7 +3,15 @@
  * @description Edge-to-edge status bar translucent hero photo container header component.
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Platform, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ImageBackground,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { palette } from '../../theme/colors';
@@ -19,7 +27,8 @@ export interface CourseDetailHeaderProps {
   onShare?: () => void;
 }
 
-const DEFAULT_HERO_IMAGE = 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
+const DEFAULT_HERO_IMAGE =
+  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
 
 export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
   destinationCountry,
@@ -31,14 +40,17 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
   onShare,
 }) => {
   return (
-    <View style={styles.heroSection} testID="course-detail-header">
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View style={styles.heroSection} testID='course-detail-header'>
+      <StatusBar
+        barStyle='dark-content'
+        backgroundColor='transparent'
+        translucent
+      />
       {/* Background Image Container spanning into status bar */}
       <ImageBackground
         source={{ uri: heroImageUrl }}
         style={styles.heroImageBackground}
-        resizeMode="cover"
-      >
+        resizeMode='cover'>
         {/* Gradient Overlay */}
         <LinearGradient
           colors={[
@@ -52,23 +64,21 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
         />
 
         {/* Top Nav Actions Bar (Back & Share buttons placed below status bar) */}
-        <View style={styles.navActionsRow} testID="nav-actions">
+        <View style={styles.navActionsRow} testID='nav-actions'>
           <TouchableOpacity
-            testID="btn-back"
+            testID='btn-back'
             style={styles.actionCircleBtn}
             onPress={onBack}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chevron-back" size={18} color={palette.deepNavy} />
+            activeOpacity={0.8}>
+            <Ionicons name='chevron-back' size={18} color={palette.deepNavy} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            testID="btn-share"
+            testID='btn-share'
             style={styles.actionCircleBtn}
             onPress={onShare}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-outline" size={18} color={palette.deepNavy} />
+            activeOpacity={0.8}>
+            <Ionicons name='share-outline' size={18} color={palette.deepNavy} />
           </TouchableOpacity>
         </View>
 
@@ -78,7 +88,8 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
             {destinationCountry} {destinationCity}
           </Text>
           <Text style={styles.headerSubtitle}>
-            {startDate ? `${startDate} · ` : ''}{title}
+            {startDate ? `${startDate} · ` : ''}
+            {title}
           </Text>
         </View>
       </ImageBackground>
@@ -86,7 +97,8 @@ export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
   );
 };
 
-const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
+const STATUS_BAR_HEIGHT =
+  Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44;
 
 const styles = StyleSheet.create({
   heroSection: {

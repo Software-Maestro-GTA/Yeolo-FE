@@ -14,7 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { CourseCreateRequest } from '@yeolo/common';
 import { InlineCalendarView } from '../components/common';
-import { useCourseCreateForm, useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import {
+  useCourseCreateForm,
+  useGA4ScreenTracking,
+  useGA4ButtonClick,
+} from '../hooks';
 import type { NavTab } from '../components/navigation';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -78,57 +82,73 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
   });
 
   const handleSelectPopularDestination = (country: string, city: string) => {
-    trackButtonClick('btn_select_popular_destination', `Select ${city}, ${country}`);
+    trackButtonClick(
+      'btn_select_popular_destination',
+      `Select ${city}, ${country}`,
+    );
     setDestinationCountry(country);
     setDestinationCity(city);
   };
 
   return (
-    <View style={styles.screenContainer} testID="screen-container">
+    <View style={styles.screenContainer} testID='screen-container'>
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.headerContent} testID="top-content">
-          <Text style={styles.headerTitle}>{UI_STRINGS.COURSE_CREATE.MAIN_TITLE}</Text>
-          <Text style={styles.headerSubTitle}>{UI_STRINGS.COURSE_CREATE.SUB_TITLE}</Text>
+        keyboardShouldPersistTaps='handled'>
+        <View style={styles.headerContent} testID='top-content'>
+          <Text style={styles.headerTitle}>
+            {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
+          </Text>
+          <Text style={styles.headerSubTitle}>
+            {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
+          </Text>
         </View>
 
-        <View style={styles.mainBody} testID="main-content">
-          <View style={styles.cardContainer} testID="destination-card">
+        <View style={styles.mainBody} testID='main-content'>
+          <View style={styles.cardContainer} testID='destination-card'>
             <View style={styles.cardHeaderRow}>
-              <Ionicons name="airplane-outline" size={20} color={palette.primary} />
-              <Text style={styles.cardTitleText}>{UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}</Text>
+              <Ionicons
+                name='airplane-outline'
+                size={20}
+                color={palette.primary}
+              />
+              <Text style={styles.cardTitleText}>
+                {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
+              </Text>
             </View>
 
             {/* Input Row (Country & City 2-Column) */}
             <View style={styles.twoColumnRow}>
               <View style={styles.fieldColumn}>
-                <Text style={styles.fieldLabelText}>{UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}</Text>
+                <Text style={styles.fieldLabelText}>
+                  {UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}
+                </Text>
                 <View style={styles.inputBox}>
                   <TextInput
-                    testID="input-country"
+                    testID='input-country'
                     style={styles.inputText}
                     placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
                     value={destinationCountry}
                     onChangeText={setDestinationCountry}
-                    placeholderTextColor="#8C949E"
+                    placeholderTextColor='#8C949E'
                   />
                 </View>
               </View>
 
               <View style={styles.fieldColumn}>
-                <Text style={styles.fieldLabelText}>{UI_STRINGS.COURSE_CREATE.CITY_LABEL}</Text>
+                <Text style={styles.fieldLabelText}>
+                  {UI_STRINGS.COURSE_CREATE.CITY_LABEL}
+                </Text>
                 <View style={styles.inputBox}>
                   <TextInput
-                    testID="input-city"
+                    testID='input-city'
                     style={styles.inputText}
                     placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
                     value={destinationCity}
                     onChangeText={setDestinationCity}
-                    placeholderTextColor="#8C949E"
+                    placeholderTextColor='#8C949E'
                   />
                 </View>
               </View>
@@ -142,15 +162,15 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.tagChipsRow}
-              >
+                contentContainerStyle={styles.tagChipsRow}>
                 {POPULAR_DESTINATIONS.map((dest) => (
                   <TouchableOpacity
                     key={dest.city}
                     style={styles.tagChip}
-                    onPress={() => handleSelectPopularDestination(dest.country, dest.city)}
-                    activeOpacity={0.7}
-                  >
+                    onPress={() =>
+                      handleSelectPopularDestination(dest.country, dest.city)
+                    }
+                    activeOpacity={0.7}>
                     <Text style={styles.tagChipText}>
                       {dest.flag} {dest.city}
                     </Text>
@@ -160,10 +180,16 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
             </View>
           </View>
 
-          <View style={styles.cardContainer} testID="date-card">
+          <View style={styles.cardContainer} testID='date-card'>
             <View style={styles.cardHeaderRow}>
-              <Ionicons name="calendar-outline" size={20} color={palette.primary} />
-              <Text style={styles.cardTitleText}>{UI_STRINGS.COURSE_CREATE.DATE_TITLE}</Text>
+              <Ionicons
+                name='calendar-outline'
+                size={20}
+                color={palette.primary}
+              />
+              <Text style={styles.cardTitleText}>
+                {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
+              </Text>
             </View>
 
             <View style={styles.twoColumnRow}>
@@ -176,15 +202,15 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                     openCalendarForTarget('start');
                   }
                 }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.fieldLabelText}>{UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}</Text>
+                activeOpacity={0.8}>
+                <Text style={styles.fieldLabelText}>
+                  {UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}
+                </Text>
                 <Text
                   style={[
                     styles.dateValueText,
                     !startDate && styles.datePlaceholderText,
-                  ]}
-                >
+                  ]}>
                   {startDate || UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
                 </Text>
               </TouchableOpacity>
@@ -198,15 +224,15 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                     openCalendarForTarget('end');
                   }
                 }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.fieldLabelText}>{UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}</Text>
+                activeOpacity={0.8}>
+                <Text style={styles.fieldLabelText}>
+                  {UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}
+                </Text>
                 <Text
                   style={[
                     styles.dateValueText,
                     !endDate && styles.datePlaceholderText,
-                  ]}
-                >
+                  ]}>
                   {endDate || UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
                 </Text>
               </TouchableOpacity>
@@ -226,129 +252,150 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
           </View>
 
           {/* Card 3: Budget Card */}
-          <View style={styles.cardContainer} testID="budget-card">
+          <View style={styles.cardContainer} testID='budget-card'>
             <View style={styles.cardHeaderRow}>
-              <Ionicons name="card-outline" size={20} color={palette.primary} />
-              <Text style={styles.cardTitleText}>{UI_STRINGS.COURSE_CREATE.STYLE_TITLE}</Text>
+              <Ionicons name='card-outline' size={20} color={palette.primary} />
+              <Text style={styles.cardTitleText}>
+                {UI_STRINGS.COURSE_CREATE.STYLE_TITLE}
+              </Text>
             </View>
 
             <View style={styles.threeColumnGrid}>
               {/* Option 1: 가성비 */}
               <TouchableOpacity
-                testID="budget-cost_effective"
+                testID='budget-cost_effective'
                 style={[
                   styles.styleCardItem,
                   budgetType === 'cost_effective' && styles.styleCardActive,
                 ]}
                 onPress={() => {
-                  trackButtonClick('btn_select_budget_type', 'Select Budget cost_effective');
+                  trackButtonClick(
+                    'btn_select_budget_type',
+                    'Select Budget cost_effective',
+                  );
                   setBudgetType('cost_effective');
                 }}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View
                   style={[
                     styles.styleIconBox,
-                    budgetType === 'cost_effective' && styles.styleIconBoxActive,
-                  ]}
-                >
+                    budgetType === 'cost_effective' &&
+                      styles.styleIconBoxActive,
+                  ]}>
                   <Ionicons
-                    name="wallet-outline"
+                    name='wallet-outline'
                     size={18}
-                    color={budgetType === 'cost_effective' ? palette.accent : palette.subText}
+                    color={
+                      budgetType === 'cost_effective'
+                        ? palette.accent
+                        : palette.subText
+                    }
                   />
                 </View>
                 <Text
                   style={[
                     styles.styleCardLabel,
-                    budgetType === 'cost_effective' && styles.styleCardLabelActive,
-                  ]}
-                >
+                    budgetType === 'cost_effective' &&
+                      styles.styleCardLabelActive,
+                  ]}>
                   {UI_STRINGS.COURSE_CREATE.STYLE_BUDGET}
                 </Text>
               </TouchableOpacity>
 
               {/* Option 2: 적정 수준 */}
               <TouchableOpacity
-                testID="budget-moderate"
+                testID='budget-moderate'
                 style={[
                   styles.styleCardItem,
                   budgetType === 'moderate' && styles.styleCardActive,
                 ]}
                 onPress={() => {
-                  trackButtonClick('btn_select_budget_type', 'Select Budget moderate');
+                  trackButtonClick(
+                    'btn_select_budget_type',
+                    'Select Budget moderate',
+                  );
                   setBudgetType('moderate');
                 }}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View
                   style={[
                     styles.styleIconBox,
                     budgetType === 'moderate' && styles.styleIconBoxActive,
-                  ]}
-                >
+                  ]}>
                   <Ionicons
-                    name="briefcase-outline"
+                    name='briefcase-outline'
                     size={18}
-                    color={budgetType === 'moderate' ? palette.accent : palette.subText}
+                    color={
+                      budgetType === 'moderate'
+                        ? palette.accent
+                        : palette.subText
+                    }
                   />
                 </View>
                 <Text
                   style={[
                     styles.styleCardLabel,
                     budgetType === 'moderate' && styles.styleCardLabelActive,
-                  ]}
-                >
+                  ]}>
                   {UI_STRINGS.COURSE_CREATE.STYLE_MODERATE}
                 </Text>
               </TouchableOpacity>
 
               {/* Option 3: 럭셔리 */}
               <TouchableOpacity
-                testID="budget-luxury"
+                testID='budget-luxury'
                 style={[
                   styles.styleCardItem,
                   budgetType === 'luxury' && styles.styleCardActive,
                 ]}
                 onPress={() => {
-                  trackButtonClick('btn_select_budget_type', 'Select Budget luxury');
+                  trackButtonClick(
+                    'btn_select_budget_type',
+                    'Select Budget luxury',
+                  );
                   setBudgetType('luxury');
                 }}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <View
                   style={[
                     styles.styleIconBox,
                     budgetType === 'luxury' && styles.styleIconBoxActive,
-                  ]}
-                >
+                  ]}>
                   <Ionicons
-                    name="diamond-outline"
+                    name='diamond-outline'
                     size={18}
-                    color={budgetType === 'luxury' ? palette.accent : palette.subText}
+                    color={
+                      budgetType === 'luxury' ? palette.accent : palette.subText
+                    }
                   />
                 </View>
                 <Text
                   style={[
                     styles.styleCardLabel,
                     budgetType === 'luxury' && styles.styleCardLabelActive,
-                  ]}
-                >
+                  ]}>
                   {UI_STRINGS.COURSE_CREATE.STYLE_LUXURY}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.bottomContainer} testID="bottom-container">
+          <View style={styles.bottomContainer} testID='bottom-container'>
             <TouchableOpacity
-              testID="submit-course-btn"
-              style={[styles.ctaButton, !isFormValid && styles.ctaButtonDisabled]}
+              testID='submit-course-btn'
+              style={[
+                styles.ctaButton,
+                !isFormValid && styles.ctaButtonDisabled,
+              ]}
               disabled={!isFormValid}
               onPress={handleSubmit}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="sparkles" size={18} color="#FFFFFF" style={styles.ctaIconLeft} />
+              activeOpacity={0.8}>
+              <Ionicons
+                name='sparkles'
+                size={18}
+                color='#FFFFFF'
+                style={styles.ctaIconLeft}
+              />
               <Text style={styles.ctaButtonText}>
                 {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
               </Text>

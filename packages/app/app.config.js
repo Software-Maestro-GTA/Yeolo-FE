@@ -4,17 +4,17 @@
  */
 
 module.exports = ({ config }) => {
-  const googleScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
+  const googleScheme =
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
 
-  const androidGoogleServices = process.env.GOOGLE_SERVICES_JSON || './google-services.json';
-  const iosGoogleServices = process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
+  const androidGoogleServices =
+    process.env.GOOGLE_SERVICES_JSON || './google-services.json';
+  const iosGoogleServices =
+    process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
 
   return {
     ...config,
-    plugins: [
-      ...(config.plugins || []),
-      'expo-apple-authentication',
-    ],
+    plugins: [...(config.plugins || []), 'expo-apple-authentication'],
     android: {
       ...config.android,
       googleServicesFile: androidGoogleServices,
@@ -32,12 +32,10 @@ module.exports = ({ config }) => {
         ...config.ios?.infoPlist,
         CFBundleURLTypes: [
           {
-            CFBundleURLSchemes: [
-              googleScheme
-            ].filter(Boolean)
-          }
-        ]
-      }
-    }
+            CFBundleURLSchemes: [googleScheme].filter(Boolean),
+          },
+        ],
+      },
+    },
   };
 };

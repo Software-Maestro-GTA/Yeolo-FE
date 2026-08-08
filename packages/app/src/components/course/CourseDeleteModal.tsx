@@ -31,44 +31,45 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+      animationType='slide'
+      onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.dimOverlay} testID="delete-modal-overlay">
+        <View style={styles.dimOverlay} testID='delete-modal-overlay'>
           <TouchableWithoutFeedback>
-            <View style={styles.bottomSheetContainer} testID="course-delete-modal-card">
+            <View
+              style={styles.bottomSheetContainer}
+              testID='course-delete-modal-card'>
               {/* Handle Bar */}
               <View style={styles.handleBar} />
 
               {/* Title & Warning Text */}
               <Text style={styles.modalTitle}>
-                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_TITLE || '코스를 삭제하시겠습니까?'}
+                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_TITLE ||
+                  '코스를 삭제하시겠습니까?'}
               </Text>
               <Text style={styles.modalSubTitle}>
                 {courseTitle ? `"${courseTitle}" ` : ''}
-                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_DESC || '삭제된 코스는 복구할 수 없습니다.'}
+                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_DESC ||
+                  '삭제된 코스는 복구할 수 없습니다.'}
               </Text>
 
               {/* Action Buttons Group */}
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
-                  testID="btn-confirm-delete"
+                  testID='btn-confirm-delete'
                   style={styles.deleteButton}
                   onPress={onConfirmDelete}
-                  activeOpacity={0.85}
-                >
+                  activeOpacity={0.85}>
                   <Text style={styles.deleteButtonText}>
                     {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_CONFIRM || '삭제하기'}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  testID="btn-cancel-delete"
+                  testID='btn-cancel-delete'
                   style={styles.cancelButton}
                   onPress={onClose}
-                  activeOpacity={0.85}
-                >
+                  activeOpacity={0.85}>
                   <Text style={styles.cancelButtonText}>
                     {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_CANCEL || '취소'}
                   </Text>

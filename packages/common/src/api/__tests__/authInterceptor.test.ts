@@ -3,7 +3,13 @@
  * @description Unit tests for refreshTokenApi and 401 HTTP interceptor (API-AUTH-3).
  */
 import ky from 'ky';
-import { refreshTokenApi, createHttpClient, setTokenGetter, setTokenSetter, setUnauthorizedHandler } from '../kyClient';
+import {
+  refreshTokenApi,
+  createHttpClient,
+  setTokenGetter,
+  setTokenSetter,
+  setUnauthorizedHandler,
+} from '../kyClient';
 import { ApiError } from '../errors';
 
 // Mock server URL
@@ -77,9 +83,9 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
         } as any);
       });
 
-      await expect(refreshTokenApi(API_URL, 'mock-expired-refresh-token')).rejects.toThrow(
-        ApiError
-      );
+      await expect(
+        refreshTokenApi(API_URL, 'mock-expired-refresh-token'),
+      ).rejects.toThrow(ApiError);
     });
   });
 
@@ -89,36 +95,42 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
 
       let callCount = 0;
       // First call returns 401, second call after refresh returns 200
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(async (input: any) => {
-        const url = typeof input === 'string' ? input : input.url;
+      const fetchSpy = jest
+        .spyOn(global, 'fetch')
+        .mockImplementation(async (input: any) => {
+          const url = typeof input === 'string' ? input : input.url;
 
-        if (url.includes('/api/auth/refresh')) {
+          if (url.includes('/api/auth/refresh')) {
+            return new Response(
+              JSON.stringify({
+                status: 200,
+                message: '토큰 재발급 성공',
+                data: {
+                  accessToken: 'refreshed-access-token',
+                  refreshToken: 'refreshed-refresh-token',
+                },
+              }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+
+          callCount++;
+          if (callCount === 1) {
+            return new Response(
+              JSON.stringify({ status: 401, message: 'AccessToken expired' }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+
           return new Response(
             JSON.stringify({
               status: 200,
-              message: '토큰 재발급 성공',
-              data: {
-                accessToken: 'refreshed-access-token',
-                refreshToken: 'refreshed-refresh-token',
-              },
+              message: 'Success',
+              data: { courses: [] },
             }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
           );
-        }
-
-        callCount++;
-        if (callCount === 1) {
-          return new Response(
-            JSON.stringify({ status: 401, message: 'AccessToken expired' }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
-
-        return new Response(
-          JSON.stringify({ status: 200, message: 'Success', data: { courses: [] } }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
-      });
+        });
 
       const res = await client.get('api/courses').json<{ status: number }>();
 
@@ -134,25 +146,27 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
       mockRefreshToken = 'mock-expired-refresh-token';
       const client = createHttpClient(API_URL);
 
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(async (input: any) => {
-        const url = typeof input === 'string' ? input : input.url;
+      const fetchSpy = jest
+        .spyOn(global, 'fetch')
+        .mockImplementation(async (input: any) => {
+          const url = typeof input === 'string' ? input : input.url;
 
-        if (url.includes('/api/auth/refresh')) {
+          if (url.includes('/api/auth/refresh')) {
+            return new Response(
+              JSON.stringify({
+                status: 401,
+                message: 'Refresh Token이 유효하지 않거나 만료되었습니다.',
+                data: null,
+              }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+
           return new Response(
-            JSON.stringify({
-              status: 401,
-              message: 'Refresh Token이 유효하지 않거나 만료되었습니다.',
-              data: null,
-            }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
+            JSON.stringify({ status: 401, message: 'AccessToken expired' }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } },
           );
-        }
-
-        return new Response(
-          JSON.stringify({ status: 401, message: 'AccessToken expired' }),
-          { status: 401, headers: { 'Content-Type': 'application/json' } }
-        );
-      });
+        });
 
       await expect(client.get('api/courses').json()).rejects.toThrow();
 
@@ -165,41 +179,45 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
       const client = createHttpClient(API_URL);
 
       let refreshCallCount = 0;
-      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(async (input: any) => {
-        const url = typeof input === 'string' ? input : input.url;
+      const fetchSpy = jest
+        .spyOn(global, 'fetch')
+        .mockImplementation(async (input: any) => {
+          const url = typeof input === 'string' ? input : input.url;
 
-        if (url.includes('/api/auth/refresh')) {
-          refreshCallCount++;
-          // Small delay to simulate network latency
-          await new Promise((r) => setTimeout(r, 50));
-          return new Response(
-            JSON.stringify({
-              status: 200,
-              message: '토큰 재발급 성공',
-              data: {
-                accessToken: 'concurrent-access-token',
-                refreshToken: 'concurrent-refresh-token',
-              },
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
+          if (url.includes('/api/auth/refresh')) {
+            refreshCallCount++;
+            // Small delay to simulate network latency
+            await new Promise((r) => setTimeout(r, 50));
+            return new Response(
+              JSON.stringify({
+                status: 200,
+                message: '토큰 재발급 성공',
+                data: {
+                  accessToken: 'concurrent-access-token',
+                  refreshToken: 'concurrent-refresh-token',
+                },
+              }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
 
-        const headers = input.headers ? new Headers(input.headers) : new Headers();
-        const auth = headers.get('Authorization');
+          const headers = input.headers
+            ? new Headers(input.headers)
+            : new Headers();
+          const auth = headers.get('Authorization');
 
-        if (auth !== 'Bearer concurrent-access-token') {
-          return new Response(
-            JSON.stringify({ status: 401, message: 'Unauthorized' }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
+          if (auth !== 'Bearer concurrent-access-token') {
+            return new Response(
+              JSON.stringify({ status: 401, message: 'Unauthorized' }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
 
-        return new Response(
-          JSON.stringify({ status: 200, data: 'OK' }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
-      });
+          return new Response(JSON.stringify({ status: 200, data: 'OK' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        });
 
       // Fire 3 requests concurrently
       const results = await Promise.all([
