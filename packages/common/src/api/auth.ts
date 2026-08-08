@@ -2,7 +2,8 @@
  * @file auth.ts
  * @description Common authentication API services shared across Web and Mobile.
  */
-import ky from 'ky';
+import { createHttpClient } from './kyClient';
+
 import type {
   GoogleLoginPayload,
   GoogleLoginResponse,
@@ -17,14 +18,14 @@ import { logger } from '../utils/logger';
 /**
  * Sends authorization code to backend to complete Google OAuth login
  */
-async function loginWithGoogleApi(
+export async function loginWithGoogleApi(
   apiUrl: string,
   payload: GoogleLoginPayload
 ): Promise<GoogleLoginResponse> {
   logger.info('[AuthAPI] loginWithGoogleApi request:', payload);
-  const response = await ky.post(`${apiUrl}/api/auth/google`, {
+  const client = createHttpClient(apiUrl);
+  const response = await client.post('api/auth/google', {
     json: payload,
-    throwHttpErrors: false,
   });
 
   const result = await response.json<GoogleLoginResponse>();
@@ -42,14 +43,14 @@ async function loginWithGoogleApi(
 /**
  * Sends authorization code and idToken to backend to complete Apple OAuth login (API-AUTH-2)
  */
-async function loginWithAppleApi(
+export async function loginWithAppleApi(
   apiUrl: string,
   payload: AppleLoginPayload
 ): Promise<AppleLoginResponse> {
   logger.info('[AuthAPI] loginWithAppleApi request:', payload);
-  const response = await ky.post(`${apiUrl}/api/auth/apple`, {
+  const client = createHttpClient(apiUrl);
+  const response = await client.post('api/auth/apple', {
     json: payload,
-    throwHttpErrors: false,
   });
 
   const result = await response.json<AppleLoginResponse>();
@@ -67,7 +68,7 @@ async function loginWithAppleApi(
 /**
  * Log out user session and invalidate refresh token (API-FB-11)
  */
-async function logoutApi(
+export async function logoutApi(
   apiUrl: string,
   token?: string,
   payload?: LogoutRequest
@@ -78,10 +79,10 @@ async function logoutApi(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await ky.post(`${apiUrl}/api/auth/logout`, {
+  const client = createHttpClient(apiUrl);
+  const response = await client.post('api/auth/logout', {
     headers,
     json: payload || {},
-    throwHttpErrors: false,
   });
 
   const result = await response.json<LogoutResponse>();
@@ -95,6 +96,3 @@ async function logoutApi(
 
   return result;
 }
-
-export { loginWithGoogleApi, loginWithAppleApi, logoutApi };
-

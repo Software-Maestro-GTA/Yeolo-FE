@@ -2,7 +2,7 @@
  * @file taste.ts
  * @description Shared taste analysis API service utilizing ky and parse-sse for progressive SSE streams.
  */
-import ky from 'ky';
+import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
 import type { AnalyzeTastePayload, StreamCallbacks, TasteProfile } from '../types/taste';
 import { ApiError } from './errors';
@@ -35,7 +35,8 @@ export async function analyzeTastePreferenceStream(
 
   try {
     logger.info('[TasteAPI] analyzeTastePreferenceStream request, images count:', payload.images?.length);
-    const response = await ky.post(`${apiUrl}/api/taste-profile/behavior`, {
+    const client = createHttpClient(apiUrl);
+    const response = await client.post('api/taste-profile/behavior', {
       json: payload,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -43,6 +44,8 @@ export async function analyzeTastePreferenceStream(
       // Disable default timeout to support long-lived AI analysis streams
       timeout: false,
     });
+
+
 
     // Parse the Server-Sent Events stream from the Response object
     for await (const event of parseServerSentEvents(response)) {
@@ -107,12 +110,14 @@ export async function fetchTasteProfileApi(
 
     const searchParams = tasteProfileId ? { tasteProfileId } : undefined;
 
-    const json = await ky
-      .get(`${apiUrl}/api/me/taste-profile`, {
-        headers,
-        searchParams,
-      })
-      .json<TasteProfileApiResponse>();
+    const client = createHttpClient(apiUrl);
+    const response = await client.get('api/me/taste-profile', {
+      headers,
+      searchParams,
+    });
+
+    const json = await response.json<TasteProfileApiResponse>();
+
 
     if (json?.data?.tasteProfile) {
       logger.info('[TasteAPI] Successfully retrieved TasteProfile:', json.data.tasteProfile.tasteProfileId);
