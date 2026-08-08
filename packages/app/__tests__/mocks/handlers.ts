@@ -450,4 +450,48 @@ export const handlers = [
       { status: 200 },
     );
   }),
+
+  // Mock Photo Consent POST API-PREF-2
+  http.post('*/api/users/me/consents/photo', async ({ request }) => {
+    const body = (await request.json()) as {
+      agreed?: boolean;
+      consentVersion?: string;
+    };
+    if (typeof body.agreed !== 'boolean' || !body.consentVersion) {
+      return HttpResponse.json(
+        {
+          status: 400,
+          message: '사진 데이터 분석 동의 입력값을 확인해주세요.',
+          data: null,
+        },
+        { status: 400 },
+      );
+    }
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '사진 데이터 분석 동의 저장 성공',
+        data: {
+          consent: {
+            agreed: body.agreed,
+            agreedAt: '2026-08-08T10:00:00.000Z',
+            consentVersion: body.consentVersion,
+          },
+        },
+      },
+      { status: 200 },
+    );
+  }),
+
+  // Mock Account Withdrawal DELETE API-USER-2
+  http.delete('*/api/users/me', async () => {
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '회원탈퇴 성공',
+        data: null,
+      },
+      { status: 200 },
+    );
+  }),
 ];
