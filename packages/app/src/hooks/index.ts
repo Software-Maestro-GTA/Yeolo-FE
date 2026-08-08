@@ -6,3 +6,4 @@ export * from './useCourseCreateForm';
 export * from './queries';
 export * from './useGA4ScreenTracking';
 export * from './useGA4ButtonClick';
+export * from './useTasteAnalysisPipeline';

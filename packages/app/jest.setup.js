@@ -70,13 +70,37 @@ jest.mock('react-native-webview', () => {
   };
 });
 
-jest.mock('expo-media-library', () => ({
-  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-  getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
-  MediaType: {},
-  AssetField: {},
-  Query: {},
-}));
+jest.mock('expo-media-library', () => {
+  class MockQuery {
+    eq() {
+      return this;
+    }
+    orderBy() {
+      return this;
+    }
+    limit() {
+      return this;
+    }
+    exe() {
+      return Promise.resolve([
+        {
+          id: 'asset-1',
+          getLocation: () =>
+            Promise.resolve({ latitude: 37.5665, longitude: 126.978 }),
+          getCreationTime: () => Promise.resolve(Date.now()),
+        },
+      ]);
+    }
+  }
+
+  return {
+    requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+    getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
+    MediaType: { IMAGE: 'photo' },
+    AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },
+    Query: MockQuery,
+  };
+});
 
 const mockAnalyticsLogEvent = jest.fn();
 const mockAnalyticsLogScreenView = jest.fn();

@@ -11,7 +11,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TasteProfile } from '@yeolo/common';
+import {
+  TasteProfile,
+  TRAVEL_PACE_DENSITY_MAP,
+  TRAVEL_PURPOSE_MAP,
+  PREFERRED_LOCATION_TYPE_MAP,
+  FOOD_PREFERENCE_MAP,
+  SEASONAL_ENVIRONMENT_MAP,
+} from '@yeolo/common';
 import { Ionicons } from '@expo/vector-icons';
 
 import { theme } from '../../theme';
@@ -26,39 +33,87 @@ const PACE_LABELS: Record<string, string> = {
   RELAXED: '여유로운',
   BALANCED: '균형잡힌',
   BUSY: '빽빽한',
+  slow_stay: TRAVEL_PACE_DENSITY_MAP.slow_stay.label,
+  balanced: TRAVEL_PACE_DENSITY_MAP.balanced.label,
+  dense_schedule: TRAVEL_PACE_DENSITY_MAP.dense_schedule.label,
+  spontaneous: TRAVEL_PACE_DENSITY_MAP.spontaneous.label,
+  long_stay: TRAVEL_PACE_DENSITY_MAP.long_stay.label,
 };
 const SPENDING_LABELS: Record<string, string> = {
   BUDGET: '가성비',
   MODERATE: '적정',
   LUXURY: '럭셔리',
+  cost_effective: '가성비형',
+  moderate: '중간 소비형',
+  luxury: '럭셔리형',
 };
 const COMPANION_LABELS: Record<string, string> = {
   SOLO: '혼자',
   COUPLE: '커플',
   FAMILY: '가족',
   FRIENDS: '친구',
+  solo: '혼자 여행형',
+  couple: '연인 여행형',
+  friends: '친구 여행형',
+  family: '가족 여행형',
 };
 const PURPOSE_LABELS: Record<string, string> = {
   GOURMET: '미식형',
   HEALING: '휴양형',
   NATURE: '자연 탐방형',
   CULTURE: '문화 탐방형',
+  relaxation: TRAVEL_PURPOSE_MAP.relaxation.label,
+  sightseeing: TRAVEL_PURPOSE_MAP.sightseeing.label,
+  culturalExperience: TRAVEL_PURPOSE_MAP.culturalExperience.label,
+  gourmet: TRAVEL_PURPOSE_MAP.gourmet.label,
+  natureExploration: TRAVEL_PURPOSE_MAP.natureExploration.label,
+  activity: TRAVEL_PURPOSE_MAP.activity.label,
+  shopping: TRAVEL_PURPOSE_MAP.shopping.label,
+  festivalEvent: TRAVEL_PURPOSE_MAP.festivalEvent.label,
+  wellness: TRAVEL_PURPOSE_MAP.wellness.label,
+  selfDevelopment: TRAVEL_PURPOSE_MAP.selfDevelopment.label,
 };
 const LOCATION_LABELS: Record<string, string> = {
   BEACH: '해변·휴양지',
   CITY: '대도시',
   NATURE: '자연·비경',
   SMALL_TOWN: '소도시',
+  bigCity: PREFERRED_LOCATION_TYPE_MAP.bigCity.label,
+  smallTownAlley: PREFERRED_LOCATION_TYPE_MAP.smallTownAlley.label,
+  natureHinterland: PREFERRED_LOCATION_TYPE_MAP.natureHinterland.label,
+  beachResort: PREFERRED_LOCATION_TYPE_MAP.beachResort.label,
+  mountainPlateau: PREFERRED_LOCATION_TYPE_MAP.mountainPlateau.label,
+  historicalCity: PREFERRED_LOCATION_TYPE_MAP.historicalCity.label,
+  themeParkResort: PREFERRED_LOCATION_TYPE_MAP.themeParkResort.label,
+  famousSpotPreferred: PREFERRED_LOCATION_TYPE_MAP.famousSpotPreferred.label,
+  hiddenSpotPreferred: PREFERRED_LOCATION_TYPE_MAP.hiddenSpotPreferred.label,
 };
 const FOOD_LABELS: Record<string, string> = {
   LOCAL: '현지 로컬 푸드',
   CAFE: '카페·디저트',
   GOURMET: '유명 맛집',
+  localFoodActive: FOOD_PREFERENCE_MAP.localFoodActive.label,
+  famousRestaurantCentered: FOOD_PREFERENCE_MAP.famousRestaurantCentered.label,
+  streetFood: FOOD_PREFERENCE_MAP.streetFood.label,
+  cafeDessert: FOOD_PREFERENCE_MAP.cafeDessert.label,
+  fineDining: FOOD_PREFERENCE_MAP.fineDining.label,
+  familiarFoodPreferred: FOOD_PREFERENCE_MAP.familiarFoodPreferred.label,
+  dietaryRestriction: FOOD_PREFERENCE_MAP.dietaryRestriction.label,
+  sightseeingOverFood: FOOD_PREFERENCE_MAP.sightseeingOverFood.label,
 };
 const SEASON_LABELS: Record<string, string> = {
   WARM: '따뜻한 지역 선호',
   COOL: '시원한 지역 선호',
   ALL: '사계절 무관',
+  warm_region: SEASONAL_ENVIRONMENT_MAP.warm_region.label,
+  cold_region: SEASONAL_ENVIRONMENT_MAP.cold_region.label,
+  summer_resort: SEASONAL_ENVIRONMENT_MAP.summer_resort.label,
+  winter_sports: SEASONAL_ENVIRONMENT_MAP.winter_sports.label,
+  spring_flower_autumn_foliage:
+    SEASONAL_ENVIRONMENT_MAP.spring_flower_autumn_foliage.label,
+  dry_weather: SEASONAL_ENVIRONMENT_MAP.dry_weather.label,
+  off_season: SEASONAL_ENVIRONMENT_MAP.off_season.label,
+  peak_season: SEASONAL_ENVIRONMENT_MAP.peak_season.label,
 };
 
 export const TasteProfileView: React.FC<TasteProfileViewProps> = ({

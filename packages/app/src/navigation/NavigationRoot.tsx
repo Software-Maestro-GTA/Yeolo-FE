@@ -152,7 +152,7 @@ export function NavigationRoot() {
             setActiveTasteProfileId(tasteProfileId);
             navigateTo(NAV_STEPS.TASTE_PROFILE);
           }}
-          onFail={() => navigateTo(NAV_STEPS.LOGIN)}
+          onFail={() => navigateTo(NAV_STEPS.PHOTO)}
         />
       );
     case NAV_STEPS.TASTE_PROFILE:
@@ -171,6 +171,7 @@ export function NavigationRoot() {
         <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
           <ProfileScreen
             onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
+            onReanalyzeTaste={() => navigateTo(NAV_STEPS.PHOTO)}
             onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
             onEditProfile={() => navigateTo(NAV_STEPS.PROFILE_INPUT)}
           />

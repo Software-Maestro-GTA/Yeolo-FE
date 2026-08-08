@@ -36,55 +36,51 @@ export async function analyzeTastePreferenceStream(
 ): Promise<string> {
   let tasteProfileId: string | undefined;
 
-  try {
-    logger.info(
-      '[TasteAPI] analyzeTastePreferenceStream request, images count:',
-      payload.images?.length,
-    );
-    const client = createHttpClient(apiUrl);
-    const response = await client.post('api/taste-profile/behavior', {
-      json: payload,
+  logger.info(
+    '[TasteAPI] analyzeTastePreferenceStream request, images count:',
+    payload.images?.length,
+  );
+  const normalizedUrl = apiUrl.replace(/\/$/, '');
+  const response = await fetch(
+    `${normalizedUrl}/api/users/me/taste-profile/analysis`,
+    {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      // Disable default timeout to support long-lived AI analysis streams
-      timeout: false,
-    });
+      body: JSON.stringify(payload),
+    },
+  );
 
-    // Parse the Server-Sent Events stream from the Response object
-    for await (const event of parseServerSentEvents(response)) {
-      if (!event.data) continue;
+  if (!response.ok) {
+    throw new ApiError(response.status, `HTTP error ${response.status}`);
+  }
 
-      try {
-        const parsed = JSON.parse(event.data);
-        if (event.type === 'progress') {
-          callbacks.onProgress?.(parsed);
-        } else if (event.type === 'complete') {
+  for await (const event of parseServerSentEvents(response)) {
+    if (!event.data) continue;
+
+    try {
+      const parsed = JSON.parse(event.data);
+      const extractedId =
+        parsed.data?.tasteProfileId ||
+        parsed.tasteProfileId ||
+        parsed.data?.id ||
+        parsed.id;
+
+      if (event.type === 'progress' || parsed.step) {
+        callbacks.onProgress?.(parsed);
+      }
+
+      if (event.type === 'complete' || extractedId) {
+        if (extractedId) {
+          tasteProfileId = extractedId;
           callbacks.onComplete?.(parsed);
-          tasteProfileId = parsed.data?.tasteProfileId;
         }
-      } catch (jsonError) {
-        logger.error('[TasteAPI] Error parsing SSE event data:', jsonError);
       }
+    } catch (jsonError) {
+      logger.error('[TasteAPI] Error parsing SSE event data:', jsonError);
     }
-  } catch (error: unknown) {
-    logger.error('[TasteAPI] analyzeTastePreferenceStream error:', error);
-    const err = error as { response?: Response; message?: string };
-    if (err?.response) {
-      const status = err.response.status;
-      let message = '성향 분석 도중 오류가 발생했습니다.';
-      try {
-        const body = await err.response.json();
-        if (body?.message) message = body.message;
-      } catch (_) {
-        // Fallback message
-      }
-      throw new ApiError(status, message);
-    }
-    throw new ApiError(
-      500,
-      err?.message || '성향 분석 도중 오류가 발생했습니다.',
-    );
   }
 
   if (!tasteProfileId) {
@@ -110,27 +106,26 @@ export async function fetchTasteProfileApi(
 ): Promise<TasteProfile> {
   try {
     logger.info('[TasteAPI] fetchTasteProfileApi request:', { tasteProfileId });
+    const client = createHttpClient(apiUrl);
+    const searchParams = tasteProfileId ? { tasteProfileId } : undefined;
     const headers: Record<string, string> = {};
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
     }
 
-    const searchParams = tasteProfileId ? { tasteProfileId } : undefined;
+    const response = await client
+      .get('api/users/me/taste-profile', {
+        headers,
+        searchParams,
+      })
+      .json<TasteProfileApiResponse>();
 
-    const client = createHttpClient(apiUrl);
-    const response = await client.get('api/me/taste-profile', {
-      headers,
-      searchParams,
-    });
-
-    const json = await response.json<TasteProfileApiResponse>();
-
-    if (json?.data?.tasteProfile) {
+    if (response?.data?.tasteProfile) {
       logger.info(
         '[TasteAPI] Successfully retrieved TasteProfile:',
-        json.data.tasteProfile.tasteProfileId,
+        response.data.tasteProfile.tasteProfileId,
       );
-      return json.data.tasteProfile;
+      return response.data.tasteProfile;
     }
 
     throw new ApiError(400, '성향 프로필 데이터가 올바르지 않습니다.');

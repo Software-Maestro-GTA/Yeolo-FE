@@ -2,22 +2,20 @@
  * @file TasteAnalysisScreen.tsx
  * @description Taste analysis progress screen with dynamic insights container and step indicators.
  */
-import React, { useEffect, useState, useRef, useContext } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ActivityIndicator,
   Animated,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useTasteStore, DEFAULT_API_URL } from '@yeolo/common';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
-import { useGA4ScreenTracking } from '../hooks';
-import { AuthContext } from '../context';
-import { fetchPhotosWithExifData } from '../services';
+import { useGA4ScreenTracking, useTasteAnalysisPipeline } from '../hooks';
 
 interface TasteAnalysisScreenProps {
   onFinish: (tasteProfileId: string) => void;
@@ -29,11 +27,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   onFail,
 }) => {
   useGA4ScreenTracking('TasteAnalysisScreen');
-  const auth = useContext(AuthContext);
-
-  // stepIndex: 0 (사진 수집 완료), 1 (여행 성향 분석 중), 2 (맞춤 코스 생성 완료/대기)
-  const [stepIndex, setStepIndex] = useState<number>(1);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { runPipeline, error: errorMessage, progress } = useTasteAnalysisPipeline();
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -64,55 +58,54 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
     let isSubscribed = true;
     let completionTimeout: ReturnType<typeof setTimeout>;
 
-    const executeAnalysisPipeline = async () => {
-      try {
-        if (isSubscribed) {
-          setStepIndex(1); // 여행 성향 분석 중
-        }
+    const executePipeline = async () => {
+      const profileId = await runPipeline();
 
-        // 1. Fetch recent photos and parse EXIF metadata
-        const exifDataList = await fetchPhotosWithExifData();
+      if (!isSubscribed) return;
 
-        if (!isSubscribed) return;
-
-        // 2. Perform taste analysis via Zustand store & backend API
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-        const profileId = await useTasteStore
-          .getState()
-          .analyzeTaste(apiUrl, '', { images: exifDataList });
-
-        if (isSubscribed && profileId) {
-          setStepIndex(2); // 맞춤 코스 생성 완료/전환 대기
-          completionTimeout = setTimeout(() => {
-            if (isSubscribed) {
-              onFinish(profileId);
-            }
-          }, 1200);
-        } else if (isSubscribed) {
-          // Fallback demo profileId during transition
-          const fallbackProfileId = 'taste-profile-v2-demo';
-          setStepIndex(2);
-          completionTimeout = setTimeout(() => {
-            if (isSubscribed) {
-              onFinish(fallbackProfileId);
-            }
-          }, 1200);
-        }
-      } catch (err: any) {
-        if (isSubscribed) {
-          setErrorMessage(err.message || '사진 분석 중 오류가 발생했습니다.');
-          onFail?.();
-        }
+      if (profileId) {
+        // 3단계 완료 후 1초(1000ms) 텀을 두고 다음 화면으로 전환
+        completionTimeout = setTimeout(() => {
+          if (isSubscribed) {
+            onFinish(profileId);
+          }
+        }, 1000);
       }
     };
 
-    executeAnalysisPipeline();
+    executePipeline();
 
     return () => {
       isSubscribed = false;
       if (completionTimeout) clearTimeout(completionTimeout);
     };
-  }, [onFinish, onFail]);
+  }, [runPipeline, onFinish]);
+
+  const handleConfirmError = () => {
+    onFail?.();
+  };
+
+  const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
+    if (status === 'COMPLETED') {
+      return (
+        <View style={styles.checkedCircleIcon}>
+          <Feather name='check' size={14} color={palette.white} />
+        </View>
+      );
+    }
+    if (status === 'IN_PROGRESS') {
+      return (
+        <View style={styles.loadingCircleIcon}>
+          <ActivityIndicator size='small' color={palette.primary} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.pendingCircleIcon}>
+        <View style={styles.pendingDotInner} />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.screenContainer}>
@@ -141,45 +134,37 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
               </Text>
 
               <View style={styles.stepsList}>
-                {/* Step 1: 사진 데이터 수집 완료 */}
+                {/* Step 1: 메타데이터 추출 / 사진 데이터 수집 */}
                 <View style={styles.stepRow} testID='step-1'>
-                  <View style={styles.checkedCircleIcon}>
-                    <Feather name='check' size={14} color='#FFFFFF' />
-                  </View>
-                  <Text style={styles.activeStepText}>
+                  {renderStepIcon(progress.step1Status)}
+                  <Text
+                    style={[
+                      styles.stepText,
+                      progress.step1Status !== 'IDLE' && styles.activeStepText,
+                    ]}>
                     {UI_STRINGS.TASTE_ANALYSIS.STEP_1}
                   </Text>
                 </View>
 
-                {/* Step 2: 여행 성향 분석 중... */}
+                {/* Step 2: 장소 정보 수집 */}
                 <View style={styles.stepRow} testID='step-2'>
-                  {stepIndex >= 2 ? (
-                    <View style={styles.checkedCircleIcon}>
-                      <Feather name='check' size={14} color='#FFFFFF' />
-                    </View>
-                  ) : (
-                    <View style={styles.loadingCircleIcon}>
-                      <ActivityIndicator size='small' color={palette.primary} />
-                    </View>
-                  )}
+                  {renderStepIcon(progress.step2Status)}
                   <Text
                     style={[
                       styles.stepText,
-                      stepIndex >= 1 && styles.activeStepText,
+                      progress.step2Status !== 'IDLE' && styles.activeStepText,
                     ]}>
                     {UI_STRINGS.TASTE_ANALYSIS.STEP_2}
                   </Text>
                 </View>
 
-                {/* Step 3: 맞춤 코스 생성 대기 */}
+                {/* Step 3: 사용자 취향 분석 */}
                 <View style={styles.stepRow} testID='step-3'>
-                  <View style={styles.pendingCircleIcon}>
-                    <View style={styles.pendingDotInner} />
-                  </View>
+                  {renderStepIcon(progress.step3Status)}
                   <Text
                     style={[
                       styles.stepText,
-                      stepIndex >= 2
+                      progress.step3Status !== 'IDLE'
                         ? styles.activeStepText
                         : styles.pendingStepText,
                     ]}>
@@ -204,10 +189,33 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                   </Text>
                 </View>
               </View>
+
+              <View style={styles.insightsCard}>
+                <Text style={styles.insightsNoticeText}>
+                  {progress.currentMessage || UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
+                </Text>
+              </View>
             </View>
 
             {errorMessage && (
-              <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.errorCard} testID='error-container'>
+                <View style={styles.errorHeader}>
+                  <Feather name='alert-circle' size={20} color={palette.red500} />
+                  <Text style={styles.errorCardTitle}>
+                    {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
+                  </Text>
+                </View>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  activeOpacity={0.8}
+                  onPress={handleConfirmError}
+                  testID='error-confirm-button'>
+                  <Text style={styles.confirmButtonText}>
+                    {UI_STRINGS.COMMON.CONFIRM}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -256,7 +264,7 @@ const styles = StyleSheet.create({
   checklistContainer: {
     backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.gray200,
     borderRadius: 24,
     padding: 20,
     gap: 14,
@@ -349,10 +357,60 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: palette.primary,
   },
+  insightsCard: {
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightsNoticeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.subText,
+  },
+  errorCard: {
+    backgroundColor: palette.red50,
+    borderWidth: 1,
+    borderColor: palette.red200,
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    alignItems: 'center',
+    shadowColor: palette.red500,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  errorCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.red800,
+  },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: palette.red700,
     textAlign: 'center',
-    marginTop: 8,
+    lineHeight: 20,
+  },
+  confirmButton: {
+    backgroundColor: palette.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  confirmButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.white,
   },
 });
