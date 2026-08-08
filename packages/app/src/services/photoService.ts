@@ -25,6 +25,7 @@ export async function fetchPhotosWithExifData(
   // 1. Request permission
   const { status } = await requestPermissionsAsync();
   if (status !== 'granted') {
+    logger.error('[PhotoService] Permission denied for media library');
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR);
   }
 
@@ -36,11 +37,13 @@ export async function fetchPhotosWithExifData(
     .exe();
 
   if (!assets || assets.length === 0) {
+    logger.error('[PhotoService] No photo assets found on device library');
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_PHOTOS_ERROR);
   }
 
   // 3. Extract latitude, longitude, and creation time metadata
   const parsedImages: ImageMetadata[] = [];
+
   for (const asset of assets) {
     try {
       const location = await asset.getLocation();
@@ -73,6 +76,9 @@ export async function fetchPhotosWithExifData(
   }
 
   if (parsedImages.length === 0) {
+    logger.error(
+      `[PhotoService] All ${assets.length} photos were skipped because none contained valid EXIF GPS coordinates (latitude/longitude).`,
+    );
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_EXIF_ERROR);
   }
 
