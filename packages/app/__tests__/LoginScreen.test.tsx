@@ -24,7 +24,7 @@ const renderLoginScreen = async (isAuthenticated = false) => {
   return await render(
     <AuthContext.Provider value={mockContextValue}>
       <LoginScreen />
-    </AuthContext.Provider>
+    </AuthContext.Provider>,
   );
 };
 
@@ -57,7 +57,10 @@ describe('LoginScreen UI & Interaction', () => {
   });
 
   it('Google 계정으로 계속하기 버튼 클릭 시 promptAsync 혹은 로그인 로직이 촉발되어야 한다', async () => {
-    mockLoginWithGoogle.mockResolvedValueOnce({ isNewUser: false, doOnboarding: true });
+    mockLoginWithGoogle.mockResolvedValueOnce({
+      isNewUser: false,
+      doOnboarding: true,
+    });
     const onLoginSuccess = jest.fn();
 
     const mockContextValue = {
@@ -72,7 +75,7 @@ describe('LoginScreen UI & Interaction', () => {
     const { getByText } = await render(
       <AuthContext.Provider value={mockContextValue}>
         <LoginScreen onLoginSuccess={onLoginSuccess} />
-      </AuthContext.Provider>
+      </AuthContext.Provider>,
     );
     const loginButton = getByText('Google 계정으로 계속하기');
 
@@ -85,7 +88,10 @@ describe('LoginScreen UI & Interaction', () => {
   });
 
   it('doOnboarding이 false인 경우 onLoginSuccess에 false를 전달해야 한다', async () => {
-    mockLoginWithGoogle.mockResolvedValueOnce({ isNewUser: false, doOnboarding: false });
+    mockLoginWithGoogle.mockResolvedValueOnce({
+      isNewUser: false,
+      doOnboarding: false,
+    });
     const onLoginSuccess = jest.fn();
 
     const mockContextValue = {
@@ -100,7 +106,7 @@ describe('LoginScreen UI & Interaction', () => {
     const { getByText } = await render(
       <AuthContext.Provider value={mockContextValue}>
         <LoginScreen onLoginSuccess={onLoginSuccess} />
-      </AuthContext.Provider>
+      </AuthContext.Provider>,
     );
     const loginButton = getByText('Google 계정으로 계속하기');
 
@@ -114,7 +120,10 @@ describe('LoginScreen UI & Interaction', () => {
 
   it('iOS 환경에서 Apple 로그인 버튼 클릭 시 signInWithApple 및 loginWithApple이 촉발되어야 한다', async () => {
     Platform.OS = 'ios';
-    mockLoginWithApple.mockResolvedValueOnce({ isNewUser: false, doOnboarding: false });
+    mockLoginWithApple.mockResolvedValueOnce({
+      isNewUser: false,
+      doOnboarding: false,
+    });
 
     const { getByTestId } = await renderLoginScreen();
     const appleButton = getByTestId('apple-login-button');
@@ -143,4 +152,3 @@ describe('LoginScreen UI & Interaction', () => {
     });
   });
 });
-

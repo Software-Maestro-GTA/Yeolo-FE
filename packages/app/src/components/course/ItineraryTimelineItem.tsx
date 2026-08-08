@@ -22,10 +22,26 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
 }) => {
   const getCategoryIcon = (category?: string) => {
     if (!category) return 'location-outline';
-    if (category.includes('미술관') || category.includes('박물관') || category.includes('전시')) return 'easel-outline';
-    if (category.includes('카페') || category.includes('디저트')) return 'cafe-outline';
-    if (category.includes('해변') || category.includes('관광') || category.includes('공원')) return 'camera-outline';
-    if (category.includes('식당') || category.includes('맛집') || category.includes('음식')) return 'restaurant-outline';
+    if (
+      category.includes('미술관') ||
+      category.includes('박물관') ||
+      category.includes('전시')
+    )
+      return 'easel-outline';
+    if (category.includes('카페') || category.includes('디저트'))
+      return 'cafe-outline';
+    if (
+      category.includes('해변') ||
+      category.includes('관광') ||
+      category.includes('공원')
+    )
+      return 'camera-outline';
+    if (
+      category.includes('식당') ||
+      category.includes('맛집') ||
+      category.includes('음식')
+    )
+      return 'restaurant-outline';
     return 'compass-outline';
   };
 
@@ -44,8 +60,13 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
     }
   };
 
-  const formatTransportLabel = (transport: TransportType, minutes?: number): string => {
-    const mins = minutes ? `${minutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}` : '';
+  const formatTransportLabel = (
+    transport: TransportType,
+    minutes?: number,
+  ): string => {
+    const mins = minutes
+      ? `${minutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
+      : '';
     switch (transport) {
       case 'walking':
         return `도보 ${mins}`;
@@ -60,16 +81,18 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
     }
   };
 
-  const hasTransport = stop.transportToNext && stop.transportToNext !== 'none' && stop.travelMinutesToNext;
+  const hasTransport =
+    stop.transportToNext &&
+    stop.transportToNext !== 'none' &&
+    stop.travelMinutesToNext;
 
   return (
     <View style={styles.timelineItemWrapper}>
       <TouchableOpacity
         style={styles.placeCard}
-        testID="place-card"
+        testID='place-card'
         activeOpacity={0.85}
-        onPress={() => onPressPlace?.(stop)}
-      >
+        onPress={() => onPressPlace?.(stop)}>
         <View style={styles.titleRow}>
           <View style={styles.placeTitleGroup}>
             <Ionicons
@@ -92,18 +115,25 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
           </Text>
           <View style={styles.dividerDot} />
           <Text style={styles.stayMinutesText}>
-            {stop.stayMinutes ? `${stop.stayMinutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}` : '60분 소요'}
+            {stop.stayMinutes
+              ? `${stop.stayMinutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
+              : '60분 소요'}
           </Text>
         </View>
 
         <View style={styles.aiTipBox}>
-          <Ionicons name="bulb-outline" size={14} color={palette.accent} style={styles.tipIcon} />
+          <Ionicons
+            name='bulb-outline'
+            size={14}
+            color={palette.accent}
+            style={styles.tipIcon}
+          />
           <Text style={styles.aiTipText}>
             {stop.reason && stop.reason.trim() !== ''
               ? stop.reason
               : stop.memo && stop.memo.trim() !== ''
-              ? stop.memo
-              : UI_STRINGS.COURSE_DETAIL.NO_INFO}
+                ? stop.memo
+                : UI_STRINGS.COURSE_DETAIL.NO_INFO}
           </Text>
         </View>
       </TouchableOpacity>
@@ -111,7 +141,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
       {/* Connected Transit Card */}
       {hasTransport && (
         <View style={styles.transitCardWrapper}>
-          <View style={styles.transitCard} testID="transit-card">
+          <View style={styles.transitCard} testID='transit-card'>
             {/* Transit Header */}
             <View style={styles.transitHeader}>
               <View style={styles.transitTitleGroup}>
@@ -121,7 +151,10 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   color={palette.deepNavy}
                 />
                 <Text style={styles.transitTitleText}>
-                  {formatTransportLabel(stop.transportToNext, stop.travelMinutesToNext)}
+                  {formatTransportLabel(
+                    stop.transportToNext,
+                    stop.travelMinutesToNext,
+                  )}
                 </Text>
               </View>
               <View style={styles.mintBadge}>
@@ -135,14 +168,19 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <View style={styles.routeVisualRow}>
               <View style={styles.routeDot} />
               <View style={styles.routeLine} />
-              <Ionicons name="footsteps" size={12} color={palette.primary} />
+              <Ionicons name='footsteps' size={12} color={palette.primary} />
               <View style={styles.routeLine} />
               <View style={styles.routeDot} />
             </View>
 
             {/* Transit Tip Box */}
             <View style={styles.aiTipBox}>
-              <Ionicons name="bulb-outline" size={14} color={palette.accent} style={styles.tipIcon} />
+              <Ionicons
+                name='bulb-outline'
+                size={14}
+                color={palette.accent}
+                style={styles.tipIcon}
+              />
               <Text style={styles.aiTipText}>
                 {stop.memo && stop.memo.includes('이동')
                   ? stop.memo

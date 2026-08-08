@@ -16,7 +16,7 @@ export interface CourseStoreState extends CourseState {
     apiUrl: string,
     payload: CourseCreateRequest,
     accessToken?: string,
-    fetcher?: typeof createCourseStreamApi
+    fetcher?: typeof createCourseStreamApi,
   ) => Promise<string | null>;
 }
 
@@ -70,7 +70,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
     apiUrl: string,
     payload: CourseCreateRequest,
     accessToken?: string,
-    fetcher = createCourseStreamApi
+    fetcher = createCourseStreamApi,
   ) => {
     set({
       isGenerating: true,

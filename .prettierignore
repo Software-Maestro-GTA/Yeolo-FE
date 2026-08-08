@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+.next
+.expo
+.yarn
+yarn.lock
+package-lock.json
+android
+ios
+coverage
+*.log
+*.md
+*.json
+*.yml
+*.yaml

@@ -4,16 +4,26 @@
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCourseListApi, DEFAULT_API_URL, type CourseSummary, ApiError } from '@yeolo/common';
+import {
+  getCourseListApi,
+  DEFAULT_API_URL,
+  type CourseSummary,
+  ApiError,
+} from '@yeolo/common';
 import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const COURSE_LIST_QUERY_KEY = ['courses'];
 
 export interface UseCourseListQueryOptions {
-  options?: Omit<UseQueryOptions<CourseSummary[], Error>, 'queryKey' | 'queryFn'>;
+  options?: Omit<
+    UseQueryOptions<CourseSummary[], Error>,
+    'queryKey' | 'queryFn'
+  >;
 }
 
-export function useCourseListQuery({ options }: UseCourseListQueryOptions = {}) {
+export function useCourseListQuery({
+  options,
+}: UseCourseListQueryOptions = {}) {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
 
   return useQuery<CourseSummary[], Error>({
@@ -27,7 +37,9 @@ export function useCourseListQuery({ options }: UseCourseListQueryOptions = {}) 
           throw new Error(err.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
         }
         const errorObj = err as { message?: string };
-        throw new Error(errorObj?.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
+        throw new Error(
+          errorObj?.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT,
+        );
       }
     },
     staleTime: APP_CONFIG.QUERY_STALE_TIME,

@@ -7,7 +7,9 @@ import { ScrollView } from 'react-native';
 import type { BudgetType, CourseCreateRequest } from '@yeolo/common';
 import { DATE_REGEX, formatYYYYMMDD, calculateTotalDays } from '@yeolo/common';
 
-export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => void) {
+export function useCourseCreateForm(
+  onSubmit?: (data: CourseCreateRequest) => void,
+) {
   const [destinationCountry, setDestinationCountry] = useState('');
   const [destinationCity, setDestinationCity] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -15,7 +17,9 @@ export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => vo
   const [budgetType, setBudgetType] = useState<BudgetType | null>(null);
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [activeDateTarget, setActiveDateTarget] = useState<'start' | 'end'>('start');
+  const [activeDateTarget, setActiveDateTarget] = useState<'start' | 'end'>(
+    'start',
+  );
 
   const todayDate = new Date();
   const [currentYearMonth, setCurrentYearMonth] = useState({
@@ -51,7 +55,10 @@ export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => vo
       setCurrentYearMonth({ year: y, month: m });
     } else {
       const now = new Date();
-      setCurrentYearMonth({ year: now.getFullYear(), month: now.getMonth() + 1 });
+      setCurrentYearMonth({
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+      });
     }
 
     setIsCalendarOpen(true);
@@ -61,7 +68,10 @@ export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => vo
     if (currentYearMonth.month === 1) {
       setCurrentYearMonth({ year: currentYearMonth.year - 1, month: 12 });
     } else {
-      setCurrentYearMonth({ year: currentYearMonth.year, month: currentYearMonth.month - 1 });
+      setCurrentYearMonth({
+        year: currentYearMonth.year,
+        month: currentYearMonth.month - 1,
+      });
     }
   };
 
@@ -69,7 +79,10 @@ export function useCourseCreateForm(onSubmit?: (data: CourseCreateRequest) => vo
     if (currentYearMonth.month === 12) {
       setCurrentYearMonth({ year: currentYearMonth.year + 1, month: 1 });
     } else {
-      setCurrentYearMonth({ year: currentYearMonth.year, month: currentYearMonth.month + 1 });
+      setCurrentYearMonth({
+        year: currentYearMonth.year,
+        month: currentYearMonth.month + 1,
+      });
     }
   };
 

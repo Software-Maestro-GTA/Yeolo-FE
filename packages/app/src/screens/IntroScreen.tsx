@@ -3,7 +3,14 @@
  * @description Application introduction screen matching Figma UI design specifications with 3-second auto-cycling carousel, background illustration images, and user touch interaction.
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated, Image } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Animated,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
@@ -57,13 +64,19 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
   // 사람이 "다음으로" 버튼을 눌렀을 때만 동작
   const handlePressNextButton = () => {
-    trackButtonClick('btn_intro_next', `Intro Next Button Slide ${activeIndex + 1}`);
+    trackButtonClick(
+      'btn_intro_next',
+      `Intro Next Button Slide ${activeIndex + 1}`,
+    );
     onNext();
   };
 
   // 사람이 메인 바디 영역을 눌렀을 때의 터치 전환 (0 -> 1 -> 2 -> 0 순환)
   const handleMainBodyPress = () => {
-    trackButtonClick('btn_intro_main_body_touch', `Intro Main Body Touch Slide ${activeIndex + 1}`);
+    trackButtonClick(
+      'btn_intro_main_body_touch',
+      `Intro Main Body Touch Slide ${activeIndex + 1}`,
+    );
     goToSlide((activeIndex + 1) % 3);
   };
 
@@ -72,31 +85,43 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
     <View style={styles.cardListContainer}>
       <View style={styles.featureCard}>
         <View style={styles.iconBg}>
-          <Ionicons name="heart" size={20} color={palette.primary} />
+          <Ionicons name='heart' size={20} color={palette.primary} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_1_TITLE}</Text>
-          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_1_DESC}</Text>
+          <Text style={styles.cardTitle}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_1_TITLE}
+          </Text>
+          <Text style={styles.cardDesc}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_1_DESC}
+          </Text>
         </View>
       </View>
 
       <View style={styles.featureCard}>
         <View style={styles.iconBg}>
-          <Ionicons name="map" size={20} color={palette.accent} />
+          <Ionicons name='map' size={20} color={palette.accent} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_2_TITLE}</Text>
-          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_2_DESC}</Text>
+          <Text style={styles.cardTitle}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_2_TITLE}
+          </Text>
+          <Text style={styles.cardDesc}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_2_DESC}
+          </Text>
         </View>
       </View>
 
       <View style={styles.featureCard}>
         <View style={styles.iconBg}>
-          <Ionicons name="share-social" size={20} color={palette.primary} />
+          <Ionicons name='share-social' size={20} color={palette.primary} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>{UI_STRINGS.INTRO.SLIDE_0_CARD_3_TITLE}</Text>
-          <Text style={styles.cardDesc}>{UI_STRINGS.INTRO.SLIDE_0_CARD_3_DESC}</Text>
+          <Text style={styles.cardTitle}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_3_TITLE}
+          </Text>
+          <Text style={styles.cardDesc}>
+            {UI_STRINGS.INTRO.SLIDE_0_CARD_3_DESC}
+          </Text>
         </View>
       </View>
     </View>
@@ -109,7 +134,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
       <Image
         source={APP_IMAGES.INTRO_PHOTO_ANALYSIS}
         style={styles.bgIllustrationImage}
-        resizeMode="cover"
+        resizeMode='cover'
       />
 
       {/* Laser Scanning Visual Line */}
@@ -117,15 +142,24 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
       {/* Analysis Badges */}
       <View style={[styles.analysisBadge, { top: 20, left: 16 }]}>
-        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_1} <Text style={styles.accentText}>92%</Text></Text>
+        <Text style={styles.badgeText}>
+          {UI_STRINGS.INTRO.SLIDE_1_BADGE_1}{' '}
+          <Text style={styles.accentText}>92%</Text>
+        </Text>
       </View>
 
       <View style={[styles.analysisBadge, { top: 76, right: 16 }]}>
-        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_2} <Text style={styles.accentText}>85%</Text></Text>
+        <Text style={styles.badgeText}>
+          {UI_STRINGS.INTRO.SLIDE_1_BADGE_2}{' '}
+          <Text style={styles.accentText}>85%</Text>
+        </Text>
       </View>
 
       <View style={[styles.analysisBadge, { top: 136, left: 20 }]}>
-        <Text style={styles.badgeText}>{UI_STRINGS.INTRO.SLIDE_1_BADGE_3} <Text style={{ color: palette.primary, fontWeight: '700' }}>76%</Text></Text>
+        <Text style={styles.badgeText}>
+          {UI_STRINGS.INTRO.SLIDE_1_BADGE_3}{' '}
+          <Text style={{ color: palette.primary, fontWeight: '700' }}>76%</Text>
+        </Text>
       </View>
 
       {/* Progress Card Overlay */}
@@ -133,14 +167,20 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
         <View style={styles.progressHeaderRow}>
           <View style={styles.rowFlex}>
             <View style={styles.dotIndicator} />
-            <Text style={styles.progressTitle}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_TITLE}</Text>
+            <Text style={styles.progressTitle}>
+              {UI_STRINGS.INTRO.SLIDE_1_PROGRESS_TITLE}
+            </Text>
           </View>
-          <Text style={styles.progressPercent}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_PERCENT}</Text>
+          <Text style={styles.progressPercent}>
+            {UI_STRINGS.INTRO.SLIDE_1_PROGRESS_PERCENT}
+          </Text>
         </View>
         <View style={styles.progressBarTrack}>
           <View style={[styles.progressBarFill, { width: '65%' }]} />
         </View>
-        <Text style={styles.progressSubText}>{UI_STRINGS.INTRO.SLIDE_1_PROGRESS_SUBTEXT}</Text>
+        <Text style={styles.progressSubText}>
+          {UI_STRINGS.INTRO.SLIDE_1_PROGRESS_SUBTEXT}
+        </Text>
       </View>
     </View>
   );
@@ -152,23 +192,27 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
       <Image
         source={APP_IMAGES.INTRO_MAP_ROUTE}
         style={styles.bgIllustrationImage}
-        resizeMode="cover"
+        resizeMode='cover'
       />
 
       {/* Route Navigation Badge Overlay */}
       <View style={styles.mapOverlayBadge}>
-        <Ionicons name="location" size={16} color={palette.accent} />
-        <Text style={styles.mapOverlayText}>{UI_STRINGS.INTRO.SLIDE_2_BADGE_TEXT}</Text>
+        <Ionicons name='location' size={16} color={palette.accent} />
+        <Text style={styles.mapOverlayText}>
+          {UI_STRINGS.INTRO.SLIDE_2_BADGE_TEXT}
+        </Text>
       </View>
     </View>
   );
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Header Title Section */}
-          <View style={styles.headerSection} testID="top-content">
+          <View style={styles.headerSection} testID='top-content'>
             <Text style={styles.mainTitle}>{UI_STRINGS.INTRO.MAIN_TITLE}</Text>
             <Text style={styles.subTitle}>{UI_STRINGS.INTRO.SUB_TITLE}</Text>
           </View>
@@ -178,8 +222,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
             style={styles.mainBodyContainer}
             activeOpacity={0.95}
             onPress={handleMainBodyPress}
-            testID="main-body-touchable"
-          >
+            testID='main-body-touchable'>
             <Animated.View style={[styles.animatedBody, { opacity: fadeAnim }]}>
               {activeIndex === 0 && renderSlide0()}
               {activeIndex === 1 && renderSlide1()}
@@ -188,7 +231,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
           </TouchableOpacity>
 
           {/* Bottom Navigation & Indicators */}
-          <View style={styles.bottomContainer} testID="bottom-container">
+          <View style={styles.bottomContainer} testID='bottom-container'>
             {/* Pagination Dots */}
             <View style={styles.paginationDots}>
               {[0, 1, 2].map((idx) => (
@@ -209,11 +252,12 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
               style={styles.primaryButton}
               activeOpacity={0.8}
               onPress={handlePressNextButton}
-              testID="next-button"
-            >
-              <Text style={styles.buttonText}>{UI_STRINGS.INTRO.NEXT_BUTTON}</Text>
+              testID='next-button'>
+              <Text style={styles.buttonText}>
+                {UI_STRINGS.INTRO.NEXT_BUTTON}
+              </Text>
               <Feather
-                name="chevron-right"
+                name='chevron-right'
                 size={18}
                 color={palette.white}
                 style={styles.arrowIcon}

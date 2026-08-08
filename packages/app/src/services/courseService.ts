@@ -24,7 +24,7 @@ export interface ProcessedCourseMapData {
  */
 export async function processCourseStopsMapData(
   stops: ItineraryStop[] = [],
-  city: string = ''
+  city: string = '',
 ): Promise<ProcessedCourseMapData> {
   if (!stops || stops.length === 0) {
     const defaultRegion = calculateRegion([]);
@@ -40,7 +40,10 @@ export async function processCourseStopsMapData(
       stops.map(async (stop, index) => {
         const coords = await geocodePlace(stop.placeName, city);
         if (coords) {
-          logger.info(`[CourseService] Geocoded coords for "${stop.placeName}" (${city}):`, coords);
+          logger.info(
+            `[CourseService] Geocoded coords for "${stop.placeName}" (${city}):`,
+            coords,
+          );
           return {
             ...coords,
             placeName: stop.placeName,
@@ -48,9 +51,11 @@ export async function processCourseStopsMapData(
           };
         }
 
-        logger.warn(`[CourseService] Failed to geocode coords for "${stop.placeName}" (${city})`);
+        logger.warn(
+          `[CourseService] Failed to geocode coords for "${stop.placeName}" (${city})`,
+        );
         return null;
-      })
+      }),
     )
   ).filter((item): item is NonNullable<typeof item> => item !== null);
 
@@ -58,7 +63,9 @@ export async function processCourseStopsMapData(
   const region = calculateRegion(coordinates);
   const leafletHtml = getLeafletMapHtml(coordinates);
 
-  logger.info(`[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`);
+  logger.info(
+    `[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`,
+  );
 
   return {
     coordinates,

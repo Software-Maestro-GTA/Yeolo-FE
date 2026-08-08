@@ -45,49 +45,50 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+      animationType='fade'
+      onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.dimOverlay} testID="profile-edit-modal-overlay">
+        <View style={styles.dimOverlay} testID='profile-edit-modal-overlay'>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardAvoidView}
-          >
+            style={styles.keyboardAvoidView}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalCard} testID="profile-edit-modal-card">
+              <View style={styles.modalCard} testID='profile-edit-modal-card'>
                 <Text style={styles.modalTitle}>프로필 정보 수정</Text>
-                <Text style={styles.modalSubTitle}>새로운 닉네임을 입력해 주세요.</Text>
+                <Text style={styles.modalSubTitle}>
+                  새로운 닉네임을 입력해 주세요.
+                </Text>
 
                 <View style={styles.inputContainer}>
                   <TextInput
-                    testID="input-nickname"
+                    testID='input-nickname'
                     style={styles.textInput}
                     value={nameInput}
                     onChangeText={setNameInput}
-                    placeholder="닉네임을 입력하세요"
-                    placeholderTextColor="#99A1AB"
+                    placeholder='닉네임을 입력하세요'
+                    placeholderTextColor='#99A1AB'
                     maxLength={20}
                   />
                 </View>
 
                 <View style={styles.buttonGroup}>
                   <TouchableOpacity
-                    testID="btn-cancel-edit"
+                    testID='btn-cancel-edit'
                     style={styles.cancelBtn}
                     onPress={onClose}
-                    activeOpacity={0.85}
-                  >
+                    activeOpacity={0.85}>
                     <Text style={styles.cancelBtnText}>취소</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    testID="btn-save-edit"
-                    style={[styles.saveBtn, !nameInput.trim() && styles.disabledBtn]}
+                    testID='btn-save-edit'
+                    style={[
+                      styles.saveBtn,
+                      !nameInput.trim() && styles.disabledBtn,
+                    ]}
                     onPress={handleSave}
                     disabled={!nameInput.trim()}
-                    activeOpacity={0.85}
-                  >
+                    activeOpacity={0.85}>
                     <Text style={styles.saveBtnText}>저장</Text>
                   </TouchableOpacity>
                 </View>

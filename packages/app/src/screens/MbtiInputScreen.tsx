@@ -3,7 +3,15 @@
  * @description MBTI selection screen matching exact Figma UI specifications with chevron-right icon.
  */
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ToastAndroid, Platform, Alert } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ToastAndroid,
+  Platform,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
@@ -40,7 +48,10 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
   const handlePressNext = () => {
     if (!isComplete) {
       if (Platform.OS === 'android') {
-        ToastAndroid.show('MBTI 4개 항목을 모두 선택해 주세요.', ToastAndroid.SHORT);
+        ToastAndroid.show(
+          'MBTI 4개 항목을 모두 선택해 주세요.',
+          ToastAndroid.SHORT,
+        );
       } else {
         Alert.alert('알림', 'MBTI 4개 항목을 모두 선택해 주세요.');
       }
@@ -51,22 +62,29 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
   };
 
   const handlePressAccurate = () => {
-    trackButtonClick('btn_mbti_accurate_recommend', `MBTI Accurate Recommend (${selectedMbti})`);
+    trackButtonClick(
+      'btn_mbti_accurate_recommend',
+      `MBTI Accurate Recommend (${selectedMbti})`,
+    );
     onDetailRecommend();
   };
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.contentContainer}>
           {/* Header Title Section */}
-          <View style={styles.headerSection} testID="top-content">
+          <View style={styles.headerSection} testID='top-content'>
             <Text style={styles.mainTitle}>{UI_STRINGS.MBTI.MAIN_TITLE}</Text>
             <Text style={styles.subTitle}>{UI_STRINGS.MBTI.SUB_TITLE}</Text>
           </View>
 
           {/* Main Body: MBTI 4-Row 2-Column Options Grid */}
-          <View style={styles.mbtiGridContainer} testID="mbti-selection-container">
+          <View
+            style={styles.mbtiGridContainer}
+            testID='mbti-selection-container'>
             {/* Row 1: E vs I */}
             <View style={styles.mbtiRow}>
               {/* Option E */}
@@ -77,12 +95,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   ei === 'E' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setEi('E')}
-                testID="mbti-option-E"
-              >
-                <Text style={[styles.letterText, ei === 'E' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-E'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    ei === 'E'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   E
                 </Text>
-                <Text style={[styles.koreanText, ei === 'E' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    ei === 'E'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   외향형
                 </Text>
               </TouchableOpacity>
@@ -95,12 +124,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   ei === 'I' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setEi('I')}
-                testID="mbti-option-I"
-              >
-                <Text style={[styles.letterText, ei === 'I' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-I'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    ei === 'I'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   I
                 </Text>
-                <Text style={[styles.koreanText, ei === 'I' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    ei === 'I'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   내향형
                 </Text>
               </TouchableOpacity>
@@ -116,12 +156,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   sn === 'S' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setSn('S')}
-                testID="mbti-option-S"
-              >
-                <Text style={[styles.letterText, sn === 'S' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-S'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    sn === 'S'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   S
                 </Text>
-                <Text style={[styles.koreanText, sn === 'S' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    sn === 'S'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   감각형
                 </Text>
               </TouchableOpacity>
@@ -134,12 +185,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   sn === 'N' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setSn('N')}
-                testID="mbti-option-N"
-              >
-                <Text style={[styles.letterText, sn === 'N' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-N'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    sn === 'N'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   N
                 </Text>
-                <Text style={[styles.koreanText, sn === 'N' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    sn === 'N'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   직관형
                 </Text>
               </TouchableOpacity>
@@ -155,12 +217,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   tf === 'T' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setTf('T')}
-                testID="mbti-option-T"
-              >
-                <Text style={[styles.letterText, tf === 'T' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-T'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    tf === 'T'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   T
                 </Text>
-                <Text style={[styles.koreanText, tf === 'T' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    tf === 'T'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   사고형
                 </Text>
               </TouchableOpacity>
@@ -173,12 +246,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   tf === 'F' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setTf('F')}
-                testID="mbti-option-F"
-              >
-                <Text style={[styles.letterText, tf === 'F' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-F'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    tf === 'F'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   F
                 </Text>
-                <Text style={[styles.koreanText, tf === 'F' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    tf === 'F'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   감정형
                 </Text>
               </TouchableOpacity>
@@ -194,12 +278,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   jp === 'J' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setJp('J')}
-                testID="mbti-option-J"
-              >
-                <Text style={[styles.letterText, jp === 'J' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-J'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    jp === 'J'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   J
                 </Text>
-                <Text style={[styles.koreanText, jp === 'J' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    jp === 'J'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   판단형
                 </Text>
               </TouchableOpacity>
@@ -212,12 +307,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
                   jp === 'P' ? styles.activeCard : styles.inactiveCard,
                 ]}
                 onPress={() => setJp('P')}
-                testID="mbti-option-P"
-              >
-                <Text style={[styles.letterText, jp === 'P' ? styles.activeLetterText : styles.inactiveLetterText]}>
+                testID='mbti-option-P'>
+                <Text
+                  style={[
+                    styles.letterText,
+                    jp === 'P'
+                      ? styles.activeLetterText
+                      : styles.inactiveLetterText,
+                  ]}>
                   P
                 </Text>
-                <Text style={[styles.koreanText, jp === 'P' ? styles.activeKoreanText : styles.inactiveKoreanText]}>
+                <Text
+                  style={[
+                    styles.koreanText,
+                    jp === 'P'
+                      ? styles.activeKoreanText
+                      : styles.inactiveKoreanText,
+                  ]}>
                   인식형
                 </Text>
               </TouchableOpacity>
@@ -225,21 +331,20 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
           </View>
 
           {/* Bottom Container Action Buttons */}
-          <View style={styles.bottomContainer} testID="bottom-container">
+          <View style={styles.bottomContainer} testID='bottom-container'>
             {/* Primary Button */}
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
               onPress={handlePressNext}
-              testID="next-button"
-            >
+              testID='next-button'>
               <Text style={styles.primaryButtonText}>
                 {UI_STRINGS.MBTI.NEXT_BUTTON}
               </Text>
               <Feather
-                name="chevron-right"
+                name='chevron-right'
                 size={18}
-                color="#FFFFFF"
+                color='#FFFFFF'
                 style={styles.arrowIcon}
               />
             </TouchableOpacity>
@@ -249,10 +354,9 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
               style={styles.secondaryButton}
               activeOpacity={0.8}
               onPress={handlePressAccurate}
-              testID="accurate-recommend-button"
-            >
+              testID='accurate-recommend-button'>
               <Ionicons
-                name="camera-outline"
+                name='camera-outline'
                 size={18}
                 color={palette.accent}
                 style={{ marginRight: 6 }}

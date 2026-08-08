@@ -32,9 +32,13 @@ const MAX_HISTORY_LENGTH = 10;
 
 export function NavigationRoot() {
   const auth = useContext(AuthContext);
-  const [activeTasteProfileId, setActiveTasteProfileId] = useState<string | undefined>();
+  const [activeTasteProfileId, setActiveTasteProfileId] = useState<
+    string | undefined
+  >();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [selectedPlaceStop, setSelectedPlaceStop] = useState<ItineraryStop | undefined>();
+  const [selectedPlaceStop, setSelectedPlaceStop] = useState<
+    ItineraryStop | undefined
+  >();
   const [history, setHistory] = useState<NavStep[]>([]);
   const [step, setStep] = useState<NavStep | null>(null);
   const lastBackPressRef = useRef<number>(0);
@@ -51,7 +55,9 @@ export function NavigationRoot() {
   useEffect(() => {
     if (!auth?.isLoading) {
       if (auth?.isAuthenticated) {
-        setStep((prev) => (prev === null || prev === NAV_STEPS.LOGIN ? NAV_STEPS.HOME : prev));
+        setStep((prev) =>
+          prev === null || prev === NAV_STEPS.LOGIN ? NAV_STEPS.HOME : prev,
+        );
       } else {
         setStep(NAV_STEPS.LOGIN);
       }
@@ -62,12 +68,19 @@ export function NavigationRoot() {
     const handleBackPress = () => {
       if (step === NAV_STEPS.GENERATING_COURSE || step === NAV_STEPS.TASTE) {
         if (Platform.OS === 'android') {
-          ToastAndroid.show('진행 중에는 이전으로 돌아갈 수 없습니다.', ToastAndroid.SHORT);
+          ToastAndroid.show(
+            '진행 중에는 이전으로 돌아갈 수 없습니다.',
+            ToastAndroid.SHORT,
+          );
         }
         return true;
       }
 
-      if (step !== NAV_STEPS.HOME && step !== NAV_STEPS.LOGIN && history.length > 0) {
+      if (
+        step !== NAV_STEPS.HOME &&
+        step !== NAV_STEPS.LOGIN &&
+        history.length > 0
+      ) {
         const prev = history[history.length - 1];
         setHistory((old) => old.slice(0, -1));
         setStep(prev);
@@ -81,14 +94,17 @@ export function NavigationRoot() {
       }
       lastBackPressRef.current = now;
       if (Platform.OS === 'android') {
-        ToastAndroid.show('한 번 더 누르시면 앱이 종료됩니다.', ToastAndroid.SHORT);
+        ToastAndroid.show(
+          '한 번 더 누르시면 앱이 종료됩니다.',
+          ToastAndroid.SHORT,
+        );
       }
       return true;
     };
 
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
-      handleBackPress
+      handleBackPress,
     );
 
     return () => subscription.remove();
@@ -208,7 +224,10 @@ export function NavigationRoot() {
       );
     case NAV_STEPS.COURSE_DETAIL:
       return (
-        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress} noTopEdges={true}>
+        <MainLayout
+          currentTab={NAV_TABS.EXPLORE}
+          onTabPress={handleTabPress}
+          noTopEdges={true}>
           <CourseDetailScreen
             courseId={selectedCourseId || ''}
             onSelectPlace={(stop) => {
@@ -229,16 +248,20 @@ export function NavigationRoot() {
       );
     case NAV_STEPS.PLACE_DETAIL:
       return (
-        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress} noTopEdges={true}>
-          <PlaceDetailScreen
-            stop={selectedPlaceStop}
-          />
+        <MainLayout
+          currentTab={NAV_TABS.EXPLORE}
+          onTabPress={handleTabPress}
+          noTopEdges={true}>
+          <PlaceDetailScreen stop={selectedPlaceStop} />
         </MainLayout>
       );
     case NAV_STEPS.HOME:
     default:
       return (
-        <MainLayout currentTab={NAV_TABS.HOME} onTabPress={handleTabPress} noTopEdges={true}>
+        <MainLayout
+          currentTab={NAV_TABS.HOME}
+          onTabPress={handleTabPress}
+          noTopEdges={true}>
           <HomeScreen
             onNavigateToCreate={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
             onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}

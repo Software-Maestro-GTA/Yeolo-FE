@@ -9,7 +9,10 @@ import { UI_STRINGS } from '../constants';
 /**
  * Extract user-friendly error message from ApiError or fallback to defaultMessage.
  */
-export const getAuthErrorMessage = (err: any, defaultMessage: string): string => {
+export const getAuthErrorMessage = (
+  err: any,
+  defaultMessage: string,
+): string => {
   if (err?.name === 'ApiError' && err?.message) {
     return err.message;
   }
@@ -22,7 +25,7 @@ export const getAuthErrorMessage = (err: any, defaultMessage: string): string =>
 export const showAuthErrorAlert = (
   err: any,
   defaultMessage: string,
-  title: string = UI_STRINGS.AUTH.LOGIN_ERROR_TITLE
+  title: string = UI_STRINGS.AUTH.LOGIN_ERROR_TITLE,
 ): void => {
   logger.error('[AuthError] Detail:', err?.code, err?.message, err);
   const userMessage = getAuthErrorMessage(err, defaultMessage);

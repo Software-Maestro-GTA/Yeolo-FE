@@ -20,14 +20,15 @@ export interface NominatimItem {
 
 const geocodeCache = new Map<string, GeocodeResult | null>();
 
-export async function fetchGeocode(query: string): Promise<GeocodeResult | null> {
+export async function fetchGeocode(
+  query: string,
+): Promise<GeocodeResult | null> {
   if (geocodeCache.has(query)) {
     logger.info('[GeocodeService] Cache hit for query:', query);
     return geocodeCache.get(query) || null;
   }
 
   logger.info('[GeocodeService] Fetching geocode for query:', query);
-
 
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=kr&limit=5`;
@@ -44,7 +45,7 @@ export async function fetchGeocode(query: string): Promise<GeocodeResult | null>
             item.class === 'tourism' ||
             item.class === 'amenity' ||
             item.class === 'leisure' ||
-            item.type === 'point'
+            item.type === 'point',
         ) || data[0];
       if (bestMatch && bestMatch.lat && bestMatch.lon) {
         const result: GeocodeResult = {
@@ -66,7 +67,10 @@ export async function fetchGeocode(query: string): Promise<GeocodeResult | null>
 /**
  * OpenStreetMap Nominatim Geocoding API를 활용한 스마트 검색어 정제 및 다단계 지오코딩 공통 유틸
  */
-export async function geocodePlace(placeName: string, city: string): Promise<GeocodeResult | null> {
+export async function geocodePlace(
+  placeName: string,
+  city: string,
+): Promise<GeocodeResult | null> {
   const cacheKey = `${placeName}::${city}`;
   if (geocodeCache.has(cacheKey)) {
     return geocodeCache.get(cacheKey) || null;
@@ -89,7 +93,7 @@ export async function geocodePlace(placeName: string, city: string): Promise<Geo
       cleanedName,
       `${placeName} ${city}`.trim(),
       placeName,
-    ])
+    ]),
   ).filter(Boolean);
 
   for (const query of candidateQueries) {

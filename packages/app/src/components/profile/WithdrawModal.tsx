@@ -29,42 +29,41 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+      animationType='fade'
+      onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.dimOverlay} testID="withdraw-modal-overlay">
+        <View style={styles.dimOverlay} testID='withdraw-modal-overlay'>
           <TouchableWithoutFeedback>
-            <View style={styles.modalCard} testID="withdraw-modal-card">
+            <View style={styles.modalCard} testID='withdraw-modal-card'>
               {/* Title & Warning Stack */}
               <View style={styles.textStack}>
                 <Text style={styles.modalTitle}>
-                  {UI_STRINGS.PROFILE?.WITHDRAW_MODAL_TITLE || '정말 탈퇴하시겠습니까?'}
+                  {UI_STRINGS.PROFILE?.WITHDRAW_MODAL_TITLE ||
+                    '정말 탈퇴하시겠습니까?'}
                 </Text>
                 <Text style={styles.modalSubTitle}>
-                  {UI_STRINGS.PROFILE?.WITHDRAW_MODAL_DESC || '탈퇴 시 모든 데이터가 삭제되며\n복구할 수 없습니다.'}
+                  {UI_STRINGS.PROFILE?.WITHDRAW_MODAL_DESC ||
+                    '탈퇴 시 모든 데이터가 삭제되며\n복구할 수 없습니다.'}
                 </Text>
               </View>
 
               {/* Action Buttons Group */}
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
-                  testID="btn-cancel-withdraw"
+                  testID='btn-cancel-withdraw'
                   style={styles.cancelBtn}
                   onPress={onClose}
-                  activeOpacity={0.85}
-                >
+                  activeOpacity={0.85}>
                   <Text style={styles.cancelBtnText}>
                     {UI_STRINGS.COMMON?.CANCEL || '취소'}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  testID="btn-confirm-withdraw"
+                  testID='btn-confirm-withdraw'
                   style={styles.confirmWithdrawBtn}
                   onPress={onConfirmWithdraw}
-                  activeOpacity={0.85}
-                >
+                  activeOpacity={0.85}>
                   <Text style={styles.confirmWithdrawBtnText}>
                     {UI_STRINGS.PROFILE?.WITHDRAW_LINK || '탈퇴하기'}
                   </Text>

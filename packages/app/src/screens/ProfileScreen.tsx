@@ -23,7 +23,10 @@ import { clearLocalSession, openCustomerSupportMail } from '../services';
 import { WithdrawModal } from '../components/profile/WithdrawModal';
 import { ProfileEditModal } from '../components/profile/ProfileEditModal';
 import { TermsModal } from '../components/profile/TermsModal';
-import { useWithdrawMutation, useLogoutMutation } from '../hooks/queries/useAuthMutations';
+import {
+  useWithdrawMutation,
+  useLogoutMutation,
+} from '../hooks/queries/useAuthMutations';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface ProfileScreenProps {
@@ -33,7 +36,8 @@ export interface ProfileScreenProps {
   onNavigateToLogin?: () => void;
 }
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+const DEFAULT_AVATAR =
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onNavigateToTasteProfile,
@@ -55,14 +59,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     };
   }, []);
 
-  const [displayName, setDisplayName] = useState<string>(user?.displayName || '김선규');
+  const [displayName, setDisplayName] = useState<string>(
+    user?.displayName || '김선규',
+  );
   const email = user?.email || 'ksk85628781@gmail.com';
   const avatarUrl = (user as any)?.photoUrl || DEFAULT_AVATAR;
 
-  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState<boolean>(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] =
+    useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
-  const [termsModalType, setTermsModalType] = useState<'service' | 'privacy'>('service');
+  const [termsModalType, setTermsModalType] = useState<'service' | 'privacy'>(
+    'service',
+  );
 
   const withdrawMutation = useWithdrawMutation();
   const logoutMutation = useLogoutMutation();
@@ -114,7 +123,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   const handleSaveNickname = (newName: string) => {
-    trackButtonClick('btn_save_nickname', 'Save Nickname', { nickname: newName });
+    trackButtonClick('btn_save_nickname', 'Save Nickname', {
+      nickname: newName,
+    });
     setDisplayName(newName);
     Alert.alert('프로필 수정', '닉네임이 성공적으로 변경되었습니다.');
   };
@@ -125,7 +136,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       setTermsModalType('service');
       setShowTermsModal(true);
     } else if (type === 'privacy') {
-      trackButtonClick('btn_profile_privacy_notion', 'Open Privacy Policy Notion URL');
+      trackButtonClick(
+        'btn_profile_privacy_notion',
+        'Open Privacy Policy Notion URL',
+      );
       try {
         await Linking.openURL(APP_CONFIG.PRIVACY_POLICY_URL);
       } catch (err) {
@@ -134,14 +148,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         setShowTermsModal(true);
       }
     } else if (type === 'support') {
-      trackButtonClick('btn_profile_support_mailto', 'Open Customer Support Mailto');
+      trackButtonClick(
+        'btn_profile_support_mailto',
+        'Open Customer Support Mailto',
+      );
       const supportEmail = APP_CONFIG.DEFAULT_SUPPORT_EMAIL;
       const mailtoUrl = `mailto:${supportEmail}`;
 
       try {
         await openCustomerSupportMail();
       } catch (err) {
-        console.warn('MailComposer/mailto failed, checking fallback canOpenURL:', err);
+        console.warn(
+          'MailComposer/mailto failed, checking fallback canOpenURL:',
+          err,
+        );
         try {
           const canOpen = await Linking.canOpenURL(mailtoUrl);
           if (canOpen) {
@@ -150,7 +170,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             Alert.alert(
               '고객 지원 문의',
               `메일 앱을 열 수 없습니다.\n아래 이메일로 직접 문의해주세요.\n\n문의처: ${supportEmail}`,
-              [{ text: '확인' }]
+              [{ text: '확인' }],
             );
           }
         } catch (linkErr) {
@@ -158,7 +178,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           Alert.alert(
             '고객 지원 문의',
             `메일 앱을 열 수 없습니다.\n아래 이메일로 직접 문의해주세요.\n\n문의처: ${supportEmail}`,
-            [{ text: '확인' }]
+            [{ text: '확인' }],
           );
         }
       }
@@ -166,13 +186,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   };
 
   return (
-    <View style={styles.container} testID="profile-screen">
+    <View style={styles.container} testID='profile-screen'>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+        contentContainerStyle={styles.scrollContent}>
         {/* Profile Info Card */}
-        <View style={styles.profileCard} testID="profile-card">
+        <View style={styles.profileCard} testID='profile-card'>
           <View style={styles.avatarAndMeta}>
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             <View style={styles.metaTextStack}>
@@ -184,7 +203,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </Text>
             </View>
             <TouchableOpacity
-              testID="btn-edit-profile"
+              testID='btn-edit-profile'
               style={styles.editBtn}
               activeOpacity={0.8}
               onPress={() => {
@@ -194,8 +213,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 } else {
                   setIsEditModalOpen(true);
                 }
-              }}
-            >
+              }}>
               <Text style={styles.editBtnText}>
                 {UI_STRINGS.PROFILE.EDIT_BUTTON}
               </Text>
@@ -209,11 +227,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.aiTasteCard}
-          testID="ai-taste-card"
-        >
+          testID='ai-taste-card'>
           <View style={styles.tasteTitleStack}>
             <View style={styles.tasteBadgeRow}>
-              <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+              <Ionicons name='sparkles' size={16} color='#FFFFFF' />
               <Text style={styles.tasteBadgeTitle}>
                 {UI_STRINGS.PROFILE.AI_TASTE_TITLE}
               </Text>
@@ -226,14 +243,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <View style={styles.tasteActionsRow}>
             {/* 1. 나의 취향 보기 */}
             <TouchableOpacity
-              testID="btn-view-taste"
+              testID='btn-view-taste'
               style={styles.btnTastePrimary}
               activeOpacity={0.85}
               onPress={() => {
-                trackButtonClick('btn_profile_view_taste', 'View Taste Profile Click');
+                trackButtonClick(
+                  'btn_profile_view_taste',
+                  'View Taste Profile Click',
+                );
                 onNavigateToTasteProfile?.();
-              }}
-            >
+              }}>
               <Text style={styles.btnTastePrimaryText}>
                 {UI_STRINGS.PROFILE.VIEW_TASTE_BUTTON}
               </Text>
@@ -241,14 +260,16 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
             {/* 2. 취향 재분석 */}
             <TouchableOpacity
-              testID="btn-reanalyze-taste"
+              testID='btn-reanalyze-taste'
               style={styles.btnTasteSecondary}
               activeOpacity={0.85}
               onPress={() => {
-                trackButtonClick('btn_profile_reanalyze_taste', 'Reanalyze Taste Click');
+                trackButtonClick(
+                  'btn_profile_reanalyze_taste',
+                  'Reanalyze Taste Click',
+                );
                 onReanalyzeTaste?.();
-              }}
-            >
+              }}>
               <Text style={styles.btnTasteSecondaryText}>
                 {UI_STRINGS.PROFILE.REANALYZE_BUTTON}
               </Text>
@@ -257,7 +278,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </LinearGradient>
 
         {/* Settings Section */}
-        <View style={styles.settingsSection} testID="settings-section">
+        <View style={styles.settingsSection} testID='settings-section'>
           <Text style={styles.settingsHeaderTitle}>
             {UI_STRINGS.PROFILE.SETTINGS_HEADER}
           </Text>
@@ -267,43 +288,40 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <TouchableOpacity
               style={styles.settingRow}
               activeOpacity={0.7}
-              onPress={() => handleOpenTerms('terms')}
-            >
+              onPress={() => handleOpenTerms('terms')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.TERMS_LABEL}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              <Ionicons name='chevron-forward' size={16} color='#9CA3AF' />
             </TouchableOpacity>
 
             {/* 개인정보 처리방침 */}
             <TouchableOpacity
               style={styles.settingRow}
               activeOpacity={0.7}
-              onPress={() => handleOpenTerms('privacy')}
-            >
+              onPress={() => handleOpenTerms('privacy')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.PRIVACY_LABEL}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              <Ionicons name='chevron-forward' size={16} color='#9CA3AF' />
             </TouchableOpacity>
 
             {/* 고객 지원 */}
             <TouchableOpacity
               style={[styles.settingRow, { borderBottomWidth: 0 }]}
               activeOpacity={0.7}
-              onPress={() => handleOpenTerms('support')}
-            >
+              onPress={() => handleOpenTerms('support')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.SUPPORT_LABEL}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+              <Ionicons name='chevron-forward' size={16} color='#9CA3AF' />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Account Links */}
         <View style={styles.accountLinksRow}>
-          <TouchableOpacity onPress={handleLogout} testID="btn-logout">
+          <TouchableOpacity onPress={handleLogout} testID='btn-logout'>
             <Text style={styles.accountLinkText}>
               {UI_STRINGS.PROFILE.LOGOUT_LINK}
             </Text>
@@ -313,8 +331,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <TouchableOpacity
             onPress={() => setIsWithdrawModalOpen(true)}
-            testID="btn-withdraw"
-          >
+            testID='btn-withdraw'>
             <Text style={styles.accountLinkText}>
               {UI_STRINGS.PROFILE.WITHDRAW_LINK}
             </Text>

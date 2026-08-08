@@ -8,9 +8,11 @@ import { TasteAnalysisScreen } from '../src/screens/TasteAnalysisScreen';
 import { UI_STRINGS } from '../src/constants';
 
 jest.mock('../src/services', () => ({
-  fetchPhotosWithExifData: jest.fn().mockResolvedValue([
-    { latitude: 37.5665, longitude: 126.978, timestamp: Date.now() },
-  ]),
+  fetchPhotosWithExifData: jest
+    .fn()
+    .mockResolvedValue([
+      { latitude: 37.5665, longitude: 126.978, timestamp: Date.now() },
+    ]),
 }));
 
 describe('TasteAnalysisScreen UI & Progress', () => {
@@ -23,7 +25,7 @@ describe('TasteAnalysisScreen UI & Progress', () => {
 
   it('Figma 스펙 타이틀, 스텝 3개 및 실시간 수집 헤더가 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
-      <TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />
+      <TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />,
     );
 
     expect(getByText(UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE)).toBeTruthy();

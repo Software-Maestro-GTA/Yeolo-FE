@@ -6,7 +6,6 @@
 import type { AnalyticsTracker, GA4EventParams } from './types';
 import { logger } from '../utils/logger';
 
-
 export class AnalyticsService {
   private static instance: AnalyticsService;
   private trackers: AnalyticsTracker[] = [];
@@ -38,46 +37,68 @@ export class AnalyticsService {
     return [...this.trackers];
   }
 
-  public async logEvent(eventName: string, params?: GA4EventParams): Promise<void> {
+  public async logEvent(
+    eventName: string,
+    params?: GA4EventParams,
+  ): Promise<void> {
     logger.info(`[AnalyticsService] logEvent "${eventName}":`, params);
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
           await tracker.logEvent(eventName, params);
         } catch (error) {
-          console.error(`[AnalyticsService] Error logging event "${eventName}":`, error);
+          console.error(
+            `[AnalyticsService] Error logging event "${eventName}":`,
+            error,
+          );
         }
-      })
+      }),
     );
   }
 
-  public async logScreenView(screenName: string, screenClass?: string): Promise<void> {
-    logger.info(`[AnalyticsService] logScreenView "${screenName}":`, screenClass);
+  public async logScreenView(
+    screenName: string,
+    screenClass?: string,
+  ): Promise<void> {
+    logger.info(
+      `[AnalyticsService] logScreenView "${screenName}":`,
+      screenClass,
+    );
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
           await tracker.logScreenView(screenName, screenClass);
         } catch (error) {
-          console.error(`[AnalyticsService] Error logging screen_view "${screenName}":`, error);
+          console.error(
+            `[AnalyticsService] Error logging screen_view "${screenName}":`,
+            error,
+          );
         }
-      })
+      }),
     );
   }
 
   public async logButtonClick(
     buttonId: string,
     buttonName?: string,
-    params?: GA4EventParams
+    params?: GA4EventParams,
   ): Promise<void> {
-    logger.info(`[AnalyticsService] logButtonClick "${buttonId}":`, buttonName, params);
+    logger.info(
+      `[AnalyticsService] logButtonClick "${buttonId}":`,
+      buttonName,
+      params,
+    );
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {
           await tracker.logButtonClick(buttonId, buttonName, params);
         } catch (error) {
-          console.error(`[AnalyticsService] Error logging button_click "${buttonId}":`, error);
+          console.error(
+            `[AnalyticsService] Error logging button_click "${buttonId}":`,
+            error,
+          );
         }
-      })
+      }),
     );
   }
 
@@ -92,11 +113,14 @@ export class AnalyticsService {
         } catch (error) {
           console.error(`[AnalyticsService] Error setting user ID:`, error);
         }
-      })
+      }),
     );
   }
 
-  public async setUserProperty(name: string, value: string | null): Promise<void> {
+  public async setUserProperty(
+    name: string,
+    value: string | null,
+  ): Promise<void> {
     logger.info(`[AnalyticsService] setUserProperty "${name}":`, value);
     await Promise.all(
       this.trackers.map(async (tracker) => {
@@ -105,9 +129,12 @@ export class AnalyticsService {
             await tracker.setUserProperty(name, value);
           }
         } catch (error) {
-          console.error(`[AnalyticsService] Error setting user property "${name}":`, error);
+          console.error(
+            `[AnalyticsService] Error setting user property "${name}":`,
+            error,
+          );
         }
-      })
+      }),
     );
   }
 }

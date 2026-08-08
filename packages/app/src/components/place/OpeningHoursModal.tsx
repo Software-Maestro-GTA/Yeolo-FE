@@ -40,25 +40,23 @@ export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+      animationType='fade'
+      onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay} testID="opening-hours-modal-overlay">
+        <View style={styles.overlay} testID='opening-hours-modal-overlay'>
           <TouchableWithoutFeedback>
-            <View style={styles.modalCard} testID="opening-hours-modal-card">
+            <View style={styles.modalCard} testID='opening-hours-modal-card'>
               {/* Modal Header */}
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
                   {UI_STRINGS.PLACE_DETAIL.MODAL_TITLE}
                 </Text>
                 <TouchableOpacity
-                  testID="close-modal-btn"
+                  testID='close-modal-btn'
                   style={styles.closeBtn}
                   onPress={onClose}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={20} color="#59616B" />
+                  activeOpacity={0.7}>
+                  <Ionicons name='close' size={20} color='#59616B' />
                 </TouchableOpacity>
               </View>
 
@@ -71,8 +69,7 @@ export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
                         style={[
                           styles.dayText,
                           item.isToday && styles.todayDayText,
-                        ]}
-                      >
+                        ]}>
                         {item.day}
                       </Text>
                       {item.isToday && (

@@ -30,27 +30,40 @@ export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
       : '당일치기';
 
   const isList = viewMode === 'list';
-  const defaultColors = [palette.primary, '#6c5ce7', palette.accent, '#e84393', '#fdcb6e'];
-  const colorIndex = Math.abs(
-    course.courseId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  ) % defaultColors.length;
+  const defaultColors = [
+    palette.primary,
+    '#6c5ce7',
+    palette.accent,
+    '#e84393',
+    '#fdcb6e',
+  ];
+  const colorIndex =
+    Math.abs(
+      course.courseId
+        .split('')
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0),
+    ) % defaultColors.length;
   const accentColor = defaultColors[colorIndex];
 
-  const imageUrl = getDestinationImageUrl(course.destinationCountry, course.destinationCity);
+  const imageUrl = getDestinationImageUrl(
+    course.destinationCountry,
+    course.destinationCity,
+  );
 
   return (
     <TouchableOpacity
       testID={`course-card-${course.courseId}`}
       style={[styles.card, isList ? styles.listCard : styles.gridCard]}
       activeOpacity={0.8}
-      onPress={() => onPress(course.courseId)}
-    >
+      onPress={() => onPress(course.courseId)}>
       <View style={[styles.bannerContainer, { backgroundColor: accentColor }]}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.thumbnailImage} />
         ) : (
           <View style={styles.placeholderBanner}>
-            <Text style={styles.placeholderText}>{course.destinationCity || course.destinationCountry}</Text>
+            <Text style={styles.placeholderText}>
+              {course.destinationCity || course.destinationCountry}
+            </Text>
           </View>
         )}
         <View style={styles.badge}>

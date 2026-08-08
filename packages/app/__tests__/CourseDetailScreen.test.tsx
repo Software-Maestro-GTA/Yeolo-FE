@@ -10,7 +10,6 @@ import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';
 
-
 jest.mock('../src/components/navigation/BottomNavBar', () => ({
   BottomNavBar: () => null,
 }));
@@ -19,7 +18,11 @@ jest.mock('react-native-maps', () => {
   const React = require('react');
   const { View } = require('react-native');
   const MockMapView = (props: any) =>
-    React.createElement(View, { ...props, testID: props.testID || 'in-app-map-view' }, props.children);
+    React.createElement(
+      View,
+      { ...props, testID: props.testID || 'in-app-map-view' },
+      props.children,
+    );
   const MockMarker = (props: any) => React.createElement(View, props);
   const MockPolyline = (props: any) => React.createElement(View, props);
   return {
@@ -34,7 +37,11 @@ jest.mock('react-native-webview', () => {
   const React = require('react');
   const { View } = require('react-native');
   return {
-    WebView: (props: any) => React.createElement(View, { ...props, testID: props.testID || 'in-app-webview' }),
+    WebView: (props: any) =>
+      React.createElement(View, {
+        ...props,
+        testID: props.testID || 'in-app-webview',
+      }),
   };
 });
 
@@ -57,7 +64,8 @@ const mockCourseDetail: commonApi.CourseDetail = {
   totalDays: 2,
   totalCost: 350000,
   tags: ['힐링', '카페', '자연'],
-  recommendationReason: '자연과 카페 선호도가 높아 힐링 중심의 짧은 동선으로 추천합니다.',
+  recommendationReason:
+    '자연과 카페 선호도가 높아 힐링 중심의 짧은 동선으로 추천합니다.',
 
   itinerary: {
     days: [
@@ -125,10 +133,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it('코스 상세 데이터 조회 후 타임라인, 방문지 카드, 추천 이유를 올바르게 렌더링해야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -143,10 +153,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it('일자별 탭/섹션 선택 시 해당 일자의 일정 스탑 목록이 표시되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByTestId, getByText, queryByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -165,10 +177,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it('메모나 추천 이유 등의 옵션 정보 누락 시 "정보 없음" 상태가 표시되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByTestId, getByText, getAllByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -193,7 +207,7 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       .mockResolvedValueOnce(mockCourseDetail);
 
     const { getByTestId, getByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -213,10 +227,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it('iOS 환경에서는 앱 내부 네이티브 지도(MapView)가 렌더링되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByTestId, getByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -228,10 +244,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   it('Android 환경에서는 API 키가 필요 없는 인앱 웹뷰(WebView)로 지도가 렌더링되어야 한다', async () => {
     const originalOS = require('react-native').Platform.OS;
     require('react-native').Platform.OS = 'android';
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByTestId } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {
@@ -243,10 +261,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it('화면 하단에 총 예상 경비 카드가 정상적으로 렌더링되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(mockCourseDetail);
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
 
     const { getByText } = await render(
-      <CourseDetailScreen courseId="test-course-id-123" />
+      <CourseDetailScreen courseId='test-course-id-123' />,
     );
 
     await waitFor(() => {

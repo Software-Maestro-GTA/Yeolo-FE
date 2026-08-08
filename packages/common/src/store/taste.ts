@@ -7,7 +7,6 @@ import type { AnalyzeTastePayload, TasteAnalysisState } from '../types/taste';
 import { analyzeTastePreferenceStream } from '../api/taste';
 import { logger } from '../utils/logger';
 
-
 export interface TasteStoreState extends TasteAnalysisState {
   setProgress: (step: string, message: string) => void;
   setComplete: () => void;
@@ -17,7 +16,7 @@ export interface TasteStoreState extends TasteAnalysisState {
     apiUrl: string,
     accessToken: string,
     payload: AnalyzeTastePayload,
-    fetcher?: typeof analyzeTastePreferenceStream
+    fetcher?: typeof analyzeTastePreferenceStream,
   ) => Promise<string | null>;
 }
 
@@ -64,7 +63,12 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
     });
   },
 
-  analyzeTaste: async (apiUrl, accessToken, payload, fetcher = analyzeTastePreferenceStream) => {
+  analyzeTaste: async (
+    apiUrl,
+    accessToken,
+    payload,
+    fetcher = analyzeTastePreferenceStream,
+  ) => {
     logger.info('[TasteStore] Starting analyzeTaste with images payload:', {
       imageCount: payload.images?.length,
     });
@@ -72,7 +76,11 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
     try {
       const profileId = await fetcher(apiUrl, accessToken, payload, {
         onProgress: (event) => {
-          logger.info('[TasteStore] Taste analysis SSE progress:', event.step, event.message);
+          logger.info(
+            '[TasteStore] Taste analysis SSE progress:',
+            event.step,
+            event.message,
+          );
           set({
             isAnalyzing: true,
             progressStep: event.step,
@@ -80,7 +88,9 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
           });
         },
         onComplete: () => {
-          logger.info('[TasteStore] Taste analysis SSE complete callback fired');
+          logger.info(
+            '[TasteStore] Taste analysis SSE complete callback fired',
+          );
           set({
             isAnalyzing: false,
             errorCode: 200,
@@ -97,7 +107,10 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
       });
 
       if (profileId) {
-        logger.info('[TasteStore] Taste analysis finished successfully. Created Profile ID:', profileId);
+        logger.info(
+          '[TasteStore] Taste analysis finished successfully. Created Profile ID:',
+          profileId,
+        );
         set({
           isAnalyzing: false,
           errorCode: 200,

@@ -33,8 +33,10 @@ export interface CourseShareScreenProps {
   onNavigateToLogin?: () => void;
 }
 
-const DEFAULT_INVITER_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
-const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
+const DEFAULT_INVITER_AVATAR =
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+const DEFAULT_COVER_IMAGE =
+  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
 
 export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   inviterName = '김선규',
@@ -61,47 +63,63 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
     }
     Alert.alert(
       UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
-      UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE
+      UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
     );
   };
 
   const handleDecline = () => {
-    trackButtonClick('btn_decline_shared_course', 'Decline Shared Course Click');
+    trackButtonClick(
+      'btn_decline_shared_course',
+      'Decline Shared Course Click',
+    );
     if (onDecline) {
       onDecline();
     }
   };
 
   const handleSocialLogin = (provider: 'google' | 'apple') => {
-    trackButtonClick(`btn_share_login_${provider}`, `Share Login ${provider} Click`);
+    trackButtonClick(
+      `btn_share_login_${provider}`,
+      `Share Login ${provider} Click`,
+    );
     if (onNavigateToLogin) {
       onNavigateToLogin();
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} testID="course-share-screen" edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={styles.container}
+      testID='course-share-screen'
+      edges={['top', 'bottom']}>
       {/* Background Glow */}
       <View style={styles.bgGlow} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* Centered Main Content */}
         <View style={styles.centeredContent}>
           {/* Header Title */}
           <View style={styles.headerBox}>
-            <Text style={styles.headerTitle}>{UI_STRINGS.COURSE_SHARE.HEADER_TITLE}</Text>
+            <Text style={styles.headerTitle}>
+              {UI_STRINGS.COURSE_SHARE.HEADER_TITLE}
+            </Text>
           </View>
 
           {/* Inviter Card */}
-          <View style={styles.inviterCard} testID="inviter-card">
-            <Image source={{ uri: inviterAvatar }} style={styles.inviterAvatar} />
+          <View style={styles.inviterCard} testID='inviter-card'>
+            <Image
+              source={{ uri: inviterAvatar }}
+              style={styles.inviterAvatar}
+            />
             <Text style={styles.inviterText} numberOfLines={1}>
               {`${inviterName}${UI_STRINGS.COURSE_SHARE.INVITER_SHARED_SUFFIX}`}
             </Text>
           </View>
 
           {/* Course Preview Card */}
-          <View style={styles.courseCard} testID="course-card">
+          <View style={styles.courseCard} testID='course-card'>
             <Image source={{ uri: coverImage }} style={styles.coverImage} />
             <View style={styles.cardBody}>
               <Text style={styles.courseTitleText} numberOfLines={1}>
@@ -110,8 +128,13 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
               <Text style={styles.metaLocationText}>{destination}</Text>
               <View style={styles.cardDivider} />
               <View style={styles.dateRow}>
-                <Ionicons name="calendar-outline" size={14} color={palette.subText} />
-                <Text style={styles.dateText}>{`${startDate} · ${duration}`}</Text>
+                <Ionicons
+                  name='calendar-outline'
+                  size={14}
+                  color={palette.subText}
+                />
+                <Text
+                  style={styles.dateText}>{`${startDate} · ${duration}`}</Text>
               </View>
             </View>
           </View>
@@ -120,21 +143,23 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
         {/* Bottom Actions */}
         <View style={styles.bottomActions}>
           <TouchableOpacity
-            testID="btn-save-course"
+            testID='btn-save-course'
             style={styles.primaryButton}
             activeOpacity={0.85}
-            onPress={handleSaveCourse}
-          >
-            <Text style={styles.primaryButtonText}>{UI_STRINGS.COURSE_SHARE.SAVE_BUTTON}</Text>
+            onPress={handleSaveCourse}>
+            <Text style={styles.primaryButtonText}>
+              {UI_STRINGS.COURSE_SHARE.SAVE_BUTTON}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            testID="btn-decline-course"
+            testID='btn-decline-course'
             style={styles.secondaryButton}
             activeOpacity={0.7}
-            onPress={handleDecline}
-          >
-            <Text style={styles.secondaryButtonText}>{UI_STRINGS.COURSE_SHARE.DECLINE_BUTTON}</Text>
+            onPress={handleDecline}>
+            <Text style={styles.secondaryButtonText}>
+              {UI_STRINGS.COURSE_SHARE.DECLINE_BUTTON}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -142,39 +167,59 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
       {/* Guest Login Required Bottom Sheet & Dim Overlay */}
       {!isAuthenticated && (
         <>
-          <View style={styles.dimOverlay} testID="dim-overlay" />
-          <View style={styles.bottomSheet} testID="login-bottom-sheet">
+          <View style={styles.dimOverlay} testID='dim-overlay' />
+          <View style={styles.bottomSheet} testID='login-bottom-sheet'>
             <View style={styles.handleBar} />
 
             <View style={styles.bannerCard}>
               <View style={styles.iconCircle}>
-                <Ionicons name="lock-closed" size={20} color={palette.primary} />
+                <Ionicons
+                  name='lock-closed'
+                  size={20}
+                  color={palette.primary}
+                />
               </View>
-              <Text style={styles.bannerTitle}>{UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_TITLE}</Text>
-              <Text style={styles.bannerSubDesc}>{UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_DESC}</Text>
+              <Text style={styles.bannerTitle}>
+                {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_TITLE}
+              </Text>
+              <Text style={styles.bannerSubDesc}>
+                {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_DESC}
+              </Text>
             </View>
 
             <View style={styles.authActions}>
               {/* Google Login Button */}
               <TouchableOpacity
-                testID="btn-google-login"
+                testID='btn-google-login'
                 style={styles.googleBtn}
                 activeOpacity={0.85}
-                onPress={() => handleSocialLogin('google')}
-              >
-                <Ionicons name="logo-google" size={18} color="#4285F4" style={styles.socialIcon} />
-                <Text style={styles.googleBtnText}>{UI_STRINGS.COURSE_SHARE.GOOGLE_LOGIN_BUTTON}</Text>
+                onPress={() => handleSocialLogin('google')}>
+                <Ionicons
+                  name='logo-google'
+                  size={18}
+                  color='#4285F4'
+                  style={styles.socialIcon}
+                />
+                <Text style={styles.googleBtnText}>
+                  {UI_STRINGS.COURSE_SHARE.GOOGLE_LOGIN_BUTTON}
+                </Text>
               </TouchableOpacity>
 
               {/* Apple Login Button */}
               <TouchableOpacity
-                testID="btn-apple-login"
+                testID='btn-apple-login'
                 style={styles.appleBtn}
                 activeOpacity={0.85}
-                onPress={() => handleSocialLogin('apple')}
-              >
-                <Ionicons name="logo-apple" size={20} color={palette.white} style={styles.socialIcon} />
-                <Text style={styles.appleBtnText}>{UI_STRINGS.COURSE_SHARE.APPLE_LOGIN_BUTTON}</Text>
+                onPress={() => handleSocialLogin('apple')}>
+                <Ionicons
+                  name='logo-apple'
+                  size={20}
+                  color={palette.white}
+                  style={styles.socialIcon}
+                />
+                <Text style={styles.appleBtnText}>
+                  {UI_STRINGS.COURSE_SHARE.APPLE_LOGIN_BUTTON}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

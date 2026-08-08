@@ -13,10 +13,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  CourseSearchBar,
-  CourseDeleteModal,
-} from '../components/course';
+import { CourseSearchBar, CourseDeleteModal } from '../components/course';
 import { useCourseListQuery } from '../hooks/queries';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -28,26 +25,39 @@ export interface CourseListScreenProps {
   onCreateCourse?: () => void;
 }
 
-const DEFAULT_CARD_BG = 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=800&q=80';
+const DEFAULT_CARD_BG =
+  'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=800&q=80';
 
-export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListScreenProps) {
+export function CourseListScreen({
+  onSelectCourse,
+  onCreateCourse,
+}: CourseListScreenProps) {
   useGA4ScreenTracking('CourseListScreen');
   const { trackButtonClick } = useGA4ButtonClick();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [courseToDelete, setCourseToDelete] = useState<CourseSummary | null>(null);
+  const [courseToDelete, setCourseToDelete] = useState<CourseSummary | null>(
+    null,
+  );
 
-  const { data: courses = [], isLoading, error, refetch } = useCourseListQuery();
+  const {
+    data: courses = [],
+    isLoading,
+    error,
+    refetch,
+  } = useCourseListQuery();
   const errorMessage = error?.message || null;
 
   const handleSelectCourse = useCallback(
     (courseId: string) => {
-      trackButtonClick('btn_select_course', 'Select Course Card', { course_id: courseId });
+      trackButtonClick('btn_select_course', 'Select Course Card', {
+        course_id: courseId,
+      });
       if (onSelectCourse) {
         onSelectCourse(courseId);
       }
     },
-    [onSelectCourse, trackButtonClick]
+    [onSelectCourse, trackButtonClick],
   );
 
   const filteredCourses = useMemo(() => {
@@ -57,21 +67,25 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
       (course) =>
         course.title.toLowerCase().includes(query) ||
         course.destinationCountry.toLowerCase().includes(query) ||
-        course.destinationCity.toLowerCase().includes(query)
+        course.destinationCity.toLowerCase().includes(query),
     );
   }, [courses, searchQuery]);
 
   const handleDeletePress = useCallback(
     (course: CourseSummary) => {
-      trackButtonClick('btn_open_delete_modal', 'Open Delete Confirm Modal', { course_id: course.courseId });
+      trackButtonClick('btn_open_delete_modal', 'Open Delete Confirm Modal', {
+        course_id: course.courseId,
+      });
       setCourseToDelete(course);
     },
-    [trackButtonClick]
+    [trackButtonClick],
   );
 
   const handleConfirmDelete = useCallback(() => {
     if (courseToDelete) {
-      trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', { course_id: courseToDelete.courseId });
+      trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', {
+        course_id: courseToDelete.courseId,
+      });
       setCourseToDelete(null);
       refetch();
     }
@@ -82,22 +96,25 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
       <View style={styles.headerSection}>
         {/* Compact CTA */}
         {onCreateCourse && (
-          <View style={styles.compactCtaCard} testID="compact-cta">
+          <View style={styles.compactCtaCard} testID='compact-cta'>
             <View style={styles.compactCtaLeft}>
-              <Ionicons name="sparkles" size={18} color={palette.primary} />
+              <Ionicons name='sparkles' size={18} color={palette.primary} />
               <Text style={styles.compactCtaTitle}>
-                {UI_STRINGS.COURSE_LIST?.COMPACT_CTA_TITLE || '새로운 맞춤형 일정이 필요할 땐?'}
+                {UI_STRINGS.COURSE_LIST?.COMPACT_CTA_TITLE ||
+                  '새로운 맞춤형 일정이 필요할 땐?'}
               </Text>
             </View>
             <TouchableOpacity
-              testID="compact-cta-button"
+              testID='compact-cta-button'
               style={styles.compactCtaBtn}
               activeOpacity={0.8}
               onPress={() => {
-                trackButtonClick('btn_course_list_create_cta', 'Create Course Compact CTA');
+                trackButtonClick(
+                  'btn_course_list_create_cta',
+                  'Create Course Compact CTA',
+                );
                 onCreateCourse();
-              }}
-            >
+              }}>
               <Text style={styles.compactCtaBtnText}>
                 {UI_STRINGS.COURSE_LIST?.CREATE_NEW_BUTTON || '새 코스 생성'}
               </Text>
@@ -106,14 +123,14 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         )}
       </View>
     ),
-    [onCreateCourse, trackButtonClick]
+    [onCreateCourse, trackButtonClick],
   );
 
   const renderEmpty = useCallback(() => {
     if (isLoading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={palette.primary} />
+          <ActivityIndicator size='large' color={palette.primary} />
           <Text style={styles.loadingText}>코스 목록을 불러오는 중...</Text>
         </View>
       );
@@ -124,13 +141,15 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <TouchableOpacity
-            testID="retry-button"
+            testID='retry-button'
             style={styles.retryButton}
             onPress={() => {
-              trackButtonClick('btn_course_list_retry', 'Retry Fetch Course List');
+              trackButtonClick(
+                'btn_course_list_retry',
+                'Retry Fetch Course List',
+              );
               refetch();
-            }}
-          >
+            }}>
             <Text style={styles.retryButtonText}>다시 시도</Text>
           </TouchableOpacity>
         </View>
@@ -140,7 +159,7 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
     // Empty state
     if (courses.length === 0) {
       return (
-        <View style={styles.emptyStateContainer} testID="empty-state">
+        <View style={styles.emptyStateContainer} testID='empty-state'>
           <View style={styles.illustrationCircle}>
             <Text style={styles.emptyEmoji}>🗺️</Text>
           </View>
@@ -148,18 +167,21 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
             {UI_STRINGS.COURSE_LIST?.EMPTY_TITLE || '아직 저장된 코스가 없어요'}
           </Text>
           <Text style={styles.emptySubTitle}>
-            {UI_STRINGS.COURSE_LIST?.EMPTY_SUBTITLE || 'AI가 추천하는 맞춤 여행 코스를\n생성해보세요'}
+            {UI_STRINGS.COURSE_LIST?.EMPTY_SUBTITLE ||
+              'AI가 추천하는 맞춤 여행 코스를\n생성해보세요'}
           </Text>
           {onCreateCourse && (
             <TouchableOpacity
-              testID="empty-create-button"
+              testID='empty-create-button'
               style={styles.emptyCtaButton}
               activeOpacity={0.85}
               onPress={() => {
-                trackButtonClick('btn_course_list_empty_create', 'First Create Course Button');
+                trackButtonClick(
+                  'btn_course_list_empty_create',
+                  'First Create Course Button',
+                );
                 onCreateCourse();
-              }}
-            >
+              }}>
               <Text style={styles.emptyCtaButtonText}>
                 {UI_STRINGS.COURSE_LIST?.CREATE_NEW_BUTTON || '새 코스 생성'}
               </Text>
@@ -173,17 +195,30 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
       <View style={styles.centerContainer}>
         <Text style={styles.emptyEmoji}>🔍</Text>
         <Text style={styles.emptyTitle}>검색 결과가 없습니다</Text>
-        <Text style={styles.emptySubTitle}>'{searchQuery}'에 일치하는 코스가 없습니다.</Text>
+        <Text style={styles.emptySubTitle}>
+          '{searchQuery}'에 일치하는 코스가 없습니다.
+        </Text>
       </View>
     );
-  }, [isLoading, errorMessage, courses.length, onCreateCourse, searchQuery, refetch, trackButtonClick]);
+  }, [
+    isLoading,
+    errorMessage,
+    courses.length,
+    onCreateCourse,
+    searchQuery,
+    refetch,
+    trackButtonClick,
+  ]);
 
   const renderItem = useCallback(
     ({ item }: { item: CourseSummary }) => {
       const summaryItem = item as any;
       const imageUrl = summaryItem.imageUrl || DEFAULT_CARD_BG;
-      const summaryText = summaryItem.summary || `${item.destinationCity} 도심 속 자연과 문화 일상 추천`;
-      const themeTag = summaryItem.theme || (item.tags && item.tags[0]) || '힐링';
+      const summaryText =
+        summaryItem.summary ||
+        `${item.destinationCity} 도심 속 자연과 문화 일상 추천`;
+      const themeTag =
+        summaryItem.theme || (item.tags && item.tags[0]) || '힐링';
 
       return (
         <TouchableOpacity
@@ -191,14 +226,12 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
           activeOpacity={0.9}
           onPress={() => handleSelectCourse(item.courseId)}
           onLongPress={() => handleDeletePress(item)}
-          testID={`course-card-${item.courseId}`}
-        >
+          testID={`course-card-${item.courseId}`}>
           {/* Photo Area Header */}
           <ImageBackground
             source={{ uri: imageUrl }}
             style={styles.photoArea}
-            resizeMode="cover"
-          >
+            resizeMode='cover'>
             <View style={styles.photoDimOverlay} />
 
             {/* Delete Action Button */}
@@ -209,9 +242,8 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
                 handleDeletePress(item);
               }}
               activeOpacity={0.7}
-              testID={`btn-delete-${item.courseId}`}
-            >
-              <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+              testID={`btn-delete-${item.courseId}`}>
+              <Ionicons name='trash-outline' size={16} color='#FFFFFF' />
             </TouchableOpacity>
 
             {/* Card Title & Meta Overlay */}
@@ -220,7 +252,8 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
                 {item.title}
               </Text>
               <Text style={styles.cardMeta} numberOfLines={1}>
-                {item.destinationCountry} {item.destinationCity} • {item.startDate || '일정 미정'} • {item.totalDays || 3}일
+                {item.destinationCountry} {item.destinationCity} •{' '}
+                {item.startDate || '일정 미정'} • {item.totalDays || 3}일
               </Text>
             </View>
           </ImageBackground>
@@ -228,7 +261,11 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
           {/* Hero Card Body */}
           <View style={styles.heroBody}>
             <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color={palette.subText} />
+              <Ionicons
+                name='location-outline'
+                size={14}
+                color={palette.subText}
+              />
               <Text style={styles.locationText} numberOfLines={1}>
                 {summaryText}
               </Text>
@@ -249,11 +286,11 @@ export function CourseListScreen({ onSelectCourse, onCreateCourse }: CourseListS
         </TouchableOpacity>
       );
     },
-    [handleSelectCourse, handleDeletePress]
+    [handleSelectCourse, handleDeletePress],
   );
 
   return (
-    <View style={styles.container} testID="course-list-screen">
+    <View style={styles.container} testID='course-list-screen'>
       {/* Top Search Bar Component */}
       <View style={styles.topHeader}>
         <CourseSearchBar value={searchQuery} onChangeText={setSearchQuery} />

@@ -16,7 +16,9 @@ describe('IntroScreen UI & Interaction', () => {
   });
 
   it('기본 타이틀 및 다음으로 버튼이 정상적으로 렌더링되어야 한다', async () => {
-    const { getByText, getByTestId } = await render(<IntroScreen onNext={mockOnNext} />);
+    const { getByText, getByTestId } = await render(
+      <IntroScreen onNext={mockOnNext} />,
+    );
 
     expect(getByText(UI_STRINGS.INTRO.MAIN_TITLE)).toBeTruthy();
     expect(getByText(UI_STRINGS.INTRO.NEXT_BUTTON)).toBeTruthy();

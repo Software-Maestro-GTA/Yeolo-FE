@@ -51,7 +51,10 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByText, getByTestId } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
     );
 
     await waitFor(() => {
@@ -68,7 +71,10 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByTestId, getByText } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
     );
 
     await waitFor(() => {
@@ -85,7 +91,10 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByTestId, getByText, queryByTestId } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
     );
 
     await waitFor(() => {
@@ -114,7 +123,10 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByTestId, getByText, queryByText } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
     );
 
     await waitFor(() => {
@@ -137,7 +149,10 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([]);
 
     const { getByText, getByTestId } = await render(
-      <CourseListScreen onSelectCourse={mockOnSelectCourse} onCreateCourse={mockOnCreateCourse} />
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
     );
 
     await waitFor(() => {

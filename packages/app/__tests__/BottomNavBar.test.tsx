@@ -16,7 +16,7 @@ describe('BottomNavBar UI & Interactions', () => {
 
   it('홈, 탐색, 생성, 프로필 4개 탭이 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
-      <BottomNavBar currentTab="profile" onTabPress={mockOnTabPress} />
+      <BottomNavBar currentTab='profile' onTabPress={mockOnTabPress} />,
     );
 
     expect(getByText('홈')).toBeTruthy();
@@ -32,7 +32,7 @@ describe('BottomNavBar UI & Interactions', () => {
 
   it('탭 클릭 시 해당 tab id와 함께 onTabPress가 호출되어야 한다', async () => {
     const { getByTestId } = await render(
-      <BottomNavBar currentTab="profile" onTabPress={mockOnTabPress} />
+      <BottomNavBar currentTab='profile' onTabPress={mockOnTabPress} />,
     );
 
     await act(async () => {

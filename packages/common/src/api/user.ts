@@ -2,7 +2,7 @@
  * @file user.ts
  * @description Common user management API services shared across Web and Mobile.
  */
-import ky from 'ky';
+import { createHttpClient } from './kyClient';
 import type { WithdrawRequest, WithdrawResponse } from '../types/auth';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
@@ -13,7 +13,7 @@ import { logger } from '../utils/logger';
 export async function withdrawApi(
   apiUrl: string,
   token?: string,
-  payload?: WithdrawRequest
+  payload?: WithdrawRequest,
 ): Promise<WithdrawResponse> {
   logger.info('[UserAPI] withdrawApi request:', payload);
   const headers: Record<string, string> = {};
@@ -23,13 +23,13 @@ export async function withdrawApi(
 
   const requestOptions: Record<string, unknown> = {
     headers,
-    throwHttpErrors: false,
   };
   if (payload && Object.keys(payload).length > 0) {
     requestOptions.json = payload;
   }
 
-  const response = await ky.delete(`${apiUrl}/api/users/me`, requestOptions);
+  const client = createHttpClient(apiUrl);
+  const response = await client.delete('api/users/me', requestOptions);
 
   const result = await response.json<WithdrawResponse>();
 

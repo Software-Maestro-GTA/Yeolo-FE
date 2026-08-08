@@ -22,7 +22,10 @@ export function formatYYYYMMDD(text: string): string {
 /**
  * Calculate total days automatically from start and end dates using explicit local Date components.
  */
-export function calculateTotalDays(startDate: string, endDate: string): number | null {
+export function calculateTotalDays(
+  startDate: string,
+  endDate: string,
+): number | null {
   const startTrim = startDate.trim();
   const endTrim = endDate.trim();
 

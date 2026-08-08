@@ -18,7 +18,10 @@ describe('MbtiInputScreen UI & Navigation', () => {
 
   it('Figma 스펙 타이틀, 8개 MBTI 옵션 카드 및 2개 버튼이 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
-      <MbtiInputScreen onNext={mockOnNext} onDetailRecommend={mockOnDetailRecommend} />
+      <MbtiInputScreen
+        onNext={mockOnNext}
+        onDetailRecommend={mockOnDetailRecommend}
+      />,
     );
 
     expect(getByText(UI_STRINGS.MBTI.MAIN_TITLE)).toBeTruthy();
@@ -40,7 +43,10 @@ describe('MbtiInputScreen UI & Navigation', () => {
 
   it('MBTI 4개 항목을 모두 선택하지 않고 다음으로 버튼 클릭 시 onNext가 호출되지 않아야 한다', async () => {
     const { getByTestId } = await render(
-      <MbtiInputScreen onNext={mockOnNext} onDetailRecommend={mockOnDetailRecommend} />
+      <MbtiInputScreen
+        onNext={mockOnNext}
+        onDetailRecommend={mockOnDetailRecommend}
+      />,
     );
 
     await act(async () => {
@@ -58,7 +64,10 @@ describe('MbtiInputScreen UI & Navigation', () => {
 
   it('MBTI 4개 항목(E/I, S/N, T/F, J/P)을 모두 선택 후 다음으로 버튼 클릭 시 onNext가 호출되어야 한다', async () => {
     const { getByTestId } = await render(
-      <MbtiInputScreen onNext={mockOnNext} onDetailRecommend={mockOnDetailRecommend} />
+      <MbtiInputScreen
+        onNext={mockOnNext}
+        onDetailRecommend={mockOnDetailRecommend}
+      />,
     );
 
     await act(async () => {
@@ -83,7 +92,10 @@ describe('MbtiInputScreen UI & Navigation', () => {
 
   it('더 정확한 추천 받기 버튼 클릭 시 onDetailRecommend가 호출되어야 한다', async () => {
     const { getByTestId } = await render(
-      <MbtiInputScreen onNext={mockOnNext} onDetailRecommend={mockOnDetailRecommend} />
+      <MbtiInputScreen
+        onNext={mockOnNext}
+        onDetailRecommend={mockOnDetailRecommend}
+      />,
     );
 
     await act(async () => {

@@ -27,8 +27,10 @@ export interface HomeScreenProps {
   onNavigateToProfile?: () => void;
 }
 
-const DEFAULT_HERO_BG = 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1000&q=80';
-const MOCK_THUMBNAIL = 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=400&q=80';
+const DEFAULT_HERO_BG =
+  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1000&q=80';
+const MOCK_THUMBNAIL =
+  'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=400&q=80';
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToCreate,
@@ -43,19 +45,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
 
   return (
-    <View style={styles.container} testID="home-screen">
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <View style={styles.container} testID='home-screen'>
+      <StatusBar
+        barStyle='light-content'
+        backgroundColor='transparent'
+        translucent
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+        contentContainerStyle={styles.scrollContent}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <ImageBackground
             source={{ uri: DEFAULT_HERO_BG }}
             style={styles.heroImageBg}
-            resizeMode="cover"
-          >
+            resizeMode='cover'>
             {/* Gradient Overlay */}
             <LinearGradient
               colors={[
@@ -76,7 +80,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Greeting Stack */}
             <View style={styles.greetingStack}>
               <Text style={styles.greetingText}>
-                {displayName}{UI_STRINGS.HOME.HONORIFIC_NIM},
+                {displayName}
+                {UI_STRINGS.HOME.HONORIFIC_NIM},
               </Text>
               <Text style={styles.greetingSubText}>
                 오늘은 어디로 떠나볼까요?
@@ -88,18 +93,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Main Content Body */}
         <View style={styles.mainContentBody}>
           {/* Quick Feature Shortcut Buttons */}
-          <View style={styles.quickIconsRow} testID="quick-icons">
+          <View style={styles.quickIconsRow} testID='quick-icons'>
             {/* 1. 코스 생성하기 */}
             <TouchableOpacity
               style={styles.shortcutBtn}
               activeOpacity={0.8}
               onPress={() => {
-                trackButtonClick('btn_home_create_course', 'Create Course Quick Button');
+                trackButtonClick(
+                  'btn_home_create_course',
+                  'Create Course Quick Button',
+                );
                 onNavigateToCreate?.();
-              }}
-            >
-              <View style={[styles.iconBadge, { backgroundColor: palette.primary }]}>
-                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+              }}>
+              <View
+                style={[
+                  styles.iconBadge,
+                  { backgroundColor: palette.primary },
+                ]}>
+                <Ionicons name='sparkles' size={16} color='#FFFFFF' />
               </View>
               <Text style={styles.shortcutBtnText}>코스 생성하기</Text>
             </TouchableOpacity>
@@ -109,12 +120,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.shortcutBtn}
               activeOpacity={0.8}
               onPress={() => {
-                trackButtonClick('btn_home_explore', 'Explore Courses Quick Button');
+                trackButtonClick(
+                  'btn_home_explore',
+                  'Explore Courses Quick Button',
+                );
                 onNavigateToExplore?.();
-              }}
-            >
+              }}>
               <View style={[styles.iconBadge, { backgroundColor: '#E0F7F1' }]}>
-                <Ionicons name="compass-outline" size={18} color={palette.accent} />
+                <Ionicons
+                  name='compass-outline'
+                  size={18}
+                  color={palette.accent}
+                />
               </View>
               <Text style={styles.shortcutBtnText}>코스 둘러보기</Text>
             </TouchableOpacity>
@@ -124,19 +141,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.shortcutBtn}
               activeOpacity={0.8}
               onPress={() => {
-                trackButtonClick('btn_home_taste', 'Taste Profile Quick Button');
+                trackButtonClick(
+                  'btn_home_taste',
+                  'Taste Profile Quick Button',
+                );
                 onNavigateToProfile?.();
-              }}
-            >
+              }}>
               <View style={[styles.iconBadge, { backgroundColor: '#E0F7F1' }]}>
-                <Ionicons name="options-outline" size={18} color={palette.accent} />
+                <Ionicons
+                  name='options-outline'
+                  size={18}
+                  color={palette.accent}
+                />
               </View>
               <Text style={styles.shortcutBtnText}>내 여행 취향</Text>
             </TouchableOpacity>
           </View>
 
           {/* Recent Course Section */}
-          <View style={styles.sectionContainer} testID="recent-course-section">
+          <View style={styles.sectionContainer} testID='recent-course-section'>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>최근 확인한 여행 코스</Text>
             </View>
@@ -145,13 +168,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.compactRouteCard}
               activeOpacity={0.85}
               onPress={() => {
-                trackButtonClick('btn_home_recent_course', 'Recent Course Card Click');
+                trackButtonClick(
+                  'btn_home_recent_course',
+                  'Recent Course Card Click',
+                );
                 onNavigateToExplore?.();
-              }}
-            >
-              <Image source={{ uri: MOCK_THUMBNAIL }} style={styles.cardThumbnail} />
+              }}>
+              <Image
+                source={{ uri: MOCK_THUMBNAIL }}
+                style={styles.cardThumbnail}
+              />
               <View style={styles.cardInfoStack}>
-                <Text style={styles.cardTitle} numberOfLines={1}>서울 힐링 여행</Text>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  서울 힐링 여행
+                </Text>
                 <Text style={styles.cardMeta}>대한민국 서울 • 3일</Text>
                 <Text style={styles.cardDesc} numberOfLines={1}>
                   도심 속 자연과 전통을 동시에 즐기는 코스
@@ -166,7 +196,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </View>
 
           {/* Booking Partner Section */}
-          <View style={styles.sectionContainer} testID="booking-section">
+          <View style={styles.sectionContainer} testID='booking-section'>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>여행 예약</Text>
               <Text style={styles.partnerSourceText}>Trip.com</Text>
@@ -175,11 +205,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <View style={styles.bookingTilesRow}>
               {/* ✈️ 항공 */}
               <TouchableOpacity
-                style={[styles.bookingTile, { backgroundColor: 'rgba(45,125,210,0.08)' }]}
+                style={[
+                  styles.bookingTile,
+                  { backgroundColor: 'rgba(45,125,210,0.08)' },
+                ]}
                 activeOpacity={0.8}
-                onPress={() => trackButtonClick('btn_home_booking_flight', 'Booking Flight Click')}
-              >
-                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(45,125,210,0.18)' }]}>
+                onPress={() =>
+                  trackButtonClick(
+                    'btn_home_booking_flight',
+                    'Booking Flight Click',
+                  )
+                }>
+                <View
+                  style={[
+                    styles.bookingIconCircle,
+                    { backgroundColor: 'rgba(45,125,210,0.18)' },
+                  ]}>
                   <Text style={styles.bookingEmoji}>✈️</Text>
                 </View>
                 <Text style={styles.bookingLabel}>항공</Text>
@@ -187,11 +228,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               {/* 🏨 숙소 */}
               <TouchableOpacity
-                style={[styles.bookingTile, { backgroundColor: 'rgba(0,201,167,0.08)' }]}
+                style={[
+                  styles.bookingTile,
+                  { backgroundColor: 'rgba(0,201,167,0.08)' },
+                ]}
                 activeOpacity={0.8}
-                onPress={() => trackButtonClick('btn_home_booking_hotel', 'Booking Hotel Click')}
-              >
-                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(0,201,167,0.18)' }]}>
+                onPress={() =>
+                  trackButtonClick(
+                    'btn_home_booking_hotel',
+                    'Booking Hotel Click',
+                  )
+                }>
+                <View
+                  style={[
+                    styles.bookingIconCircle,
+                    { backgroundColor: 'rgba(0,201,167,0.18)' },
+                  ]}>
                   <Text style={styles.bookingEmoji}>🏨</Text>
                 </View>
                 <Text style={styles.bookingLabel}>숙소</Text>
@@ -199,11 +251,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               {/* 🚄 기차 */}
               <TouchableOpacity
-                style={[styles.bookingTile, { backgroundColor: 'rgba(242,153,51,0.08)' }]}
+                style={[
+                  styles.bookingTile,
+                  { backgroundColor: 'rgba(242,153,51,0.08)' },
+                ]}
                 activeOpacity={0.8}
-                onPress={() => trackButtonClick('btn_home_booking_train', 'Booking Train Click')}
-              >
-                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(242,153,51,0.18)' }]}>
+                onPress={() =>
+                  trackButtonClick(
+                    'btn_home_booking_train',
+                    'Booking Train Click',
+                  )
+                }>
+                <View
+                  style={[
+                    styles.bookingIconCircle,
+                    { backgroundColor: 'rgba(242,153,51,0.18)' },
+                  ]}>
                   <Text style={styles.bookingEmoji}>🚄</Text>
                 </View>
                 <Text style={styles.bookingLabel}>기차</Text>
@@ -211,11 +274,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               {/* 🎫 투어·티켓 */}
               <TouchableOpacity
-                style={[styles.bookingTile, { backgroundColor: 'rgba(153,102,204,0.08)' }]}
+                style={[
+                  styles.bookingTile,
+                  { backgroundColor: 'rgba(153,102,204,0.08)' },
+                ]}
                 activeOpacity={0.8}
-                onPress={() => trackButtonClick('btn_home_booking_ticket', 'Booking Ticket Click')}
-              >
-                <View style={[styles.bookingIconCircle, { backgroundColor: 'rgba(153,102,204,0.18)' }]}>
+                onPress={() =>
+                  trackButtonClick(
+                    'btn_home_booking_ticket',
+                    'Booking Ticket Click',
+                  )
+                }>
+                <View
+                  style={[
+                    styles.bookingIconCircle,
+                    { backgroundColor: 'rgba(153,102,204,0.18)' },
+                  ]}>
                   <Text style={styles.bookingEmoji}>🎫</Text>
                 </View>
                 <Text style={styles.bookingLabel}>투어·티켓</Text>
@@ -228,7 +302,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   );
 };
 
-const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44;
+const STATUS_BAR_HEIGHT =
+  Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44;
 
 const styles = StyleSheet.create({
   container: {

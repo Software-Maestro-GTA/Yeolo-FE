@@ -2,12 +2,15 @@
  * @file taste.ts
  * @description Shared taste analysis API service utilizing ky and parse-sse for progressive SSE streams.
  */
-import ky from 'ky';
+import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
-import type { AnalyzeTastePayload, StreamCallbacks, TasteProfile } from '../types/taste';
+import type {
+  AnalyzeTastePayload,
+  StreamCallbacks,
+  TasteProfile,
+} from '../types/taste';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
-
 
 export interface TasteProfileApiResponse {
   status: number;
@@ -19,7 +22,7 @@ export interface TasteProfileApiResponse {
 
 /**
  * Initiates the taste preference analysis SSE stream based on photo metadata.
- * 
+ *
  * @param apiUrl Base backend URL
  * @param accessToken User JWT access token
  * @param payload Photo metadata array
@@ -29,13 +32,17 @@ export async function analyzeTastePreferenceStream(
   apiUrl: string,
   accessToken: string,
   payload: AnalyzeTastePayload,
-  callbacks: StreamCallbacks
+  callbacks: StreamCallbacks,
 ): Promise<string> {
   let tasteProfileId: string | undefined;
 
   try {
-    logger.info('[TasteAPI] analyzeTastePreferenceStream request, images count:', payload.images?.length);
-    const response = await ky.post(`${apiUrl}/api/taste-profile/behavior`, {
+    logger.info(
+      '[TasteAPI] analyzeTastePreferenceStream request, images count:',
+      payload.images?.length,
+    );
+    const client = createHttpClient(apiUrl);
+    const response = await client.post('api/taste-profile/behavior', {
       json: payload,
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -74,7 +81,10 @@ export async function analyzeTastePreferenceStream(
       }
       throw new ApiError(status, message);
     }
-    throw new ApiError(500, err?.message || '성향 분석 도중 오류가 발생했습니다.');
+    throw new ApiError(
+      500,
+      err?.message || '성향 분석 도중 오류가 발생했습니다.',
+    );
   }
 
   if (!tasteProfileId) {
@@ -88,7 +98,7 @@ export async function analyzeTastePreferenceStream(
 /**
  * Fetches user taste profile from backend (API-FB-8).
  * Supports optional tasteProfileId query parameter using ky HTTP client.
- * 
+ *
  * @param apiUrl Base backend URL
  * @param accessToken User JWT access token
  * @param tasteProfileId Optional taste profile ID parameter
@@ -96,7 +106,7 @@ export async function analyzeTastePreferenceStream(
 export async function fetchTasteProfileApi(
   apiUrl: string,
   accessToken?: string,
-  tasteProfileId?: string
+  tasteProfileId?: string,
 ): Promise<TasteProfile> {
   try {
     logger.info('[TasteAPI] fetchTasteProfileApi request:', { tasteProfileId });
@@ -107,15 +117,19 @@ export async function fetchTasteProfileApi(
 
     const searchParams = tasteProfileId ? { tasteProfileId } : undefined;
 
-    const json = await ky
-      .get(`${apiUrl}/api/me/taste-profile`, {
-        headers,
-        searchParams,
-      })
-      .json<TasteProfileApiResponse>();
+    const client = createHttpClient(apiUrl);
+    const response = await client.get('api/me/taste-profile', {
+      headers,
+      searchParams,
+    });
+
+    const json = await response.json<TasteProfileApiResponse>();
 
     if (json?.data?.tasteProfile) {
-      logger.info('[TasteAPI] Successfully retrieved TasteProfile:', json.data.tasteProfile.tasteProfileId);
+      logger.info(
+        '[TasteAPI] Successfully retrieved TasteProfile:',
+        json.data.tasteProfile.tasteProfileId,
+      );
       return json.data.tasteProfile;
     }
 

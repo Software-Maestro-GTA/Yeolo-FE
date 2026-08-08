@@ -42,7 +42,7 @@ describe('HomeScreen (FUN-1: 홈 스크린 Figma UI)', () => {
         onNavigateToCreate={mockOnCreate}
         onNavigateToExplore={mockOnExplore}
         onNavigateToProfile={mockOnProfile}
-      />
+      />,
     );
 
     fireEvent.press(getByText('코스 생성하기'));

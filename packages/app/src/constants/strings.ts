@@ -18,8 +18,10 @@ export const UI_STRINGS = {
     APPLE_BUTTON_TEXT: 'Apple 계정으로 계속하기',
     MISSING_AUTH_CODE_ERROR: '인증 코드가 누락되었습니다.',
     MISSING_APPLE_CODE_ERROR: 'Apple 인증 코드가 누락되었습니다.',
-    GOOGLE_LOGIN_FAIL_DEFAULT: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
-    APPLE_LOGIN_FAIL_DEFAULT: 'Apple 로그인에 실패했습니다. 다시 시도해 주세요.',
+    GOOGLE_LOGIN_FAIL_DEFAULT:
+      'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
+    APPLE_LOGIN_FAIL_DEFAULT:
+      'Apple 로그인에 실패했습니다. 다시 시도해 주세요.',
     LOGIN_ERROR_TITLE: '로그인 오류',
   },
   HOME: {
@@ -31,7 +33,8 @@ export const UI_STRINGS = {
   },
   INTRO: {
     MAIN_TITLE: '여로가 당신의\n여행을 설계합니다',
-    SUB_TITLE: 'AI가 당신의 취향을 분석하고,\n세상에 단 하나뿐인 여행 코스를 만들어요.',
+    SUB_TITLE:
+      'AI가 당신의 취향을 분석하고,\n세상에 단 하나뿐인 여행 코스를 만들어요.',
     NEXT_BUTTON: '다음으로',
     SLIDE_0_CARD_1_TITLE: 'AI 취향 분석',
     SLIDE_0_CARD_1_DESC: '몇 장의 사진으로 발견하는 나만의 여행 취향',
@@ -55,11 +58,14 @@ export const UI_STRINGS = {
   },
   PHOTO_CONSENT: {
     MAIN_TITLE: '사진으로\n취향을 읽어볼까요?',
-    SUB_TITLE: '당신의 사진을 분석하여 여행 성향을 파악해요.\n사진 원본은 외부로 전송되지 않아요.',
+    SUB_TITLE:
+      '당신의 사진을 분석하여 여행 성향을 파악해요.\n사진 원본은 외부로 전송되지 않아요.',
     CARD_1_TITLE: '메타데이터만 안전하게 가공',
-    CARD_1_DESC: '사진 좌표와 시간 데이터만 추출하여 활용하며\n실제 사진 파일은 서버에 저장되지 않습니다.',
+    CARD_1_DESC:
+      '사진 좌표와 시간 데이터만 추출하여 활용하며\n실제 사진 파일은 서버에 저장되지 않습니다.',
     CARD_2_TITLE: '분석 즉시 데이터 파기',
-    CARD_2_DESC: 'AI 취향 분석을 위한 연산 처리가 완료되는\n즉시 메타데이터는 영구 소멸됩니다.',
+    CARD_2_DESC:
+      'AI 취향 분석을 위한 연산 처리가 완료되는\n즉시 메타데이터는 영구 소멸됩니다.',
     START_BUTTON: '동의하고 시작하기',
   },
   TASTE_ANALYSIS: {
@@ -196,7 +202,8 @@ export const UI_STRINGS = {
     OPENING_HOURS: '10:00 - 22:00',
     MORE_BUTTON: '더보기 ▾',
     AI_RECOMMEND_TITLE: 'AI 추천',
-    AI_RECOMMEND_DESC: '오전 10시~11시는 관람객이 적어 여유롭게 감상할 수 있어요. 52층 전망대 통합권(₩2,300)을 구매하면 도쿄 시내 전경을 한눈에 볼 수 있고, 맑은 날에는 후지산도 보여요.',
+    AI_RECOMMEND_DESC:
+      '오전 10시~11시는 관람객이 적어 여유롭게 감상할 수 있어요. 52층 전망대 통합권(₩2,300)을 구매하면 도쿄 시내 전경을 한눈에 볼 수 있고, 맑은 날에는 후지산도 보여요.',
     LOCATION_TITLE: '위치',
     GPS_LABEL: 'GPS: 35.6605, 139.7292',
     MODAL_TITLE: '영업 시간',
@@ -219,7 +226,8 @@ export const UI_STRINGS = {
     DEFAULT_USER_NAME: '사용자',
     EDIT_BUTTON: '수정',
     AI_TASTE_TITLE: 'AI 여행 취향 분석',
-    AI_TASTE_DESC: 'AI가 분석한 나의 독창적인 여행 스타일과 성향 키워드를 확인해보세요!',
+    AI_TASTE_DESC:
+      'AI가 분석한 나의 독창적인 여행 스타일과 성향 키워드를 확인해보세요!',
     VIEW_TASTE_BUTTON: '나의 취향 보기',
     REANALYZE_BUTTON: '취향 재분석',
     SETTINGS_HEADER: '설정',
@@ -277,9 +285,11 @@ export const UI_STRINGS = {
     CUSTOMER_SUPPORT_TEXT: '도움이 필요하신가요? ',
     CUSTOMER_SUPPORT_LINK: '고객 지원',
     SUPPORT_EMAIL_TITLE: '고객지원 이메일 안내',
-    SUPPORT_EMAIL_FAIL_ALERT: '기기에서 메일 앱을 실행할 수 없습니다.\n아래 이메일 주소로 문의해 주세요:\n\n',
+    SUPPORT_EMAIL_FAIL_ALERT:
+      '기기에서 메일 앱을 실행할 수 없습니다.\n아래 이메일 주소로 문의해 주세요:\n\n',
     SUPPORT_MAIL_DEFAULT_SUBJECT: '[여로] 고객 지원 및 문의',
-    SUPPORT_MAIL_DEFAULT_BODY: '여로 서비스 이용 중 문의사항이나 개선 의견을 자유롭게 작성해주세요.\n\n-------------------\n',
+    SUPPORT_MAIL_DEFAULT_BODY:
+      '여로 서비스 이용 중 문의사항이나 개선 의견을 자유롭게 작성해주세요.\n\n-------------------\n',
     CONFIRM: '확인',
     CONFIRM_CANCEL: '취소',
     CANCEL: '취소',

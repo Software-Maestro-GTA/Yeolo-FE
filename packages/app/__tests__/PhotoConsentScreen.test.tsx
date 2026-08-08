@@ -17,7 +17,7 @@ describe('PhotoConsentScreen UI & Navigation', () => {
 
   it('Figma 스펙 타이틀, 보증 카드 2개 및 동의 버튼이 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
-      <PhotoConsentScreen onNext={mockOnNext} />
+      <PhotoConsentScreen onNext={mockOnNext} />,
     );
 
     expect(getByText(UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE)).toBeTruthy();
@@ -33,7 +33,7 @@ describe('PhotoConsentScreen UI & Navigation', () => {
 
   it('동의하고 시작하기 버튼 클릭 시 onNext가 호출되어야 한다', async () => {
     const { getByTestId } = await render(
-      <PhotoConsentScreen onNext={mockOnNext} />
+      <PhotoConsentScreen onNext={mockOnNext} />,
     );
 
     await act(async () => {

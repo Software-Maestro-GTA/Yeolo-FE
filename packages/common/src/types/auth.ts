@@ -69,4 +69,15 @@ export interface WithdrawResponse {
   data: null;
 }
 
+export interface RefreshTokenPayload {
+  refreshToken?: string;
+}
 
+export interface RefreshTokenResponse {
+  status: number;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+  };
+}

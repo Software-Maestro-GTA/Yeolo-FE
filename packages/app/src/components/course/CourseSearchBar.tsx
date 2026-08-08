@@ -20,12 +20,19 @@ export const CourseSearchBar: React.FC<CourseSearchBarProps> = ({
   return (
     <View style={styles.searchRow}>
       <View style={styles.searchInputWrapper}>
-        <Ionicons name="search" size={18} color="#99A1AB" style={styles.searchIcon} />
+        <Ionicons
+          name='search'
+          size={18}
+          color='#99A1AB'
+          style={styles.searchIcon}
+        />
         <TextInput
-          testID="search-input"
+          testID='search-input'
           style={styles.searchInput}
-          placeholder={UI_STRINGS.COURSE_LIST?.SEARCH_PLACEHOLDER || '여행 코스 검색'}
-          placeholderTextColor="#99A1AB"
+          placeholder={
+            UI_STRINGS.COURSE_LIST?.SEARCH_PLACEHOLDER || '여행 코스 검색'
+          }
+          placeholderTextColor='#99A1AB'
           value={value}
           onChangeText={onChangeText}
         />

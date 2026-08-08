@@ -2,11 +2,15 @@
  * @file photoService.ts
  * @description Device photo library access and EXIF metadata extraction service.
  */
-import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
+import {
+  requestPermissionsAsync,
+  Query,
+  AssetField,
+  MediaType,
+} from 'expo-media-library';
 import type { ImageMetadata } from '@yeolo/common';
 import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
-
 
 /**
  * Request device photo library permission and fetch recent images with EXIF location & time metadata.
@@ -16,7 +20,7 @@ import { UI_STRINGS } from '../constants';
  */
 export async function fetchPhotosWithExifData(
   limit: number = 100,
-  timezone: string = 'UTC'
+  timezone: string = 'UTC',
 ): Promise<ImageMetadata[]> {
   // 1. Request permission
   const { status } = await requestPermissionsAsync();
@@ -61,7 +65,10 @@ export async function fetchPhotosWithExifData(
         timezone,
       });
     } catch (err) {
-      logger.warn(`[PhotoService] Failed to fetch location metadata for asset ${asset.id}:`, err);
+      logger.warn(
+        `[PhotoService] Failed to fetch location metadata for asset ${asset.id}:`,
+        err,
+      );
     }
   }
 
@@ -69,7 +76,9 @@ export async function fetchPhotosWithExifData(
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_EXIF_ERROR);
   }
 
-  logger.info(`[PhotoService] Successfully extracted EXIF metadata from ${parsedImages.length} of ${assets.length} photos`);
+  logger.info(
+    `[PhotoService] Successfully extracted EXIF metadata from ${parsedImages.length} of ${assets.length} photos`,
+  );
 
   return parsedImages;
 }

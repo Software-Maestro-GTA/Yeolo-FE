@@ -34,11 +34,13 @@ else
 fi
 rm -f "$BUILD_TMP"
 
-# 2. Linter 검사 (정적 분석)
-echo "🔍 1. 정적 분석 검사 (Linter) 구동 중..."
+# 2. 코드 포맷팅 자동 정렬 (Prettier) & Linter 검사 (정적 분석)
+echo "🔍 1. 코드 포맷팅 자동 정렬 (yarn format) 및 정적 분석 (Linter) 구동 중..."
+yarn format > /dev/null 2>&1
+
 LINT_TMP=$(mktemp)
 if yarn lint > "$LINT_TMP" 2>&1; then
-    echo "✅ [LINT] PASS - 코드 스타일에 위반 사항이 없습니다."
+    echo "✅ [LINT] PASS - 코드 포맷팅이 정렬되었으며 스타일 위반 사항이 없습니다."
     echo "- **LINT**: PASS" >> "$LOG_FILE"
 else
     echo -e "\n### ❌ [LINT] FAIL - 린트 위반 사항 발생\n\`\`\`text" >> "$LOG_FILE"
@@ -49,6 +51,8 @@ else
     exit 1
 fi
 rm -f "$LINT_TMP"
+
+
 
 # 3. TypeScript 컴파일러 검사 (웹 프로젝트 타입 무결성 추가 검증)
 echo "🔍 2. 웹 패키지 타입 검사 (TypeScript Compiler) 구동 중..."
