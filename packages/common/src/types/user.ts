@@ -12,3 +12,22 @@ export interface UpdatePreferencesResponse {
   message: string;
   data: null;
 }
+
+export interface PhotoConsentData {
+  agreed: boolean;
+  agreedAt: string;
+  consentVersion: string;
+}
+
+export interface SavePhotoConsentPayload {
+  agreed: boolean;
+  consentVersion: string;
+}
+
+export interface SavePhotoConsentResponse {
+  status: number;
+  message: string;
+  data: {
+    consent: PhotoConsentData;
+  };
+}
