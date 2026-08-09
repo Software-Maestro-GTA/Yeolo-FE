@@ -251,8 +251,6 @@ export const UI_STRINGS = {
     SUPPORT_LABEL: '고객 지원',
     LOGOUT_LINK: '로그아웃',
     WITHDRAW_LINK: '탈퇴하기',
-    WITHDRAW_MODAL_TITLE: '정말 탈퇴하시겠습니까?',
-    WITHDRAW_MODAL_DESC: '탈퇴 시 모든 데이터가 삭제되며\n복구할 수 없습니다.',
     LOGOUT: '로그아웃',
     WITHDRAW: '회원 탈퇴',
     LOGOUT_CONFIRM: '로그아웃하시겠습니까?',
@@ -262,9 +260,15 @@ export const UI_STRINGS = {
     LOGOUT_CONFIRM_BTN: '로그아웃',
     WITHDRAW_CONFIRM_BTN: '탈퇴하기',
     WITHDRAW_REASON_DEFAULT: '서비스 이용 불편',
-    TASTE_CARD_TITLE: 'AI 여행 취향 분석',
-    TASTE_CARD_VIEW_BUTTON: '나의 취향 보기',
     CONFIRM_CANCEL: '취소',
+    CONFIRM_OK: '확인',
+    WITHDRAW_HEADER: '회원탈퇴',
+    WITHDRAW_ALERT_DESC:
+      '정말 탈퇴하시겠습니까?\n모든 일정 및 회원 정보가 삭제됩니다.',
+    WITHDRAW_ACTION_BTN: '탈퇴',
+    SUPPORT_ALERT_TITLE: '고객 지원 문의',
+    SUPPORT_ALERT_MESSAGE: (email: string) =>
+      `메일 앱을 열 수 없습니다.\n아래 이메일로 직접 문의해주세요.\n\n문의처: ${email}`,
   },
   PROFILE_INPUT: {
     HEADER_TITLE: '프로필 설정',
