@@ -264,9 +264,16 @@ export function NavigationRoot() {
           onTabPress={handleTabPress}
           noTopEdges={true}>
           <HomeScreen
+            selectedCourseId={selectedCourseId}
             onNavigateToCreate={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
             onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}
             onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
+            onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
+            onNavigateToPhotoConsent={() => navigateTo(NAV_STEPS.PHOTO)}
+            onSelectCourse={(courseId) => {
+              setSelectedCourseId(courseId);
+              navigateTo(NAV_STEPS.COURSE_DETAIL);
+            }}
           />
         </MainLayout>
       );
