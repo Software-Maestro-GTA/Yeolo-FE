@@ -208,7 +208,10 @@ export function createHttpClient(
 
                 // Retry original request with new access token
                 const newHeaders = new Headers(request.headers);
-                newHeaders.set('Authorization', `Bearer ${newTokens.accessToken}`);
+                newHeaders.set(
+                  'Authorization',
+                  `Bearer ${newTokens.accessToken}`,
+                );
                 return ky(request.url, {
                   method: request.method,
                   headers: newHeaders,
