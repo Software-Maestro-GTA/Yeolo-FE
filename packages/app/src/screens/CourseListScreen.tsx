@@ -1,6 +1,6 @@
 /**
  * @file CourseListScreen.tsx
- * @description Screen component for viewing previously generated course list, searching, and managing saved itineraries.
+ * @description Screen component for viewing previously generated course list (API-COURSE-3), searching, long-press deletion modal, and deleting saved itineraries (API-COURSE-4).
  */
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CourseSearchBar, CourseDeleteModal } from '../components/course';
-import { useCourseListQuery } from '../hooks/queries';
-import { palette } from '../theme/colors';
+import { getDestinationImageUrl } from '../components/course/CourseCard';
+import { useCourseListQuery, useCourseDeleteMutation } from '../hooks/queries';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import type { CourseSummary } from '@yeolo/common';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
@@ -24,9 +25,6 @@ export interface CourseListScreenProps {
   onSelectCourse?: (courseId: string) => void;
   onCreateCourse?: () => void;
 }
-
-const DEFAULT_CARD_BG =
-  'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?auto=format&fit=crop&w=800&q=80';
 
 export function CourseListScreen({
   onSelectCourse,
@@ -46,6 +44,7 @@ export function CourseListScreen({
     error,
     refetch,
   } = useCourseListQuery();
+  const deleteCourseMutation = useCourseDeleteMutation();
   const errorMessage = error?.message || null;
 
   const handleSelectCourse = useCallback(
@@ -86,10 +85,10 @@ export function CourseListScreen({
       trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', {
         course_id: courseToDelete.courseId,
       });
+      deleteCourseMutation.mutate(courseToDelete.courseId);
       setCourseToDelete(null);
-      refetch();
     }
-  }, [courseToDelete, refetch, trackButtonClick]);
+  }, [courseToDelete, deleteCourseMutation, trackButtonClick]);
 
   const renderHeader = useCallback(
     () => (
@@ -100,8 +99,7 @@ export function CourseListScreen({
             <View style={styles.compactCtaLeft}>
               <Ionicons name='sparkles' size={18} color={palette.primary} />
               <Text style={styles.compactCtaTitle}>
-                {UI_STRINGS.COURSE_LIST?.COMPACT_CTA_TITLE ||
-                  '새로운 맞춤형 일정이 필요할 땐?'}
+                {UI_STRINGS.COURSE_LIST.COMPACT_CTA_TITLE}
               </Text>
             </View>
             <TouchableOpacity
@@ -116,7 +114,7 @@ export function CourseListScreen({
                 onCreateCourse();
               }}>
               <Text style={styles.compactCtaBtnText}>
-                {UI_STRINGS.COURSE_LIST?.CREATE_NEW_BUTTON || '새 코스 생성'}
+                {UI_STRINGS.COURSE_LIST.CREATE_NEW_BUTTON}
               </Text>
             </TouchableOpacity>
           </View>
@@ -131,7 +129,9 @@ export function CourseListScreen({
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator size='large' color={palette.primary} />
-          <Text style={styles.loadingText}>코스 목록을 불러오는 중...</Text>
+          <Text style={styles.loadingText}>
+            {UI_STRINGS.COURSE_LIST.LOADING_TEXT}
+          </Text>
         </View>
       );
     }
@@ -150,7 +150,9 @@ export function CourseListScreen({
               );
               refetch();
             }}>
-            <Text style={styles.retryButtonText}>다시 시도</Text>
+            <Text style={styles.retryButtonText}>
+              {UI_STRINGS.COURSE_LIST.RETRY_BUTTON}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -164,11 +166,10 @@ export function CourseListScreen({
             <Text style={styles.emptyEmoji}>🗺️</Text>
           </View>
           <Text style={styles.emptyTitle}>
-            {UI_STRINGS.COURSE_LIST?.EMPTY_TITLE || '아직 저장된 코스가 없어요'}
+            {UI_STRINGS.COURSE_LIST.EMPTY_TITLE}
           </Text>
           <Text style={styles.emptySubTitle}>
-            {UI_STRINGS.COURSE_LIST?.EMPTY_SUBTITLE ||
-              'AI가 추천하는 맞춤 여행 코스를\n생성해보세요'}
+            {UI_STRINGS.COURSE_LIST.EMPTY_SUBTITLE}
           </Text>
           {onCreateCourse && (
             <TouchableOpacity
@@ -183,7 +184,7 @@ export function CourseListScreen({
                 onCreateCourse();
               }}>
               <Text style={styles.emptyCtaButtonText}>
-                {UI_STRINGS.COURSE_LIST?.CREATE_NEW_BUTTON || '새 코스 생성'}
+                {UI_STRINGS.COURSE_LIST.CREATE_NEW_BUTTON}
               </Text>
             </TouchableOpacity>
           )}
@@ -194,9 +195,13 @@ export function CourseListScreen({
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.emptyEmoji}>🔍</Text>
-        <Text style={styles.emptyTitle}>검색 결과가 없습니다</Text>
+        <Text style={styles.emptyTitle}>
+          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_TITLE}
+        </Text>
         <Text style={styles.emptySubTitle}>
-          '{searchQuery}'에 일치하는 코스가 없습니다.
+          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_PREFIX}
+          {searchQuery}
+          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_SUFFIX}
         </Text>
       </View>
     );
@@ -213,12 +218,12 @@ export function CourseListScreen({
   const renderItem = useCallback(
     ({ item }: { item: CourseSummary }) => {
       const summaryItem = item as any;
-      const imageUrl = summaryItem.imageUrl || DEFAULT_CARD_BG;
+      const imageUrl =
+        summaryItem.imageUrl ||
+        getDestinationImageUrl(item.destinationCountry, item.destinationCity);
       const summaryText =
-        summaryItem.summary ||
-        `${item.destinationCity} 도심 속 자연과 문화 일상 추천`;
-      const themeTag =
-        summaryItem.theme || (item.tags && item.tags[0]) || '힐링';
+        item.recommendationReason || summaryItem.summary || '';
+      const displayTags = item.tags ? item.tags.slice(0, 3) : [];
 
       return (
         <TouchableOpacity
@@ -234,54 +239,45 @@ export function CourseListScreen({
             resizeMode='cover'>
             <View style={styles.photoDimOverlay} />
 
-            {/* Delete Action Button */}
-            <TouchableOpacity
-              style={styles.deleteIconBtn}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                handleDeletePress(item);
-              }}
-              activeOpacity={0.7}
-              testID={`btn-delete-${item.courseId}`}>
-              <Ionicons name='trash-outline' size={16} color='#FFFFFF' />
-            </TouchableOpacity>
-
             {/* Card Title & Meta Overlay */}
             <View style={styles.photoContentOverlay}>
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {item.title}
               </Text>
               <Text style={styles.cardMeta} numberOfLines={1}>
-                {item.destinationCountry} {item.destinationCity} •{' '}
-                {item.startDate || '일정 미정'} • {item.totalDays || 3}일
+                {item.destinationCountry} {item.destinationCity}
+                {item.startDate ? ` • ${item.startDate}` : ''}
+                {item.totalDays ? ` • ${item.totalDays}일` : ''}
               </Text>
             </View>
           </ImageBackground>
 
           {/* Hero Card Body */}
           <View style={styles.heroBody}>
-            <View style={styles.locationRow}>
-              <Ionicons
-                name='location-outline'
-                size={14}
-                color={palette.subText}
-              />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {summaryText}
-              </Text>
-            </View>
+            {summaryText ? (
+              <View style={styles.locationRow}>
+                <Ionicons
+                  name='location-outline'
+                  size={14}
+                  color={palette.subText}
+                />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {summaryText}
+                </Text>
+              </View>
+            ) : null}
 
-            <View style={styles.tagsRow}>
-              <View style={styles.tagChip}>
-                <Text style={styles.tagText}>#{themeTag}</Text>
+            {displayTags.length > 0 && (
+              <View style={styles.tagsRow}>
+                {displayTags.map((tag, idx) => (
+                  <View
+                    key={`${item.courseId}-tag-${idx}`}
+                    style={styles.tagChip}>
+                    <Text style={styles.tagText}>#{tag}</Text>
+                  </View>
+                ))}
               </View>
-              <View style={styles.tagChip}>
-                <Text style={styles.tagText}>#나홀로여행</Text>
-              </View>
-              <View style={styles.tagChip}>
-                <Text style={styles.tagText}>#교육깊은여행</Text>
-              </View>
-            </View>
+            )}
           </View>
         </TouchableOpacity>
       );
@@ -330,6 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.softMint,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingBottom: 76,
   },
@@ -339,7 +336,7 @@ const styles = StyleSheet.create({
   compactCtaCard: {
     backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: '#E0E5EB',
+    borderColor: palette.gray200,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -354,10 +351,10 @@ const styles = StyleSheet.create({
   compactCtaTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   compactCtaBtn: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -380,22 +377,12 @@ const styles = StyleSheet.create({
   },
   photoArea: {
     height: 160,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: 12,
   },
   photoDimOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(13, 33, 55, 0.35)',
-  },
-  deleteIconBtn: {
-    alignSelf: 'flex-end',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 5,
+    backgroundColor: hexToRgba(palette.deepNavy, 0.35),
   },
   photoContentOverlay: {
     gap: 2,
@@ -409,7 +396,7 @@ const styles = StyleSheet.create({
   cardMeta: {
     fontSize: 12,
     fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: hexToRgba(palette.white, 0.9),
   },
   heroBody: {
     height: 85,
@@ -433,7 +420,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagChip: {
-    backgroundColor: '#E0F7F1',
+    backgroundColor: palette.lightTeal,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 99,
@@ -441,10 +428,11 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 11,
     fontWeight: '700',
-    color: palette.primary, // #2D7DD2
+    color: palette.primary,
   },
   centerContainer: {
-    paddingVertical: 60,
+    flex: 1,
+    paddingVertical: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -455,7 +443,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    color: '#EB4545',
+    color: palette.red500,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -471,7 +459,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   emptyStateContainer: {
-    paddingVertical: 48,
+    flex: 1,
+    paddingVertical: 32,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
@@ -480,7 +469,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E0F7F1',
+    backgroundColor: palette.lightTeal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -496,12 +485,12 @@ const styles = StyleSheet.create({
   emptySubTitle: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#73808C',
+    color: palette.subText,
     textAlign: 'center',
     lineHeight: 22,
   },
   emptyCtaButton: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
