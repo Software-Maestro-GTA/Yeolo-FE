@@ -4,11 +4,7 @@
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  getCourseListApi,
-  type CourseSummary,
-  ApiError,
-} from '@yeolo/common';
+import { getCourseListApi, type CourseSummary, ApiError } from '@yeolo/common';
 import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const COURSE_LIST_QUERY_KEY = ['courses'];

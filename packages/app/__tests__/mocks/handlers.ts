@@ -576,4 +576,107 @@ export const handlers = [
       { status: 200 },
     );
   }),
+
+  // Mock Country Autocomplete GET API-LOC-1
+  http.get('*/api/locations/countries/autocomplete', ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword') || '';
+
+    const allCountries = [
+      { countryId: 'c-1', countryNameKo: '대한민국' },
+      { countryId: 'c-2', countryNameKo: '일본' },
+      { countryId: 'c-3', countryNameKo: '태국' },
+      { countryId: 'c-4', countryNameKo: '프랑스' },
+      { countryId: 'c-5', countryNameKo: '스페인' },
+      { countryId: 'c-6', countryNameKo: '이탈리아' },
+      { countryId: 'c-7', countryNameKo: '베트남' },
+    ];
+
+    const filtered = keyword
+      ? allCountries.filter((c) =>
+          c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
+        )
+      : allCountries;
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '국가 자동완성 조회 성공',
+        data: {
+          countries: filtered,
+        },
+      },
+      { status: 200 },
+    );
+  }),
+
+  // Mock City Autocomplete GET API-LOC-2
+  http.get('*/api/locations/cities/autocomplete', ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword') || '';
+
+    const allCities = [
+      {
+        cityId: 'city-1',
+        cityNameKo: '도쿄',
+        countryId: 'c-2',
+        countryNameKo: '일본',
+      },
+      {
+        cityId: 'city-2',
+        cityNameKo: '오사카',
+        countryId: 'c-2',
+        countryNameKo: '일본',
+      },
+      {
+        cityId: 'city-3',
+        cityNameKo: '방콕',
+        countryId: 'c-3',
+        countryNameKo: '태국',
+      },
+      {
+        cityId: 'city-4',
+        cityNameKo: '파리',
+        countryId: 'c-4',
+        countryNameKo: '프랑스',
+      },
+      {
+        cityId: 'city-5',
+        cityNameKo: '다낭',
+        countryId: 'c-7',
+        countryNameKo: '베트남',
+      },
+      {
+        cityId: 'city-6',
+        cityNameKo: '제주',
+        countryId: 'c-1',
+        countryNameKo: '대한민국',
+      },
+      {
+        cityId: 'city-7',
+        cityNameKo: '서울',
+        countryId: 'c-1',
+        countryNameKo: '대한민국',
+      },
+    ];
+
+    const filtered = keyword
+      ? allCities.filter(
+          (c) =>
+            c.cityNameKo.toLowerCase().includes(keyword.toLowerCase()) ||
+            c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
+        )
+      : allCities;
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '도시 자동완성 조회 성공',
+        data: {
+          cities: filtered,
+        },
+      },
+      { status: 200 },
+    );
+  }),
 ];

@@ -5,6 +5,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { calculateTotalDays } from '@yeolo/common';
 import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
@@ -56,12 +57,24 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   );
   const weekRows = getWeekRows(calendarDays);
 
+  const today = new Date();
+  const todayY = today.getFullYear();
+  const todayM = String(today.getMonth() + 1).padStart(2, '0');
+  const todayD = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${todayY}-${todayM}-${todayD}`;
+
+  const isPrevMonthDisabled =
+    currentYearMonth.year < todayY ||
+    (currentYearMonth.year === todayY &&
+      currentYearMonth.month <= today.getMonth() + 1);
+
   return (
-    <View style={styles.inlineCalendarCard}>
+    <View style={styles.inlineCalendarCard} testID='inline-calendar'>
       <View style={styles.calendarHeader}>
         <TouchableOpacity
           onPress={onPrevMonth}
-          style={styles.monthNavBtn}
+          disabled={isPrevMonthDisabled}
+          style={[styles.monthNavBtn, isPrevMonthDisabled && { opacity: 0.3 }]}
           activeOpacity={0.7}>
           <Ionicons name='chevron-back' size={18} color={palette.deepNavy} />
         </TouchableOpacity>
@@ -111,6 +124,16 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
               const dd = String(dayNum).padStart(2, '0');
               const dateStr = `${currentYearMonth.year}-${mm}-${dd}`;
 
+              const isDisabledByPast = dateStr < todayStr;
+              let isDisabledByMaxDays = false;
+              if (startDate && !endDate && dateStr >= startDate) {
+                const days = calculateTotalDays(startDate, dateStr);
+                if (days !== null && days >= 30) {
+                  isDisabledByMaxDays = true;
+                }
+              }
+              const isDisabled = isDisabledByPast || isDisabledByMaxDays;
+
               const isStart = startDate === dateStr;
               const isEnd = endDate === dateStr;
               const hasBoth = Boolean(startDate) && Boolean(endDate);
@@ -125,8 +148,9 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
                 <TouchableOpacity
                   key={`day-${dayNum}`}
                   style={styles.dayCellContainer}
-                  activeOpacity={0.7}
-                  onPress={() => onSelectDay(dayNum)}>
+                  activeOpacity={isDisabled ? 1 : 0.7}
+                  disabled={isDisabled}
+                  onPress={() => !isDisabled && onSelectDay(dayNum)}>
                   {/* Connected Ribbon Background Track */}
                   {showStartTrack && (
                     <View style={[styles.rangeTrack, styles.rangeTrackStart]} />
@@ -149,6 +173,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
                     <Text
                       style={[
                         styles.dayCellText,
+                        isDisabled && styles.dayTextDisabled,
                         isInRange && styles.dayCellTextInRange,
                         (isStart || isEnd) && styles.dayCellTextSelected,
                       ]}>

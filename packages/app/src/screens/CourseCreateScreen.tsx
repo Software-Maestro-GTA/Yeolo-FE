@@ -9,26 +9,37 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   ScrollView,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 import { Ionicons } from '@expo/vector-icons';
 import type { CourseCreateRequest } from '@yeolo/common';
-import { logger } from '@yeolo/common';
 import { InlineCalendarView } from '../components/common';
 import {
   useCourseCreateForm,
+  useCourseCreateMutation,
   useGA4ScreenTracking,
   useGA4ButtonClick,
 } from '../hooks';
 import type { NavTab } from '../components/navigation';
 import { palette } from '../theme/colors';
-import { UI_STRINGS, APP_CONFIG } from '../constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCourseStore } from '@yeolo/common';
+import { UI_STRINGS } from '../constants';
 
 export interface CourseCreateScreenProps {
   onSubmit?: (data: CourseCreateRequest) => void;
-  onTabPress?: (tab: NavTab) => void;
+  onNavigate?: (tab: NavTab) => void;
 }
 
 const POPULAR_DESTINATIONS = [
@@ -45,12 +56,22 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
 }) => {
   useGA4ScreenTracking('CourseCreateScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const createCourseMutation = useCourseCreateMutation();
 
   const {
     destinationCountry,
     setDestinationCountry,
     destinationCity,
     setDestinationCity,
+    countrySuggestions,
+    citySuggestions,
+    showCountryDropdown,
+    setShowCountryDropdown,
+    showCityDropdown,
+    setShowCityDropdown,
+    handleSelectCountry,
+    handleSelectCity,
+    handleSelectPopularDestination,
     startDate,
     endDate,
     budgetType,
@@ -66,345 +87,413 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     handleSelectDay,
     isFormValid,
     handleSubmit,
-  } = useCourseCreateForm(async (data) => {
+  } = useCourseCreateForm((data) => {
     trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
       country: data.destinationCountry,
       city: data.destinationCity,
       budgetType: data.budgetType,
     });
-    try {
-      const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
-      useCourseStore.getState().createCourse(apiUrl, data, token);
-    } catch (err) {
-      logger.error('Failed to trigger createCourse store action:', err);
-    }
+    createCourseMutation.mutate(data);
     onSubmit?.(data);
   });
 
-  const handleSelectPopularDestination = (country: string, city: string) => {
+  const handleDismissOverlay = () => {
+    if (isCalendarOpen) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsCalendarOpen(false);
+    }
+    if (showCountryDropdown) setShowCountryDropdown(false);
+    if (showCityDropdown) setShowCityDropdown(false);
+    Keyboard.dismiss();
+  };
+
+  const onSelectPopular = (country: string, city: string) => {
     trackButtonClick(
       'btn_select_popular_destination',
       `Select ${city}, ${country}`,
     );
-    setDestinationCountry(country);
-    setDestinationCity(city);
+    handleSelectPopularDestination(country, city);
   };
 
   return (
-    <View style={styles.screenContainer} testID='screen-container'>
-      <ScrollView
-        ref={scrollViewRef}
-        contentContainerStyle={styles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps='handled'>
-        <View style={styles.headerContent} testID='top-content'>
-          <Text style={styles.headerTitle}>
-            {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
-          </Text>
-          <Text style={styles.headerSubTitle}>
-            {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
-          </Text>
-        </View>
-
-        <View style={styles.mainBody} testID='main-content'>
-          <View style={styles.cardContainer} testID='destination-card'>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name='airplane-outline'
-                size={20}
-                color={palette.primary}
-              />
-              <Text style={styles.cardTitleText}>
-                {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
-              </Text>
-            </View>
-
-            {/* Input Row (Country & City 2-Column) */}
-            <View style={styles.twoColumnRow}>
-              <View style={styles.fieldColumn}>
-                <Text style={styles.fieldLabelText}>
-                  {UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}
-                </Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    testID='input-country'
-                    style={styles.inputText}
-                    placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
-                    value={destinationCountry}
-                    onChangeText={setDestinationCountry}
-                    placeholderTextColor='#8C949E'
-                  />
-                </View>
-              </View>
-
-              <View style={styles.fieldColumn}>
-                <Text style={styles.fieldLabelText}>
-                  {UI_STRINGS.COURSE_CREATE.CITY_LABEL}
-                </Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    testID='input-city'
-                    style={styles.inputText}
-                    placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
-                    value={destinationCity}
-                    onChangeText={setDestinationCity}
-                    placeholderTextColor='#8C949E'
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Divider Line */}
-            <View style={styles.cardDivider} />
-
-            {/* Popular Destinations Tag Section */}
-            <View style={styles.tagSection}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.tagChipsRow}>
-                {POPULAR_DESTINATIONS.map((dest) => (
-                  <TouchableOpacity
-                    key={dest.city}
-                    style={styles.tagChip}
-                    onPress={() =>
-                      handleSelectPopularDestination(dest.country, dest.city)
-                    }
-                    activeOpacity={0.7}>
-                    <Text style={styles.tagChipText}>
-                      {dest.flag} {dest.city}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+    <TouchableWithoutFeedback
+      onPress={handleDismissOverlay}
+      testID='dismiss-overlay-area'>
+      <View style={styles.screenContainer} testID='screen-container'>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'>
+          <View style={styles.headerContent} testID='top-content'>
+            <Text style={styles.headerTitle}>
+              {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
+            </Text>
+            <Text style={styles.headerSubTitle}>
+              {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
+            </Text>
           </View>
 
-          <View style={styles.cardContainer} testID='date-card'>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name='calendar-outline'
-                size={20}
-                color={palette.primary}
-              />
-              <Text style={styles.cardTitleText}>
-                {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
-              </Text>
-            </View>
-
-            <View style={styles.twoColumnRow}>
-              <TouchableOpacity
-                style={styles.dateBox}
-                onPress={() => {
-                  if (isCalendarOpen && activeDateTarget === 'start') {
-                    setIsCalendarOpen(false);
-                  } else {
-                    openCalendarForTarget('start');
-                  }
-                }}
-                activeOpacity={0.8}>
-                <Text style={styles.fieldLabelText}>
-                  {UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}
-                </Text>
-                <Text
-                  style={[
-                    styles.dateValueText,
-                    !startDate && styles.datePlaceholderText,
-                  ]}>
-                  {startDate || UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.dateBox}
-                onPress={() => {
-                  if (isCalendarOpen && activeDateTarget === 'end') {
-                    setIsCalendarOpen(false);
-                  } else {
-                    openCalendarForTarget('end');
-                  }
-                }}
-                activeOpacity={0.8}>
-                <Text style={styles.fieldLabelText}>
-                  {UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}
-                </Text>
-                <Text
-                  style={[
-                    styles.dateValueText,
-                    !endDate && styles.datePlaceholderText,
-                  ]}>
-                  {endDate || UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Expandable Inline Calendar */}
-            {isCalendarOpen && (
-              <InlineCalendarView
-                currentYearMonth={currentYearMonth}
-                startDate={startDate}
-                endDate={endDate}
-                onPrevMonth={handlePrevMonth}
-                onNextMonth={handleNextMonth}
-                onSelectDay={handleSelectDay}
-              />
-            )}
-          </View>
-
-          {/* Card 3: Budget Card */}
-          <View style={styles.cardContainer} testID='budget-card'>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons name='card-outline' size={20} color={palette.primary} />
-              <Text style={styles.cardTitleText}>
-                {UI_STRINGS.COURSE_CREATE.STYLE_TITLE}
-              </Text>
-            </View>
-
-            <View style={styles.threeColumnGrid}>
-              {/* Option 1: 가성비 */}
-              <TouchableOpacity
-                testID='budget-cost_effective'
-                style={[
-                  styles.styleCardItem,
-                  budgetType === 'cost_effective' && styles.styleCardActive,
-                ]}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_select_budget_type',
-                    'Select Budget cost_effective',
-                  );
-                  setBudgetType('cost_effective');
-                }}
-                activeOpacity={0.8}>
-                <View
-                  style={[
-                    styles.styleIconBox,
-                    budgetType === 'cost_effective' &&
-                      styles.styleIconBoxActive,
-                  ]}>
-                  <Ionicons
-                    name='wallet-outline'
-                    size={18}
-                    color={
-                      budgetType === 'cost_effective'
-                        ? palette.accent
-                        : palette.subText
-                    }
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.styleCardLabel,
-                    budgetType === 'cost_effective' &&
-                      styles.styleCardLabelActive,
-                  ]}>
-                  {UI_STRINGS.COURSE_CREATE.STYLE_BUDGET}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option 2: 적정 수준 */}
-              <TouchableOpacity
-                testID='budget-moderate'
-                style={[
-                  styles.styleCardItem,
-                  budgetType === 'moderate' && styles.styleCardActive,
-                ]}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_select_budget_type',
-                    'Select Budget moderate',
-                  );
-                  setBudgetType('moderate');
-                }}
-                activeOpacity={0.8}>
-                <View
-                  style={[
-                    styles.styleIconBox,
-                    budgetType === 'moderate' && styles.styleIconBoxActive,
-                  ]}>
-                  <Ionicons
-                    name='briefcase-outline'
-                    size={18}
-                    color={
-                      budgetType === 'moderate'
-                        ? palette.accent
-                        : palette.subText
-                    }
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.styleCardLabel,
-                    budgetType === 'moderate' && styles.styleCardLabelActive,
-                  ]}>
-                  {UI_STRINGS.COURSE_CREATE.STYLE_MODERATE}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option 3: 럭셔리 */}
-              <TouchableOpacity
-                testID='budget-luxury'
-                style={[
-                  styles.styleCardItem,
-                  budgetType === 'luxury' && styles.styleCardActive,
-                ]}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_select_budget_type',
-                    'Select Budget luxury',
-                  );
-                  setBudgetType('luxury');
-                }}
-                activeOpacity={0.8}>
-                <View
-                  style={[
-                    styles.styleIconBox,
-                    budgetType === 'luxury' && styles.styleIconBoxActive,
-                  ]}>
-                  <Ionicons
-                    name='diamond-outline'
-                    size={18}
-                    color={
-                      budgetType === 'luxury' ? palette.accent : palette.subText
-                    }
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.styleCardLabel,
-                    budgetType === 'luxury' && styles.styleCardLabelActive,
-                  ]}>
-                  {UI_STRINGS.COURSE_CREATE.STYLE_LUXURY}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            <TouchableOpacity
-              testID='submit-course-btn'
+          <View style={styles.mainBody} testID='main-content'>
+            <View
               style={[
-                styles.ctaButton,
-                !isFormValid && styles.ctaButtonDisabled,
+                styles.cardContainer,
+                (showCountryDropdown || showCityDropdown) &&
+                  styles.cardContainerActiveDropdown,
               ]}
-              disabled={!isFormValid}
-              onPress={handleSubmit}
-              activeOpacity={0.8}>
-              <Ionicons
-                name='sparkles'
-                size={18}
-                color='#FFFFFF'
-                style={styles.ctaIconLeft}
-              />
-              <Text style={styles.ctaButtonText}>
-                {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
-              </Text>
-            </TouchableOpacity>
+              testID='destination-card'>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name='airplane-outline'
+                  size={20}
+                  color={palette.primary}
+                />
+                <Text style={styles.cardTitleText}>
+                  {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
+                </Text>
+              </View>
+
+              {/* Input Row (Country & City 2-Column) */}
+              <View style={styles.twoColumnRow}>
+                <View style={styles.fieldColumn}>
+                  <Text style={styles.fieldLabelText}>
+                    {UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}
+                  </Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      testID='input-country'
+                      style={styles.inputText}
+                      placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
+                      value={destinationCountry}
+                      onChangeText={setDestinationCountry}
+                      onFocus={() => setShowCountryDropdown(true)}
+                      placeholderTextColor='#8C949E'
+                    />
+                  </View>
+                  {showCountryDropdown && countrySuggestions.length > 0 && (
+                    <View
+                      style={styles.dropdownContainer}
+                      testID='country-dropdown'>
+                      <ScrollView
+                        nestedScrollEnabled
+                        style={styles.dropdownList}>
+                        {countrySuggestions.map((item) => (
+                          <TouchableOpacity
+                            key={item.countryId}
+                            style={styles.dropdownItem}
+                            onPress={() => handleSelectCountry(item)}
+                            activeOpacity={0.7}>
+                            <Text style={styles.dropdownItemText}>
+                              {item.countryNameKo}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.fieldColumn}>
+                  <Text style={styles.fieldLabelText}>
+                    {UI_STRINGS.COURSE_CREATE.CITY_LABEL}
+                  </Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      testID='input-city'
+                      style={styles.inputText}
+                      placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
+                      value={destinationCity}
+                      onChangeText={setDestinationCity}
+                      onFocus={() => setShowCityDropdown(true)}
+                      placeholderTextColor='#8C949E'
+                    />
+                  </View>
+                  {showCityDropdown && citySuggestions.length > 0 && (
+                    <View
+                      style={styles.dropdownContainer}
+                      testID='city-dropdown'>
+                      <ScrollView
+                        nestedScrollEnabled
+                        style={styles.dropdownList}>
+                        {citySuggestions.map((item) => (
+                          <TouchableOpacity
+                            key={item.cityId}
+                            style={styles.dropdownItem}
+                            onPress={() => handleSelectCity(item)}
+                            activeOpacity={0.7}>
+                            <Text style={styles.dropdownItemText}>
+                              {item.cityNameKo}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Divider Line */}
+              <View style={styles.cardDivider} />
+
+              {/* Popular Destinations Tag Section */}
+              <View style={styles.tagSection}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.tagChipsRow}>
+                  {POPULAR_DESTINATIONS.map((dest) => (
+                    <TouchableOpacity
+                      key={dest.city}
+                      style={styles.tagChip}
+                      onPress={() => onSelectPopular(dest.country, dest.city)}
+                      activeOpacity={0.7}>
+                      <Text style={styles.tagChipText}>
+                        {dest.flag} {dest.city}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            <View style={styles.cardContainer} testID='date-card'>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name='calendar-outline'
+                  size={20}
+                  color={palette.primary}
+                />
+                <Text style={styles.cardTitleText}>
+                  {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
+                </Text>
+              </View>
+
+              <View style={styles.twoColumnRow}>
+                <TouchableOpacity
+                  style={styles.dateBox}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(
+                      LayoutAnimation.Presets.easeInEaseOut,
+                    );
+                    if (isCalendarOpen && activeDateTarget === 'start') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('start');
+                    }
+                  }}
+                  activeOpacity={0.8}>
+                  <Text style={styles.fieldLabelText}>
+                    {UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dateValueText,
+                      !startDate && styles.datePlaceholderText,
+                    ]}>
+                    {startDate ||
+                      UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dateBox}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(
+                      LayoutAnimation.Presets.easeInEaseOut,
+                    );
+                    if (isCalendarOpen && activeDateTarget === 'end') {
+                      setIsCalendarOpen(false);
+                    } else {
+                      openCalendarForTarget('end');
+                    }
+                  }}
+                  activeOpacity={0.8}>
+                  <Text style={styles.fieldLabelText}>
+                    {UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dateValueText,
+                      !endDate && styles.datePlaceholderText,
+                    ]}>
+                    {endDate || UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Expandable Inline Calendar */}
+              {isCalendarOpen && (
+                <InlineCalendarView
+                  currentYearMonth={currentYearMonth}
+                  startDate={startDate}
+                  endDate={endDate}
+                  onPrevMonth={handlePrevMonth}
+                  onNextMonth={handleNextMonth}
+                  onSelectDay={handleSelectDay}
+                />
+              )}
+            </View>
+
+            {/* Card 3: Budget Card */}
+            <View style={styles.cardContainer} testID='budget-card'>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name='card-outline'
+                  size={20}
+                  color={palette.primary}
+                />
+                <Text style={styles.cardTitleText}>
+                  {UI_STRINGS.COURSE_CREATE.STYLE_TITLE}
+                </Text>
+              </View>
+
+              <View style={styles.threeColumnGrid}>
+                {/* Option 1: 가성비 */}
+                <TouchableOpacity
+                  testID='budget-cost_effective'
+                  style={[
+                    styles.styleCardItem,
+                    budgetType === 'cost_effective' && styles.styleCardActive,
+                  ]}
+                  onPress={() => {
+                    trackButtonClick(
+                      'btn_select_budget_type',
+                      'Select Budget cost_effective',
+                    );
+                    setBudgetType('cost_effective');
+                  }}
+                  activeOpacity={0.8}>
+                  <View
+                    style={[
+                      styles.styleIconBox,
+                      budgetType === 'cost_effective' &&
+                        styles.styleIconBoxActive,
+                    ]}>
+                    <Ionicons
+                      name='wallet-outline'
+                      size={18}
+                      color={
+                        budgetType === 'cost_effective'
+                          ? palette.accent
+                          : palette.subText
+                      }
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.styleCardLabel,
+                      budgetType === 'cost_effective' &&
+                        styles.styleCardLabelActive,
+                    ]}>
+                    {UI_STRINGS.COURSE_CREATE.STYLE_BUDGET}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Option 2: 적정 수준 */}
+                <TouchableOpacity
+                  testID='budget-moderate'
+                  style={[
+                    styles.styleCardItem,
+                    budgetType === 'moderate' && styles.styleCardActive,
+                  ]}
+                  onPress={() => {
+                    trackButtonClick(
+                      'btn_select_budget_type',
+                      'Select Budget moderate',
+                    );
+                    setBudgetType('moderate');
+                  }}
+                  activeOpacity={0.8}>
+                  <View
+                    style={[
+                      styles.styleIconBox,
+                      budgetType === 'moderate' && styles.styleIconBoxActive,
+                    ]}>
+                    <Ionicons
+                      name='briefcase-outline'
+                      size={18}
+                      color={
+                        budgetType === 'moderate'
+                          ? palette.accent
+                          : palette.subText
+                      }
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.styleCardLabel,
+                      budgetType === 'moderate' && styles.styleCardLabelActive,
+                    ]}>
+                    {UI_STRINGS.COURSE_CREATE.STYLE_MODERATE}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Option 3: 럭셔리 */}
+                <TouchableOpacity
+                  testID='budget-luxury'
+                  style={[
+                    styles.styleCardItem,
+                    budgetType === 'luxury' && styles.styleCardActive,
+                  ]}
+                  onPress={() => {
+                    trackButtonClick(
+                      'btn_select_budget_type',
+                      'Select Budget luxury',
+                    );
+                    setBudgetType('luxury');
+                  }}
+                  activeOpacity={0.8}>
+                  <View
+                    style={[
+                      styles.styleIconBox,
+                      budgetType === 'luxury' && styles.styleIconBoxActive,
+                    ]}>
+                    <Ionicons
+                      name='diamond-outline'
+                      size={18}
+                      color={
+                        budgetType === 'luxury'
+                          ? palette.accent
+                          : palette.subText
+                      }
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.styleCardLabel,
+                      budgetType === 'luxury' && styles.styleCardLabelActive,
+                    ]}>
+                    {UI_STRINGS.COURSE_CREATE.STYLE_LUXURY}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.bottomContainer} testID='bottom-container'>
+              <TouchableOpacity
+                testID='submit-course-btn'
+                style={[
+                  styles.ctaButton,
+                  !isFormValid && styles.ctaButtonDisabled,
+                ]}
+                disabled={!isFormValid}
+                onPress={handleSubmit}
+                activeOpacity={0.8}>
+                <Ionicons
+                  name='sparkles'
+                  size={18}
+                  color='#FFFFFF'
+                  style={styles.ctaIconLeft}
+                />
+                <Text style={styles.ctaButtonText}>
+                  {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -414,10 +503,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.softMint, // #F5FAF8
   },
   scrollContentContainer: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 76,
     gap: 16,
+    justifyContent: 'space-between',
   },
   headerContent: {
     width: '100%',
@@ -450,6 +541,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.02,
     shadowRadius: 5,
     elevation: 2,
+    zIndex: 1,
+  },
+  cardContainerActiveDropdown: {
+    zIndex: 1000,
+    elevation: 10,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -464,11 +560,47 @@ const styles = StyleSheet.create({
   twoColumnRow: {
     flexDirection: 'row',
     gap: 12,
+    zIndex: 100,
   },
+
   fieldColumn: {
     flex: 1,
     gap: 6,
+    position: 'relative',
+    zIndex: 10,
   },
+  dropdownContainer: {
+    position: 'absolute',
+    top: 62,
+    left: 0,
+    right: 0,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    borderRadius: 8,
+    maxHeight: 160,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  dropdownList: {
+    maxHeight: 150,
+  },
+  dropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EBEDF2',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: palette.deepNavy,
+  },
+
   fieldLabelText: {
     fontSize: 11,
     fontWeight: '500',
@@ -534,7 +666,7 @@ const styles = StyleSheet.create({
   styleCardItem: {
     flex: 1,
     backgroundColor: palette.white,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: palette.gray200,
     borderRadius: 12,
     paddingVertical: 14,
@@ -544,7 +676,6 @@ const styles = StyleSheet.create({
   },
   styleCardActive: {
     backgroundColor: '#E0F7F1',
-    borderWidth: 1.5,
     borderColor: palette.accent, // #00C9A7
   },
   styleIconBox: {
@@ -562,11 +693,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: palette.subText,
+    lineHeight: 16,
   },
   styleCardLabelActive: {
     fontWeight: '700',
     color: palette.deepNavy,
   },
+
   bottomContainer: {
     width: '100%',
     marginTop: 8,

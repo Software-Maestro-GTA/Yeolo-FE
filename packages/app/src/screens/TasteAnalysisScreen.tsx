@@ -27,7 +27,11 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   onFail,
 }) => {
   useGA4ScreenTracking('TasteAnalysisScreen');
-  const { runPipeline, error: errorMessage, progress } = useTasteAnalysisPipeline();
+  const {
+    runPipeline,
+    error: errorMessage,
+    progress,
+  } = useTasteAnalysisPipeline();
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -192,7 +196,8 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
 
               <View style={styles.insightsCard}>
                 <Text style={styles.insightsNoticeText}>
-                  {progress.currentMessage || UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
+                  {progress.currentMessage ||
+                    UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
                 </Text>
               </View>
             </View>
@@ -200,7 +205,11 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
             {errorMessage && (
               <View style={styles.errorCard} testID='error-container'>
                 <View style={styles.errorHeader}>
-                  <Feather name='alert-circle' size={20} color={palette.red500} />
+                  <Feather
+                    name='alert-circle'
+                    size={20}
+                    color={palette.red500}
+                  />
                   <Text style={styles.errorCardTitle}>
                     {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
                   </Text>
