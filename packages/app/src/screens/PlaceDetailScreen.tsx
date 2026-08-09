@@ -1,6 +1,6 @@
 /**
  * @file PlaceDetailScreen.tsx
- * @description Screen for displaying detailed place information, AI tips, opening hours, and location.
+ * @description Screen for displaying detailed place information (API-PLACE-1) combined with itinerary stop details.
  */
 import React, { useState } from 'react';
 import {
@@ -18,81 +18,56 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ItineraryStop } from '@yeolo/common';
 import { OpeningHoursModal } from '../components/place';
 import { CourseMiniMapView } from '../components/course';
-import { palette } from '../theme/colors';
+import { usePlaceDetailQuery } from '../hooks/queries';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { getDestinationImageUrl } from '../services';
 
 export interface PlaceDetailScreenProps {
   stop?: ItineraryStop;
-  placeName?: string;
-  category?: string;
-  address?: string;
-  rating?: string;
-  arrivalTime?: string;
-  stayMinutes?: number;
-  cost?: number;
-  aiTip?: string;
-  openingHours?: string;
-  latitude?: number;
-  longitude?: number;
-  heroImageUrl?: string;
 }
 
-const DEFAULT_PLACE_IMAGE =
-  'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1000&q=80';
-
-export function PlaceDetailScreen({
-  stop,
-  placeName,
-  category,
-  address,
-  rating,
-  arrivalTime,
-  stayMinutes,
-  cost,
-  aiTip,
-  openingHours,
-  latitude = 35.6605,
-  longitude = 139.7292,
-  heroImageUrl = DEFAULT_PLACE_IMAGE,
-}: PlaceDetailScreenProps) {
+export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
   useGA4ScreenTracking('PlaceDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
 
+  const targetPlaceId = stop?.placeId;
+  const { data: placeDetail } = usePlaceDetailQuery({
+    placeId: targetPlaceId,
+  });
+
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
 
-  const displayPlaceName =
-    placeName || stop?.placeName || UI_STRINGS.PLACE_DETAIL.DEFAULT_NAME;
-  const displayCategory =
-    category || stop?.category || UI_STRINGS.PLACE_DETAIL.DEFAULT_CATEGORY;
-  const displayRating = rating || UI_STRINGS.PLACE_DETAIL.DEFAULT_RATING;
-  const displayAddress = address || UI_STRINGS.PLACE_DETAIL.DEFAULT_ADDRESS;
-  const displayTime =
-    arrivalTime || stop?.arrivalTime || UI_STRINGS.PLACE_DETAIL.DEFAULT_TIME;
-  const displayStay = stayMinutes
-    ? `${stayMinutes}분 소요`
-    : stop?.stayMinutes
-      ? `${stop.stayMinutes}분 소요`
-      : UI_STRINGS.PLACE_DETAIL.DEFAULT_STAY;
-  const displayCost =
-    cost !== undefined
-      ? `₩${cost.toLocaleString()}`
-      : stop?.cost !== undefined
-        ? `₩${stop.cost.toLocaleString()}`
-        : UI_STRINGS.PLACE_DETAIL.DEFAULT_COST;
-  const displayAiTip =
-    aiTip ||
-    stop?.reason ||
-    stop?.memo ||
-    UI_STRINGS.PLACE_DETAIL.AI_RECOMMEND_DESC;
+  const displayPlaceName = placeDetail?.placeName || stop?.placeName || '';
+  const displayCategory = placeDetail?.category || stop?.category || '';
+  const displayRating =
+    placeDetail?.rating !== undefined && placeDetail?.rating !== null
+      ? String(placeDetail.rating)
+      : '';
+  const displayAddress = placeDetail?.address || '';
   const displayOpeningHours =
-    openingHours || UI_STRINGS.PLACE_DETAIL.OPENING_HOURS;
+    placeDetail?.openingHours && placeDetail.openingHours.length > 0
+      ? placeDetail.openingHours[0]
+      : '';
+
+  const displayLatitude = placeDetail?.latitude ?? stop?.latitude ?? 0;
+  const displayLongitude = placeDetail?.longitude ?? stop?.longitude ?? 0;
+  const displayHeroImageUrl =
+    placeDetail?.photoUrls?.[0] || getDestinationImageUrl('', displayPlaceName);
+
+  // 코스 확인 창에서 보여준 정보 (일정 정보 종합)
+  const displayTime = stop?.arrivalTime || '';
+  const displayStay = stop?.stayMinutes ? `${stop.stayMinutes}분 소요` : '';
+  const displayCost =
+    stop?.cost !== undefined ? `₩${stop.cost.toLocaleString()}` : '';
+  const displayAiTip = stop?.reason || stop?.memo || '';
 
   const mockMapCoordinates = [
     {
       placeName: displayPlaceName,
-      latitude,
-      longitude,
+      latitude: displayLatitude,
+      longitude: displayLongitude,
     },
   ];
 
@@ -109,14 +84,14 @@ export function PlaceDetailScreen({
         {/* Hero Photo Container Header (Extends into Status Bar) */}
         <View style={styles.heroSection}>
           <ImageBackground
-            source={{ uri: heroImageUrl }}
+            source={{ uri: displayHeroImageUrl }}
             style={styles.heroImageBackground}
             resizeMode='cover'>
             <LinearGradient
               colors={[
-                'rgba(245, 250, 248, 0)',
-                'rgba(245, 250, 248, 0.35)',
-                'rgba(245, 250, 248, 0.95)',
+                hexToRgba(palette.softMint, 0),
+                hexToRgba(palette.softMint, 0.35),
+                hexToRgba(palette.softMint, 0.95),
                 palette.softMint,
               ]}
               locations={[0, 0.4, 0.8, 1]}
@@ -128,27 +103,35 @@ export function PlaceDetailScreen({
               <View style={styles.placeTitleRow}>
                 <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
                 <View style={styles.tagRow}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>
-                      {displayCategory}
-                    </Text>
-                  </View>
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name='star' size={12} color='#F97316' />
-                    <Text style={styles.ratingBadgeText}>{displayRating}</Text>
-                  </View>
+                  {Boolean(displayCategory) && (
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>
+                        {displayCategory}
+                      </Text>
+                    </View>
+                  )}
+                  {Boolean(displayRating) && (
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name='star' size={12} color={palette.warning} />
+                      <Text style={styles.ratingBadgeText}>
+                        {displayRating}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
               {/* Address Row */}
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name='location-outline'
-                  size={14}
-                  color={palette.subText}
-                />
-                <Text style={styles.addressText}>{displayAddress}</Text>
-              </View>
+              {Boolean(displayAddress) && (
+                <View style={styles.addressRow}>
+                  <Ionicons
+                    name='location-outline'
+                    size={14}
+                    color={palette.subText}
+                  />
+                  <Text style={styles.addressText}>{displayAddress}</Text>
+                </View>
+              )}
             </View>
           </ImageBackground>
         </View>
@@ -200,7 +183,9 @@ export function PlaceDetailScreen({
                   {UI_STRINGS.PLACE_DETAIL.OPENING_STATUS}
                 </Text>
                 <Text style={styles.statusDot}>·</Text>
-                <Text style={styles.hoursValueText}>{displayOpeningHours}</Text>
+                <Text style={styles.hoursValueText}>
+                  {displayOpeningHours || UI_STRINGS.PLACE_DETAIL.OPENING_HOURS}
+                </Text>
               </View>
               <TouchableOpacity
                 testID='btn-more-hours'
@@ -242,8 +227,8 @@ export function PlaceDetailScreen({
             <CourseMiniMapView
               stopCoordinates={mockMapCoordinates}
               mapRegion={{
-                latitude,
-                longitude,
+                latitude: displayLatitude,
+                longitude: displayLongitude,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
@@ -257,7 +242,7 @@ export function PlaceDetailScreen({
                 color={palette.subText}
               />
               <Text style={styles.gpsText}>
-                {`GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`}
+                {`GPS: ${displayLatitude.toFixed(4)}, ${displayLongitude.toFixed(4)}`}
               </Text>
             </View>
           </View>
@@ -279,7 +264,7 @@ const STATUS_BAR_HEIGHT =
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: palette.softMint, // #F5FAF8
+    backgroundColor: palette.softMint,
   },
   scrollContentContainer: {
     paddingTop: 0,
@@ -287,7 +272,7 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     height: 280,
-    backgroundColor: '#D1E5E0',
+    backgroundColor: palette.lightTeal,
   },
   heroImageBackground: {
     flex: 1,
@@ -311,7 +296,7 @@ const styles = StyleSheet.create({
   placeTitleText: {
     fontSize: 24,
     fontWeight: '900',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   tagRow: {
     flexDirection: 'row',
@@ -319,7 +304,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   categoryBadge: {
-    backgroundColor: '#E0F7F1',
+    backgroundColor: palette.lightTeal,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 99,
@@ -330,7 +315,7 @@ const styles = StyleSheet.create({
     color: palette.accent,
   },
   ratingBadge: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: hexToRgba(palette.warning, 0.15),
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
@@ -341,7 +326,7 @@ const styles = StyleSheet.create({
   ratingBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#F97316',
+    color: palette.warning,
   },
   addressRow: {
     flexDirection: 'row',
@@ -383,12 +368,12 @@ const styles = StyleSheet.create({
   cardDivider: {
     width: 1,
     height: 28,
-    backgroundColor: '#EBEDF2',
+    backgroundColor: palette.gray200,
   },
   metricTimeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: palette.primary, // #2D7DD2
+    color: palette.primary,
   },
   metricStayText: {
     fontSize: 13,
@@ -398,7 +383,7 @@ const styles = StyleSheet.create({
   metricCostText: {
     fontSize: 13,
     fontWeight: '700',
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
   },
   sectionContainer: {
     gap: 10,
@@ -427,7 +412,7 @@ const styles = StyleSheet.create({
   openStatusText: {
     fontSize: 14,
     fontWeight: '700',
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
   },
   statusDot: {
     fontSize: 14,
@@ -446,7 +431,7 @@ const styles = StyleSheet.create({
   aiRecommendCard: {
     backgroundColor: palette.softMint,
     borderWidth: 1,
-    borderColor: '#E0E8E5',
+    borderColor: palette.lightTeal,
     borderRadius: 16,
     padding: 16,
     gap: 10,
