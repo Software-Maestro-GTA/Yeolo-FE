@@ -260,3 +260,69 @@ export async function getCourseListApi(
     throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
   }
 }
+
+/**
+ * Sends DELETE /api/courses/{courseId} request to delete a saved travel course (API-COURSE-4).
+ *
+ * @param apiUrl Base backend URL
+ * @param accessToken User JWT access token
+ * @param courseId Unique ID of the course to delete
+ * @returns Promise resolving to void upon successful deletion
+ */
+export async function deleteCourseApi(
+  apiUrl: string,
+  accessToken: string,
+  courseId: string,
+): Promise<void> {
+  try {
+    logger.info('[CourseAPI] deleteCourseApi request, courseId:', courseId);
+    const client = createHttpClient(apiUrl);
+    const headers: Record<string, string> = {};
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await client.delete(`api/courses/${courseId}`, {
+      headers,
+    });
+
+    const json = (await response.json().catch(() => null)) as {
+      status?: number;
+      message?: string;
+    } | null;
+    logger.info(
+      '[CourseAPI] deleteCourseApi response status:',
+      response.status,
+      'body:',
+      json,
+    );
+
+    if (response.ok && (json?.status === 200 || response.status === 200)) {
+      return;
+    }
+
+    const errorStatus = json?.status || response.status || 500;
+    const errorMessage = json?.message || '코스 삭제에 실패했습니다.';
+    throw new ApiError(errorStatus, errorMessage);
+  } catch (error: any) {
+    logger.error(
+      `[CourseAPI] deleteCourseApi error (courseId: ${courseId}):`,
+      error,
+    );
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (error?.response) {
+      let status = error.response.status || 400;
+      let message = '코스 삭제에 실패했습니다.';
+      try {
+        const json = await error.response.json();
+        if (json?.message) message = json.message;
+      } catch (_) {
+        // Fallback message
+      }
+      throw new ApiError(status, message);
+    }
+    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+  }
+}
