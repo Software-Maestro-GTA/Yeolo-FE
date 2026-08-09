@@ -87,7 +87,7 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     expect(mockOnSelectCourse).toHaveBeenCalledWith('course-uuid-1');
   });
 
-  it('삭제 아이콘 클릭 시 코스 삭제 확인 바텀시트 모달(CourseDeleteModal)이 오픈되어야 한다', async () => {
+  it('삭제 아이콘 클릭 또는 코스 카드 길게 누르기(longPress) 시 코스 삭제 확인 바텀시트 모달(CourseDeleteModal)이 오픈되어야 한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
 
     const { getByTestId, getByText, queryByTestId } = await render(
@@ -103,8 +103,9 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
 
     expect(queryByTestId('course-delete-modal-card')).toBeNull();
 
-    const deleteBtn = getByTestId('btn-delete-course-uuid-1');
-    fireEvent.press(deleteBtn);
+    // 1. Long Press event test on card
+    const card1 = getByTestId('course-card-course-uuid-1');
+    fireEvent(card1, 'longPress');
 
     await waitFor(() => {
       expect(getByTestId('course-delete-modal-card')).toBeTruthy();
@@ -116,6 +117,49 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
 
     await waitFor(() => {
       expect(queryByTestId('course-delete-modal-card')).toBeNull();
+    });
+  });
+
+  it('코스 삭제 모달에서 삭제하기 클릭 시 API-COURSE-4(deleteCourseApi)를 호출하고 목록을 갱신해야 한다', async () => {
+    const mockDeleteApi = jest
+      .spyOn(commonApi, 'deleteCourseApi' as any)
+      .mockResolvedValue(undefined);
+    const getCourseListSpy = jest
+      .spyOn(commonApi, 'getCourseListApi')
+      .mockResolvedValueOnce(mockCourseList)
+      .mockResolvedValueOnce([mockCourseList[1]]);
+
+    const { getByTestId, getByText, queryByText } = await render(
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
+    });
+
+    // Long Press card to trigger delete modal
+    const card1 = getByTestId('course-card-course-uuid-1');
+    fireEvent(card1, 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('course-delete-modal-card')).toBeTruthy();
+    });
+
+    // Confirm deletion
+    const confirmBtn = getByTestId('btn-confirm-delete');
+    await act(async () => {
+      fireEvent.press(confirmBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockDeleteApi).toHaveBeenCalledWith(
+        expect.any(String),
+        'mock-token',
+        'course-uuid-1',
+      );
     });
   });
 

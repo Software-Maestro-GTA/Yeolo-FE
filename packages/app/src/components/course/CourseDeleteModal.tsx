@@ -44,13 +44,11 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
 
               {/* Title & Warning Text */}
               <Text style={styles.modalTitle}>
-                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_TITLE ||
-                  '코스를 삭제하시겠습니까?'}
+                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_TITLE}
               </Text>
               <Text style={styles.modalSubTitle}>
                 {courseTitle ? `"${courseTitle}" ` : ''}
-                {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_DESC ||
-                  '삭제된 코스는 복구할 수 없습니다.'}
+                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_DESC}
               </Text>
 
               {/* Action Buttons Group */}
@@ -61,7 +59,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
                   onPress={onConfirmDelete}
                   activeOpacity={0.85}>
                   <Text style={styles.deleteButtonText}>
-                    {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_CONFIRM || '삭제하기'}
+                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CONFIRM}
                   </Text>
                 </TouchableOpacity>
 
@@ -71,7 +69,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
                   onPress={onClose}
                   activeOpacity={0.85}>
                   <Text style={styles.cancelButtonText}>
-                    {UI_STRINGS.COURSE_LIST?.DELETE_MODAL_CANCEL || '취소'}
+                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CANCEL}
                   </Text>
                 </TouchableOpacity>
               </View>
