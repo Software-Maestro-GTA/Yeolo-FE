@@ -181,6 +181,7 @@ export const UI_STRINGS = {
     MINUTES_SUFFIX: '분 소요',
     NO_INFO: '정보 없음',
     ERROR_TITLE: '코스 상세 조회 오류',
+    MAP_LOADING: '지도를 불러오는 중...',
   },
   PLACE_DETAIL: {
     DEFAULT_NAME: '모리 미술관',

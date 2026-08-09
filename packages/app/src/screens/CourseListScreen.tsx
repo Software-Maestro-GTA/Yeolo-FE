@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CourseSearchBar, CourseDeleteModal } from '../components/course';
-import { getDestinationImageUrl } from '../components/course/CourseCard';
 import { useCourseListQuery, useCourseDeleteMutation } from '../hooks/queries';
+import { getDestinationImageUrl } from '../services';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import type { CourseSummary } from '@yeolo/common';
