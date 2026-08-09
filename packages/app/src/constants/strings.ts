@@ -162,6 +162,9 @@ export const UI_STRINGS = {
     PROGRESS_LABEL: '코스 조합 중',
     BOTTOM_DESC_1: '잠시만 기다려주세요.',
     BOTTOM_DESC_2: 'AI가 여로를 그리고 있어요.',
+    ERROR_TITLE: '코스 생성 중 오류가 발생했습니다',
+    GO_INTRO_BTN: '시작 화면으로 이동',
+    RETRY_BTN: '다시 시도하기',
   },
   COURSE_DETAIL: {
     MAIN_TITLE: '일본 도쿄',
