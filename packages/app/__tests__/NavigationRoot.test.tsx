@@ -47,8 +47,16 @@ jest.mock('../src/screens', () => {
         onPress={() => onComplete?.('course-123')}
       />
     ),
-    CourseDetailScreen: ({ courseId }: any) => (
-      <Text testID='course-detail-screen'>CourseDetailScreen: {courseId}</Text>
+    CourseDetailScreen: ({ courseId, onSelectPlace }: any) => (
+      <Button
+        title='Select Place Stop'
+        onPress={() =>
+          onSelectPlace?.({
+            placeId: 'place-123',
+            placeName: '함덕 해수욕장',
+          })
+        }
+      />
     ),
     CourseShareScreen: ({ courseId }: any) => (
       <Text testID='course-share-screen'>CourseShareScreen: {courseId}</Text>
@@ -56,13 +64,15 @@ jest.mock('../src/screens', () => {
     ProfileInputScreen: () => (
       <Text testID='profile-input-screen'>ProfileInputScreen</Text>
     ),
-    PlaceDetailScreen: () => (
-      <Text testID='place-detail-screen'>PlaceDetailScreen</Text>
+    PlaceDetailScreen: ({ stop, placeId }: any) => (
+      <Text testID='place-detail-screen'>
+        PlaceDetailScreen: {stop?.placeName || placeId}
+      </Text>
     ),
   };
 });
 
-describe('NavigationRoot - CourseDetailScreen Navigation Bar', () => {
+describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navigation', () => {
   const mockAuthContext = {
     isAuthenticated: true,
     isLoading: false,
@@ -72,7 +82,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar', () => {
   };
 
   it('renders BottomNavBar when showing CourseDetailScreen', async () => {
-    const { getByTestId, queryByText, getByText } = await render(
+    const { queryByText, getByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
       </AuthContext.Provider>,
@@ -91,7 +101,35 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar', () => {
     }
 
     await waitFor(() => {
-      expect(getByTestId('course-detail-screen')).toBeTruthy();
+      expect(getByText('Select Place Stop')).toBeTruthy();
     });
+  });
+
+  it('navigates from CourseDetailScreen to PlaceDetailScreen when place is pressed', async () => {
+    const { getByText, findByTestId } = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    if (getByText('Go to Explore')) {
+      await act(async () => {
+        fireEvent.press(getByText('Go to Explore'));
+      });
+    }
+
+    if (getByText('Select Course')) {
+      await act(async () => {
+        fireEvent.press(getByText('Select Course'));
+      });
+    }
+
+    await act(async () => {
+      fireEvent.press(getByText('Select Place Stop'));
+    });
+
+    const placeDetailScreen = await findByTestId('place-detail-screen');
+    expect(placeDetailScreen).toBeTruthy();
+    expect(getByText(/함덕 해수욕장/)).toBeTruthy();
   });
 });
