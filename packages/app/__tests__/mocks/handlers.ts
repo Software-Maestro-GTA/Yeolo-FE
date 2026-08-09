@@ -725,4 +725,51 @@ export const handlers = [
       { status: 200 },
     );
   }),
+
+  // Mock Place Detail GET API-PLACE-1
+  http.get('*/api/places/:placeId', ({ params }) => {
+    const { placeId } = params;
+
+    if (placeId === 'error-place-id') {
+      return HttpResponse.json(
+        {
+          status: 404,
+          message: '장소 정보를 찾을 수 없습니다.',
+          data: null,
+        },
+        { status: 404 },
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '장소 상세 조회 성공',
+        data: {
+          place: {
+            placeId: (placeId as string) || 'place-1',
+            placeName: '함덕 해수욕장 (API)',
+            category: '해변',
+            address: '제주특별자치도 제주시 조천읍 함덕리 1008',
+            latitude: 33.5434,
+            longitude: 126.6692,
+            rating: 4.8,
+            photoUrls: [
+              'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
+            ],
+            openingHours: [
+              '월요일 09:00 - 18:00',
+              '화요일 09:00 - 18:00',
+              '수요일 09:00 - 18:00',
+              '목요일 09:00 - 18:00',
+              '금요일 09:00 - 18:00',
+              '토요일 09:00 - 18:00',
+              '일요일 09:00 - 18:00',
+            ],
+          },
+        },
+      },
+      { status: 200 },
+    );
+  }),
 ];
