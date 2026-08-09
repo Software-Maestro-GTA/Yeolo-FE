@@ -55,7 +55,7 @@ describe('TasteProfileScreen UI & Navigation', () => {
   it('Figma 스펙 타이틀 및 섹션 영역이 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
       <TasteProfileScreen
-        tasteProfileId="550e8400-e29b-41d4-a716-446655440001"
+        tasteProfileId='550e8400-e29b-41d4-a716-446655440001'
         onGenerateCourse={mockOnGenerateCourse}
       />,
     );
@@ -74,7 +74,7 @@ describe('TasteProfileScreen UI & Navigation', () => {
   it('여행 코스 생성하기 버튼 클릭 시 onGenerateCourse가 호출되어야 한다', async () => {
     const { getByTestId } = await render(
       <TasteProfileScreen
-        tasteProfileId="550e8400-e29b-41d4-a716-446655440001"
+        tasteProfileId='550e8400-e29b-41d4-a716-446655440001'
         onGenerateCourse={mockOnGenerateCourse}
       />,
     );
