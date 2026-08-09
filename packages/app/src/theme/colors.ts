@@ -17,6 +17,7 @@ export const palette = {
   mutedText: '#8C949E', // Muted SubText - 보조 캡션 및 메타 정보 텍스트
   darkBlue: '#1E5FA6', // Darker Blue - 항공권 CTA 그래디언트 종단색
   darkTeal: '#0D7361', // Darker Teal - 호텔 CTA 그래디언트 종단색
+  purple: '#9966CC', // Purple - 투어/티켓 강조색
 
   // Base Neutrals & Statuses
   white: '#FFFFFF',
