@@ -39,6 +39,7 @@ export interface AuthContextType {
     idToken?: string | null;
   }) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
   logout: () => void;
+  updateUser?: (updatedFields: Partial<User>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -212,6 +213,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const updateUser = (updatedFields: Partial<User>) => {
+    setUser((prevUser) =>
+      prevUser ? { ...prevUser, ...updatedFields } : null,
+    );
+  };
+
   const isLoading =
     isRestoring ||
     googleLoginMutation.isPending ||
@@ -227,6 +234,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         loginWithGoogle,
         loginWithApple,
         logout,
+        updateUser,
       }}>
       {children}
     </AuthContext.Provider>
