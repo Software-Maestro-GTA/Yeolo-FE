@@ -131,18 +131,18 @@ export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
       <style>
         html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #eaeef2; }
         .custom-marker {
-          background-color: #4f45e5;
-          color: #ffffff;
-          border-radius: 50%;
-          width: 26px;
-          height: 26px;
+          background-color: #ffffff;
+          color: #2d7dd2;
+          border-radius: 14px;
+          width: 28px;
+          height: 28px;
           display: flex;
           justify-content: center;
           align-items: center;
-          font-weight: 800;
-          font-size: 13px;
-          border: 2px solid #ffffff;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          font-weight: 700;
+          font-size: 12px;
+          border: 2px solid #2d7dd2;
+          box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
       </style>
     </head>
@@ -165,15 +165,15 @@ export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
           var customIcon = L.divIcon({
             className: 'custom-marker',
             html: (index + 1).toString(),
-            iconSize: [26, 26],
-            iconAnchor: [13, 13]
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
           });
 
           L.marker(latlng, { icon: customIcon }).addTo(map).bindPopup(stop.placeName);
         });
 
         if (latlngs.length > 1) {
-          var polyline = L.polyline(latlngs, { color: '#4f45e5', weight: 4, opacity: 0.9 }).addTo(map);
+          var polyline = L.polyline(latlngs, { color: '#2d7dd2', weight: 3, opacity: 0.9 }).addTo(map);
           map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
         }
       </script>

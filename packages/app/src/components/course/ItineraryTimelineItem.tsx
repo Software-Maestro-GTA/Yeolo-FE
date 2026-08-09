@@ -60,6 +60,21 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
     }
   };
 
+  const getRouteVisualIcon = (transport: TransportType) => {
+    switch (transport) {
+      case 'walking':
+        return 'footsteps';
+      case 'transit':
+        return 'bus';
+      case 'driving':
+        return 'car';
+      case 'taxi':
+        return 'car-sport';
+      default:
+        return 'walk';
+    }
+  };
+
   const formatTransportLabel = (
     transport: TransportType,
     minutes?: number,
@@ -157,23 +172,29 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   )}
                 </Text>
               </View>
+              {/* 교통비: 현재 API 단계에서 미지원으로 주석 처리
               <View style={styles.mintBadge}>
                 <Text style={styles.mintBadgeText}>
                   {UI_STRINGS.COURSE_DETAIL.FREE_TRANSIT}
                 </Text>
               </View>
+              */}
             </View>
 
             {/* Route Visual Line */}
             <View style={styles.routeVisualRow}>
               <View style={styles.routeDot} />
               <View style={styles.routeLine} />
-              <Ionicons name='footsteps' size={12} color={palette.primary} />
+              <Ionicons
+                name={getRouteVisualIcon(stop.transportToNext)}
+                size={12}
+                color={palette.primary}
+              />
               <View style={styles.routeLine} />
               <View style={styles.routeDot} />
             </View>
 
-            {/* Transit Tip Box */}
+            {/* 이동 방법 상세 팁: 현재 API 단계에서 미지원으로 주석 처리
             <View style={styles.aiTipBox}>
               <Ionicons
                 name='bulb-outline'
@@ -187,6 +208,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   : '가장 효율적인 추천 동선으로 연결된 구간입니다.'}
               </Text>
             </View>
+            */}
           </View>
         </View>
       )}
@@ -229,7 +251,7 @@ const styles = StyleSheet.create({
     color: palette.deepNavy, // #0D2137
   },
   mintBadge: {
-    backgroundColor: '#E0F7F1',
+    backgroundColor: palette.lightTeal,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 99,
@@ -237,7 +259,7 @@ const styles = StyleSheet.create({
   mintBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
   },
   timeRow: {
     flexDirection: 'row',
@@ -247,20 +269,20 @@ const styles = StyleSheet.create({
   arrivalTimeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: palette.primary, // #2D7DD2
+    color: palette.primary,
   },
   dividerDot: {
     width: 1,
     height: 12,
-    backgroundColor: '#EBEDF2',
+    backgroundColor: palette.gray200,
   },
   stayMinutesText: {
     fontSize: 13,
     fontWeight: '400',
-    color: palette.subText, // #59616B
+    color: palette.subText,
   },
   aiTipBox: {
-    backgroundColor: palette.softMint, // #F5FAF8
+    backgroundColor: palette.softMint,
     padding: 10,
     borderRadius: 8,
     flexDirection: 'row',
@@ -323,6 +345,6 @@ const styles = StyleSheet.create({
   routeLine: {
     flex: 1,
     height: 1.5,
-    backgroundColor: '#E0E5EB',
+    backgroundColor: palette.gray200,
   },
 });

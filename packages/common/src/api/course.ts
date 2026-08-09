@@ -168,7 +168,8 @@ export async function getCourseDetailApi(
     }
 
     const errorStatus = json?.status || response.status || 500;
-    const errorMessage = json?.message || '여행 코스 정보를 찾을 수 없습니다.';
+    const errorMessage =
+      json?.message || '코스 상세 정보를 불러올 수 없습니다.';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
     logger.error(
@@ -180,7 +181,7 @@ export async function getCourseDetailApi(
     }
     if (error?.response) {
       let status = error.response.status || 400;
-      let message = '여행 코스 정보를 불러오지 못했습니다.';
+      let message = '코스 상세 정보를 불러오지 못했습니다.';
       try {
         const json = await error.response.json();
         if (json?.message) message = json.message;

@@ -1,9 +1,8 @@
 /**
  * @file courseService.ts
- * @description Course detail geocoding helper and location coordinate transformation service.
+ * @description Course detail location coordinate transformation service using server provided coordinates.
  */
 import {
-  geocodePlace,
   getAdjustedCoordinates,
   calculateRegion,
   getLeafletMapHtml,
@@ -20,7 +19,15 @@ export interface ProcessedCourseMapData {
 }
 
 /**
- * Perform geocoding for all stops in an itinerary day and produce adjusted map coordinates.
+ * Generate fallback destination image URL for a given country and city.
+ */
+export function getDestinationImageUrl(country: string, city: string): string {
+  const keyword = (city || country || '여행').trim();
+  return `https://loremflickr.com/600/400/${encodeURIComponent(keyword)}`;
+}
+
+/**
+ * Process itinerary day stops using server-provided coordinates to produce map data.
  */
 export async function processCourseStopsMapData(
   stops: ItineraryStop[] = [],
@@ -35,29 +42,20 @@ export async function processCourseStopsMapData(
     };
   }
 
-  const rawStops = (
-    await Promise.all(
-      stops.map(async (stop, index) => {
-        const coords = await geocodePlace(stop.placeName, city);
-        if (coords) {
-          logger.info(
-            `[CourseService] Geocoded coords for "${stop.placeName}" (${city}):`,
-            coords,
-          );
-          return {
-            ...coords,
-            placeName: stop.placeName,
-            sequence: stop.sequence ?? index + 1,
-          };
-        }
-
-        logger.warn(
-          `[CourseService] Failed to geocode coords for "${stop.placeName}" (${city})`,
-        );
-        return null;
-      }),
+  const rawStops: MapCoordinate[] = stops
+    .filter(
+      (stop) =>
+        typeof stop.latitude === 'number' &&
+        typeof stop.longitude === 'number' &&
+        !isNaN(stop.latitude) &&
+        !isNaN(stop.longitude),
     )
-  ).filter((item): item is NonNullable<typeof item> => item !== null);
+    .map((stop, index) => ({
+      latitude: stop.latitude,
+      longitude: stop.longitude,
+      placeName: stop.placeName,
+      sequence: stop.sequence ?? index + 1,
+    }));
 
   const coordinates = getAdjustedCoordinates(rawStops);
   const region = calculateRegion(coordinates);

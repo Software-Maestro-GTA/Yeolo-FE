@@ -13,7 +13,8 @@ import {
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import type { MapCoordinate, MapRegion } from '@yeolo/common';
-import { palette } from '../../theme/colors';
+import { palette, hexToRgba } from '../../theme/colors';
+import { UI_STRINGS } from '../../constants';
 
 export interface CourseMiniMapViewProps {
   stopCoordinates: MapCoordinate[];
@@ -62,8 +63,11 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
                   latitude: stop.latitude,
                   longitude: stop.longitude,
                 }}
-                title={`${idx + 1}. ${stop.placeName}`}
-              />
+                title={`${idx + 1}. ${stop.placeName}`}>
+                <View style={styles.customMarkerPin}>
+                  <Text style={styles.customMarkerText}>{idx + 1}</Text>
+                </View>
+              </Marker>
             ))}
             {stopCoordinates.length > 1 && (
               <Polyline
@@ -93,7 +97,7 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
               <View style={styles.webViewLoading}>
                 <ActivityIndicator size='small' color={palette.primary} />
                 <Text style={styles.webViewLoadingText}>
-                  지도를 불러오는 중...
+                  {UI_STRINGS.COURSE_DETAIL.MAP_LOADING}
                 </Text>
               </View>
             )}
@@ -107,7 +111,6 @@ export const CourseMiniMapView: React.FC<CourseMiniMapViewProps> = ({
 const styles = StyleSheet.create({
   miniMapSection: {
     width: '100%',
-    paddingHorizontal: 20,
     marginVertical: 4,
   },
   miniMapCard: {
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(198, 198, 204, 0.3)',
+    borderColor: hexToRgba(palette.gray200, 0.5),
     backgroundColor: palette.softMint,
     shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
@@ -125,6 +128,26 @@ const styles = StyleSheet.create({
   },
   mapView: {
     flex: 1,
+  },
+  customMarkerPin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: palette.white,
+    borderWidth: 2,
+    borderColor: palette.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: palette.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  customMarkerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: palette.primary,
   },
   webView: {
     flex: 1,

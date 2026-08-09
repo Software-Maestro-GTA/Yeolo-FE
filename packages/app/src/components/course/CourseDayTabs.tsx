@@ -6,6 +6,7 @@ import React from 'react';
 import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import type { ItineraryDay } from '@yeolo/common';
 import { palette } from '../../theme/colors';
+import { UI_STRINGS } from '../../constants';
 
 export interface CourseDayTabsProps {
   days?: ItineraryDay[];
@@ -39,7 +40,8 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
                 styles.dayPillText,
                 isSelected && styles.dayPillTextSelected,
               ]}>
-              Day {dayItem.day}
+              {UI_STRINGS.COURSE_DETAIL.DAY_PREFIX}
+              {dayItem.day}
             </Text>
           </TouchableOpacity>
         );
@@ -50,29 +52,29 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
 
 const styles = StyleSheet.create({
   dayTabContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     gap: 8,
-    marginVertical: 12,
+    marginVertical: 4,
   },
   dayPill: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: palette.white, // #FFFFFF
+    backgroundColor: palette.white,
     borderWidth: 1.5,
-    borderColor: palette.gray200, // #E0E5EB
+    borderColor: palette.gray200,
   },
   dayPillSelected: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     borderColor: palette.primary,
   },
   dayPillText: {
     fontSize: 13,
     fontWeight: '500',
-    color: palette.subText, // #59616B
+    color: palette.subText,
   },
   dayPillTextSelected: {
-    color: '#FFFFFF',
+    color: palette.white,
     fontWeight: '700',
   },
 });
