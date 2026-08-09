@@ -91,7 +91,8 @@ export function useTasteAnalysisPipeline(): UseTasteAnalysisPipelineResult {
 
       // 2. JWT 토큰 및 API URL 준비
       const token = (await AsyncStorage.getItem('accessToken')) || '';
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+      const apiUrl =
+        process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
       // 3. 백엔드 SSE 취향 분석 실행
       const profileId = await useTasteStore

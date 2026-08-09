@@ -6,3 +6,4 @@ export * from './useCourseListQuery';
 export * from './useCourseDetailQuery';
 export * from './useTasteProfileQuery';
 export * from './useAuthMutations';
+export * from './useCourseMutations';
