@@ -62,19 +62,21 @@ export interface ItineraryStop {
   placeId: string;
   placeName: string;
   category: string;
+  latitude: number;
+  longitude: number;
   arrivalTime: string;
   stayMinutes: number;
-  memo?: string;
+  memo: string;
   transportToNext: TransportType;
-  travelMinutesToNext?: number;
+  travelMinutesToNext: number;
   cost: number;
-  reason?: string;
+  reason: string;
 }
 
 export interface ItineraryDay {
   day: number;
   date: string;
-  memo?: string;
+  memo: string;
   stops: ItineraryStop[];
 }
 

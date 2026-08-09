@@ -45,15 +45,6 @@ jest.mock('react-native-webview', () => {
   };
 });
 
-globalThis.fetch = jest.fn().mockImplementation((url: string) => {
-  if (url.includes('nominatim.openstreetmap.org')) {
-    return Promise.resolve({
-      json: () => Promise.resolve([{ lat: '33.5434', lon: '126.6692' }]),
-    });
-  }
-  return Promise.reject(new Error('Unknown URL'));
-}) as any;
-
 const mockCourseDetail: commonApi.CourseDetail = {
   courseId: 'test-course-id-123',
   userId: 'test-user-id',
@@ -86,6 +77,8 @@ const mockCourseDetail: commonApi.CourseDetail = {
             travelMinutesToNext: 30,
             cost: 0,
             reason: '바다 전망 추천',
+            latitude: 33.5434,
+            longitude: 126.6692,
           },
           {
             sequence: 2,
@@ -99,6 +92,8 @@ const mockCourseDetail: commonApi.CourseDetail = {
             travelMinutesToNext: 0,
             cost: 15000,
             reason: '커피 품질 및 바다 뷰 우수',
+            latitude: 33.5436,
+            longitude: 126.6695,
           },
         ],
       },
@@ -119,6 +114,8 @@ const mockCourseDetail: commonApi.CourseDetail = {
             travelMinutesToNext: 0,
             cost: 4000,
             reason: '',
+            latitude: 33.4912,
+            longitude: 126.8114,
           },
         ],
       },
@@ -211,7 +208,7 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     );
 
     await waitFor(() => {
-      expect(getByText('코스 정보를 불러오지 못했습니다.')).toBeTruthy();
+      expect(getByText('코스 상세 조회 오류')).toBeTruthy();
       expect(getByTestId('retry-button')).toBeTruthy();
     });
 
@@ -273,5 +270,25 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       expect(getByText('총 예상 경비')).toBeTruthy();
       expect(getByText('₩350,000')).toBeTruthy();
     });
+  });
+
+  it('상단 헤더의 뒤로가기 버튼 클릭 시 onBack 콜백이 호출되어야 한다', async () => {
+    const handleBack = jest.fn();
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' onBack={handleBack} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const backButton = getByTestId('btn-back');
+    fireEvent.press(backButton);
+
+    expect(handleBack).toHaveBeenCalledTimes(1);
   });
 });

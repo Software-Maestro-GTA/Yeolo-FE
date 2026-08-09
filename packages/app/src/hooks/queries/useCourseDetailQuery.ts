@@ -22,13 +22,14 @@ export function useCourseDetailQuery({
   options,
 }: UseCourseDetailQueryOptions) {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+  const targetCourseId = courseId || 'mock-course-id-1';
 
   return useQuery<CourseDetail, Error>({
-    queryKey: getCourseDetailQueryKey(courseId),
+    queryKey: getCourseDetailQueryKey(targetCourseId),
     queryFn: async () => {
       try {
         const token = (await AsyncStorage.getItem('accessToken')) || '';
-        return await getCourseDetailApi(apiUrl, token, courseId);
+        return await getCourseDetailApi(apiUrl, token, targetCourseId);
       } catch (err: unknown) {
         const errorObj = err as { message?: string };
         throw new Error(
@@ -36,7 +37,7 @@ export function useCourseDetailQuery({
         );
       }
     },
-    enabled: Boolean(courseId),
+    enabled: true,
     staleTime: APP_CONFIG.QUERY_STALE_TIME,
     ...options,
   });

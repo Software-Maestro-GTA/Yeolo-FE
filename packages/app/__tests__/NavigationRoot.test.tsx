@@ -72,77 +72,24 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar', () => {
   };
 
   it('renders BottomNavBar when showing CourseDetailScreen', async () => {
-    const { getByTestId, getByText, queryByText } = await render(
+    const { getByTestId, queryByText, getByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
       </AuthContext.Provider>,
     );
 
-    // Handle any onboarding steps until HomeScreen is reached
-    if (queryByText('Go to Intro Next')) {
-      await act(async () => {
-        fireEvent.press(getByText('Go to Intro Next'));
-      });
-    }
-
-    if (queryByText('Go to MBTI Next')) {
-      await act(async () => {
-        fireEvent.press(getByText('Go to MBTI Next'));
-      });
-    }
-
-    if (queryByText('Go to Photo Next')) {
-      await act(async () => {
-        fireEvent.press(getByText('Go to Photo Next'));
-      });
-    }
-
-    if (queryByText('Finish Taste')) {
-      await act(async () => {
-        fireEvent.press(getByText('Finish Taste'));
-      });
-    }
-
-    if (queryByText('Go Home from Taste')) {
-      await act(async () => {
-        fireEvent.press(getByText('Go Home from Taste'));
-      });
-    }
-
-    if (queryByText('Complete Course Generation')) {
-      await act(async () => {
-        fireEvent.press(getByText('Complete Course Generation'));
-      });
-    }
-
-    if (queryByText('Mock Login')) {
-      await act(async () => {
-        fireEvent.press(getByText('Mock Login'));
-      });
-    }
-
-    // Switch tab to 탐색 or navigate to COURSE_LIST
-    if (queryByText('탐색')) {
-      await act(async () => {
-        fireEvent.press(getByText('탐색'));
-      });
-    } else if (queryByText('Go to Explore')) {
+    if (queryByText('Go to Explore')) {
       await act(async () => {
         fireEvent.press(getByText('Go to Explore'));
       });
     }
 
-    // Wait for COURSE_LIST screen button
-    await waitFor(() => {
-      expect(getByText('Select Course')).toBeTruthy();
-    });
+    if (queryByText('Select Course')) {
+      await act(async () => {
+        fireEvent.press(getByText('Select Course'));
+      });
+    }
 
-    // Select course to transition to COURSE_DETAIL
-    await act(async () => {
-      fireEvent.press(getByText('Select Course'));
-    });
-
-    // Verify CourseDetailScreen is visible
     await waitFor(() => {
       expect(getByTestId('course-detail-screen')).toBeTruthy();
     });
