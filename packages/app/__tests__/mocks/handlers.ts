@@ -496,7 +496,7 @@ export const handlers = [
     );
   }),
 
-  // Mock Course List GET API-FB-10
+  // Mock Course List GET API-COURSE-3
   http.get('*/api/courses', () => {
     return HttpResponse.json(
       {
@@ -505,6 +505,42 @@ export const handlers = [
         data: {
           courses: MOCK_COURSE_LIST,
         },
+      },
+      { status: 200 },
+    );
+  }),
+
+  // Mock Course Delete DELETE API-COURSE-4
+  http.delete('*/api/courses/:courseId', async ({ params }) => {
+    const { courseId } = params;
+
+    if (courseId === 'error-course-id') {
+      return HttpResponse.json(
+        {
+          status: 500,
+          message: '코스 삭제에 실패했습니다.',
+          data: null,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (courseId === 'forbidden-course-id') {
+      return HttpResponse.json(
+        {
+          status: 403,
+          message: '해당 여행 코스를 삭제할 권한이 없습니다.',
+          data: null,
+        },
+        { status: 403 },
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '여행 코스 삭제 성공',
+        data: null,
       },
       { status: 200 },
     );
