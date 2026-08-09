@@ -1,8 +1,8 @@
 /**
  * @file ProfileInputScreen.tsx
- * @description Screen component for entering and updating user profile details (nickname, avatar), matching Figma UI specifications.
+ * @description Screen component for entering and updating user profile details (nickname, avatar) matching Figma UI specifications and API-USER-1.
  */
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,17 +17,30 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context';
-import { palette, theme } from '../theme/colors';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { useUpdateUserProfileMutation } from '../hooks/queries';
 
 export interface ProfileInputScreenProps {
   onGoBack?: () => void;
   onSaveSuccess?: () => void;
 }
 
-const DEFAULT_AVATAR =
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+export const validateNickname = (nickname: string): string | null => {
+  const trimmed = nickname.trim();
+  if (!trimmed) {
+    return UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_EMPTY;
+  }
+  if (trimmed.length < 2 || trimmed.length > 10) {
+    return UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_LENGTH;
+  }
+  const validRegex = /^[a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣ\s]+$/;
+  if (!validRegex.test(trimmed)) {
+    return UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_INVALID;
+  }
+  return null;
+};
 
 export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   onGoBack,
@@ -40,41 +53,85 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   const user = auth?.user;
 
   const [displayName, setDisplayName] = useState<string>(
-    user?.displayName || '김선규',
+    user?.displayName || '',
   );
-  const email = user?.email || 'ksk85628781@gmail.com';
-  const [avatarUrl, setAvatarUrl] = useState<string>(
-    (user as any)?.photoUrl || DEFAULT_AVATAR,
+  const email = user?.email || UI_STRINGS.PROFILE_INPUT.EMAIL_PLACEHOLDER;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    (user as any)?.profileImageUrl || (user as any)?.photoUrl || null,
   );
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    if (!displayName.trim()) {
-      Alert.alert('알림', '닉네임을 입력해 주세요.');
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.displayName || '');
+      setAvatarUrl(
+        (user as any)?.profileImageUrl || (user as any)?.photoUrl || null,
+      );
+    }
+  }, [user]);
+
+  const updateProfileMutation = useUpdateUserProfileMutation();
+
+  const handleNicknameChange = (text: string) => {
+    setDisplayName(text);
+    if (text.trim()) {
+      setNicknameError(validateNickname(text));
+    } else {
+      setNicknameError(null);
+    }
+  };
+
+  const handleSave = async () => {
+    const validationError = validateNickname(displayName);
+    if (validationError) {
+      setNicknameError(validationError);
+      Alert.alert(UI_STRINGS.PROFILE_INPUT.ALERT_TITLE, validationError);
       return;
     }
+    setNicknameError(null);
 
     trackButtonClick('btn_save_profile_input', 'Save Profile Input', {
       nickname: displayName,
     });
 
-    if (onSaveSuccess) {
-      onSaveSuccess();
-    }
+    try {
+      const result = await updateProfileMutation.mutateAsync({
+        email: email || null,
+        displayName: displayName.trim() || null,
+        profileImage: avatarUrl || null,
+      });
 
-    Alert.alert(
-      UI_STRINGS.PROFILE_INPUT.SUCCESS_ALERT_TITLE,
-      UI_STRINGS.PROFILE_INPUT.SUCCESS_ALERT_MESSAGE,
-      [
-        {
-          text: UI_STRINGS.COMMON.CONFIRM,
-          onPress: () => {
-            if (onGoBack) {
-              onGoBack();
-            }
+      if (result?.data?.user && auth?.updateUser) {
+        auth.updateUser({
+          displayName: result.data.user.displayName || displayName.trim(),
+          profileImageUrl: result.data.user.profileImageUrl,
+        });
+      }
+
+      if (onSaveSuccess) {
+        onSaveSuccess();
+      }
+
+      Alert.alert(
+        UI_STRINGS.PROFILE_INPUT.SUCCESS_ALERT_TITLE,
+        UI_STRINGS.PROFILE_INPUT.SUCCESS_ALERT_MESSAGE,
+        [
+          {
+            text: UI_STRINGS.COMMON.CONFIRM,
+            onPress: () => {
+              if (onGoBack) {
+                onGoBack();
+              }
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
+    } catch (err: any) {
+      Alert.alert(
+        UI_STRINGS.PROFILE_INPUT.ERROR_TITLE,
+        err?.message || UI_STRINGS.PROFILE_INPUT.UPDATE_FAILED_MESSAGE,
+      );
+    }
   };
 
   const handleSkip = () => {
@@ -87,13 +144,13 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   const handleChangeAvatar = () => {
     trackButtonClick('btn_change_avatar', 'Change Avatar Click');
     Alert.alert(
-      '프로필 이미지',
-      '카메라 또는 갤러리에서 프로필 사진을 변경하시겠습니까?',
+      UI_STRINGS.PROFILE_INPUT.AVATAR_ALERT_TITLE,
+      UI_STRINGS.PROFILE_INPUT.AVATAR_ALERT_MESSAGE,
       [
-        { text: '취소', style: 'cancel' },
+        { text: UI_STRINGS.COMMON.CONFIRM_CANCEL, style: 'cancel' },
         {
-          text: '기본 이미지 적용',
-          onPress: () => setAvatarUrl(DEFAULT_AVATAR),
+          text: UI_STRINGS.PROFILE_INPUT.AVATAR_RESET_DEFAULT,
+          onPress: () => setAvatarUrl(null),
         },
       ],
     );
@@ -134,7 +191,14 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
               style={styles.avatarContainer}
               activeOpacity={0.85}
               onPress={handleChangeAvatar}>
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <View
+                  style={[styles.avatarImage, styles.defaultAvatarPlaceholder]}>
+                  <Ionicons name='person' size={44} color={palette.gray400} />
+                </View>
+              )}
               <View style={styles.cameraBadge}>
                 <Ionicons name='camera' size={14} color={palette.white} />
               </View>
@@ -148,17 +212,26 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
               <Text style={styles.fieldLabel}>
                 {UI_STRINGS.PROFILE_INPUT.NICKNAME_LABEL}
               </Text>
-              <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  nicknameError ? styles.inputErrorBorder : null,
+                ]}>
                 <TextInput
                   testID='input-profile-nickname'
                   style={styles.textInput}
                   value={displayName}
-                  onChangeText={setDisplayName}
+                  onChangeText={handleNicknameChange}
                   placeholder={UI_STRINGS.PROFILE_INPUT.NICKNAME_PLACEHOLDER}
                   placeholderTextColor={palette.gray400}
-                  maxLength={20}
+                  maxLength={10}
                 />
               </View>
+              {nicknameError ? (
+                <Text testID='nickname-error-text' style={styles.errorText}>
+                  {nicknameError}
+                </Text>
+              ) : null}
             </View>
 
             {/* Email Field */}
@@ -186,7 +259,8 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
             testID='btn-save-profile-input'
             style={styles.primaryButton}
             activeOpacity={0.85}
-            onPress={handleSave}>
+            onPress={handleSave}
+            disabled={updateProfileMutation.isPending}>
             <Text style={styles.primaryButtonText}>
               {UI_STRINGS.PROFILE_INPUT.SAVE_BUTTON}
             </Text>
@@ -210,7 +284,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.softMint, // #F5FAF8
+    backgroundColor: palette.softMint,
   },
   auraGlow: {
     position: 'absolute',
@@ -219,7 +293,7 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: 'rgba(224, 247, 241, 0.65)',
+    backgroundColor: hexToRgba(palette.lightTeal, 0.65),
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -241,7 +315,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   formWrapper: {
     gap: 32,
@@ -266,6 +340,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: palette.white,
   },
+  defaultAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.gray100,
+    borderColor: palette.gray200,
+  },
   cameraBadge: {
     position: 'absolute',
     bottom: 2,
@@ -273,7 +353,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: palette.accent, // #00C9A7
+    backgroundColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -311,8 +391,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  inputErrorBorder: {
+    borderColor: palette.red500,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: palette.red500,
+    marginTop: 2,
+  },
   inputDisabled: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.gray100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -337,7 +426,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 54,
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -353,12 +442,16 @@ const styles = StyleSheet.create({
     color: palette.white,
   },
   secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    width: '100%',
+    height: 54,
+    backgroundColor: palette.transparent,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: palette.mutedText,
+    fontSize: 15,
+    fontWeight: '600',
+    color: palette.subText,
   },
 });
