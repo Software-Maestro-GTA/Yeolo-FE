@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { palette } from '../../theme/colors';
+import { palette, hexToRgba } from '../../theme/colors';
+import { getDestinationImageUrl } from '../../services';
 
 export interface CourseDetailHeaderProps {
   destinationCountry: string;
@@ -27,39 +28,39 @@ export interface CourseDetailHeaderProps {
   onShare?: () => void;
 }
 
-const DEFAULT_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
-
 export const CourseDetailHeader: React.FC<CourseDetailHeaderProps> = ({
   destinationCountry,
   destinationCity,
   startDate,
   title,
-  heroImageUrl = DEFAULT_HERO_IMAGE,
+  heroImageUrl,
   onBack,
   onShare,
 }) => {
+  const activeHeroImageUrl =
+    heroImageUrl || getDestinationImageUrl(destinationCountry, destinationCity);
+
   return (
     <View style={styles.heroSection} testID='course-detail-header'>
       <StatusBar
         barStyle='dark-content'
-        backgroundColor='transparent'
+        backgroundColor={palette.transparent}
         translucent
       />
       {/* Background Image Container spanning into status bar */}
       <ImageBackground
-        source={{ uri: heroImageUrl }}
+        source={{ uri: activeHeroImageUrl }}
         style={styles.heroImageBackground}
         resizeMode='cover'>
         {/* Gradient Overlay */}
         <LinearGradient
           colors={[
-            'rgba(13, 33, 55, 0.7)',
-            'rgba(13, 33, 55, 0.3)',
-            'transparent',
-            'rgba(245, 250, 248, 0.95)',
+            hexToRgba(palette.deepNavy, 0.6),
+            hexToRgba(palette.deepNavy, 0.15),
+            hexToRgba(palette.softMint, 0.65),
+            hexToRgba(palette.softMint, 0.98),
           ]}
-          locations={[0, 0.35, 0.7, 1]}
+          locations={[0.5, 0.1, 0.9, 1]}
           style={styles.gradientOverlay}
         />
 
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
   heroSection: {
     width: '100%',
     height: 300,
-    backgroundColor: '#C4DFD8',
+    backgroundColor: palette.lightTeal,
     marginBottom: 4,
   },
   heroImageBackground: {
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: hexToRgba(palette.white, 0.85),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: palette.deepNavy,
@@ -143,12 +144,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
     lineHeight: 32,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: palette.subText, // #45464C / #59616B
+    color: palette.subText,
     fontWeight: '400',
     lineHeight: 20,
   },
