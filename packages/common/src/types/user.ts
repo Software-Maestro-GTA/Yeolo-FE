@@ -1,7 +1,31 @@
 /**
  * @file user.ts
- * @description Shared user preference and profile types across Web and Mobile.
+ * @description Shared user preference and profile types across Web and Mobile matching API-USER-1 spec.
  */
+
+export interface UpdateUserProfilePayload {
+  email: string | null;
+  displayName: string | null;
+  profileImage: string | File | null;
+}
+
+export interface UserProfileData {
+  userId: string;
+  provider: string;
+  email: string | null;
+  displayName: string | null;
+  profileImageUrl: string | null;
+  status: string;
+  lastLoginAt: string;
+}
+
+export interface UpdateUserProfileResponse {
+  status: number;
+  message: string;
+  data: {
+    user: UserProfileData;
+  };
+}
 
 export interface UpdatePreferencesPayload {
   mbti: string;
