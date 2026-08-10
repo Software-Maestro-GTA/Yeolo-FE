@@ -9,3 +9,4 @@ export * from './useTasteProfileQuery';
 export * from './useAuthMutations';
 export * from './useCourseMutations';
 export * from './useUserProfileMutation';
+export * from './useShareMutations';
