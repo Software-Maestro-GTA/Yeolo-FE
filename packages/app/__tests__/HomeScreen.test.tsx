@@ -148,4 +148,35 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
     fireEvent.press(getByTestId('recent-course-card'));
     expect(mockOnSelectCourse).toHaveBeenCalledWith('mock-course-id-1');
   });
+
+  it('여행 예약 파트너스 타일(항공, 숙소, 기차, 투어·티켓) 클릭 시 각각의 Trip.com 파트너스 URL로 Linking.openURL이 구동되어야 한다', async () => {
+    const { Linking } = require('react-native');
+    const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
+    const { getByTestId } = await render(<HomeScreen />);
+
+    // 1. 항공
+    fireEvent.press(getByTestId('booking-tile-flight'));
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/flights/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+    );
+
+    // 2. 숙소
+    fireEvent.press(getByTestId('booking-tile-hotel'));
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/hotels/w/home?Allianceid=9936872&SID=327895947',
+    );
+
+    // 3. 기차
+    fireEvent.press(getByTestId('booking-tile-train'));
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/trains/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+    );
+
+    // 4. 투어·티켓
+    fireEvent.press(getByTestId('booking-tile-ticket'));
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/things-to-do/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+    );
+  });
 });

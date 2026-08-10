@@ -15,7 +15,9 @@ import {
   Alert,
   Platform,
   ToastAndroid,
+  Linking,
 } from 'react-native';
+
 import Clipboard from '@react-native-clipboard/clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ItineraryStop } from '@yeolo/common';
@@ -96,6 +98,30 @@ export function CourseDetailScreen({
         );
       },
     });
+  };
+
+  const handleOpenTripFlight = async () => {
+    trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner');
+    try {
+      await Linking.openURL(APP_CONFIG.TRIP_FLIGHT_URL);
+    } catch (_err) {
+      Alert.alert(
+        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
+        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
+      );
+    }
+  };
+
+  const handleOpenTripHotel = async () => {
+    trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner');
+    try {
+      await Linking.openURL(APP_CONFIG.TRIP_HOTEL_URL);
+    } catch (_err) {
+      Alert.alert(
+        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
+        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
+      );
+    }
   };
 
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -235,11 +261,10 @@ export function CourseDetailScreen({
 
           {/* Flight Booking Banner */}
           <TouchableOpacity
+            testID='btn-flight-cta'
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={() =>
-              trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner')
-            }>
+            onPress={handleOpenTripFlight}>
             <ImageBackground
               source={ctaFlightBg}
               style={styles.bannerImageBg}
@@ -291,11 +316,10 @@ export function CourseDetailScreen({
 
           {/* Hotel Booking Banner */}
           <TouchableOpacity
+            testID='btn-hotel-cta'
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={() =>
-              trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner')
-            }>
+            onPress={handleOpenTripHotel}>
             <ImageBackground
               source={ctaHotelBg}
               style={styles.bannerImageBg}
