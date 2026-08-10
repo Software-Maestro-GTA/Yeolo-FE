@@ -4,3 +4,4 @@ export * from './course';
 export * from './user';
 export * from './location';
 export * from './place';
+export * from './share';
