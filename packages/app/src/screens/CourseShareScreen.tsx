@@ -1,8 +1,8 @@
 /**
  * @file CourseShareScreen.tsx
- * @description Screen component for viewing shared travel itineraries, supporting authenticated course saving and guest login prompt bottom sheet.
+ * @description Screen component for viewing shared travel itineraries, supporting authenticated course saving and guest login prompt bottom sheet (API-SHARE-2, API-SHARE-3).
  */
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,41 +11,37 @@ import {
   Image,
   Alert,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context';
-import { palette } from '../theme/colors';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import {
+  useShareLinkDetailQuery,
+  useAcceptShareLinkMutation,
+} from '../hooks/queries';
+import {
+  getDestinationImageUrl,
+  signInWithGoogle,
+  signInWithApple,
+  isAppleAuthAvailable,
+} from '../services';
+import { showAuthErrorAlert } from '../utils/errorUtils';
 
 export interface CourseShareScreenProps {
+  shareToken?: string;
   courseId?: string;
-  inviterName?: string;
-  inviterAvatar?: string;
-  destination?: string;
-  startDate?: string;
-  duration?: string;
-  courseTitle?: string;
-  coverImage?: string;
-  onSaveSuccess?: () => void;
+  onSaveSuccess?: (acceptedCourseId?: string) => void;
   onDecline?: () => void;
   onNavigateToLogin?: () => void;
 }
 
-const DEFAULT_INVITER_AVATAR =
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
-const DEFAULT_COVER_IMAGE =
-  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80';
-
 export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
-  inviterName = '김선규',
-  inviterAvatar = DEFAULT_INVITER_AVATAR,
-  destination = '대한민국 · 서울',
-  startDate = '2026-08-19',
-  duration = '3일',
-  courseTitle = '예술과 야경을 즐기는 여정',
-  coverImage = DEFAULT_COVER_IMAGE,
+  shareToken,
+  courseId,
   onSaveSuccess,
   onDecline,
   onNavigateToLogin,
@@ -56,15 +52,113 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   const auth = useContext(AuthContext);
   const isAuthenticated = auth?.isAuthenticated;
 
+  const [isLocalLoggingIn, setIsLocalLoggingIn] = useState<boolean>(false);
+  const isLoggingIn = auth?.isLoading || isLocalLoggingIn;
+
+  const [isAppleAvailable, setIsAppleAvailable] = useState<boolean>(
+    Platform.OS === 'ios',
+  );
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      isAppleAuthAvailable()
+        .then(setIsAppleAvailable)
+        .catch(() => setIsAppleAvailable(false));
+    }
+  }, []);
+
+  const {
+    data: shareData,
+    isLoading: isLoadingShare,
+    error: shareError,
+  } = useShareLinkDetailQuery({
+    shareToken,
+  });
+
+  useEffect(() => {
+    if (shareError) {
+      Alert.alert(
+        UI_STRINGS.COURSE_SHARE.ERROR_TITLE,
+        UI_STRINGS.COURSE_SHARE.INVALID_LINK_MESSAGE,
+        [
+          {
+            text: UI_STRINGS.COMMON.CONFIRM,
+            onPress: () => {
+              if (isAuthenticated) {
+                onDecline?.();
+              } else {
+                onNavigateToLogin?.();
+              }
+            },
+          },
+        ],
+      );
+    }
+  }, [shareError, isAuthenticated, onDecline, onNavigateToLogin]);
+
+  const acceptShareLinkMutation = useAcceptShareLinkMutation();
+
+  const inviter = shareData?.inviter;
+  const course = shareData?.course;
+
+  const activeInviterName = inviter?.displayName || '';
+  const activeInviterAvatar = inviter?.profileImageUrl || null;
+  const activeCourseTitle = course?.title || '';
+  const activeDestination = course
+    ? [course.destinationCountry, course.destinationCity]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+  const activeStartDate = course?.startDate || '';
+  const activeDuration = course?.totalDays ? `${course.totalDays}일` : '';
+
+  const coverImage = getDestinationImageUrl(
+    course?.destinationCountry || '',
+    course?.destinationCity || '',
+  );
+
   const handleSaveCourse = () => {
     trackButtonClick('btn_save_shared_course', 'Save Shared Course Click');
-    if (onSaveSuccess) {
-      onSaveSuccess();
+
+    if (shareToken) {
+      acceptShareLinkMutation.mutate(shareToken, {
+        onSuccess: (res) => {
+          Alert.alert(
+            UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
+            UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
+          );
+          onSaveSuccess?.(res.courseId || courseId);
+        },
+        onError: (err: any) => {
+          if (err?.status === 400) {
+            Alert.alert(
+              UI_STRINGS.COURSE_SHARE.ALREADY_SAVED_TITLE,
+              UI_STRINGS.COURSE_SHARE.ALREADY_SAVED_MESSAGE,
+              [
+                {
+                  text: UI_STRINGS.COMMON.CONFIRM,
+                  onPress: () => onSaveSuccess?.(courseId),
+                },
+              ],
+            );
+          } else {
+            Alert.alert(
+              UI_STRINGS.COURSE_SHARE.SAVE_FAILED_TITLE,
+              err?.message ||
+                UI_STRINGS.COURSE_SHARE.SAVE_FAILED_DEFAULT_MESSAGE,
+            );
+          }
+        },
+      });
+    } else {
+      if (onSaveSuccess) {
+        onSaveSuccess(courseId);
+      }
+      Alert.alert(
+        UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
+        UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
+      );
     }
-    Alert.alert(
-      UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
-      UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
-    );
   };
 
   const handleDecline = () => {
@@ -77,15 +171,53 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
     }
   };
 
-  const handleSocialLogin = (provider: 'google' | 'apple') => {
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
     trackButtonClick(
       `btn_share_login_${provider}`,
       `Share Login ${provider} Click`,
     );
-    if (onNavigateToLogin) {
-      onNavigateToLogin();
+    if (isLoggingIn) return;
+    setIsLocalLoggingIn(true);
+
+    try {
+      if (provider === 'google') {
+        const code = await signInWithGoogle();
+        if (auth?.loginWithGoogle) {
+          await auth.loginWithGoogle(code);
+        }
+      } else {
+        const { code, idToken } = await signInWithApple();
+        if (auth?.loginWithApple) {
+          await auth.loginWithApple({ code, idToken });
+        }
+      }
+    } catch (err: any) {
+      if (
+        err?.code === 'ERR_REQUEST_CANCELED' ||
+        err?.code === 'SIGN_IN_CANCELLED'
+      ) {
+        return;
+      }
+      showAuthErrorAlert(
+        err,
+        provider === 'google'
+          ? UI_STRINGS.AUTH.GOOGLE_LOGIN_FAIL_DEFAULT
+          : UI_STRINGS.AUTH.APPLE_LOGIN_FAIL_DEFAULT,
+      );
+    } finally {
+      setIsLocalLoggingIn(false);
     }
   };
+
+  if (isLoadingShare) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContainer]}>
+        <Text style={styles.loadingText}>
+          {UI_STRINGS.COURSE_SHARE.LOADING_TEXT}
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -109,12 +241,22 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
 
           {/* Inviter Card */}
           <View style={styles.inviterCard} testID='inviter-card'>
-            <Image
-              source={{ uri: inviterAvatar }}
-              style={styles.inviterAvatar}
-            />
+            {activeInviterAvatar ? (
+              <Image
+                source={{ uri: activeInviterAvatar }}
+                style={styles.inviterAvatar}
+              />
+            ) : (
+              <View
+                style={[styles.inviterAvatar, styles.defaultAvatarPlaceholder]}
+                testID='default-avatar-placeholder'>
+                <Ionicons name='person' size={32} color={palette.gray400} />
+              </View>
+            )}
             <Text style={styles.inviterText} numberOfLines={1}>
-              {`${inviterName}${UI_STRINGS.COURSE_SHARE.INVITER_SHARED_SUFFIX}`}
+              {activeInviterName
+                ? `${activeInviterName}${UI_STRINGS.COURSE_SHARE.INVITER_SHARED_SUFFIX}`
+                : UI_STRINGS.COURSE_SHARE.DEFAULT_INVITER_SHARED}
             </Text>
           </View>
 
@@ -122,20 +264,31 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
           <View style={styles.courseCard} testID='course-card'>
             <Image source={{ uri: coverImage }} style={styles.coverImage} />
             <View style={styles.cardBody}>
-              <Text style={styles.courseTitleText} numberOfLines={1}>
-                {courseTitle}
-              </Text>
-              <Text style={styles.metaLocationText}>{destination}</Text>
-              <View style={styles.cardDivider} />
-              <View style={styles.dateRow}>
-                <Ionicons
-                  name='calendar-outline'
-                  size={14}
-                  color={palette.subText}
-                />
-                <Text
-                  style={styles.dateText}>{`${startDate} · ${duration}`}</Text>
-              </View>
+              {activeCourseTitle ? (
+                <Text style={styles.courseTitleText} numberOfLines={1}>
+                  {activeCourseTitle}
+                </Text>
+              ) : null}
+              {activeDestination ? (
+                <Text style={styles.metaLocationText}>{activeDestination}</Text>
+              ) : null}
+              {(activeStartDate || activeDuration) && (
+                <>
+                  <View style={styles.cardDivider} />
+                  <View style={styles.dateRow}>
+                    <Ionicons
+                      name='calendar-outline'
+                      size={14}
+                      color={palette.subText}
+                    />
+                    <Text style={styles.dateText}>
+                      {[activeStartDate, activeDuration]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -191,13 +344,14 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
               {/* Google Login Button */}
               <TouchableOpacity
                 testID='btn-google-login'
-                style={styles.googleBtn}
+                style={[styles.googleBtn, isLoggingIn && styles.disabledButton]}
                 activeOpacity={0.85}
+                disabled={isLoggingIn}
                 onPress={() => handleSocialLogin('google')}>
                 <Ionicons
                   name='logo-google'
                   size={18}
-                  color='#4285F4'
+                  color={palette.googleBlue}
                   style={styles.socialIcon}
                 />
                 <Text style={styles.googleBtnText}>
@@ -206,21 +360,27 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
               </TouchableOpacity>
 
               {/* Apple Login Button */}
-              <TouchableOpacity
-                testID='btn-apple-login'
-                style={styles.appleBtn}
-                activeOpacity={0.85}
-                onPress={() => handleSocialLogin('apple')}>
-                <Ionicons
-                  name='logo-apple'
-                  size={20}
-                  color={palette.white}
-                  style={styles.socialIcon}
-                />
-                <Text style={styles.appleBtnText}>
-                  {UI_STRINGS.COURSE_SHARE.APPLE_LOGIN_BUTTON}
-                </Text>
-              </TouchableOpacity>
+              {isAppleAvailable && (
+                <TouchableOpacity
+                  testID='btn-apple-login'
+                  style={[
+                    styles.appleBtn,
+                    isLoggingIn && styles.disabledButton,
+                  ]}
+                  activeOpacity={0.85}
+                  disabled={isLoggingIn}
+                  onPress={() => handleSocialLogin('apple')}>
+                  <Ionicons
+                    name='logo-apple'
+                    size={20}
+                    color={palette.white}
+                    style={styles.socialIcon}
+                  />
+                  <Text style={styles.appleBtnText}>
+                    {UI_STRINGS.COURSE_SHARE.APPLE_LOGIN_BUTTON}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </>
@@ -232,7 +392,16 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.softMint, // #F5FAF8
+    backgroundColor: palette.softMint,
+  },
+  centerContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: palette.subText,
   },
   bgGlow: {
     position: 'absolute',
@@ -241,7 +410,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: 'rgba(224, 247, 241, 0.7)',
+    backgroundColor: hexToRgba(palette.lightTeal, 0.7),
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -260,7 +429,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   inviterCard: {
     flexDirection: 'row',
@@ -282,6 +451,10 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: palette.lightTeal,
+  },
+  defaultAvatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   inviterText: {
     fontSize: 14,
@@ -343,7 +516,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 54,
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.primary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -367,11 +540,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: palette.mutedText,
   },
-
-  /* Guest Login Bottom Sheet Styles */
   dimOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(13, 33, 55, 0.55)',
+    backgroundColor: hexToRgba(palette.deepNavy, 0.55),
   },
   bottomSheet: {
     position: 'absolute',
@@ -460,5 +631,8 @@ const styles = StyleSheet.create({
   },
   socialIcon: {
     marginRight: 4,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
