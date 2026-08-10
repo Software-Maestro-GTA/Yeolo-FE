@@ -14,6 +14,15 @@ export const APP_CONFIG = {
   ANALYSIS_PHOTO_LIMIT: 100,
   /** Default staleTime for TanStack Query (5 minutes) */
   QUERY_STALE_TIME: 5 * 60 * 1000,
+  /** Trip.com Affiliate booking URLs */
+  TRIP_HOTEL_URL:
+    'https://kr.trip.com/hotels/w/home?Allianceid=9936872&SID=327895947',
+  TRIP_FLIGHT_URL:
+    'https://kr.trip.com/flights/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+  TRIP_TRAIN_URL:
+    'https://kr.trip.com/trains/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+  TRIP_TICKET_URL:
+    'https://kr.trip.com/things-to-do/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
   /** Default fallback map region (Seoul City Hall) for in-app mini map view */
   DEFAULT_MAP_REGION: {
     latitude: 37.5665,
@@ -22,6 +31,11 @@ export const APP_CONFIG = {
     longitudeDelta: 0.0421,
   },
 } as const;
+
+export const TRIP_HOTEL_URL = APP_CONFIG.TRIP_HOTEL_URL;
+export const TRIP_FLIGHT_URL = APP_CONFIG.TRIP_FLIGHT_URL;
+export const TRIP_TRAIN_URL = APP_CONFIG.TRIP_TRAIN_URL;
+export const TRIP_TICKET_URL = APP_CONFIG.TRIP_TICKET_URL;
 
 export const ANALYSIS_PHOTO_LIMIT = APP_CONFIG.ANALYSIS_PHOTO_LIMIT;
 export const DEFAULT_MAP_REGION = APP_CONFIG.DEFAULT_MAP_REGION;
