@@ -395,4 +395,82 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
 
     Platform.OS = originalOS;
   });
+
+  it('Trip.com 항공권 예약 CTA 클릭 시 Linking.openURL이 TRIP_FLIGHT_URL로 올바르게 구동되어야 한다', async () => {
+    const { Linking } = require('react-native');
+    const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const flightCta = getByTestId('btn-flight-cta');
+    fireEvent.press(flightCta);
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/flights/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+    );
+  });
+
+  it('Trip.com 숙소 예약 CTA 클릭 시 Linking.openURL이 TRIP_HOTEL_URL로 올바르게 구동되어야 한다', async () => {
+    const { Linking } = require('react-native');
+    const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const hotelCta = getByTestId('btn-hotel-cta');
+    fireEvent.press(hotelCta);
+
+    expect(openURLSpy).toHaveBeenCalledWith(
+      'https://kr.trip.com/hotels/w/home?Allianceid=9936872&SID=327895947',
+    );
+  });
+
+  it('Linking.openURL 호출 실패 시 사용자 안내 알림 메시지가 출력되어야 한다', async () => {
+    const { Linking, Alert } = require('react-native');
+    jest
+      .spyOn(Linking, 'openURL')
+      .mockRejectedValue(new Error('Cannot open URL'));
+    const alertSpy = jest.spyOn(Alert, 'alert');
+
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const hotelCta = getByTestId('btn-hotel-cta');
+    await act(async () => {
+      fireEvent.press(hotelCta);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      '오류',
+      '예약 페이지를 열 수 없습니다. 잠시 후 다시 시도해주세요.',
+    );
+  });
 });
