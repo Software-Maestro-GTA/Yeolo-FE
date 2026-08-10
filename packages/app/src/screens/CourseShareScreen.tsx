@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context';
-import { palette } from '../theme/colors';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import {
@@ -78,11 +78,11 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   useEffect(() => {
     if (shareError) {
       Alert.alert(
-        '공유 링크 오류',
-        '만료되었거나 유효하지 않은 공유 링크입니다.',
+        UI_STRINGS.COURSE_SHARE.ERROR_TITLE,
+        UI_STRINGS.COURSE_SHARE.INVALID_LINK_MESSAGE,
         [
           {
-            text: '확인',
+            text: UI_STRINGS.COMMON.CONFIRM,
             onPress: () => {
               if (isAuthenticated) {
                 onDecline?.();
@@ -131,16 +131,21 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
         },
         onError: (err: any) => {
           if (err?.status === 400) {
-            Alert.alert('안내', '이미 저장된 코스입니다.', [
-              {
-                text: '확인',
-                onPress: () => onSaveSuccess?.(courseId),
-              },
-            ]);
+            Alert.alert(
+              UI_STRINGS.COURSE_SHARE.ALREADY_SAVED_TITLE,
+              UI_STRINGS.COURSE_SHARE.ALREADY_SAVED_MESSAGE,
+              [
+                {
+                  text: UI_STRINGS.COMMON.CONFIRM,
+                  onPress: () => onSaveSuccess?.(courseId),
+                },
+              ],
+            );
           } else {
             Alert.alert(
-              '저장 실패',
-              err?.message || '코스 저장에 실패했습니다.',
+              UI_STRINGS.COURSE_SHARE.SAVE_FAILED_TITLE,
+              err?.message ||
+                UI_STRINGS.COURSE_SHARE.SAVE_FAILED_DEFAULT_MESSAGE,
             );
           }
         },
@@ -207,7 +212,9 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   if (isLoadingShare) {
     return (
       <SafeAreaView style={[styles.container, styles.centerContainer]}>
-        <Text style={styles.loadingText}>공유된 코스를 불러오는 중...</Text>
+        <Text style={styles.loadingText}>
+          {UI_STRINGS.COURSE_SHARE.LOADING_TEXT}
+        </Text>
       </SafeAreaView>
     );
   }
@@ -249,7 +256,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
             <Text style={styles.inviterText} numberOfLines={1}>
               {activeInviterName
                 ? `${activeInviterName}${UI_STRINGS.COURSE_SHARE.INVITER_SHARED_SUFFIX}`
-                : '여행 코스를 공유했습니다'}
+                : UI_STRINGS.COURSE_SHARE.DEFAULT_INVITER_SHARED}
             </Text>
           </View>
 
@@ -344,7 +351,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
                 <Ionicons
                   name='logo-google'
                   size={18}
-                  color='#4285F4'
+                  color={palette.googleBlue}
                   style={styles.socialIcon}
                 />
                 <Text style={styles.googleBtnText}>
@@ -403,7 +410,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: 'rgba(224, 247, 241, 0.7)',
+    backgroundColor: hexToRgba(palette.lightTeal, 0.7),
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -535,7 +542,7 @@ const styles = StyleSheet.create({
   },
   dimOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(13, 33, 55, 0.55)',
+    backgroundColor: hexToRgba(palette.deepNavy, 0.55),
   },
   bottomSheet: {
     position: 'absolute',

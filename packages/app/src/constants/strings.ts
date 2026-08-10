@@ -294,6 +294,7 @@ export const UI_STRINGS = {
   COURSE_SHARE: {
     HEADER_TITLE: '공유된 여행 코스',
     INVITER_SHARED_SUFFIX: '님이 여행 코스를 공유했습니다',
+    DEFAULT_INVITER_SHARED: '여행 코스를 공유했습니다',
     SAVE_BUTTON: '코스 저장하기',
     DECLINE_BUTTON: '거절하기',
     LOGIN_REQUIRED_TITLE: '로그인이 필요합니다',
@@ -302,6 +303,13 @@ export const UI_STRINGS = {
     APPLE_LOGIN_BUTTON: 'Apple 계정으로 계속하기',
     SAVE_SUCCESS_TITLE: '코스 저장 완료',
     SAVE_SUCCESS_MESSAGE: '공유된 코스가 내 여정에 저장되었습니다.',
+    ERROR_TITLE: '공유 링크 오류',
+    INVALID_LINK_MESSAGE: '만료되었거나 유효하지 않은 공유 링크입니다.',
+    ALREADY_SAVED_TITLE: '안내',
+    ALREADY_SAVED_MESSAGE: '이미 저장된 코스입니다.',
+    SAVE_FAILED_TITLE: '저장 실패',
+    SAVE_FAILED_DEFAULT_MESSAGE: '코스 저장에 실패했습니다.',
+    LOADING_TEXT: '공유된 코스를 불러오는 중...',
   },
   COMPONENTS: {
     CALENDAR_YEAR_SUFFIX: '년',
