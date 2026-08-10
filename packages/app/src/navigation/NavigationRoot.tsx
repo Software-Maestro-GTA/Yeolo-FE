@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { BackHandler, ToastAndroid, Platform } from 'react-native';
+import { BackHandler, ToastAndroid, Platform, Linking } from 'react-native';
 import type { ItineraryStop } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
@@ -30,17 +30,27 @@ const NON_HISTORY_STEPS: NavStep[] = [
 
 const MAX_HISTORY_LENGTH = 10;
 
-export function NavigationRoot() {
+export interface NavigationRootProps {
+  initialStep?: NavStep;
+  initialShareToken?: string;
+}
+
+export function NavigationRoot({
+  initialStep,
+  initialShareToken = '',
+}: NavigationRootProps = {}) {
   const auth = useContext(AuthContext);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<
     string | undefined
   >();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [selectedShareToken, setSelectedShareToken] =
+    useState<string>(initialShareToken);
   const [selectedPlaceStop, setSelectedPlaceStop] = useState<
     ItineraryStop | undefined
   >();
   const [history, setHistory] = useState<NavStep[]>([]);
-  const [step, setStep] = useState<NavStep | null>(null);
+  const [step, setStep] = useState<NavStep | null>(initialStep || null);
   const lastBackPressRef = useRef<number>(0);
 
   const navigateTo = (nextStep: NavStep) => {
@@ -53,16 +63,37 @@ export function NavigationRoot() {
   };
 
   useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (!url) return;
+      const match = /share-links\/([a-zA-Z0-9_-]+)/.exec(url);
+      if (match && match[1]) {
+        setSelectedShareToken(match[1]);
+        navigateTo(NAV_STEPS.COURSE_SHARE);
+      }
+    };
+
+    Linking.getInitialURL()
+      .then(handleUrl)
+      .catch(() => {});
+    const subscription = Linking.addEventListener('url', (event) =>
+      handleUrl(event.url),
+    );
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     if (!auth?.isLoading) {
-      if (auth?.isAuthenticated) {
-        setStep((prev) =>
-          prev === null || prev === NAV_STEPS.LOGIN ? NAV_STEPS.HOME : prev,
-        );
-      } else {
-        setStep(NAV_STEPS.LOGIN);
+      if (step === null) {
+        if (auth?.isAuthenticated) {
+          setStep(selectedShareToken ? NAV_STEPS.COURSE_SHARE : NAV_STEPS.HOME);
+        } else {
+          setStep(
+            selectedShareToken ? NAV_STEPS.COURSE_SHARE : NAV_STEPS.LOGIN,
+          );
+        }
       }
     }
-  }, [auth?.isAuthenticated, auth?.isLoading]);
+  }, [auth?.isAuthenticated, auth?.isLoading, selectedShareToken, step]);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -241,12 +272,19 @@ export function NavigationRoot() {
     case NAV_STEPS.COURSE_SHARE:
       return (
         <CourseShareScreen
+          shareToken={selectedShareToken}
           courseId={selectedCourseId}
-          onSaveSuccess={() => navigateTo(NAV_STEPS.COURSE_DETAIL)}
-          onDecline={() => navigateTo(NAV_STEPS.COURSE_LIST)}
+          onSaveSuccess={(acceptedCourseId) => {
+            if (acceptedCourseId) {
+              setSelectedCourseId(acceptedCourseId);
+            }
+            navigateTo(NAV_STEPS.COURSE_DETAIL);
+          }}
+          onDecline={() => navigateTo(NAV_STEPS.HOME)}
           onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
         />
       );
+
     case NAV_STEPS.PLACE_DETAIL:
       return (
         <MainLayout

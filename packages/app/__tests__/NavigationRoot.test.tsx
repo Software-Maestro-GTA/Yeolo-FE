@@ -72,6 +72,8 @@ jest.mock('../src/screens', () => {
   };
 });
 
+import { NAV_STEPS } from '../src/constants';
+
 describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navigation', () => {
   const mockAuthContext = {
     isAuthenticated: true,

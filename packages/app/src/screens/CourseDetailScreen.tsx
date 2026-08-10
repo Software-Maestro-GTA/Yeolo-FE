@@ -11,16 +11,24 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ImageBackground,
+  Share,
+  Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ItineraryStop } from '@yeolo/common';
+import { type ItineraryStop } from '@yeolo/common';
 import {
   CourseDetailHeader,
   CourseMiniMapView,
   CourseDayTabs,
   ItineraryTimelineItem,
 } from '../components/course';
-import { useCourseDetailQuery } from '../hooks/queries';
+import {
+  useCourseDetailQuery,
+  useCreateShareLinkMutation,
+} from '../hooks/queries';
 import { processCourseStopsMapData, ProcessedCourseMapData } from '../services';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
@@ -50,6 +58,45 @@ export function CourseDetailScreen({
   } = useCourseDetailQuery({
     courseId,
   });
+
+  const createShareLinkMutation = useCreateShareLinkMutation();
+
+  const handleShareCourse = () => {
+    trackButtonClick('btn_course_detail_share', 'Share Course Click');
+    if (!courseId) return;
+
+    createShareLinkMutation.mutate(courseId, {
+      onSuccess: async (shareData) => {
+        const shareMessage = `[여로] ${course?.title || '여행 코스'} 여행 일정을 공유합니다!`;
+
+        try {
+          await Share.share({
+            message: shareMessage,
+            url: shareData.shareUrl,
+          });
+        } catch (shareError) {
+          Clipboard.setString(shareData.shareUrl);
+          if (Platform.OS === 'android') {
+            ToastAndroid.show(
+              '공유 링크가 클립보드에 복사되었습니다.',
+              ToastAndroid.SHORT,
+            );
+          } else {
+            Alert.alert(
+              '공유 링크 복사 완료',
+              '공유 링크가 클립보드에 복사되었습니다.',
+            );
+          }
+        }
+      },
+      onError: (err: any) => {
+        Alert.alert(
+          '공유 실패',
+          err?.message || '공유 링크를 생성하지 못했습니다.',
+        );
+      },
+    });
+  };
 
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
@@ -158,9 +205,7 @@ export function CourseDetailScreen({
             trackButtonClick('btn_course_detail_back', 'Back Button Click');
             onBack?.();
           }}
-          onShare={() =>
-            trackButtonClick('btn_course_detail_share', 'Share Course Click')
-          }
+          onShare={handleShareCourse}
         />
 
         {/* Main Content Body */}

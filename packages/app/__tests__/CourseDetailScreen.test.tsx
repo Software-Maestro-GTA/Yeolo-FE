@@ -1,14 +1,20 @@
 /**
  * @file CourseDetailScreen.test.tsx
- * @description Unit and integration tests for CourseDetailScreen & CourseTimeline (FUN-3, REQ-9).
+ * @description Unit and integration tests for CourseDetailScreen & CourseTimeline (FUN-3, REQ-9, API-SHARE-1).
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { Share, Alert } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { CourseDetailScreen } from '../src/screens/CourseDetailScreen';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  setString: jest.fn(),
+  getString: jest.fn().mockResolvedValue(''),
+}));
 
 jest.mock('../src/components/navigation/BottomNavBar', () => ({
   BottomNavBar: () => null,
@@ -123,7 +129,7 @@ const mockCourseDetail: commonApi.CourseDetail = {
   },
 };
 
-describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 표시)', () => {
+describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 표시 & API-SHARE-1)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.setItem('accessToken', 'mock-token');
@@ -290,5 +296,103 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     fireEvent.press(backButton);
 
     expect(handleBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('헤더의 공유 버튼(btn-share) 클릭 시 createShareLinkApi (API-SHARE-1)가 호출되고 Share.share가 구동되어야 한다', async () => {
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const shareApiSpy = jest
+      .spyOn(commonApi, 'createShareLinkApi')
+      .mockResolvedValue({
+        shareUrl: 'https://yeolo.app/share-links/token-123',
+        shareToken: 'token-123',
+        expiresAt: '2026-08-17T10:00:00.000Z',
+      });
+
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({
+      action: Share.sharedAction,
+    });
+
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const shareButton = getByTestId('btn-share');
+    await act(async () => {
+      fireEvent.press(shareButton);
+    });
+
+    expect(shareApiSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      'mock-token',
+      'test-course-id-123',
+    );
+
+    expect(shareSpy).toHaveBeenCalledWith({
+      message: '[여로] 2박 3일 서귀포 감성 힐링 코스 여행 일정을 공유합니다!',
+      url: 'https://yeolo.app/share-links/token-123',
+    });
+  });
+
+  it('Share.share 실패 시 iOS에서는 Alert, Android에서는 ToastAndroid로 클립보드 복사 완료 알림이 호출되어야 한다', async () => {
+    const { Platform, ToastAndroid } = require('react-native');
+    const originalOS = Platform.OS;
+
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    jest.spyOn(commonApi, 'createShareLinkApi').mockResolvedValue({
+      shareUrl: 'https://yeolo.app/share-links/token-123',
+      shareToken: 'token-123',
+      expiresAt: null,
+    });
+
+    jest.spyOn(Share, 'share').mockRejectedValue(new Error('Share failed'));
+    const setStringSpy = jest.spyOn(Clipboard, 'setString');
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const toastSpy = jest.spyOn(ToastAndroid, 'show');
+
+    // iOS Test
+    Platform.OS = 'ios';
+    const { getByTestId, getByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+
+    await waitFor(() => {
+      expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+    });
+
+    const shareButton = getByTestId('btn-share');
+    await act(async () => {
+      fireEvent.press(shareButton);
+    });
+
+    expect(setStringSpy).toHaveBeenCalledWith(
+      'https://yeolo.app/share-links/token-123',
+    );
+    expect(alertSpy).toHaveBeenCalledWith(
+      '공유 링크 복사 완료',
+      '공유 링크가 클립보드에 복사되었습니다.',
+    );
+
+    // Android Test
+    Platform.OS = 'android';
+    await act(async () => {
+      fireEvent.press(shareButton);
+    });
+
+    expect(toastSpy).toHaveBeenCalledWith(
+      '공유 링크가 클립보드에 복사되었습니다.',
+      ToastAndroid.SHORT,
+    );
+
+    Platform.OS = originalOS;
   });
 });
