@@ -83,6 +83,23 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     },
   ];
 
+  const parsedHoursData = placeDetail?.openingHours?.map((str) => {
+    if (!str) return { day: '', hours: '' };
+    // '월요일 09:00 - 18:00' 또는 '월요일: 09:00 - 18:00' 형태 유연하게 정규식 파싱
+    const match = str.match(/^([가-힣a-zA-Z]+)(?:\s*:?\s*)(.*)$/);
+    if (match) {
+      return { day: match[1].trim(), hours: match[2].trim() };
+    }
+    const colonIdx = str.indexOf(':');
+    if (colonIdx !== -1) {
+      return {
+        day: str.substring(0, colonIdx).trim(),
+        hours: str.substring(colonIdx + 1).trim(),
+      };
+    }
+    return { day: str, hours: '' };
+  });
+
   return (
     <View style={styles.screenContainer} testID='place-detail-screen'>
       <StatusBar
@@ -265,6 +282,7 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
       <OpeningHoursModal
         visible={isHoursModalOpen}
         onClose={() => setIsHoursModalOpen(false)}
+        hoursData={parsedHoursData}
       />
     </View>
   );
@@ -280,7 +298,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingTop: 0,
-    paddingBottom: 76,
+    paddingBottom: 24,
   },
   heroSection: {
     height: 280,

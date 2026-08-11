@@ -225,6 +225,16 @@ export const UI_STRINGS = {
     GPS_LABEL: 'GPS: 35.6605, 139.7292',
     MODAL_TITLE: '영업 시간',
     TODAY_BADGE: '오늘',
+    WEEKDAYS: [
+      '일요일',
+      '월요일',
+      '화요일',
+      '수요일',
+      '목요일',
+      '금요일',
+      '토요일',
+    ],
+    SHORT_WEEKDAYS: ['일', '월', '화', '수', '목', '금', '토'],
   },
   COURSE_LIST: {
     COMPACT_CTA_TITLE: '새로운 맞춤형 일정이 필요할 땐?',
