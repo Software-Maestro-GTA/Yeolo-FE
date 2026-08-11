@@ -8,6 +8,7 @@ import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import * as commonApi from '@yeolo/common';
 import { renderWithQueryClient as render } from './test-utils';
 import { ProfileInputScreen } from '../src/screens/ProfileInputScreen';
+import { UI_STRINGS } from '../src/constants';
 
 describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
   beforeEach(() => {
@@ -131,17 +132,15 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
     });
   });
 
-  it('아바타 피커 클릭 시 프로필 사진 변경 선택 알림창이 떠야 한다', async () => {
+  it('아바타 피커 클릭 시 프로필 사진 변경 바텀 시트 모달이 떠야 한다', async () => {
     const { findByTestId } = await render(<ProfileInputScreen />);
 
     const btnAvatar = await findByTestId('btn-avatar-picker');
     fireEvent.press(btnAvatar);
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      '프로필 이미지',
-      '카메라 또는 갤러리에서 프로필 사진을 변경하시겠습니까?',
-      expect.any(Array),
-    );
+    expect(await findByTestId('avatar-action-bottom-sheet')).toBeTruthy();
+    expect(await findByTestId('btn-select-gallery')).toBeTruthy();
+    expect(await findByTestId('btn-reset-default')).toBeTruthy();
   });
 
   it('나중에 하기 버튼 및 뒤로가기 버튼 클릭 시 onGoBack 콜백이 호출되어야 한다', async () => {

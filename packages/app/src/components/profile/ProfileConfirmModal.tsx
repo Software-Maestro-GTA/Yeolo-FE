@@ -1,6 +1,6 @@
 /**
- * @file CourseDeleteModal.tsx
- * @description Bottom sheet modal component for confirming course deletion, featuring separated fade backdrop overlay and independent bottom sheet slide animation.
+ * @file ProfileConfirmModal.tsx
+ * @description Bottom sheet modal component for confirming user logout and account withdrawal actions in ProfileScreen.
  */
 import React, { useEffect, useRef } from 'react';
 import {
@@ -16,18 +16,26 @@ import {
 import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
-export interface CourseDeleteModalProps {
+export interface ProfileConfirmModalProps {
   visible: boolean;
-  courseTitle?: string;
+  title: string;
+  description?: string;
+  confirmText: string;
+  cancelText?: string;
+  isDestructive?: boolean;
   onClose: () => void;
-  onConfirmDelete: () => void;
+  onConfirm: () => void;
 }
 
-export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
+export const ProfileConfirmModal: React.FC<ProfileConfirmModalProps> = ({
   visible,
-  courseTitle,
+  title,
+  description,
+  confirmText,
+  cancelText = UI_STRINGS.PROFILE.CONFIRM_CANCEL,
+  isDestructive = true,
   onClose,
-  onConfirmDelete,
+  onConfirm,
 }) => {
   const slideAnim = useRef(new Animated.Value(300)).current;
 
@@ -50,7 +58,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
       animationType='fade'
       onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.dimOverlay} testID='delete-modal-overlay'>
+        <View style={styles.dimOverlay} testID='profile-confirm-modal-overlay'>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[
@@ -59,39 +67,37 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
                   transform: [{ translateY: slideAnim }],
                 },
               ]}
-              testID='course-delete-modal-card'>
+              testID='profile-confirm-modal-card'>
               {/* Handle Bar */}
               <View style={styles.handleBar} />
 
-              {/* Title & Warning Text */}
-              <Text style={styles.modalTitle}>
-                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_TITLE}
-              </Text>
-              <Text style={styles.modalSubTitle}>
-                {courseTitle ? `"${courseTitle}" ` : ''}
-                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_DESC}
-              </Text>
+              {/* Title & Description */}
+              <Text style={styles.modalTitle}>{title}</Text>
+              {Boolean(description) && (
+                <Text style={styles.modalSubTitle}>{description}</Text>
+              )}
 
               {/* Action Buttons Group */}
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
-                  testID='btn-confirm-delete'
-                  style={styles.deleteButton}
-                  onPress={onConfirmDelete}
+                  testID='btn-confirm-action'
+                  style={[
+                    styles.actionButton,
+                    isDestructive
+                      ? styles.destructiveButton
+                      : styles.primaryButton,
+                  ]}
+                  onPress={onConfirm}
                   activeOpacity={0.85}>
-                  <Text style={styles.deleteButtonText}>
-                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CONFIRM}
-                  </Text>
+                  <Text style={styles.actionButtonText}>{confirmText}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  testID='btn-cancel-delete'
+                  testID='btn-cancel-action'
                   style={styles.cancelButton}
                   onPress={onClose}
                   activeOpacity={0.85}>
-                  <Text style={styles.cancelButtonText}>
-                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CANCEL}
-                  </Text>
+                  <Text style={styles.cancelButtonText}>{cancelText}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -141,36 +147,42 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: palette.subText,
     textAlign: 'center',
+    lineHeight: 20,
   },
   buttonGroup: {
     width: '100%',
     gap: 10,
     marginTop: 8,
   },
-  deleteButton: {
+  actionButton: {
     width: '100%',
-    backgroundColor: palette.red500,
-    paddingVertical: 14,
+    height: 48,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  destructiveButton: {
+    backgroundColor: palette.red500,
+  },
+  primaryButton: {
+    backgroundColor: palette.primary,
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
     color: palette.white,
   },
   cancelButton: {
     width: '100%',
+    height: 48,
     backgroundColor: palette.gray100,
-    paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: palette.deepNavy,
+    color: palette.subText,
   },
 });

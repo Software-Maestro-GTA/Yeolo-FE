@@ -14,6 +14,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ItineraryStop } from '@yeolo/common';
 import { OpeningHoursModal } from '../components/place';
@@ -23,6 +24,7 @@ import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { getDestinationImageUrl } from '../services';
+import { useBackground } from '../context';
 
 export interface PlaceDetailScreenProps {
   stop?: ItineraryStop;
@@ -31,6 +33,16 @@ export interface PlaceDetailScreenProps {
 export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
   useGA4ScreenTracking('PlaceDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const topPadding = (insets.top || StatusBar.currentHeight || 24) + 12;
+
+  React.useEffect(() => {
+    setBackground({ noTopEdges: true });
+    return () => {
+      resetBackground();
+    };
+  }, [setBackground, resetBackground]);
 
   const targetPlaceId = stop?.placeId;
   const { data: placeDetail } = usePlaceDetailQuery({
@@ -71,6 +83,23 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     },
   ];
 
+  const parsedHoursData = placeDetail?.openingHours?.map((str) => {
+    if (!str) return { day: '', hours: '' };
+    // '월요일 09:00 - 18:00' 또는 '월요일: 09:00 - 18:00' 형태 유연하게 정규식 파싱
+    const match = str.match(/^([가-힣a-zA-Z]+)(?:\s*:?\s*)(.*)$/);
+    if (match) {
+      return { day: match[1].trim(), hours: match[2].trim() };
+    }
+    const colonIdx = str.indexOf(':');
+    if (colonIdx !== -1) {
+      return {
+        day: str.substring(0, colonIdx).trim(),
+        hours: str.substring(colonIdx + 1).trim(),
+      };
+    }
+    return { day: str, hours: '' };
+  });
+
   return (
     <View style={styles.screenContainer} testID='place-detail-screen'>
       <StatusBar
@@ -99,7 +128,7 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
             />
 
             {/* Place Title & Tags Group */}
-            <View style={styles.heroContentGroup}>
+            <View style={[styles.heroContentGroup, { paddingTop: topPadding }]}>
               <View style={styles.placeTitleRow}>
                 <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
                 <View style={styles.tagRow}>
@@ -253,6 +282,7 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
       <OpeningHoursModal
         visible={isHoursModalOpen}
         onClose={() => setIsHoursModalOpen(false)}
+        hoursData={parsedHoursData}
       />
     </View>
   );
@@ -268,7 +298,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingTop: 0,
-    paddingBottom: 76,
+    paddingBottom: 24,
   },
   heroSection: {
     height: 280,

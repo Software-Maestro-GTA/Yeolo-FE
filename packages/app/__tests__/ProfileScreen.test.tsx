@@ -55,9 +55,8 @@ describe('ProfileScreen (FUN-11: 프로필 화면 개편 및 마이페이지 연
     expect(mockOnEditProfile).toHaveBeenCalledTimes(1);
   });
 
-  it('탈퇴하기 링크 클릭 시 Alert.alert가 호출되며, 확인 선택 시 withdrawApi(API-USER-2) 호출 후 로그인 화면으로 이동해야 한다', async () => {
+  it('탈퇴하기 링크 클릭 시 바텀시트 모달이 표시되며, 확인 버튼 선택 시 withdrawApi(API-USER-2) 호출 후 로그인 화면으로 이동해야 한다', async () => {
     const mockOnNavigateToLogin = jest.fn();
-    const spyAlert = jest.spyOn(Alert, 'alert');
     const spyWithdraw = jest
       .spyOn(yeoloCommon, 'withdrawApi')
       .mockResolvedValueOnce({
@@ -66,27 +65,19 @@ describe('ProfileScreen (FUN-11: 프로필 화면 개편 및 마이페이지 연
         data: null,
       });
 
-    const { findByTestId } = await render(
+    const { findByTestId, findByText } = await render(
       <ProfileScreen onNavigateToLogin={mockOnNavigateToLogin} />,
     );
 
     const btnWithdraw = await findByTestId('btn-withdraw');
     fireEvent.press(btnWithdraw);
 
-    expect(spyAlert).toHaveBeenCalledWith(
-      '회원탈퇴',
-      expect.any(String),
-      expect.any(Array),
-    );
+    expect(await findByTestId('profile-confirm-modal-card')).toBeTruthy();
+    expect(await findByText('회원탈퇴')).toBeTruthy();
 
-    const buttons = spyAlert.mock.calls[0][2];
-    const destructBtn = buttons?.find((b) => b.style === 'destructive');
-    expect(destructBtn).toBeTruthy();
-
+    const btnConfirm = await findByTestId('btn-confirm-action');
     await act(async () => {
-      if (destructBtn && destructBtn.onPress) {
-        await destructBtn.onPress();
-      }
+      fireEvent.press(btnConfirm);
     });
 
     await waitFor(() => {

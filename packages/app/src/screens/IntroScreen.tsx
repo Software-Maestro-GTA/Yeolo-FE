@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Animated,
   Image,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -26,24 +27,36 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
   const { trackButtonClick } = useGA4ButtonClick();
 
   const [activeIndex, setActiveIndex] = useState<number>(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const isAnimatingRef = useRef<boolean>(false);
+  const activeIndexRef = useRef<number>(activeIndex);
 
-  const goToSlide = (nextIndex: number) => {
-    if (nextIndex === activeIndex || isAnimatingRef.current) return;
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  const goToSlide = (
+    nextIndex: number,
+    direction: 'next' | 'prev' = 'next',
+  ) => {
+    if (nextIndex === activeIndexRef.current || isAnimatingRef.current) return;
     isAnimatingRef.current = true;
 
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
+    const exitValue = direction === 'next' ? -350 : 350;
+    const enterValue = direction === 'next' ? 350 : -350;
+
+    Animated.timing(slideAnim, {
+      toValue: exitValue,
+      duration: 160,
+      useNativeDriver: false,
     }).start(({ finished }) => {
       if (finished) {
         setActiveIndex(nextIndex);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
+        slideAnim.setValue(enterValue);
+        Animated.timing(slideAnim, {
+          toValue: 0,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start(() => {
           isAnimatingRef.current = false;
         });
@@ -56,7 +69,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
   // 5초마다 main-body 자동 전환 (0 -> 1 -> 2 -> 0 무한 순환)
   useEffect(() => {
     const timer = setInterval(() => {
-      goToSlide((activeIndex + 1) % 3);
+      goToSlide((activeIndex + 1) % 3, 'next');
     }, 5000);
 
     return () => clearInterval(timer);
@@ -75,10 +88,44 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
   const handleMainBodyPress = () => {
     trackButtonClick(
       'btn_intro_main_body_touch',
-      `Intro Main Body Touch Slide ${activeIndex + 1}`,
+      `Intro Main Body Touch Slide ${activeIndexRef.current + 1}`,
     );
-    goToSlide((activeIndex + 1) % 3);
+    goToSlide((activeIndexRef.current + 1) % 3, 'next');
   };
+
+  // 좌/우 터치 드래그 및 스와이프 제스처 (PanResponder)
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const { dx } = gestureState;
+        const currentIdx = activeIndexRef.current;
+        if (dx < -30) {
+          // 왼쪽으로 밀면 다음 슬라이드 (오른쪽에서 들어옴)
+          const nextIdx = (currentIdx + 1) % 3;
+          trackButtonClick(
+            'btn_intro_swipe_next',
+            `Intro Swipe Left to Slide ${nextIdx + 1}`,
+          );
+          goToSlide(nextIdx, 'next');
+        } else if (dx > 30) {
+          // 오른쪽으로 밀면 이전 슬라이드 (왼쪽에서 들어옴)
+          const prevIdx = (currentIdx - 1 + 3) % 3;
+          trackButtonClick(
+            'btn_intro_swipe_prev',
+            `Intro Swipe Right to Slide ${prevIdx + 1}`,
+          );
+          goToSlide(prevIdx, 'prev');
+        } else {
+          // 단순 클릭 시
+          handleMainBodyPress();
+        }
+      },
+    }),
+  ).current;
 
   // Main Body Slide 0: 3가지 핵심 기능 카드 리스트 (앱 소개1)
   const renderSlide0 = () => (
@@ -135,6 +182,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
         source={APP_IMAGES.INTRO_PHOTO_ANALYSIS}
         style={styles.bgIllustrationImage}
         resizeMode='cover'
+        fadeDuration={0}
       />
 
       {/* Laser Scanning Visual Line */}
@@ -193,6 +241,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
         source={APP_IMAGES.INTRO_MAP_ROUTE}
         style={styles.bgIllustrationImage}
         resizeMode='cover'
+        fadeDuration={0}
       />
 
       {/* Route Navigation Badge Overlay */}
@@ -207,65 +256,72 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Header Title Section */}
-          <View style={styles.headerSection} testID='top-content'>
-            <Text style={styles.mainTitle}>{UI_STRINGS.INTRO.MAIN_TITLE}</Text>
-            <Text style={styles.subTitle}>{UI_STRINGS.INTRO.SUB_TITLE}</Text>
-          </View>
-
-          {/* Main Body */}
-          <TouchableOpacity
-            style={styles.mainBodyContainer}
-            activeOpacity={0.95}
-            onPress={handleMainBodyPress}
-            testID='main-body-touchable'>
-            <Animated.View style={[styles.animatedBody, { opacity: fadeAnim }]}>
-              {activeIndex === 0 && renderSlide0()}
-              {activeIndex === 1 && renderSlide1()}
-              {activeIndex === 2 && renderSlide2()}
-            </Animated.View>
-          </TouchableOpacity>
-
-          {/* Bottom Navigation & Indicators */}
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            {/* Pagination Dots */}
-            <View style={styles.paginationDots}>
-              {[0, 1, 2].map((idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  activeOpacity={0.6}
-                  onPress={() => goToSlide(idx)}
-                  style={[
-                    styles.dot,
-                    activeIndex === idx ? styles.activeDot : styles.inactiveDot,
-                  ]}
-                />
-              ))}
-            </View>
-
-            {/* Next Action Button */}
-            <TouchableOpacity
-              style={styles.primaryButton}
-              activeOpacity={0.8}
-              onPress={handlePressNextButton}
-              testID='next-button'>
-              <Text style={styles.buttonText}>
-                {UI_STRINGS.INTRO.NEXT_BUTTON}
-              </Text>
-              <Feather
-                name='chevron-right'
-                size={18}
-                color={palette.white}
-                style={styles.arrowIcon}
-              />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.contentContainer}>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>{UI_STRINGS.INTRO.MAIN_TITLE}</Text>
+          <Text style={styles.subTitle}>{UI_STRINGS.INTRO.SUB_TITLE}</Text>
         </View>
-      </SafeAreaView>
+
+        {/* Main Body with Swipe Gesture */}
+        <View
+          style={[styles.mainBodyContainer, { outlineStyle: 'none' } as any]}
+          testID='main-body-touchable'
+          {...panResponder.panHandlers}>
+          <Animated.View
+            style={[
+              styles.animatedBody,
+              { transform: [{ translateX: slideAnim }] },
+            ]}
+            renderToHardwareTextureAndroid={true}
+            shouldRasterizeIOS={true}>
+            {activeIndex === 0 && renderSlide0()}
+            {activeIndex === 1 && renderSlide1()}
+            {activeIndex === 2 && renderSlide2()}
+          </Animated.View>
+        </View>
+
+        {/* Bottom Navigation & Indicators */}
+        <View style={styles.bottomContainer} testID='bottom-container'>
+          {/* Pagination Dots */}
+          <View style={styles.paginationDots}>
+            {[0, 1, 2].map((idx) => (
+              <TouchableOpacity
+                key={idx}
+                activeOpacity={0.6}
+                onPress={() =>
+                  goToSlide(
+                    idx,
+                    idx >= activeIndexRef.current ? 'next' : 'prev',
+                  )
+                }
+                style={[
+                  styles.dot,
+                  activeIndex === idx ? styles.activeDot : styles.inactiveDot,
+                  { outlineStyle: 'none' } as any,
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Next Action Button */}
+          <TouchableOpacity
+            style={[styles.primaryButton, { outlineStyle: 'none' } as any]}
+            activeOpacity={0.8}
+            onPress={handlePressNextButton}
+            testID='next-button'>
+            <Text style={styles.buttonText}>
+              {UI_STRINGS.INTRO.NEXT_BUTTON}
+            </Text>
+            <Feather
+              name='chevron-right'
+              size={18}
+              color={palette.white}
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };
@@ -281,9 +337,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
   },
   headerSection: {
     gap: 8,
@@ -307,11 +360,15 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: palette.softMint,
+    overflow: 'hidden',
   },
   animatedBody: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
+    backgroundColor: palette.softMint,
+    overflow: 'hidden',
   },
   cardListContainer: {
     gap: 12,
@@ -330,7 +387,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
-    elevation: 2,
+    overflow: 'hidden',
   },
   iconBg: {
     width: 42,
@@ -396,11 +453,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    shadowColor: palette.black,
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    overflow: 'hidden',
   },
   badgeText: {
     fontSize: 12,
@@ -420,11 +477,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     gap: 8,
-    shadowColor: palette.black,
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 3,
+    overflow: 'hidden',
   },
   progressHeaderRow: {
     flexDirection: 'row',
@@ -478,11 +535,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    shadowColor: palette.black,
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 4,
+    overflow: 'hidden',
   },
   mapOverlayText: {
     fontSize: 13,
@@ -522,7 +579,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 3,
+    overflow: 'hidden',
   },
   buttonText: {
     fontSize: 16,

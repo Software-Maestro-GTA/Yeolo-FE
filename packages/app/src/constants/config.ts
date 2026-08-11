@@ -3,6 +3,8 @@
  * @description Centralized app configuration, limits, and network default constants.
  */
 
+import { Platform } from 'react-native';
+
 export const APP_CONFIG = {
   DEFAULT_API_URL: 'https://api.yeolo.com',
   DEFAULT_REDIRECT_URI: 'yeolo-app',
@@ -31,6 +33,20 @@ export const APP_CONFIG = {
     longitudeDelta: 0.0421,
   },
 } as const;
+
+/**
+ * Platform Detection & Helpers
+ */
+export const IS_ANDROID = Platform.OS === 'android';
+export const IS_IOS = Platform.OS === 'ios';
+export const IS_WEB = Platform.OS === 'web';
+
+/**
+ * Helper to safely disable Android GPU elevation artifacts during opacity animation transitions
+ */
+export const getPlatformElevation = (elevation: number): number => {
+  return IS_ANDROID ? 0 : elevation;
+};
 
 export const TRIP_HOTEL_URL = APP_CONFIG.TRIP_HOTEL_URL;
 export const TRIP_FLIGHT_URL = APP_CONFIG.TRIP_FLIGHT_URL;

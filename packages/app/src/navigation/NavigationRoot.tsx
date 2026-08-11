@@ -3,7 +3,7 @@ import { BackHandler, ToastAndroid, Platform, Linking } from 'react-native';
 import type { ItineraryStop } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
-import { MainLayout } from '../layouts';
+import { MainLayout, OnboardingLayout } from '../layouts';
 import { NAV_STEPS, NAV_TABS, NavStep } from '../constants';
 import {
   LoginScreen,
@@ -52,6 +52,16 @@ export function NavigationRoot({
   const [history, setHistory] = useState<NavStep[]>([]);
   const [step, setStep] = useState<NavStep | null>(initialStep || null);
   const lastBackPressRef = useRef<number>(0);
+
+  const goBack = () => {
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      setHistory((old) => old.slice(0, -1));
+      setStep(prev);
+    } else {
+      setStep(NAV_STEPS.COURSE_LIST);
+    }
+  };
 
   const navigateTo = (nextStep: NavStep) => {
     if (nextStep === NAV_STEPS.HOME || nextStep === NAV_STEPS.LOGIN) {
@@ -166,25 +176,37 @@ export function NavigationRoot({
         />
       );
     case NAV_STEPS.INTRO:
-      return <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />;
+      return (
+        <OnboardingLayout>
+          <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
+        </OnboardingLayout>
+      );
     case NAV_STEPS.MBTI:
       return (
-        <MbtiInputScreen
-          onNext={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
-          onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
-        />
+        <OnboardingLayout>
+          <MbtiInputScreen
+            onNext={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
+          />
+        </OnboardingLayout>
       );
     case NAV_STEPS.PHOTO:
-      return <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />;
+      return (
+        <OnboardingLayout>
+          <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />
+        </OnboardingLayout>
+      );
     case NAV_STEPS.TASTE:
       return (
-        <TasteAnalysisScreen
-          onFinish={(tasteProfileId) => {
-            setActiveTasteProfileId(tasteProfileId);
-            navigateTo(NAV_STEPS.TASTE_PROFILE);
-          }}
-          onFail={() => navigateTo(NAV_STEPS.PHOTO)}
-        />
+        <OnboardingLayout>
+          <TasteAnalysisScreen
+            onFinish={(tasteProfileId) => {
+              setActiveTasteProfileId(tasteProfileId);
+              navigateTo(NAV_STEPS.TASTE_PROFILE);
+            }}
+            onFail={() => navigateTo(NAV_STEPS.PHOTO)}
+          />
+        </OnboardingLayout>
       );
     case NAV_STEPS.TASTE_PROFILE:
       return (
@@ -266,6 +288,7 @@ export function NavigationRoot({
               setSelectedPlaceStop(stop);
               navigateTo(NAV_STEPS.PLACE_DETAIL);
             }}
+            onBack={goBack}
           />
         </MainLayout>
       );

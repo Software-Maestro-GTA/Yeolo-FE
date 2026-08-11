@@ -3,3 +3,4 @@
  * @description Export all React Context providers.
  */
 export * from './AuthContext';
+export * from './BackgroundContext';

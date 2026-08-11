@@ -13,15 +13,17 @@ import {
   Image,
   Alert,
   Linking,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { logger } from '@yeolo/common';
-import { AuthContext } from '../context';
+import { AuthContext, useBackground } from '../context';
 import { palette, theme, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { clearLocalSession, openCustomerSupportMail } from '../services';
-import { TermsModal } from '../components/profile/TermsModal';
+import { TermsModal, ProfileConfirmModal } from '../components/profile';
 import {
   useWithdrawMutation,
   useLogoutMutation,
@@ -68,6 +70,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     'service' | 'privacy'
   >('service');
 
+  const [confirmModalConfig, setConfirmModalConfig] = React.useState<{
+    visible: boolean;
+    title: string;
+    description?: string;
+    confirmText: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    onConfirm: () => {},
+  });
+
   const withdrawMutation = useWithdrawMutation();
   const logoutMutation = useLogoutMutation();
 
@@ -81,31 +97,33 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     await clearLocalSession();
     if (isMounted.current) {
       setShowTermsModal(false);
+      setConfirmModalConfig((prev) => ({ ...prev, visible: false }));
     }
     onNavigateToLogin?.();
   };
 
+  const executeLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch (err) {
+      logger.error('Logout mutation failed:', err);
+    } finally {
+      if (auth?.logout) {
+        await auth.logout();
+      }
+      await clearSessionAndRedirect();
+    }
+  };
+
   const handleLogout = () => {
     trackButtonClick('btn_profile_logout', 'Logout Click');
-    Alert.alert(UI_STRINGS.PROFILE.LOGOUT, UI_STRINGS.PROFILE.LOGOUT_CONFIRM, [
-      { text: UI_STRINGS.PROFILE.CONFIRM_CANCEL, style: 'cancel' },
-      {
-        text: UI_STRINGS.PROFILE.LOGOUT_CONFIRM_BTN,
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await logoutMutation.mutateAsync();
-          } catch (err) {
-            logger.error('Logout mutation failed:', err);
-          } finally {
-            if (auth?.logout) {
-              await auth.logout();
-            }
-            await clearSessionAndRedirect();
-          }
-        },
-      },
-    ]);
+    setConfirmModalConfig({
+      visible: true,
+      title: UI_STRINGS.PROFILE.LOGOUT,
+      description: UI_STRINGS.PROFILE.LOGOUT_CONFIRM,
+      confirmText: UI_STRINGS.PROFILE.LOGOUT_CONFIRM_BTN,
+      onConfirm: executeLogout,
+    });
   };
 
   const handleConfirmWithdraw = async () => {
@@ -126,20 +144,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleWithdraw = () => {
     trackButtonClick('btn_profile_withdraw', 'Withdraw Click');
-    Alert.alert(
-      UI_STRINGS.PROFILE.WITHDRAW_HEADER,
-      UI_STRINGS.PROFILE.WITHDRAW_ALERT_DESC,
-      [
-        { text: UI_STRINGS.PROFILE.CONFIRM_CANCEL, style: 'cancel' },
-        {
-          text: UI_STRINGS.PROFILE.WITHDRAW_ACTION_BTN,
-          style: 'destructive',
-          onPress: async () => {
-            await handleConfirmWithdraw();
-          },
-        },
-      ],
-    );
+    setConfirmModalConfig({
+      visible: true,
+      title: UI_STRINGS.PROFILE.WITHDRAW_HEADER,
+      description: UI_STRINGS.PROFILE.WITHDRAW_ALERT_DESC,
+      confirmText: UI_STRINGS.PROFILE.WITHDRAW_ACTION_BTN,
+      onConfirm: handleConfirmWithdraw,
+    });
   };
 
   const handleOpenTerms = async (type: 'terms' | 'privacy' | 'support') => {
@@ -199,6 +210,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <View style={styles.container} testID='profile-screen'>
+      {/* Top Header Row (Left-aligned Title) */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>{UI_STRINGS.PROFILE.MAIN_TITLE}</Text>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
@@ -385,6 +401,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         type={termsModalType}
         onClose={() => setShowTermsModal(false)}
       />
+
+      {/* Confirmation Bottom Sheet Modal */}
+      <ProfileConfirmModal
+        visible={confirmModalConfig.visible}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
+        onClose={() =>
+          setConfirmModalConfig((prev) => ({ ...prev, visible: false }))
+        }
+        onConfirm={() => {
+          confirmModalConfig.onConfirm();
+        }}
+      />
     </View>
   );
 };
@@ -394,9 +424,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.softMint,
   },
-  scrollContent: {
+  headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 16,
+    paddingBottom: 8,
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: palette.deepNavy,
+    letterSpacing: -0.4,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 76,
     gap: 20,
   },

@@ -3,3 +3,5 @@
  * @description Export profile UI components using clean named exports.
  */
 export * from './TermsModal';
+export * from './ProfileConfirmModal';
+export * from './AvatarActionBottomSheet';

@@ -17,9 +17,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getDestinationImageUrl } from '../services';
-import { AuthContext } from '../context';
+import { AuthContext, useBackground } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_IMAGES, APP_CONFIG } from '../constants';
 
@@ -47,6 +48,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   useGA4ScreenTracking('HomeScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const topPadding = (insets.top || StatusBar.currentHeight || 24) + 12;
+
+  React.useEffect(() => {
+    setBackground({ noTopEdges: true });
+    return () => {
+      resetBackground();
+    };
+  }, [setBackground, resetBackground]);
 
   const auth = useContext(AuthContext);
   const user = auth?.user;
@@ -109,7 +120,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <View style={styles.heroSection}>
           <ImageBackground
             source={APP_IMAGES.HOME_HERO_BG}
-            style={styles.heroImageBg}
+            style={[styles.heroImageBg, { paddingTop: topPadding }]}
             resizeMode='cover'>
             {/* Gradient Overlay */}
             <LinearGradient
@@ -123,12 +134,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.gradientOverlay}
             />
 
-            {/* Top Brand Logo Row */}
-            <View style={styles.heroTopNav}>
-              <Text style={styles.brandTitle}>{UI_STRINGS.BRAND.NAME}</Text>
-            </View>
-
-            {/* Greeting Stack */}
+            {/* Greeting Stack (Bottom-aligned inside Hero Image) */}
             <View style={styles.greetingStack}>
               <Text style={styles.greetingText}>
                 {displayName}
@@ -418,19 +424,18 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 0,
-    paddingBottom: 76,
+    paddingBottom: 24,
   },
   heroSection: {
     width: '100%',
-    height: 310,
+    height: 320,
     backgroundColor: palette.deepNavy,
   },
   heroImageBg: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: STATUS_BAR_HEIGHT + 12,
-    paddingBottom: 24,
-    justifyContent: 'space-between',
+    paddingBottom: 20,
+    justifyContent: 'flex-end',
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFill,

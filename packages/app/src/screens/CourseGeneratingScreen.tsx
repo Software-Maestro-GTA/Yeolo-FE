@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -78,44 +79,55 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     step2Status = 'pending';
   }
 
-  // Handle Progress Animation and Creeping Effect
+  // Handle Continuous Logarithmic Progress Animation
   useEffect(() => {
-    let targetValue = 10;
     if (createdCourseId || progressStep === 'COMPLETE') {
-      targetValue = 100;
-    } else if (progressStep === 'GENERATING_COURSE') {
-      targetValue = 88;
-    } else if (progressStep === 'LOADING_TASTE_PREFERENCE') {
-      targetValue = 45;
+      // Smoothly animate from current percentage up to 100% without jump
+      Animated.timing(progressAnim, {
+        toValue: 100,
+        duration: 700,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }).start();
+      return;
     }
 
-    // Animate to target
+    let targetValue = 65;
+    let animDuration = 1800;
+
+    if (progressStep === 'GENERATING_COURSE') {
+      targetValue = 92;
+      animDuration = 2200;
+    } else if (progressStep === 'LOADING_TASTE_PREFERENCE') {
+      targetValue = 65;
+      animDuration = 1600;
+    }
+
+    // Logarithmic Easing curve (fast initial boost from current value to target)
     Animated.timing(progressAnim, {
       toValue: targetValue,
-      duration: targetValue === 100 ? 500 : 800,
+      duration: animDuration,
+      easing: Easing.out(Easing.poly(3)),
       useNativeDriver: false,
     }).start();
 
-    // Creeping effect while waiting for next event (if not complete)
-    let creepingInterval: ReturnType<typeof setInterval> | null = null;
-    if (!createdCourseId && progressStep !== 'COMPLETE') {
-      creepingInterval = setInterval(() => {
-        progressAnim.stopAnimation((currentVal) => {
-          const maxCap = progressStep === 'GENERATING_COURSE' ? 96 : 48;
-          if (currentVal < maxCap) {
-            const nextVal = Math.min(maxCap, currentVal + 0.3);
-            Animated.timing(progressAnim, {
-              toValue: nextVal,
-              duration: 300,
-              useNativeDriver: false,
-            }).start();
-          }
-        });
-      }, 400);
-    }
+    // Smooth creeping effect up to 96% while waiting for completion
+    const creepingInterval = setInterval(() => {
+      progressAnim.stopAnimation((currentVal) => {
+        if (currentVal < 96) {
+          const nextVal = Math.min(96, currentVal + 0.25);
+          Animated.timing(progressAnim, {
+            toValue: nextVal,
+            duration: 300,
+            easing: Easing.linear,
+            useNativeDriver: false,
+          }).start();
+        }
+      });
+    }, 300);
 
     return () => {
-      if (creepingInterval) clearInterval(creepingInterval);
+      clearInterval(creepingInterval);
     };
   }, [createdCourseId, progressStep, progressAnim]);
 

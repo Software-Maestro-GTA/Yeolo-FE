@@ -16,13 +16,14 @@ import {
   Platform,
   ToastAndroid,
   Linking,
+  StatusBar,
 } from 'react-native';
 
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ItineraryStop } from '@yeolo/common';
 import {
-  CourseDetailHeader,
   CourseMiniMapView,
   CourseDayTabs,
   ItineraryTimelineItem,
@@ -31,12 +32,20 @@ import {
   useCourseDetailQuery,
   useCreateShareLinkMutation,
 } from '../hooks/queries';
-import { processCourseStopsMapData, ProcessedCourseMapData } from '../services';
+import {
+  processCourseStopsMapData,
+  ProcessedCourseMapData,
+  getDestinationImageUrl,
+} from '../services';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import ctaFlightBg from '../../assets/images/cta_flight_bg.png';
 import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
+
+import { Ionicons } from '@expo/vector-icons';
+
+import { useBackground } from '../context';
 
 export interface CourseDetailScreenProps {
   courseId: string;
@@ -51,6 +60,16 @@ export function CourseDetailScreen({
 }: CourseDetailScreenProps) {
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const topPadding = (insets.top || 24) + 12;
+
+  useEffect(() => {
+    setBackground({ noTopEdges: true });
+    return () => {
+      resetBackground();
+    };
+  }, [setBackground, resetBackground]);
 
   const {
     data: course,
@@ -69,7 +88,9 @@ export function CourseDetailScreen({
 
     createShareLinkMutation.mutate(courseId, {
       onSuccess: async (shareData) => {
-        const shareMessage = `[여로] ${course?.title || '여행 코스'} 여행 일정을 공유합니다!`;
+        const shareTitle =
+          course?.title || UI_STRINGS.COURSE_DETAIL.DEFAULT_COURSE_TITLE;
+        const shareMessage = `[여로] ${shareTitle} 여행 일정을 공유합니다!`;
 
         try {
           await Share.share({
@@ -80,21 +101,21 @@ export function CourseDetailScreen({
           Clipboard.setString(shareData.shareUrl);
           if (Platform.OS === 'android') {
             ToastAndroid.show(
-              '공유 링크가 클립보드에 복사되었습니다.',
+              UI_STRINGS.COURSE_DETAIL.SHARE_SUCCESS_TOAST,
               ToastAndroid.SHORT,
             );
           } else {
             Alert.alert(
-              '공유 링크 복사 완료',
-              '공유 링크가 클립보드에 복사되었습니다.',
+              UI_STRINGS.COURSE_DETAIL.SHARE_SUCCESS_TITLE,
+              UI_STRINGS.COURSE_DETAIL.SHARE_SUCCESS_TOAST,
             );
           }
         }
       },
       onError: (err: any) => {
         Alert.alert(
-          '공유 실패',
-          err?.message || '공유 링크를 생성하지 못했습니다.',
+          UI_STRINGS.COURSE_DETAIL.SHARE_FAIL_TITLE,
+          err?.message || UI_STRINGS.COURSE_DETAIL.SHARE_FAIL_DEFAULT,
         );
       },
     });
@@ -214,25 +235,83 @@ export function CourseDetailScreen({
       return acc + (d.stops?.reduce((sAcc, s) => sAcc + (s.cost || 0), 0) || 0);
     }, 0);
 
+  const activeHeroImageUrl = getDestinationImageUrl(
+    course.destinationCountry,
+    course.destinationCity,
+  );
+
   return (
     <View style={styles.screenContainer} testID='screen-container'>
       <ScrollView
         contentContainerStyle={styles.scrollContentContainer}
         scrollEnabled={!isMapInteracting}
         showsVerticalScrollIndicator={false}>
-        {/* Header Section Component */}
-        <CourseDetailHeader
-          destinationCountry={course.destinationCountry}
-          destinationCity={course.destinationCity}
-          startDate={course.startDate}
-          title={course.title}
-          totalCost={calculatedTotalCost}
-          onBack={() => {
-            trackButtonClick('btn_course_detail_back', 'Back Button Click');
-            onBack?.();
-          }}
-          onShare={handleShareCourse}
-        />
+        {/* Direct Hero Header Section with Integrated Background (Scrolls naturally with content) */}
+        <View style={styles.heroSection} testID='course-detail-header'>
+          {/* 1. Background Image Layer (Scrolls with page) */}
+          <ImageBackground
+            source={{ uri: activeHeroImageUrl }}
+            style={StyleSheet.absoluteFill}
+            resizeMode='cover'
+          />
+          {/* 2. Gradient Overlay for text readability and smooth transition */}
+          <LinearGradient
+            colors={[
+              hexToRgba(palette.deepNavy, 0.45),
+              hexToRgba(palette.deepNavy, 0.05),
+              hexToRgba(palette.softMint, 0.5),
+              palette.softMint,
+            ]}
+            locations={[0.0, 0.35, 0.75, 1.0]}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View style={[styles.heroContent, { paddingTop: topPadding }]}>
+            {/* Top Nav Actions Bar (Back & Share buttons) */}
+            <View style={styles.navActionsRow} testID='nav-actions'>
+              <TouchableOpacity
+                testID='btn-back'
+                style={styles.actionCircleBtn}
+                onPress={() => {
+                  trackButtonClick(
+                    'btn_course_detail_back',
+                    'Back Button Click',
+                  );
+                  onBack?.();
+                }}
+                activeOpacity={0.8}>
+                <Ionicons
+                  name='chevron-back'
+                  size={18}
+                  color={palette.deepNavy}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                testID='btn-share'
+                style={styles.actionCircleBtn}
+                onPress={handleShareCourse}
+                activeOpacity={0.8}>
+                <Ionicons
+                  name='share-outline'
+                  size={18}
+                  color={palette.deepNavy}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Title Content Group at the bottom of hero */}
+            <View style={styles.headerContentGroup}>
+              <Text style={styles.headerTitle}>
+                {course.destinationCountry} {course.destinationCity}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {course.startDate ? `${course.startDate} · ` : ''}
+                {course.title}
+              </Text>
+            </View>
+          </View>
+        </View>
 
         {/* Main Content Body */}
         <View style={styles.mainContentBody}>
@@ -372,7 +451,7 @@ export function CourseDetailScreen({
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: palette.softMint,
+    backgroundColor: palette.transparent,
   },
   centerContainer: {
     justifyContent: 'center',
@@ -410,7 +489,7 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingHorizontal: 0,
     paddingTop: 0,
-    paddingBottom: 60,
+    paddingBottom: 24,
   },
   mainContentBody: {
     paddingHorizontal: 20,
@@ -506,8 +585,54 @@ const styles = StyleSheet.create({
     color: palette.subText,
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: palette.deepNavy,
+  },
+  heroSection: {
+    width: '100%',
+    height: 340,
+    marginBottom: 4,
+  },
+  heroContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  navActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  actionCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: hexToRgba(palette.white, 0.85),
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerContentGroup: {
+    gap: 4,
+    zIndex: 10,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: palette.deepNavy,
+    lineHeight: 32,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: palette.subText,
+    fontWeight: '400',
+    lineHeight: 20,
   },
 });

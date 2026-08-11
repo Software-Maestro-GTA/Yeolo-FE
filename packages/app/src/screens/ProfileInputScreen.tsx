@@ -16,11 +16,13 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useUpdateUserProfileMutation } from '../hooks/queries';
+import { AvatarActionBottomSheet } from '../components/profile';
 
 export interface ProfileInputScreenProps {
   onGoBack?: () => void;
@@ -60,6 +62,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
     (user as any)?.profileImageUrl || (user as any)?.photoUrl || null,
   );
   const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const [showAvatarSheet, setShowAvatarSheet] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -141,19 +144,48 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
     }
   };
 
+  const handlePickImageFromGallery = async () => {
+    try {
+      if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+        Alert.alert(
+          UI_STRINGS.PROFILE_INPUT.ALERT_TITLE,
+          '네이티브 기기 모듈을 찾을 수 없습니다. 개발 빌드를 재기동(yarn android 또는 ios)해주세요.',
+        );
+        return;
+      }
+
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert(
+          UI_STRINGS.PROFILE_INPUT.ALERT_TITLE,
+          UI_STRINGS.PROFILE_INPUT.AVATAR_PERMISSION_ERROR,
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images || ('Images' as any),
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAvatarUrl(result.assets[0].uri);
+      }
+    } catch (error: any) {
+      Alert.alert(
+        UI_STRINGS.PROFILE_INPUT.ERROR_TITLE,
+        error?.message || '이미지를 불러오는 중 오류가 발생했습니다.',
+      );
+    }
+  };
+
   const handleChangeAvatar = () => {
     trackButtonClick('btn_change_avatar', 'Change Avatar Click');
-    Alert.alert(
-      UI_STRINGS.PROFILE_INPUT.AVATAR_ALERT_TITLE,
-      UI_STRINGS.PROFILE_INPUT.AVATAR_ALERT_MESSAGE,
-      [
-        { text: UI_STRINGS.COMMON.CONFIRM_CANCEL, style: 'cancel' },
-        {
-          text: UI_STRINGS.PROFILE_INPUT.AVATAR_RESET_DEFAULT,
-          onPress: () => setAvatarUrl(null),
-        },
-      ],
-    );
+    setShowAvatarSheet(true);
   };
 
   return (
@@ -277,6 +309,14 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Avatar Action Bottom Sheet */}
+      <AvatarActionBottomSheet
+        visible={showAvatarSheet}
+        onClose={() => setShowAvatarSheet(false)}
+        onSelectGallery={handlePickImageFromGallery}
+        onResetDefault={() => setAvatarUrl(null)}
+      />
     </KeyboardAvoidingView>
   );
 };

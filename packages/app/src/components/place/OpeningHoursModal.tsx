@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette } from '../../theme/colors';
+import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface OpeningHoursModalProps {
@@ -21,21 +21,30 @@ export interface OpeningHoursModalProps {
   hoursData?: { day: string; hours: string; isToday?: boolean }[];
 }
 
-const DEFAULT_WEEKLY_HOURS = [
-  { day: '월요일', hours: '10:00 - 22:00', isToday: true },
-  { day: '화요일', hours: '10:00 - 22:00', isToday: false },
-  { day: '수요일', hours: '10:00 - 22:00', isToday: false },
-  { day: '목요일', hours: '10:00 - 22:00', isToday: false },
-  { day: '금요일', hours: '10:00 - 22:00', isToday: false },
-  { day: '토요일', hours: '10:00 - 22:00', isToday: false },
-  { day: '일요일', hours: '10:00 - 22:00', isToday: false },
-];
+const DAYS_MAP = UI_STRINGS.PLACE_DETAIL.WEEKDAYS;
+const SHORT_DAYS_MAP = UI_STRINGS.PLACE_DETAIL.SHORT_WEEKDAYS;
 
 export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
   visible,
   onClose,
-  hoursData = DEFAULT_WEEKLY_HOURS,
+  hoursData = [],
 }) => {
+  const currentDayIdx = new Date().getDay();
+  const currentFullDay = DAYS_MAP[currentDayIdx];
+  const currentShortDay = SHORT_DAYS_MAP[currentDayIdx];
+
+  const getIsToday = (item: { day: string; hours: string; isToday?: boolean }) => {
+    if (typeof item.isToday === 'boolean') {
+      return item.isToday;
+    }
+    if (!item.day) return false;
+    const dayTrimmed = item.day.trim();
+    return (
+      dayTrimmed.includes(currentFullDay) ||
+      dayTrimmed.startsWith(currentShortDay)
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -56,33 +65,36 @@ export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
                   style={styles.closeBtn}
                   onPress={onClose}
                   activeOpacity={0.7}>
-                  <Ionicons name='close' size={20} color='#59616B' />
+                  <Ionicons name='close' size={20} color={palette.subText} />
                 </TouchableOpacity>
               </View>
 
               {/* Hours Rows List */}
               <View style={styles.hoursListContainer}>
-                {hoursData.map((item) => (
-                  <View key={item.day} style={styles.hourRow}>
-                    <View style={styles.dayGroup}>
-                      <Text
-                        style={[
-                          styles.dayText,
-                          item.isToday && styles.todayDayText,
-                        ]}>
-                        {item.day}
-                      </Text>
-                      {item.isToday && (
-                        <View style={styles.todayBadge}>
-                          <Text style={styles.todayBadgeText}>
-                            {UI_STRINGS.PLACE_DETAIL.TODAY_BADGE}
-                          </Text>
-                        </View>
-                      )}
+                {hoursData.map((item) => {
+                  const isToday = getIsToday(item);
+                  return (
+                    <View key={item.day} style={styles.hourRow}>
+                      <View style={styles.dayGroup}>
+                        <Text
+                          style={[
+                            styles.dayText,
+                            isToday && styles.todayDayText,
+                          ]}>
+                          {item.day}
+                        </Text>
+                        {isToday && (
+                          <View style={styles.todayBadge}>
+                            <Text style={styles.todayBadgeText}>
+                              {UI_STRINGS.PLACE_DETAIL.TODAY_BADGE}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.hoursText}>{item.hours}</Text>
                     </View>
-                    <Text style={styles.hoursText}>{item.hours}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -95,7 +107,7 @@ export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(13, 33, 55, 0.5)',
+    backgroundColor: hexToRgba(palette.deepNavy, 0.5),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -103,7 +115,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: palette.white, // #FFFFFF
+    backgroundColor: palette.white,
     borderRadius: 20,
     padding: 24,
     gap: 16,
@@ -122,7 +134,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
   },
   closeBtn: {
     padding: 4,
@@ -143,14 +155,14 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 14,
     fontWeight: '500',
-    color: palette.subText, // #59616B
+    color: palette.subText,
   },
   todayDayText: {
     fontWeight: '700',
     color: palette.deepNavy,
   },
   todayBadge: {
-    backgroundColor: '#E0F7F1',
+    backgroundColor: palette.lightTeal,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -158,7 +170,7 @@ const styles = StyleSheet.create({
   todayBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: palette.accent, // #00C9A7
+    color: palette.accent,
   },
   hoursText: {
     fontSize: 14,

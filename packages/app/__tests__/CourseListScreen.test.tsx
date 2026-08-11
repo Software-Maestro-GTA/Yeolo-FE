@@ -207,4 +207,40 @@ describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 �
     fireEvent.press(getByTestId('empty-create-button'));
     expect(mockOnCreateCourse).toHaveBeenCalled();
   });
+
+  it('검색 바에 검색어 입력 시 우측에 지우기(X) 버튼이 노출되고, 클릭 시 검색어가 초기화되어야 한다', async () => {
+    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
+
+    const { getByTestId, getByText, queryByTestId } = await render(
+      <CourseListScreen
+        onSelectCourse={mockOnSelectCourse}
+        onCreateCourse={mockOnCreateCourse}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
+    });
+
+    const searchInput = getByTestId('search-input');
+    expect(queryByTestId('clear-search-button')).toBeNull();
+
+    // 1. Enter search query "도쿄"
+    fireEvent.changeText(searchInput, '도쿄');
+
+    // Clear button should be visible after state update
+    await waitFor(() => {
+      expect(getByTestId('clear-search-button')).toBeTruthy();
+    });
+
+    // 2. Press clear button
+    fireEvent.press(getByTestId('clear-search-button'));
+
+    // Search query should be cleared and clear button hidden
+    await waitFor(() => {
+      expect(queryByTestId('clear-search-button')).toBeNull();
+      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
+      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
+    });
+  });
 });

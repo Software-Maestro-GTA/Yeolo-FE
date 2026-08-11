@@ -29,13 +29,6 @@ export async function updateUserProfileApi(
 ): Promise<UpdateUserProfileResponse> {
   logger.info('[UserAPI] updateUserProfileApi request:', payload);
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const client = createHttpClient(apiUrl);
-
   const formData = new FormData();
   if (payload) {
     if (payload.email !== undefined && payload.email !== null) {
@@ -60,24 +53,79 @@ export async function updateUserProfileApi(
     }
   }
 
-  const response = await client.patch('api/users/me/profile', {
-    headers,
-    body: formData,
+  const normalizedApiUrl = apiUrl.replace(/\/$/, '');
+  const targetUrl = `${normalizedApiUrl}/api/users/me/profile`;
+
+  return new Promise<UpdateUserProfileResponse>((resolve, reject) => {
+    if (typeof XMLHttpRequest !== 'undefined') {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PATCH', targetUrl);
+
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      xhr.onload = () => {
+        try {
+          const result = JSON.parse(
+            xhr.responseText,
+          ) as UpdateUserProfileResponse;
+          if (xhr.status >= 200 && xhr.status < 300 && result.status === 200) {
+            resolve(result);
+          } else {
+            const errorStatus = result.status || xhr.status;
+            const errorMessage = result.message || '프로필 정보 수정 실패';
+            logger.error(
+              `[UserAPI] updateUserProfileApi error (${errorStatus}):`,
+              errorMessage,
+            );
+            reject(new ApiError(errorStatus, errorMessage));
+          }
+        } catch (e) {
+          reject(new ApiError(xhr.status || 500, '응답 데이터 파싱 실패'));
+        }
+      };
+
+      xhr.onerror = () => {
+        logger.error(
+          `[UserAPI] updateUserProfileApi network error (${xhr.status})`,
+        );
+        reject(
+          new ApiError(xhr.status || 500, '네트워크 오류가 발생했습니다.'),
+        );
+      };
+
+      xhr.send(formData);
+    } else {
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      fetch(targetUrl, {
+        method: 'PATCH',
+        headers,
+        body: formData,
+      })
+        .then((res) => res.json())
+        .then((result: UpdateUserProfileResponse) => {
+          if (result.status === 200) {
+            resolve(result);
+          } else {
+            reject(
+              new ApiError(
+                result.status || 500,
+                result.message || '프로필 정보 수정 실패',
+              ),
+            );
+          }
+        })
+        .catch((err) =>
+          reject(
+            new ApiError(500, err?.message || '네트워크 오류가 발생했습니다.'),
+          ),
+        );
+    }
   });
-
-  const result = await response.json<UpdateUserProfileResponse>();
-
-  if (!response.ok || result.status !== 200) {
-    const errorStatus = result.status || response.status;
-    const errorMessage = result.message || '프로필 정보 수정 실패';
-    logger.error(
-      `[UserAPI] updateUserProfileApi error (${errorStatus}):`,
-      errorMessage,
-    );
-    throw new ApiError(errorStatus, errorMessage);
-  }
-
-  return result;
 }
 
 /**

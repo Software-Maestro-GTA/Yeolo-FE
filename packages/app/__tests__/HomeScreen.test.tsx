@@ -29,7 +29,6 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
     const { getByText, getByTestId } = await render(<HomeScreen />);
 
     expect(getByTestId('home-screen')).toBeTruthy();
-    expect(getByText('여로')).toBeTruthy();
     expect(getByText('오늘은 어디로 떠나볼까요?')).toBeTruthy();
 
     expect(getByTestId('quick-icons')).toBeTruthy();

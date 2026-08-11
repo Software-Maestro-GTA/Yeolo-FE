@@ -130,8 +130,21 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
 
   it('OpeningHoursModal 단독 렌더링 시 주간 요일 목록 및 영업시간이 정상 표시되어야 한다', async () => {
     const mockOnClose = jest.fn();
+    const mockHoursData = [
+      { day: '월요일', hours: '10:00 - 22:00' },
+      { day: '화요일', hours: '10:00 - 22:00' },
+      { day: '수요일', hours: '10:00 - 22:00' },
+      { day: '목요일', hours: '10:00 - 22:00' },
+      { day: '금요일', hours: '10:00 - 22:00' },
+      { day: '토요일', hours: '10:00 - 22:00' },
+      { day: '일요일', hours: '10:00 - 22:00' },
+    ];
     const { getByText, getAllByText, getByTestId } = await render(
-      <OpeningHoursModal visible={true} onClose={mockOnClose} />,
+      <OpeningHoursModal
+        visible={true}
+        onClose={mockOnClose}
+        hoursData={mockHoursData}
+      />,
     );
 
     expect(getByTestId('opening-hours-modal-card')).toBeTruthy();

@@ -83,11 +83,20 @@ export class AnalyticsService {
     buttonName?: string,
     params?: GA4EventParams,
   ): Promise<void> {
-    logger.info(
-      `[AnalyticsService] logButtonClick "${buttonId}":`,
-      buttonName,
-      params,
-    );
+    if (params) {
+      logger.info(
+        `[AnalyticsService] logButtonClick "${buttonId}":`,
+        buttonName,
+        params,
+      );
+    } else if (buttonName) {
+      logger.info(
+        `[AnalyticsService] logButtonClick "${buttonId}":`,
+        buttonName,
+      );
+    } else {
+      logger.info(`[AnalyticsService] logButtonClick "${buttonId}"`);
+    }
     await Promise.all(
       this.trackers.map(async (tracker) => {
         try {

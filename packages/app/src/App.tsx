@@ -1,6 +1,6 @@
 /**
  * @file App.tsx
- * @description Main mobile application root component initializing providers, analytics, and navigation.
+ * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -13,9 +13,10 @@ import {
 } from '@tanstack/react-query';
 import { analyticsService, ApiError } from '@yeolo/common';
 import { appAnalyticsTracker } from './analytics';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, BackgroundProvider } from './context';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
+import { BackgroundImageLayout } from './layouts';
 
 import { APP_CONFIG } from './constants/config';
 
@@ -68,8 +69,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NavigationRoot />
-          <StatusBar style='auto' />
+          <BackgroundProvider>
+            <BackgroundImageLayout>
+              <NavigationRoot />
+              <StatusBar style='auto' />
+            </BackgroundImageLayout>
+          </BackgroundProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
