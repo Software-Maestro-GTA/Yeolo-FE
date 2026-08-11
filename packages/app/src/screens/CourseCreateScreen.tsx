@@ -232,9 +232,6 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                 </View>
               </View>
 
-              {/* Divider Line */}
-              <View style={styles.cardDivider} />
-
               {/* Popular Destinations Tag Section */}
               <View style={styles.tagSection}>
                 <ScrollView
@@ -244,12 +241,12 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                   {POPULAR_DESTINATIONS.map((dest) => (
                     <TouchableOpacity
                       key={dest.city}
+                      testID={`popular-tag-${dest.city}`}
                       style={styles.tagChip}
                       onPress={() => onSelectPopular(dest.country, dest.city)}
                       activeOpacity={0.7}>
-                      <Text style={styles.tagChipText}>
-                        {dest.flag} {dest.city}
-                      </Text>
+                      <Text style={styles.tagFlagText}>{dest.flag}</Text>
+                      <Text style={styles.tagChipText}>{dest.city}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -468,28 +465,28 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
 
-            <View style={styles.bottomContainer} testID='bottom-container'>
-              <TouchableOpacity
-                testID='submit-course-btn'
-                style={[
-                  styles.ctaButton,
-                  !isFormValid && styles.ctaButtonDisabled,
-                ]}
-                disabled={!isFormValid}
-                onPress={handleSubmit}
-                activeOpacity={0.8}>
-                <Ionicons
-                  name='sparkles'
-                  size={18}
-                  color='#FFFFFF'
-                  style={styles.ctaIconLeft}
-                />
-                <Text style={styles.ctaButtonText}>
-                  {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.bottomContainer} testID='bottom-container'>
+            <TouchableOpacity
+              testID='submit-course-btn'
+              style={[
+                styles.ctaButton,
+                !isFormValid && styles.ctaButtonDisabled,
+              ]}
+              disabled={!isFormValid}
+              onPress={handleSubmit}
+              activeOpacity={0.8}>
+              <Ionicons
+                name='sparkles'
+                size={20}
+                color='#FFFFFF'
+                style={styles.ctaIconLeft}
+              />
+              <Text style={styles.ctaButtonText}>
+                {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -500,52 +497,61 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: palette.softMint, // #F5FAF8
   },
   scrollContentContainer: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 76,
-    gap: 16,
-    justifyContent: 'space-between',
+    paddingTop: 20,
+    paddingBottom: 24,
+    gap: 18,
   },
   headerContent: {
     width: '100%',
     gap: 6,
+    paddingTop: 8,
+    paddingBottom: 4,
+    paddingHorizontal: 6,
   },
   headerTitle: {
     fontSize: 26,
     fontWeight: '900',
     color: palette.deepNavy, // #0D2137
-    lineHeight: 32,
+    lineHeight: 34,
+    letterSpacing: -0.6,
+    includeFontPadding: false,
   },
   headerSubTitle: {
     fontSize: 14,
     fontWeight: '400',
     color: palette.subText, // #59616B
+    lineHeight: 20,
+    includeFontPadding: false,
   },
   mainBody: {
+    flex: 1,
     width: '100%',
-    gap: 16,
+    justifyContent: 'center',
+    gap: 18,
   },
   cardContainer: {
     backgroundColor: palette.white, // #FFFFFF
     borderWidth: 1,
     borderColor: palette.gray200, // #E0E5EB
-    borderRadius: 16,
-    padding: 16,
-    gap: 14,
+    borderRadius: 18,
+    padding: 18,
+    gap: 16,
     shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
     zIndex: 1,
   },
   cardContainerActiveDropdown: {
     zIndex: 1000,
-    elevation: 10,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -556,6 +562,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: palette.deepNavy,
+    includeFontPadding: false,
   },
   twoColumnRow: {
     flexDirection: 'row',
@@ -571,13 +578,13 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     position: 'absolute',
-    top: 62,
+    top: 66,
     left: 0,
     right: 0,
     backgroundColor: palette.white,
     borderWidth: 1,
     borderColor: palette.gray200,
-    borderRadius: 8,
+    borderRadius: 10,
     maxHeight: 160,
     zIndex: 1000,
     elevation: 5,
@@ -590,8 +597,8 @@ const styles = StyleSheet.create({
     maxHeight: 150,
   },
   dropdownItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#EBEDF2',
   },
@@ -599,27 +606,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: palette.deepNavy,
+    includeFontPadding: false,
   },
 
   fieldLabelText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#8C949E',
+    includeFontPadding: false,
   },
   inputBox: {
     backgroundColor: palette.softMint,
     borderWidth: 1,
     borderColor: 'rgba(217, 222, 229, 0.6)',
-    borderRadius: 8,
-    height: 40,
+    borderRadius: 10,
+    height: 44,
     paddingHorizontal: 12,
     justifyContent: 'center',
   },
   inputText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: palette.deepNavy,
     padding: 0,
+    includeFontPadding: false,
   },
   cardDivider: {
     height: 1,
@@ -633,27 +643,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#E0F7F1',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
+  },
+  tagFlagText: {
+    fontSize: 14,
+    includeFontPadding: false,
   },
   tagChipText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#0D7361',
+    includeFontPadding: false,
   },
   dateBox: {
     flex: 1,
     backgroundColor: palette.softMint,
-    borderRadius: 8,
-    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 222, 229, 0.6)',
+    borderRadius: 10,
+    padding: 12,
     gap: 4,
   },
   dateValueText: {
     fontSize: 13,
     fontWeight: '700',
     color: palette.deepNavy,
+    includeFontPadding: false,
   },
   datePlaceholderText: {
     color: '#8C949E',
@@ -661,15 +683,15 @@ const styles = StyleSheet.create({
   },
   threeColumnGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   styleCardItem: {
     flex: 1,
     backgroundColor: palette.white,
     borderWidth: 1.5,
     borderColor: palette.gray200,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
@@ -679,9 +701,9 @@ const styles = StyleSheet.create({
     borderColor: palette.accent, // #00C9A7
   },
   styleIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: palette.softMint,
     alignItems: 'center',
     justifyContent: 'center',
@@ -690,10 +712,11 @@ const styles = StyleSheet.create({
     backgroundColor: palette.white,
   },
   styleCardLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     color: palette.subText,
     lineHeight: 16,
+    includeFontPadding: false,
   },
   styleCardLabelActive: {
     fontWeight: '700',
@@ -702,19 +725,20 @@ const styles = StyleSheet.create({
 
   bottomContainer: {
     width: '100%',
-    marginTop: 8,
+    marginTop: 'auto',
+    paddingTop: 16,
   },
   ctaButton: {
     backgroundColor: palette.primary, // #2D7DD2
     height: 56,
-    borderRadius: 14,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2D7DD2',
+    shadowColor: palette.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 3,
   },
   ctaButtonDisabled: {
@@ -724,6 +748,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: -0.3,
+    includeFontPadding: false,
   },
   ctaIconLeft: {
     marginRight: 8,

@@ -34,10 +34,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 const styles = StyleSheet.create({
   mainLayout: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: palette.softMint, // #F5FAF8
   },
   content: {
     flex: 1,
-    paddingBottom: 60,
+    width: '100%',
+    height: '100%',
   },
 });

@@ -69,10 +69,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
 const styles = StyleSheet.create({
   bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 2,
     borderTopColor: 'rgba(45, 125, 210, 0.3)',
@@ -86,7 +83,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 8,
-    zIndex: 10,
   },
   navItem: {
     width: 70,

@@ -3,7 +3,7 @@
  * @description Unit and integration tests for CourseCreateScreen travel condition input form matching Figma UI specs.
  */
 import React from 'react';
-import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor, act, within } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from './test-utils';
 import { CourseCreateScreen } from '../src/screens/CourseCreateScreen';
 
@@ -107,7 +107,7 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     const { getByTestId, getByText } = await render(<CourseCreateScreen />);
 
     await act(async () => {
-      fireEvent.press(getByText('🇯🇵 도쿄'));
+      fireEvent.press(getByTestId('popular-tag-도쿄'));
     });
 
     expect(getByTestId('input-country').props.value).toBe('일본');
@@ -246,7 +246,7 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
 
     await findByTestId('city-dropdown');
     await act(async () => {
-      fireEvent.press(getByText('도쿄'));
+      fireEvent.press(within(getByTestId('city-dropdown')).getByText('도쿄'));
     });
 
     expect(getByTestId('input-city').props.value).toBe('도쿄');
