@@ -125,16 +125,16 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
           contentContainerStyle={styles.scrollContentContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps='handled'>
-          <View style={styles.headerContent} testID='top-content'>
-            <Text style={styles.headerTitle}>
-              {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
-            </Text>
-            <Text style={styles.headerSubTitle}>
-              {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
-            </Text>
-          </View>
-
           <View style={styles.mainBody} testID='main-content'>
+            <View style={styles.headerContent} testID='top-content'>
+              <Text style={styles.headerTitle}>
+                {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
+              </Text>
+              <Text style={styles.headerSubTitle}>
+                {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
+              </Text>
+            </View>
+
             <View
               style={[
                 styles.cardContainer,
@@ -510,10 +510,8 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     width: '100%',
-    gap: 6,
-    paddingTop: 8,
-    paddingBottom: 4,
-    paddingHorizontal: 6,
+    gap: 4,
+    paddingBottom: 2,
   },
   headerTitle: {
     fontSize: 26,

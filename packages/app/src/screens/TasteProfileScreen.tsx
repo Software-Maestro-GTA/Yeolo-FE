@@ -95,13 +95,13 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.headerContent} testID='top-content'>
-          <Text style={styles.headerTitle}>
-            {UI_STRINGS.TASTE_PROFILE.MAIN_TITLE}
-          </Text>
-        </View>
-
         <View style={styles.mainBody} testID='main-content'>
+          <View style={styles.headerContent} testID='top-content'>
+            <Text style={styles.headerTitle}>
+              {UI_STRINGS.TASTE_PROFILE.MAIN_TITLE}
+            </Text>
+          </View>
+
           {/* 6 Key Trait Summary Chips */}
           <View style={styles.summaryChipsFrame} testID='summary-chips-row'>
             <View style={styles.chipColumn}>
@@ -254,24 +254,24 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
               )}
             </View>
           </View>
+        </View>
 
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            <TouchableOpacity
-              style={styles.ctaButton}
-              activeOpacity={0.8}
-              onPress={handlePressGenerateCourse}
-              testID='generate-course-button'>
-              <Ionicons
-                name='sparkles'
-                size={18}
-                color={palette.white}
-                style={styles.ctaIconLeft}
-              />
-              <Text style={styles.ctaButtonText}>
-                {UI_STRINGS.TASTE_PROFILE.GENERATE_COURSE_BUTTON}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.bottomContainer} testID='bottom-container'>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.8}
+            onPress={handlePressGenerateCourse}
+            testID='generate-course-button'>
+            <Ionicons
+              name='sparkles'
+              size={18}
+              color={palette.white}
+              style={styles.ctaIconLeft}
+            />
+            <Text style={styles.ctaButtonText}>
+              {UI_STRINGS.TASTE_PROFILE.GENERATE_COURSE_BUTTON}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -287,22 +287,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContentContainer: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 76,
-    gap: 16,
+    paddingTop: 20,
+    paddingBottom: 24,
+    gap: 18,
   },
   headerContent: {
     width: '100%',
+    gap: 4,
+    paddingBottom: 2,
   },
   headerTitle: {
     fontSize: 26,
     fontWeight: '900',
     color: palette.deepNavy,
-    lineHeight: 32,
+    lineHeight: 34,
+    letterSpacing: -0.6,
+    includeFontPadding: false,
   },
   mainBody: {
+    flex: 1,
     width: '100%',
+    justifyContent: 'center',
     gap: 16,
   },
   summaryChipsFrame: {
@@ -440,7 +447,8 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     width: '100%',
-    marginTop: 8,
+    marginTop: 'auto',
+    paddingTop: 16,
   },
   ctaButton: {
     backgroundColor: palette.primary,
