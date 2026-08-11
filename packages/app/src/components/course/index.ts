@@ -2,7 +2,6 @@
  * @file index.ts
  * @description Export all course UI components.
  */
-export * from './CourseDetailHeader';
 export * from './CourseMiniMapView';
 export * from './CourseDayTabs';
 export * from './ItineraryTimelineItem';
