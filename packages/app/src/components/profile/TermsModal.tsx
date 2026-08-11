@@ -1,6 +1,6 @@
 /**
  * @file TermsModal.tsx
- * @description Modal dialog component for displaying Terms of Service.
+ * @description Center-aligned popup dialog modal component for displaying Terms of Service and Privacy Policy.
  */
 import React from 'react';
 import {
@@ -13,7 +13,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 
-import { theme } from '../../theme';
+import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface TermsModalProps {
@@ -30,18 +30,19 @@ export const TermsModal: React.FC<TermsModalProps> = ({
   return (
     <Modal
       visible={visible}
-      animationType='slide'
+      animationType='fade'
       transparent={true}
       onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
+        <View style={styles.overlay} testID='terms-modal-overlay'>
           <TouchableWithoutFeedback>
-            <View style={styles.modalCard}>
+            <View style={styles.modalCard} testID='terms-modal-card'>
               <Text style={styles.modalTitle}>
                 {type === 'privacy'
                   ? '여로 개인정보 처리방침'
                   : '여로 서비스 이용약관'}
               </Text>
+
               <ScrollView
                 style={styles.scrollContent}
                 showsVerticalScrollIndicator={true}>
@@ -65,7 +66,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={onClose}
-                activeOpacity={0.8}>
+                activeOpacity={0.85}>
                 <Text style={styles.closeButtonText}>
                   {UI_STRINGS.COMMON.CLOSE}
                 </Text>
@@ -81,47 +82,50 @@ export const TermsModal: React.FC<TermsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: hexToRgba(palette.deepNavy, 0.45),
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modalCard: {
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 20,
+    backgroundColor: palette.white,
+    borderRadius: 24,
     padding: 24,
     width: '100%',
-    maxHeight: '80%',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    maxHeight: '75%',
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     marginBottom: 16,
     textAlign: 'center',
   },
   scrollContent: {
+    width: '100%',
     marginBottom: 20,
   },
   termsText: {
     fontSize: 14,
-    color: theme.colors.text.secondary,
+    color: palette.subText,
     lineHeight: 22,
   },
   closeButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
+    width: '100%',
+    height: 48,
+    backgroundColor: palette.primary,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButtonText: {
-    color: theme.colors.text.inverse,
+    color: palette.white,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
