@@ -723,8 +723,6 @@ const styles = StyleSheet.create({
 
   bottomContainer: {
     width: '100%',
-    marginTop: 'auto',
-    paddingTop: 16,
   },
   ctaButton: {
     backgroundColor: palette.primary, // #2D7DD2
