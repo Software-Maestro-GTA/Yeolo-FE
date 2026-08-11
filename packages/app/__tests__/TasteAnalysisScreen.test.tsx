@@ -45,15 +45,21 @@ describe('TasteAnalysisScreen UI & Progress', () => {
   });
 
   it('Figma 스펙 타이틀, 스텝 3개, 실시간 인사이트 안내가 정상 렌더링되어야 한다', async () => {
-    const { getByText, getByTestId } = await render(
+    const { getByText, getAllByText, getByTestId } = await render(
       <TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />,
     );
 
     expect(getByText(UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE)).toBeTruthy();
     expect(getByText(UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.TASTE_ANALYSIS.STEP_1)).toBeTruthy();
-    expect(getByText(UI_STRINGS.TASTE_ANALYSIS.STEP_2)).toBeTruthy();
-    expect(getByText(UI_STRINGS.TASTE_ANALYSIS.STEP_3)).toBeTruthy();
+    expect(
+      getAllByText(new RegExp(UI_STRINGS.TASTE_ANALYSIS.STEP_1)).length,
+    ).toBeGreaterThan(0);
+    expect(
+      getAllByText(new RegExp(UI_STRINGS.TASTE_ANALYSIS.STEP_2)).length,
+    ).toBeGreaterThan(0);
+    expect(
+      getAllByText(new RegExp(UI_STRINGS.TASTE_ANALYSIS.STEP_3)).length,
+    ).toBeGreaterThan(0);
 
     expect(getByTestId('checklist-container')).toBeTruthy();
     expect(getByTestId('step-1')).toBeTruthy();

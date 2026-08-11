@@ -11,7 +11,6 @@ import {
   Animated,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -111,12 +110,22 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
     );
   };
 
+  const getStepLabel = (
+    baseText: string,
+    status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED',
+  ) => {
+    if (status === 'COMPLETED') {
+      return `${baseText} 완료`;
+    }
+    if (status === 'IN_PROGRESS') {
+      return `${baseText} 중`;
+    }
+    return baseText;
+  };
+
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
+      <View style={styles.contentContainer}>
           {/* Header Title Section */}
           <View style={styles.headerSection} testID='top-content'>
             <Text style={styles.mainTitle}>
@@ -146,7 +155,10 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                       styles.stepText,
                       progress.step1Status !== 'IDLE' && styles.activeStepText,
                     ]}>
-                    {UI_STRINGS.TASTE_ANALYSIS.STEP_1}
+                    {getStepLabel(
+                      UI_STRINGS.TASTE_ANALYSIS.STEP_1,
+                      progress.step1Status,
+                    )}
                   </Text>
                 </View>
 
@@ -158,7 +170,10 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                       styles.stepText,
                       progress.step2Status !== 'IDLE' && styles.activeStepText,
                     ]}>
-                    {UI_STRINGS.TASTE_ANALYSIS.STEP_2}
+                    {getStepLabel(
+                      UI_STRINGS.TASTE_ANALYSIS.STEP_2,
+                      progress.step2Status,
+                    )}
                   </Text>
                 </View>
 
@@ -172,7 +187,10 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                         ? styles.activeStepText
                         : styles.pendingStepText,
                     ]}>
-                    {UI_STRINGS.TASTE_ANALYSIS.STEP_3}
+                    {getStepLabel(
+                      UI_STRINGS.TASTE_ANALYSIS.STEP_3,
+                      progress.step3Status,
+                    )}
                   </Text>
                 </View>
               </View>
@@ -228,7 +246,6 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
             )}
           </View>
         </View>
-      </SafeAreaView>
     </View>
   );
 };
@@ -238,13 +255,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.softMint,
   },
-  safeArea: {
-    flex: 1,
-  },
   contentContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
   },
@@ -304,6 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   loadingCircleIcon: {
     width: 24,
@@ -311,6 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   pendingCircleIcon: {
     width: 24,
@@ -319,6 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gray200,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   pendingDotInner: {
     width: 8,
