@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: palette.softMint, // #F5FAF8
+    backgroundColor: palette.softMint,
   },
   content: {
     flex: 1,

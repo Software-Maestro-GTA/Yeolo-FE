@@ -198,6 +198,13 @@ export const UI_STRINGS = {
     BOOKING_ERROR_MESSAGE:
       '예약 페이지를 열 수 없습니다. 잠시 후 다시 시도해주세요.',
     MAP_LOADING: '지도를 불러오는 중...',
+    SHARE_SUCCESS_TOAST: '공유 링크가 클립보드에 복사되었습니다.',
+    SHARE_SUCCESS_TITLE: '공유 링크 복사 완료',
+    SHARE_FAIL_TITLE: '공유 실패',
+    SHARE_FAIL_DEFAULT: '공유 링크를 생성하지 못했습니다.',
+    DEFAULT_COURSE_TITLE: '여행 코스',
+    DEFAULT_STAY_TIME: '60분 소요',
+    RECOMMENDED_ROUTE_TIP: '가장 효율적인 추천 동선으로 연결된 구간입니다.',
   },
   PLACE_DETAIL: {
     DEFAULT_NAME: '모리 미술관',

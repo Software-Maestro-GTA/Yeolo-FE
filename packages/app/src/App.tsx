@@ -1,10 +1,10 @@
 /**
  * @file App.tsx
- * @description Main mobile application root component initializing providers, analytics, and navigation.
+ * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   QueryClient,
   QueryClientProvider,
@@ -13,10 +13,10 @@ import {
 } from '@tanstack/react-query';
 import { analyticsService, ApiError } from '@yeolo/common';
 import { appAnalyticsTracker } from './analytics';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, BackgroundProvider } from './context';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
-import { palette } from './theme/colors';
+import { BackgroundImageLayout } from './layouts';
 
 import { APP_CONFIG } from './constants/config';
 
@@ -69,12 +69,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthProvider>
-          <SafeAreaView
-            style={{ flex: 1, backgroundColor: palette.softMint }}
-            edges={['top', 'left', 'right']}>
-            <NavigationRoot />
-            <StatusBar style='auto' />
-          </SafeAreaView>
+          <BackgroundProvider>
+            <BackgroundImageLayout>
+              <NavigationRoot />
+              <StatusBar style='auto' />
+            </BackgroundImageLayout>
+          </BackgroundProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
