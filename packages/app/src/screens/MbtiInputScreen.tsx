@@ -12,7 +12,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -93,307 +92,303 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Header Title Section */}
-          <View style={styles.headerSection} testID='top-content'>
-            <Text style={styles.mainTitle}>{UI_STRINGS.MBTI.MAIN_TITLE}</Text>
-            <Text style={styles.subTitle}>{UI_STRINGS.MBTI.SUB_TITLE}</Text>
-          </View>
+      <View style={styles.contentContainer}>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>{UI_STRINGS.MBTI.MAIN_TITLE}</Text>
+          <Text style={styles.subTitle}>{UI_STRINGS.MBTI.SUB_TITLE}</Text>
+        </View>
 
-          {/* Main Body: MBTI 4-Row 2-Column Options Grid */}
-          <View
-            style={styles.mbtiGridContainer}
-            testID='mbti-selection-container'>
-            {/* Row 1: E vs I */}
-            <View style={styles.mbtiRow}>
-              {/* Option E */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  ei === 'E' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setEi('E')}
-                testID='mbti-option-E'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    ei === 'E'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  E
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    ei === 'E'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  외향형
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option I */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  ei === 'I' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setEi('I')}
-                testID='mbti-option-I'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    ei === 'I'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  I
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    ei === 'I'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  내향형
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Row 2: S vs N */}
-            <View style={styles.mbtiRow}>
-              {/* Option S */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  sn === 'S' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setSn('S')}
-                testID='mbti-option-S'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    sn === 'S'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  S
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    sn === 'S'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  감각형
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option N */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  sn === 'N' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setSn('N')}
-                testID='mbti-option-N'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    sn === 'N'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  N
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    sn === 'N'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  직관형
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Row 3: T vs F */}
-            <View style={styles.mbtiRow}>
-              {/* Option T */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  tf === 'T' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setTf('T')}
-                testID='mbti-option-T'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    tf === 'T'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  T
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    tf === 'T'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  사고형
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option F */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  tf === 'F' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setTf('F')}
-                testID='mbti-option-F'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    tf === 'F'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  F
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    tf === 'F'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  감정형
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Row 4: J vs P */}
-            <View style={styles.mbtiRow}>
-              {/* Option J */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  jp === 'J' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setJp('J')}
-                testID='mbti-option-J'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    jp === 'J'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  J
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    jp === 'J'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  판단형
-                </Text>
-              </TouchableOpacity>
-
-              {/* Option P */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.mbtiOptionCard,
-                  jp === 'P' ? styles.activeCard : styles.inactiveCard,
-                ]}
-                onPress={() => setJp('P')}
-                testID='mbti-option-P'>
-                <Text
-                  style={[
-                    styles.letterText,
-                    jp === 'P'
-                      ? styles.activeLetterText
-                      : styles.inactiveLetterText,
-                  ]}>
-                  P
-                </Text>
-                <Text
-                  style={[
-                    styles.koreanText,
-                    jp === 'P'
-                      ? styles.activeKoreanText
-                      : styles.inactiveKoreanText,
-                  ]}>
-                  인식형
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Bottom Container Action Buttons */}
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            {/* Primary Button */}
+        {/* Main Body: MBTI 4-Row 2-Column Options Grid */}
+        <View
+          style={styles.mbtiGridContainer}
+          testID='mbti-selection-container'>
+          {/* Row 1: E vs I */}
+          <View style={styles.mbtiRow}>
+            {/* Option E */}
             <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                updatePreferencesMutation.isPending && styles.disabledButton,
-              ]}
               activeOpacity={0.8}
-              disabled={updatePreferencesMutation.isPending}
-              onPress={handlePressNext}
-              testID='next-button'>
-              <Text style={styles.primaryButtonText}>
-                {UI_STRINGS.MBTI.NEXT_BUTTON}
+              style={[
+                styles.mbtiOptionCard,
+                ei === 'E' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setEi('E')}
+              testID='mbti-option-E'>
+              <Text
+                style={[
+                  styles.letterText,
+                  ei === 'E'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                E
               </Text>
-              <Feather
-                name='chevron-right'
-                size={18}
-                color={palette.white}
-                style={styles.arrowIcon}
-              />
+              <Text
+                style={[
+                  styles.koreanText,
+                  ei === 'E'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                외향형
+              </Text>
             </TouchableOpacity>
 
-            {/* Secondary Button: 📷 더 정확한 추천 받기 */}
+            {/* Option I */}
             <TouchableOpacity
-              style={styles.secondaryButton}
               activeOpacity={0.8}
-              onPress={handlePressAccurate}
-              testID='accurate-recommend-button'>
-              <Ionicons
-                name='camera-outline'
-                size={18}
-                color={palette.accent}
-                style={styles.cameraIconMargin}
-              />
-              <Text style={styles.secondaryButtonText}>
-                {UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON}
+              style={[
+                styles.mbtiOptionCard,
+                ei === 'I' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setEi('I')}
+              testID='mbti-option-I'>
+              <Text
+                style={[
+                  styles.letterText,
+                  ei === 'I'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                I
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  ei === 'I'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                내향형
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 2: S vs N */}
+          <View style={styles.mbtiRow}>
+            {/* Option S */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                sn === 'S' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setSn('S')}
+              testID='mbti-option-S'>
+              <Text
+                style={[
+                  styles.letterText,
+                  sn === 'S'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                S
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  sn === 'S'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                감각형
+              </Text>
+            </TouchableOpacity>
+
+            {/* Option N */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                sn === 'N' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setSn('N')}
+              testID='mbti-option-N'>
+              <Text
+                style={[
+                  styles.letterText,
+                  sn === 'N'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                N
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  sn === 'N'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                직관형
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 3: T vs F */}
+          <View style={styles.mbtiRow}>
+            {/* Option T */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                tf === 'T' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setTf('T')}
+              testID='mbti-option-T'>
+              <Text
+                style={[
+                  styles.letterText,
+                  tf === 'T'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                T
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  tf === 'T'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                사고형
+              </Text>
+            </TouchableOpacity>
+
+            {/* Option F */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                tf === 'F' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setTf('F')}
+              testID='mbti-option-F'>
+              <Text
+                style={[
+                  styles.letterText,
+                  tf === 'F'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                F
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  tf === 'F'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                감정형
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 4: J vs P */}
+          <View style={styles.mbtiRow}>
+            {/* Option J */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                jp === 'J' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setJp('J')}
+              testID='mbti-option-J'>
+              <Text
+                style={[
+                  styles.letterText,
+                  jp === 'J'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                J
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  jp === 'J'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                판단형
+              </Text>
+            </TouchableOpacity>
+
+            {/* Option P */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.mbtiOptionCard,
+                jp === 'P' ? styles.activeCard : styles.inactiveCard,
+              ]}
+              onPress={() => setJp('P')}
+              testID='mbti-option-P'>
+              <Text
+                style={[
+                  styles.letterText,
+                  jp === 'P'
+                    ? styles.activeLetterText
+                    : styles.inactiveLetterText,
+                ]}>
+                P
+              </Text>
+              <Text
+                style={[
+                  styles.koreanText,
+                  jp === 'P'
+                    ? styles.activeKoreanText
+                    : styles.inactiveKoreanText,
+                ]}>
+                인식형
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+
+        {/* Bottom Container Action Buttons */}
+        <View style={styles.bottomContainer} testID='bottom-container'>
+          {/* Primary Button */}
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              updatePreferencesMutation.isPending && styles.disabledButton,
+            ]}
+            activeOpacity={0.8}
+            disabled={updatePreferencesMutation.isPending}
+            onPress={handlePressNext}
+            testID='next-button'>
+            <Text style={styles.primaryButtonText}>
+              {UI_STRINGS.MBTI.NEXT_BUTTON}
+            </Text>
+            <Feather
+              name='chevron-right'
+              size={18}
+              color={palette.white}
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
+
+          {/* Secondary Button: 📷 더 정확한 추천 받기 */}
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            activeOpacity={0.8}
+            onPress={handlePressAccurate}
+            testID='accurate-recommend-button'>
+            <Ionicons
+              name='camera-outline'
+              size={18}
+              color={palette.accent}
+              style={styles.cameraIconMargin}
+            />
+            <Text style={styles.secondaryButtonText}>
+              {UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };

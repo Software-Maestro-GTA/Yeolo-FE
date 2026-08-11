@@ -256,76 +256,72 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onNext }) => {
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Header Title Section */}
-          <View style={styles.headerSection} testID='top-content'>
-            <Text style={styles.mainTitle}>{UI_STRINGS.INTRO.MAIN_TITLE}</Text>
-            <Text style={styles.subTitle}>{UI_STRINGS.INTRO.SUB_TITLE}</Text>
-          </View>
-
-          {/* Main Body with Swipe Gesture */}
-          <View
-            style={[styles.mainBodyContainer, { outlineStyle: 'none' } as any]}
-            testID='main-body-touchable'
-            {...panResponder.panHandlers}>
-            <Animated.View
-              style={[
-                styles.animatedBody,
-                { transform: [{ translateX: slideAnim }] },
-              ]}
-              renderToHardwareTextureAndroid={true}
-              shouldRasterizeIOS={true}>
-              {activeIndex === 0 && renderSlide0()}
-              {activeIndex === 1 && renderSlide1()}
-              {activeIndex === 2 && renderSlide2()}
-            </Animated.View>
-          </View>
-
-          {/* Bottom Navigation & Indicators */}
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            {/* Pagination Dots */}
-            <View style={styles.paginationDots}>
-              {[0, 1, 2].map((idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  activeOpacity={0.6}
-                  onPress={() =>
-                    goToSlide(
-                      idx,
-                      idx >= activeIndexRef.current ? 'next' : 'prev',
-                    )
-                  }
-                  style={[
-                    styles.dot,
-                    activeIndex === idx ? styles.activeDot : styles.inactiveDot,
-                    { outlineStyle: 'none' } as any,
-                  ]}
-                />
-              ))}
-            </View>
-
-            {/* Next Action Button */}
-            <TouchableOpacity
-              style={[styles.primaryButton, { outlineStyle: 'none' } as any]}
-              activeOpacity={0.8}
-              onPress={handlePressNextButton}
-              testID='next-button'>
-              <Text style={styles.buttonText}>
-                {UI_STRINGS.INTRO.NEXT_BUTTON}
-              </Text>
-              <Feather
-                name='chevron-right'
-                size={18}
-                color={palette.white}
-                style={styles.arrowIcon}
-              />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.contentContainer}>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>{UI_STRINGS.INTRO.MAIN_TITLE}</Text>
+          <Text style={styles.subTitle}>{UI_STRINGS.INTRO.SUB_TITLE}</Text>
         </View>
-      </SafeAreaView>
+
+        {/* Main Body with Swipe Gesture */}
+        <View
+          style={[styles.mainBodyContainer, { outlineStyle: 'none' } as any]}
+          testID='main-body-touchable'
+          {...panResponder.panHandlers}>
+          <Animated.View
+            style={[
+              styles.animatedBody,
+              { transform: [{ translateX: slideAnim }] },
+            ]}
+            renderToHardwareTextureAndroid={true}
+            shouldRasterizeIOS={true}>
+            {activeIndex === 0 && renderSlide0()}
+            {activeIndex === 1 && renderSlide1()}
+            {activeIndex === 2 && renderSlide2()}
+          </Animated.View>
+        </View>
+
+        {/* Bottom Navigation & Indicators */}
+        <View style={styles.bottomContainer} testID='bottom-container'>
+          {/* Pagination Dots */}
+          <View style={styles.paginationDots}>
+            {[0, 1, 2].map((idx) => (
+              <TouchableOpacity
+                key={idx}
+                activeOpacity={0.6}
+                onPress={() =>
+                  goToSlide(
+                    idx,
+                    idx >= activeIndexRef.current ? 'next' : 'prev',
+                  )
+                }
+                style={[
+                  styles.dot,
+                  activeIndex === idx ? styles.activeDot : styles.inactiveDot,
+                  { outlineStyle: 'none' } as any,
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Next Action Button */}
+          <TouchableOpacity
+            style={[styles.primaryButton, { outlineStyle: 'none' } as any]}
+            activeOpacity={0.8}
+            onPress={handlePressNextButton}
+            testID='next-button'>
+            <Text style={styles.buttonText}>
+              {UI_STRINGS.INTRO.NEXT_BUTTON}
+            </Text>
+            <Feather
+              name='chevron-right'
+              size={18}
+              color={palette.white}
+              style={styles.arrowIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };

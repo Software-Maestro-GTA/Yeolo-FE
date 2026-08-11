@@ -48,88 +48,84 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Header Title Section */}
-          <View style={styles.headerSection} testID='top-content'>
-            <Text style={styles.mainTitle}>
-              {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
-            </Text>
-            <Text style={styles.subTitle}>
-              {UI_STRINGS.PHOTO_CONSENT.SUB_TITLE}
-            </Text>
-          </View>
+      <View style={styles.contentContainer}>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>
+            {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
+          </Text>
+          <Text style={styles.subTitle}>
+            {UI_STRINGS.PHOTO_CONSENT.SUB_TITLE}
+          </Text>
+        </View>
 
-          {/* Main Body Section */}
-          <View style={styles.mainBodyContainer} testID='main-content'>
-            {/* Hero Lock Illustration Graphic */}
-            <View style={styles.heroIllustration} testID='hero-illustration'>
-              <View style={styles.iconCircleBg}>
-                <Feather name='lock' size={44} color={palette.accent} />
-              </View>
-            </View>
-
-            {/* Security & Data Privacy Assurance Cards */}
-            <View style={styles.assuranceCardsContainer}>
-              {/* Card 1: 메타데이터만 안전하게 가공 */}
-              <View style={styles.infoCard} testID='info-card-1'>
-                <View style={styles.cardIconWrapper}>
-                  <Ionicons
-                    name='shield-checkmark-outline'
-                    size={22}
-                    color={palette.accent}
-                  />
-                </View>
-                <View style={styles.cardTextGroup}>
-                  <Text style={styles.cardTitle}>
-                    {UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE}
-                  </Text>
-                  <Text style={styles.cardDescription}>
-                    {UI_STRINGS.PHOTO_CONSENT.CARD_1_DESC}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Card 2: 분석 즉시 데이터 파기 */}
-              <View style={styles.infoCard} testID='info-card-2'>
-                <View style={styles.cardIconWrapper}>
-                  <Feather name='trash-2' size={22} color={palette.accent} />
-                </View>
-                <View style={styles.cardTextGroup}>
-                  <Text style={styles.cardTitle}>
-                    {UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE}
-                  </Text>
-                  <Text style={styles.cardDescription}>
-                    {UI_STRINGS.PHOTO_CONSENT.CARD_2_DESC}
-                  </Text>
-                </View>
-              </View>
+        {/* Main Body Section */}
+        <View style={styles.mainBodyContainer} testID='main-content'>
+          {/* Hero Lock Illustration Graphic */}
+          <View style={styles.heroIllustration} testID='hero-illustration'>
+            <View style={styles.iconCircleBg}>
+              <Feather name='lock' size={44} color={palette.accent} />
             </View>
           </View>
 
-          {/* Bottom Container Action Button */}
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              activeOpacity={0.8}
-              disabled={saveConsentMutation.isPending}
-              onPress={handlePressConsent}
-              testID='consent-start-button'>
-              <Text style={styles.primaryButtonText}>
-                {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
-              </Text>
-              <Ionicons
-                name='shield-checkmark'
-                size={18}
-                color={palette.white}
-                style={styles.buttonIcon}
-              />
-            </TouchableOpacity>
+          {/* Security & Data Privacy Assurance Cards */}
+          <View style={styles.assuranceCardsContainer}>
+            {/* Card 1: 메타데이터만 안전하게 가공 */}
+            <View style={styles.infoCard} testID='info-card-1'>
+              <View style={styles.cardIconWrapper}>
+                <Ionicons
+                  name='shield-checkmark-outline'
+                  size={22}
+                  color={palette.accent}
+                />
+              </View>
+              <View style={styles.cardTextGroup}>
+                <Text style={styles.cardTitle}>
+                  {UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE}
+                </Text>
+                <Text style={styles.cardDescription}>
+                  {UI_STRINGS.PHOTO_CONSENT.CARD_1_DESC}
+                </Text>
+              </View>
+            </View>
+
+            {/* Card 2: 분석 즉시 데이터 파기 */}
+            <View style={styles.infoCard} testID='info-card-2'>
+              <View style={styles.cardIconWrapper}>
+                <Feather name='trash-2' size={22} color={palette.accent} />
+              </View>
+              <View style={styles.cardTextGroup}>
+                <Text style={styles.cardTitle}>
+                  {UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE}
+                </Text>
+                <Text style={styles.cardDescription}>
+                  {UI_STRINGS.PHOTO_CONSENT.CARD_2_DESC}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
-      </SafeAreaView>
+
+        {/* Bottom Container Action Button */}
+        <View style={styles.bottomContainer} testID='bottom-container'>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            activeOpacity={0.8}
+            disabled={saveConsentMutation.isPending}
+            onPress={handlePressConsent}
+            testID='consent-start-button'>
+            <Text style={styles.primaryButtonText}>
+              {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
+            </Text>
+            <Ionicons
+              name='shield-checkmark'
+              size={18}
+              color={palette.white}
+              style={styles.buttonIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };

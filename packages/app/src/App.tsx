@@ -4,7 +4,7 @@
  */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   QueryClient,
   QueryClientProvider,
@@ -16,6 +16,7 @@ import { appAnalyticsTracker } from './analytics';
 import { AuthProvider } from './context/AuthContext';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
+import { palette } from './theme/colors';
 
 import { APP_CONFIG } from './constants/config';
 
@@ -68,8 +69,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NavigationRoot />
-          <StatusBar style='auto' />
+          <SafeAreaView
+            style={{ flex: 1, backgroundColor: palette.softMint }}
+            edges={['top', 'left', 'right']}>
+            <NavigationRoot />
+            <StatusBar style='auto' />
+          </SafeAreaView>
         </AuthProvider>
       </SafeAreaProvider>
     </QueryClientProvider>

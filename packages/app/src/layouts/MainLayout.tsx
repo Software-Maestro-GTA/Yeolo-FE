@@ -4,7 +4,6 @@
  */
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
 import { BottomNavBar, NavTab } from '../components/navigation';
 import { palette } from '../theme/colors';
 
@@ -21,19 +20,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   currentTab,
   onTabPress,
-  noTopEdges = false,
   style,
   contentStyle,
 }) => {
-  const edges: Edge[] = noTopEdges
-    ? ['left', 'right']
-    : ['top', 'left', 'right'];
-
   return (
-    <SafeAreaView style={[styles.mainLayout, style]} edges={edges}>
+    <View style={[styles.mainLayout, style]}>
       <View style={[styles.content, contentStyle]}>{children}</View>
       <BottomNavBar currentTab={currentTab} onTabPress={onTabPress} />
-    </SafeAreaView>
+    </View>
   );
 };
 
