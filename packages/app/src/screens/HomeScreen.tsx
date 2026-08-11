@@ -120,7 +120,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <View style={styles.heroSection}>
           <ImageBackground
             source={APP_IMAGES.HOME_HERO_BG}
-            style={styles.heroImageBg}
+            style={[styles.heroImageBg, { paddingTop: topPadding }]}
             resizeMode='cover'>
             {/* Gradient Overlay */}
             <LinearGradient
@@ -134,12 +134,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.gradientOverlay}
             />
 
-            {/* Top Brand Logo Row */}
-            <View style={[styles.heroTopNav, { paddingTop: topPadding }]}>
-              <Text style={styles.brandTitle}>{UI_STRINGS.BRAND.NAME}</Text>
-            </View>
-
-            {/* Greeting Stack */}
+            {/* Greeting Stack (Bottom-aligned inside Hero Image) */}
             <View style={styles.greetingStack}>
               <Text style={styles.greetingText}>
                 {displayName}
@@ -433,15 +428,14 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     width: '100%',
-    height: 310,
+    height: 320,
     backgroundColor: palette.deepNavy,
   },
   heroImageBg: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: STATUS_BAR_HEIGHT + 12,
-    paddingBottom: 24,
-    justifyContent: 'space-between',
+    paddingBottom: 20,
+    justifyContent: 'flex-end',
   },
   gradientOverlay: {
     ...StyleSheet.absoluteFill,
