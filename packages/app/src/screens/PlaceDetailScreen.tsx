@@ -14,6 +14,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ItineraryStop } from '@yeolo/common';
 import { OpeningHoursModal } from '../components/place';
@@ -23,6 +24,7 @@ import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { getDestinationImageUrl } from '../services';
+import { useBackground } from '../context';
 
 export interface PlaceDetailScreenProps {
   stop?: ItineraryStop;
@@ -31,6 +33,16 @@ export interface PlaceDetailScreenProps {
 export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
   useGA4ScreenTracking('PlaceDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const topPadding = (insets.top || StatusBar.currentHeight || 24) + 12;
+
+  React.useEffect(() => {
+    setBackground({ noTopEdges: true });
+    return () => {
+      resetBackground();
+    };
+  }, [setBackground, resetBackground]);
 
   const targetPlaceId = stop?.placeId;
   const { data: placeDetail } = usePlaceDetailQuery({
@@ -99,7 +111,7 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
             />
 
             {/* Place Title & Tags Group */}
-            <View style={styles.heroContentGroup}>
+            <View style={[styles.heroContentGroup, { paddingTop: topPadding }]}>
               <View style={styles.placeTitleRow}>
                 <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
                 <View style={styles.tagRow}>

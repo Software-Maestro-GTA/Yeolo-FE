@@ -17,9 +17,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getDestinationImageUrl } from '../services';
-import { AuthContext } from '../context';
+import { AuthContext, useBackground } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_IMAGES, APP_CONFIG } from '../constants';
 
@@ -47,6 +48,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   useGA4ScreenTracking('HomeScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const topPadding = (insets.top || StatusBar.currentHeight || 24) + 12;
+
+  React.useEffect(() => {
+    setBackground({ noTopEdges: true });
+    return () => {
+      resetBackground();
+    };
+  }, [setBackground, resetBackground]);
 
   const auth = useContext(AuthContext);
   const user = auth?.user;
@@ -124,7 +135,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             />
 
             {/* Top Brand Logo Row */}
-            <View style={styles.heroTopNav}>
+            <View style={[styles.heroTopNav, { paddingTop: topPadding }]}>
               <Text style={styles.brandTitle}>{UI_STRINGS.BRAND.NAME}</Text>
             </View>
 
