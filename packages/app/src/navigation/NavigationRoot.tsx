@@ -53,6 +53,16 @@ export function NavigationRoot({
   const [step, setStep] = useState<NavStep | null>(initialStep || null);
   const lastBackPressRef = useRef<number>(0);
 
+  const goBack = () => {
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      setHistory((old) => old.slice(0, -1));
+      setStep(prev);
+    } else {
+      setStep(NAV_STEPS.COURSE_LIST);
+    }
+  };
+
   const navigateTo = (nextStep: NavStep) => {
     if (nextStep === NAV_STEPS.HOME || nextStep === NAV_STEPS.LOGIN) {
       setHistory([]);
@@ -278,6 +288,7 @@ export function NavigationRoot({
               setSelectedPlaceStop(stop);
               navigateTo(NAV_STEPS.PLACE_DETAIL);
             }}
+            onBack={goBack}
           />
         </MainLayout>
       );

@@ -132,7 +132,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
           <Text style={styles.stayMinutesText}>
             {stop.stayMinutes
               ? `${stop.stayMinutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
-              : '60분 소요'}
+              : UI_STRINGS.COURSE_DETAIL.DEFAULT_STAY_TIME}
           </Text>
         </View>
 
@@ -239,18 +239,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   placeTitleGroup: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   placeNameText: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '700',
     color: palette.deepNavy, // #0D2137
   },
   mintBadge: {
+    flexShrink: 0,
     backgroundColor: palette.lightTeal,
     paddingHorizontal: 8,
     paddingVertical: 4,
