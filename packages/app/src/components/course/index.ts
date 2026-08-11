@@ -9,3 +9,4 @@ export * from './ItineraryTimelineItem';
 export * from './BudgetTypeSelector';
 export * from './CourseSearchBar';
 export * from './CourseDeleteModal';
+export * from './CourseCard';

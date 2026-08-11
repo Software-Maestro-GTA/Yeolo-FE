@@ -1,8 +1,8 @@
 /**
  * @file CourseDeleteModal.tsx
- * @description Bottom sheet modal component for confirming course deletion.
+ * @description Bottom sheet modal component for confirming course deletion, featuring separated fade backdrop overlay and independent bottom sheet slide animation.
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,8 +10,10 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
+  Animated,
+  Easing,
 } from 'react-native';
-import { palette } from '../../theme/colors';
+import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface CourseDeleteModalProps {
@@ -27,17 +29,36 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
   onClose,
   onConfirmDelete,
 }) => {
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(300);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, slideAnim]);
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType='slide'
+      animationType='fade'
       onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.dimOverlay} testID='delete-modal-overlay'>
           <TouchableWithoutFeedback>
-            <View
-              style={styles.bottomSheetContainer}
+            <Animated.View
+              style={[
+                styles.bottomSheetContainer,
+                {
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
               testID='course-delete-modal-card'>
               {/* Handle Bar */}
               <View style={styles.handleBar} />
@@ -73,7 +94,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -84,7 +105,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
 const styles = StyleSheet.create({
   dimOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: hexToRgba(palette.deepNavy, 0.45),
     justifyContent: 'flex-end',
   },
   bottomSheetContainer: {
@@ -105,20 +126,20 @@ const styles = StyleSheet.create({
   handleBar: {
     width: 40,
     height: 4,
-    backgroundColor: '#D9DEE5',
+    backgroundColor: palette.gray200,
     borderRadius: 2,
     marginBottom: 4,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
     textAlign: 'center',
   },
   modalSubTitle: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#73808C',
+    color: palette.subText,
     textAlign: 'center',
   },
   buttonGroup: {
@@ -128,7 +149,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     width: '100%',
-    backgroundColor: '#EB4545',
+    backgroundColor: palette.red500,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
@@ -141,7 +162,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     width: '100%',
-    backgroundColor: '#F0F2F5',
+    backgroundColor: palette.gray100,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
