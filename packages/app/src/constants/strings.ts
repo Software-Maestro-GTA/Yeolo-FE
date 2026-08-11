@@ -308,8 +308,10 @@ export const UI_STRINGS = {
     UPDATE_FAILED_MESSAGE: '프로필 정보 수정에 실패했습니다.',
     AVATAR_ALERT_TITLE: '프로필 이미지',
     AVATAR_ALERT_MESSAGE:
-      '카메라 또는 갤러리에서 프로필 사진을 변경하시겠습니까?',
+      '사진첩에서 프로필 사진을 변경하거나 기본 이미지로 설정하시겠습니까?',
+    AVATAR_SELECT_GALLERY: '사진첩에서 선택',
     AVATAR_RESET_DEFAULT: '기본 이미지 적용',
+    AVATAR_PERMISSION_ERROR: '사진첩 접근 권한이 필요합니다.',
   },
   COURSE_SHARE: {
     HEADER_TITLE: '공유된 여행 코스',

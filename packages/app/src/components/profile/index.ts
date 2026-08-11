@@ -4,3 +4,4 @@
  */
 export * from './TermsModal';
 export * from './ProfileConfirmModal';
+export * from './AvatarActionBottomSheet';

@@ -102,6 +102,17 @@ jest.mock('expo-media-library', () => {
   };
 });
 
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest
+    .fn()
+    .mockResolvedValue({ status: 'granted' }),
+  launchImageLibraryAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'https://example.com/mock-avatar.jpg' }],
+  }),
+  MediaTypeOptions: { Images: 'Images' },
+}));
+
 const mockAnalyticsLogEvent = jest.fn();
 const mockAnalyticsLogScreenView = jest.fn();
 const mockAnalyticsSetUserId = jest.fn();
