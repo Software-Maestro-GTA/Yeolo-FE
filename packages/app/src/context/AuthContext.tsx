@@ -39,6 +39,7 @@ export interface AuthContextType {
     idToken?: string | null;
   }) => Promise<{ user: User; isNewUser: boolean; doOnboarding: boolean }>;
   logout: () => void;
+  resetAuthState?: () => Promise<void>;
   updateUser?: (updatedFields: Partial<User>) => void;
 }
 
@@ -213,6 +214,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const resetAuthState = async () => {
+    logger.info('[AuthContext] Resetting local auth state without API call...');
+    await signOutGoogle();
+    await AsyncStorage.removeItem('accessToken');
+    await AsyncStorage.removeItem('refreshToken');
+    await AsyncStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
   const updateUser = (updatedFields: Partial<User>) => {
     setUser((prevUser) =>
       prevUser ? { ...prevUser, ...updatedFields } : null,
@@ -234,6 +245,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         loginWithGoogle,
         loginWithApple,
         logout,
+        resetAuthState,
         updateUser,
       }}>
       {children}

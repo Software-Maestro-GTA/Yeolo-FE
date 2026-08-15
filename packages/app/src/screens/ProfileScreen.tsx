@@ -135,7 +135,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     } catch (err) {
       logger.error('Withdraw mutation failed:', err);
     } finally {
-      if (auth?.logout) {
+      if (auth?.resetAuthState) {
+        await auth.resetAuthState();
+      } else if (auth?.logout) {
         await auth.logout();
       }
       await clearSessionAndRedirect();
