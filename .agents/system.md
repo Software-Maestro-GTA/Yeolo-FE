@@ -33,3 +33,7 @@
   - 백엔드 REST/GraphQL API 호출 함수(`common/src/api/`), API 에러 클래스(`ApiError`), DTO 타입 및 Zustand 전역 상태 스토어(`common/src/store/`)는 특정 패키지(`app` 또는 `web`)에 파편화하여 구현하지 않고, 반드시 **`packages/common/` 하위에 작성하여 공유 및 재사용**합니다.
 - **UI 컴포넌트 독립 모듈화 규칙**:
   - 화면(Screen/Page) 내에서 재사용되거나 독립된 역할을 수행하는 UI 요소(네비게이션 바, 플로팅 버튼, 분석 데이터 뷰 등)는 Screen 파일 내 인라인 작성을 금지하고, 반드시 **`components/` 하위 전용 파일로 독립 캡슐화**하여 구현합니다.
+
+## 7. CLI 우선 작업 표준 (CLI-First Tooling Rule)
+- **CLI 명령어 우선 활용**:
+  - GitHub 연동(`gh`), 형상 관리(`git`), 패키지 및 빌드(`yarn`) 등 명령어로 수행 가능한 개발 및 외부 서비스 조작 작업은 별도의 MCP 도구 대신 터미널 CLI 명령어를 우선 사용하여 처리합니다.
