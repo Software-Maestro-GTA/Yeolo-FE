@@ -14,6 +14,7 @@ export interface User {
   createdAt?: string;
   lastLoginAt?: string;
   deletedAt?: string | null;
+  recentCourseId?: string | null;
 }
 
 export interface GoogleLoginPayload {
@@ -27,6 +28,7 @@ export interface GoogleLoginResponse {
   data: {
     user: User;
     doOnboarding: boolean;
+    recentCourseId?: string | null;
     accessToken: string;
     refreshToken: string;
   };
@@ -44,6 +46,7 @@ export interface AppleLoginResponse {
   data: {
     user: User;
     doOnboarding: boolean;
+    recentCourseId?: string | null;
     accessToken: string;
     refreshToken: string;
   };

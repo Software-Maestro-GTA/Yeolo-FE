@@ -47,6 +47,7 @@ beforeAll(() => {
               lastLoginAt: '2026-08-04T10:00:00Z',
             },
             doOnboarding: false,
+            recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
             accessToken: 'mock-apple-access-token',
             refreshToken: 'mock-apple-refresh-token',
           },
@@ -108,6 +109,7 @@ beforeAll(() => {
               lastLoginAt: '2026-07-16T11:00:00Z',
             },
             doOnboarding: true,
+            recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
             accessToken: 'mock-access-token',
             refreshToken: 'mock-refresh-token',
           },
@@ -178,10 +180,19 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('최고민수');
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
     expect(res?.doOnboarding).toBe(true);
+    expect(res?.recentCourseId).toBe('550e8400-e29b-41d4-a716-446655440030');
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
   });
 
-  it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
+  it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰, recentCourseId를 저장해야 한다', async () => {
     const { result } = await renderHook(() => React.useContext(AuthContext)!, {
       wrapper: createWrapper(),
     });
@@ -190,8 +201,9 @@ describe('AuthContext', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
+    let res: any;
     await act(async () => {
-      await result.current.loginWithApple({
+      res = await result.current.loginWithApple({
         code: 'mock-apple-code',
         idToken: 'mock-apple-id-token',
       });
@@ -200,6 +212,15 @@ describe('AuthContext', () => {
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('Apple User');
     expect(result.current.user?.provider).toBe('apple');
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(true);
+    expect(res?.recentCourseId).toBe('550e8400-e29b-41d4-a716-446655440030');
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
   });
 
   it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
@@ -221,6 +242,85 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
+  });
+
+  it('기존에 저장된 세션 복원 시 AsyncStorage의 recentCourseId 및 hasCompletedOnboarding을 복원해야 한다', async () => {
+    await AsyncStorage.setItem('accessToken', 'mock-valid-token');
+    await AsyncStorage.setItem('refreshToken', 'mock-valid-refresh-token');
+    await AsyncStorage.setItem(
+      'user',
+      JSON.stringify({ userId: 'u1', email: 'test@example.com' }),
+    );
+    await AsyncStorage.setItem(
+      'recentCourseId',
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    await AsyncStorage.setItem('hasCompletedOnboarding', 'false');
+
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+  });
+
+  it('setHasCompletedOnboarding 호출 시 상태와 AsyncStorage가 업데이트되어야 한다', async () => {
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.setHasCompletedOnboarding?.(true);
+    });
+
+    expect(result.current.hasCompletedOnboarding).toBe(true);
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+  });
+
+  it('resetAuthState 호출 시 recentCourseId, hasCompletedOnboarding 및 세션 데이터가 모두 초기화되어야 한다', async () => {
+    await AsyncStorage.setItem('accessToken', 'mock-token');
+    await AsyncStorage.setItem('refreshToken', 'mock-refresh-token');
+    await AsyncStorage.setItem(
+      'user',
+      JSON.stringify({ userId: 'u1', email: 'test@example.com' }),
+    );
+    await AsyncStorage.setItem(
+      'recentCourseId',
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    await AsyncStorage.setItem('hasCompletedOnboarding', 'false');
+
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+
+    await act(async () => {
+      await result.current.resetAuthState?.();
+    });
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.recentCourseId).toBeNull();
+    expect(result.current.hasCompletedOnboarding).toBeNull();
+    expect(await AsyncStorage.getItem('recentCourseId')).toBeNull();
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBeNull();
   });
 
   it('401 Unauthorized 이벤트(notifyUnauthorized) 발생 시 토큰을 비우고 비인증 상태로 초기화되어야 한다', async () => {

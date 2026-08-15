@@ -21,12 +21,15 @@ import {
 } from '@yeolo/common';
 import { APP_CONFIG, UI_STRINGS } from '../../constants';
 
+export interface LoginMutationResult {
+  user: User;
+  isNewUser: boolean;
+  doOnboarding: boolean;
+  recentCourseId?: string | null;
+}
+
 export interface UseGoogleLoginMutationOptions {
-  options?: UseMutationOptions<
-    { user: User; isNewUser: boolean; doOnboarding: boolean },
-    Error,
-    string
-  >;
+  options?: UseMutationOptions<LoginMutationResult, Error, string>;
 }
 
 export function useGoogleLoginMutation({
@@ -35,22 +38,29 @@ export function useGoogleLoginMutation({
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
   const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
 
-  return useMutation<
-    { user: User; isNewUser: boolean; doOnboarding: boolean },
-    Error,
-    string
-  >({
+  return useMutation<LoginMutationResult, Error, string>({
     mutationFn: async (code: string) => {
       const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
       const fetchedUser = response.data.user;
       const isNewUser = !fetchedUser.lastLoginAt;
       const doOnboarding = response.data.doOnboarding;
+      const recentCourseId = response.data.recentCourseId || null;
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
-      return { user: fetchedUser, isNewUser, doOnboarding };
+      if (recentCourseId) {
+        await AsyncStorage.setItem('recentCourseId', recentCourseId);
+      } else {
+        await AsyncStorage.removeItem('recentCourseId');
+      }
+
+      return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,
   });
@@ -63,7 +73,7 @@ export interface AppleAuthPayloadInput {
 
 export interface UseAppleLoginMutationOptions {
   options?: UseMutationOptions<
-    { user: User; isNewUser: boolean; doOnboarding: boolean },
+    LoginMutationResult,
     Error,
     AppleAuthPayloadInput
   >;
@@ -75,11 +85,7 @@ export function useAppleLoginMutation({
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
   const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
 
-  return useMutation<
-    { user: User; isNewUser: boolean; doOnboarding: boolean },
-    Error,
-    AppleAuthPayloadInput
-  >({
+  return useMutation<LoginMutationResult, Error, AppleAuthPayloadInput>({
     mutationFn: async ({ code, idToken }: AppleAuthPayloadInput) => {
       const response = await loginWithAppleApi(apiUrl, {
         code,
@@ -89,12 +95,23 @@ export function useAppleLoginMutation({
       const fetchedUser = response.data.user;
       const isNewUser = !fetchedUser.lastLoginAt;
       const doOnboarding = response.data.doOnboarding;
+      const recentCourseId = response.data.recentCourseId || null;
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
-      return { user: fetchedUser, isNewUser, doOnboarding };
+      if (recentCourseId) {
+        await AsyncStorage.setItem('recentCourseId', recentCourseId);
+      } else {
+        await AsyncStorage.removeItem('recentCourseId');
+      }
+
+      return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,
   });

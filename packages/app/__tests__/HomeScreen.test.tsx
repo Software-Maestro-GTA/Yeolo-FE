@@ -148,6 +148,46 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
     expect(mockOnSelectCourse).toHaveBeenCalledWith('mock-course-id-1');
   });
 
+  it('selectedCourseId가 props로 제공되지 않더라도 AuthContext에 recentCourseId가 있을 경우 최근 코스를 표시하고 클릭 시 이동해야 한다', async () => {
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
+      courseId: '550e8400-e29b-41d4-a716-446655440030',
+      title: '로그인 응답 기반 최근 추천 코스',
+      destinationCountry: '대한민국',
+      destinationCity: '제주',
+      startDate: '2026-08-01',
+      totalDays: 3,
+      tags: ['최신', '추천'],
+      recommendationReason: '최근에 확인한 추천 코스입니다.',
+      itinerary: { days: [] },
+    } as any);
+
+    const { AuthContext } = require('../src/context/AuthContext');
+    const mockAuthValue = {
+      isAuthenticated: true,
+      user: { displayName: '테스터' },
+      isLoading: false,
+      recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
+      loginWithGoogle: jest.fn(),
+      loginWithApple: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const { getByTestId, findByText } = await render(
+      <AuthContext.Provider value={mockAuthValue}>
+        <HomeScreen onSelectCourse={mockOnSelectCourse} />
+      </AuthContext.Provider>,
+    );
+
+    expect(getByTestId('recent-course-section')).toBeTruthy();
+    const courseTitle = await findByText('로그인 응답 기반 최근 추천 코스');
+    expect(courseTitle).toBeTruthy();
+
+    fireEvent.press(getByTestId('recent-course-card'));
+    expect(mockOnSelectCourse).toHaveBeenCalledWith(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+  });
+
   it('여행 예약 파트너스 타일(항공, 숙소, 기차, 투어·티켓) 클릭 시 각각의 Trip.com 파트너스 URL로 Linking.openURL이 구동되어야 한다', async () => {
     const { Linking } = require('react-native');
     const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);

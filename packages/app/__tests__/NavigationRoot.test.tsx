@@ -134,4 +134,46 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(placeDetailScreen).toBeTruthy();
     expect(getByText(/함덕 해수욕장/)).toBeTruthy();
   });
+
+  it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 IntroScreen(온보딩)으로 진입해야 한다', async () => {
+    const mockAuthOnboarding = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: false,
+      user: { id: 'user-1', email: 'test@example.com' },
+      login: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const { getByText } = await render(
+      <AuthContext.Provider value={mockAuthOnboarding as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Go to Intro Next')).toBeTruthy();
+    });
+  });
+
+  it('hasCompletedOnboarding이 true인 경우 HomeScreen으로 진입해야 한다', async () => {
+    const mockAuthCompleted = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: true,
+      user: { id: 'user-1', email: 'test@example.com' },
+      login: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const { getByText } = await render(
+      <AuthContext.Provider value={mockAuthCompleted as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Go to Explore')).toBeTruthy();
+    });
+  });
 });

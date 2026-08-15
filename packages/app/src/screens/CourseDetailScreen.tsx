@@ -43,9 +43,10 @@ import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import ctaFlightBg from '../../assets/images/cta_flight_bg.png';
 import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useBackground } from '../context';
+import { useBackground, AuthContext } from '../context';
 
 export interface CourseDetailScreenProps {
   courseId: string;
@@ -61,6 +62,7 @@ export function CourseDetailScreen({
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const { setBackground, resetBackground } = useBackground();
+  const auth = React.useContext(AuthContext);
   const insets = useSafeAreaInsets();
   const topPadding = (insets.top || 24) + 12;
 
@@ -70,6 +72,13 @@ export function CourseDetailScreen({
       resetBackground();
     };
   }, [setBackground, resetBackground]);
+
+  useEffect(() => {
+    if (courseId) {
+      auth?.setRecentCourseId?.(courseId);
+      AsyncStorage.setItem('recentCourseId', courseId).catch(() => {});
+    }
+  }, [courseId, auth]);
 
   const {
     data: course,
