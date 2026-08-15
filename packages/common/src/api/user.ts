@@ -31,9 +31,6 @@ export async function updateUserProfileApi(
 
   const formData = new FormData();
   if (payload) {
-    if (payload.email !== undefined && payload.email !== null) {
-      formData.append('email', payload.email);
-    }
     if (payload.displayName !== undefined && payload.displayName !== null) {
       formData.append('displayName', payload.displayName);
     }
