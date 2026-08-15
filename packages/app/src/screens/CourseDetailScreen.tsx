@@ -241,13 +241,17 @@ export function CourseDetailScreen({
   const calculatedTotalCost =
     course.totalCost ||
     course.itinerary?.days?.reduce((acc, d) => {
-      return acc + (d.stops?.reduce((sAcc, s) => sAcc + (s.cost || 0), 0) || 0);
+      return (
+        acc +
+        (d.stops?.reduce((sAcc, s) => {
+          return sAcc + (s.transportToNext?.cost || 0);
+        }, 0) || 0)
+      );
     }, 0);
 
-  const activeHeroImageUrl = getDestinationImageUrl(
-    course.destinationCountry,
-    course.destinationCity,
-  );
+  const activeHeroImageUrl =
+    course.coverImageUrl ||
+    getDestinationImageUrl(course.destinationCountry, course.destinationCity);
 
   return (
     <View style={styles.screenContainer} testID='screen-container'>

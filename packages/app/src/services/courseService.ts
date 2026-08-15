@@ -45,15 +45,15 @@ export async function processCourseStopsMapData(
   const rawStops: MapCoordinate[] = stops
     .filter(
       (stop) =>
-        typeof stop.latitude === 'number' &&
-        typeof stop.longitude === 'number' &&
-        !isNaN(stop.latitude) &&
-        !isNaN(stop.longitude),
+        typeof stop.place?.latitude === 'number' &&
+        typeof stop.place?.longitude === 'number' &&
+        !isNaN(stop.place.latitude) &&
+        !isNaN(stop.place.longitude),
     )
     .map((stop, index) => ({
-      latitude: stop.latitude,
-      longitude: stop.longitude,
-      placeName: stop.placeName,
+      latitude: stop.place.latitude,
+      longitude: stop.place.longitude,
+      placeName: stop.place.placeName,
       sequence: stop.sequence ?? index + 1,
     }));
 

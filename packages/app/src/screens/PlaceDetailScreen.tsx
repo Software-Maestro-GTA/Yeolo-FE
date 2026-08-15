@@ -44,15 +44,17 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     };
   }, [setBackground, resetBackground]);
 
-  const targetPlaceId = stop?.placeId;
+  const targetPlaceId = stop?.place?.placeId;
   const { data: placeDetail } = usePlaceDetailQuery({
     placeId: targetPlaceId,
   });
 
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
 
-  const displayPlaceName = placeDetail?.placeName || stop?.placeName || '';
-  const displayCategory = placeDetail?.category || stop?.category || '';
+  const displayPlaceName =
+    placeDetail?.placeName || stop?.place?.placeName || '';
+  const displayPlaceEngName = placeDetail?.placeEngName || '';
+  const displayCategory = placeDetail?.category || stop?.place?.category || '';
   const displayRating =
     placeDetail?.rating !== undefined && placeDetail?.rating !== null
       ? String(placeDetail.rating)
@@ -63,16 +65,20 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
       ? placeDetail.openingHours[0]
       : '';
 
-  const displayLatitude = placeDetail?.latitude ?? stop?.latitude ?? 0;
-  const displayLongitude = placeDetail?.longitude ?? stop?.longitude ?? 0;
+  const displayLatitude = placeDetail?.latitude ?? stop?.place?.latitude ?? 0;
+  const displayLongitude =
+    placeDetail?.longitude ?? stop?.place?.longitude ?? 0;
   const displayHeroImageUrl =
-    placeDetail?.photoUrls?.[0] || getDestinationImageUrl('', displayPlaceName);
+    placeDetail?.photoUrl || getDestinationImageUrl('', displayPlaceName);
 
   // 코스 확인 창에서 보여준 정보 (일정 정보 종합)
   const displayTime = stop?.arrivalTime || '';
   const displayStay = stop?.stayMinutes ? `${stop.stayMinutes}분 소요` : '';
   const displayCost =
-    stop?.cost !== undefined ? `₩${stop.cost.toLocaleString()}` : '';
+    stop?.transportToNext?.cost !== undefined &&
+    stop?.transportToNext?.cost !== null
+      ? `₩${stop.transportToNext.cost.toLocaleString()}`
+      : '';
   const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
   const hasMemo = Boolean(
     stop?.memo &&

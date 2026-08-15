@@ -77,7 +77,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
 
   const formatTransportLabel = (
     transport: TransportType,
-    minutes?: number,
+    minutes?: number | null,
   ): string => {
     const mins = minutes
       ? `${minutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
@@ -104,9 +104,10 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
   );
 
   const hasTransport =
-    stop.transportToNext &&
-    stop.transportToNext !== 'none' &&
-    stop.travelMinutesToNext;
+    stop.transportToNext.type !== 'none' &&
+    (stop.transportToNext.minutes !== null
+      ? stop.transportToNext.minutes > 0
+      : true);
 
   return (
     <View style={styles.timelineItemWrapper}>
@@ -118,15 +119,18 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         <View style={styles.titleRow}>
           <View style={styles.placeTitleGroup}>
             <Ionicons
-              name={getCategoryIcon(stop.category)}
+              name={getCategoryIcon(stop.place.category)}
               size={18}
               color={palette.primary}
             />
-            <Text style={styles.placeNameText}>{stop.placeName}</Text>
+            <Text style={styles.placeNameText}>{stop.place.placeName}</Text>
           </View>
           <View style={styles.mintBadge}>
             <Text style={styles.mintBadgeText}>
-              ₩{stop.cost !== undefined ? stop.cost.toLocaleString() : '0'}
+              ₩
+              {stop.transportToNext.cost !== null
+                ? stop.transportToNext.cost.toLocaleString()
+                : '0'}
             </Text>
           </View>
         </View>
@@ -194,14 +198,14 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <View style={styles.transitHeader}>
               <View style={styles.transitTitleGroup}>
                 <Ionicons
-                  name={getTransportIcon(stop.transportToNext)}
+                  name={getTransportIcon(stop.transportToNext.type)}
                   size={16}
                   color={palette.deepNavy}
                 />
                 <Text style={styles.transitTitleText}>
                   {formatTransportLabel(
-                    stop.transportToNext,
-                    stop.travelMinutesToNext,
+                    stop.transportToNext.type,
+                    stop.transportToNext.minutes,
                   )}
                 </Text>
               </View>
@@ -219,7 +223,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
               <View style={styles.routeDot} />
               <View style={styles.routeLine} />
               <Ionicons
-                name={getRouteVisualIcon(stop.transportToNext)}
+                name={getRouteVisualIcon(stop.transportToNext.type)}
                 size={12}
                 color={palette.primary}
               />
