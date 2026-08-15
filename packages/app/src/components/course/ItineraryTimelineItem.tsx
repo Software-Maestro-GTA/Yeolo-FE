@@ -96,6 +96,13 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
     }
   };
 
+  const hasReason = Boolean(stop.reason && stop.reason.trim() !== '');
+  const hasMemo = Boolean(
+    stop.memo &&
+    stop.memo.trim() !== '' &&
+    stop.memo.trim() !== stop.reason?.trim(),
+  );
+
   const hasTransport =
     stop.transportToNext &&
     stop.transportToNext !== 'none' &&
@@ -137,19 +144,45 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         </View>
 
         <View style={styles.aiTipBox}>
-          <Ionicons
-            name='bulb-outline'
-            size={14}
-            color={palette.accent}
-            style={styles.tipIcon}
-          />
-          <Text style={styles.aiTipText}>
-            {stop.reason && stop.reason.trim() !== ''
-              ? stop.reason
-              : stop.memo && stop.memo.trim() !== ''
-                ? stop.memo
-                : UI_STRINGS.COURSE_DETAIL.NO_INFO}
-          </Text>
+          {hasReason && (
+            <View style={styles.tipRow}>
+              <Ionicons
+                name='bulb-outline'
+                size={14}
+                color={palette.accent}
+                style={styles.tipIcon}
+              />
+              <Text style={styles.aiTipText}>{stop.reason?.trim()}</Text>
+            </View>
+          )}
+
+          {hasReason && hasMemo && <View style={styles.tipDivider} />}
+
+          {hasMemo && (
+            <View style={styles.tipRow}>
+              <Ionicons
+                name='document-text-outline'
+                size={14}
+                color={palette.primary}
+                style={styles.tipIcon}
+              />
+              <Text style={styles.aiTipText}>{stop.memo?.trim()}</Text>
+            </View>
+          )}
+
+          {!hasReason && !hasMemo && (
+            <View style={styles.tipRow}>
+              <Ionicons
+                name='bulb-outline'
+                size={14}
+                color={palette.accent}
+                style={styles.tipIcon}
+              />
+              <Text style={styles.aiTipText}>
+                {UI_STRINGS.COURSE_DETAIL.NO_INFO}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -289,6 +322,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.softMint,
     padding: 10,
     borderRadius: 8,
+    gap: 6,
+  },
+  tipRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
@@ -302,6 +338,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: palette.subText,
     lineHeight: 15,
+  },
+  tipLabelText: {
+    fontWeight: '700',
+    color: palette.deepNavy,
+  },
+  tipDivider: {
+    height: 1,
+    backgroundColor: 'rgba(13, 33, 55, 0.08)',
+    marginVertical: 1,
   },
   transitCardWrapper: {
     width: '100%',

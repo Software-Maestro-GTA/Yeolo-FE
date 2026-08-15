@@ -338,6 +338,20 @@ export function CourseDetailScreen({
             }}
           />
 
+          {/* Day Memo Theme Summary Card */}
+          {currentDayData?.memo && currentDayData.memo.trim() !== '' && (
+            <View style={styles.dayMemoCard} testID='day-memo-card'>
+              <Ionicons
+                name='compass-outline'
+                size={16}
+                color={palette.primary}
+              />
+              <Text style={styles.dayMemoText}>
+                {currentDayData.memo.trim()}
+              </Text>
+            </View>
+          )}
+
           {/* Flight Booking Banner */}
           <TouchableOpacity
             testID='btn-flight-cta'
@@ -634,5 +648,27 @@ const styles = StyleSheet.create({
     color: palette.subText,
     fontWeight: '400',
     lineHeight: 20,
+  },
+  dayMemoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: palette.white,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  dayMemoText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: palette.deepNavy,
   },
 });

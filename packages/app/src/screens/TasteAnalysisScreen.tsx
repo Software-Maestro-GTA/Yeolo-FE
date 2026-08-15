@@ -126,126 +126,120 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   return (
     <View style={styles.screenContainer}>
       <View style={styles.contentContainer}>
-          {/* Header Title Section */}
-          <View style={styles.headerSection} testID='top-content'>
-            <Text style={styles.mainTitle}>
-              {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
-            </Text>
-            <Text style={styles.subTitle}>
-              {UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}
-            </Text>
-          </View>
-
-          {/* Main Body Section */}
-          <View style={styles.mainBodyContainer} testID='main-content'>
-            {/* Checklist Step Container */}
-            <View
-              style={styles.checklistContainer}
-              testID='checklist-container'>
-              <Text style={styles.checklistTitle}>
-                {UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}
-              </Text>
-
-              <View style={styles.stepsList}>
-                {/* Step 1: 메타데이터 추출 / 사진 데이터 수집 */}
-                <View style={styles.stepRow} testID='step-1'>
-                  {renderStepIcon(progress.step1Status)}
-                  <Text
-                    style={[
-                      styles.stepText,
-                      progress.step1Status !== 'IDLE' && styles.activeStepText,
-                    ]}>
-                    {getStepLabel(
-                      UI_STRINGS.TASTE_ANALYSIS.STEP_1,
-                      progress.step1Status,
-                    )}
-                  </Text>
-                </View>
-
-                {/* Step 2: 장소 정보 수집 */}
-                <View style={styles.stepRow} testID='step-2'>
-                  {renderStepIcon(progress.step2Status)}
-                  <Text
-                    style={[
-                      styles.stepText,
-                      progress.step2Status !== 'IDLE' && styles.activeStepText,
-                    ]}>
-                    {getStepLabel(
-                      UI_STRINGS.TASTE_ANALYSIS.STEP_2,
-                      progress.step2Status,
-                    )}
-                  </Text>
-                </View>
-
-                {/* Step 3: 사용자 취향 분석 */}
-                <View style={styles.stepRow} testID='step-3'>
-                  {renderStepIcon(progress.step3Status)}
-                  <Text
-                    style={[
-                      styles.stepText,
-                      progress.step3Status !== 'IDLE'
-                        ? styles.activeStepText
-                        : styles.pendingStepText,
-                    ]}>
-                    {getStepLabel(
-                      UI_STRINGS.TASTE_ANALYSIS.STEP_3,
-                      progress.step3Status,
-                    )}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Insights Live Container */}
-            <View style={styles.insightsContainer} testID='insights-container'>
-              <View style={styles.insightsHeader}>
-                <Text style={styles.insightsTitle}>
-                  {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_TITLE}
-                </Text>
-                <View style={styles.liveBadge}>
-                  <Animated.View
-                    style={[styles.liveDot, { opacity: pulseAnim }]}
-                  />
-                  <Text style={styles.liveBadgeText}>
-                    {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_BADGE}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.insightsCard}>
-                <Text style={styles.insightsNoticeText}>
-                  {progress.currentMessage ||
-                    UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
-                </Text>
-              </View>
-            </View>
-
-            {errorMessage && (
-              <View style={styles.errorCard} testID='error-container'>
-                <View style={styles.errorHeader}>
-                  <Feather
-                    name='alert-circle'
-                    size={20}
-                    color={palette.red500}
-                  />
-                  <Text style={styles.errorCardTitle}>
-                    {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
-                  </Text>
-                </View>
-                <Text style={styles.errorText}>{errorMessage}</Text>
-                <TouchableOpacity
-                  style={styles.confirmButton}
-                  activeOpacity={0.8}
-                  onPress={handleConfirmError}
-                  testID='error-confirm-button'>
-                  <Text style={styles.confirmButtonText}>
-                    {UI_STRINGS.COMMON.CONFIRM}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>
+            {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
+          </Text>
+          <Text style={styles.subTitle}>
+            {UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}
+          </Text>
         </View>
+
+        {/* Main Body Section */}
+        <View style={styles.mainBodyContainer} testID='main-content'>
+          {/* Checklist Step Container */}
+          <View style={styles.checklistContainer} testID='checklist-container'>
+            <Text style={styles.checklistTitle}>
+              {UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}
+            </Text>
+
+            <View style={styles.stepsList}>
+              {/* Step 1: 메타데이터 추출 / 사진 데이터 수집 */}
+              <View style={styles.stepRow} testID='step-1'>
+                {renderStepIcon(progress.step1Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step1Status !== 'IDLE' && styles.activeStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_1,
+                    progress.step1Status,
+                  )}
+                </Text>
+              </View>
+
+              {/* Step 2: 장소 정보 수집 */}
+              <View style={styles.stepRow} testID='step-2'>
+                {renderStepIcon(progress.step2Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step2Status !== 'IDLE' && styles.activeStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_2,
+                    progress.step2Status,
+                  )}
+                </Text>
+              </View>
+
+              {/* Step 3: 사용자 취향 분석 */}
+              <View style={styles.stepRow} testID='step-3'>
+                {renderStepIcon(progress.step3Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step3Status !== 'IDLE'
+                      ? styles.activeStepText
+                      : styles.pendingStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_3,
+                    progress.step3Status,
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Insights Live Container */}
+          <View style={styles.insightsContainer} testID='insights-container'>
+            <View style={styles.insightsHeader}>
+              <Text style={styles.insightsTitle}>
+                {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_TITLE}
+              </Text>
+              <View style={styles.liveBadge}>
+                <Animated.View
+                  style={[styles.liveDot, { opacity: pulseAnim }]}
+                />
+                <Text style={styles.liveBadgeText}>
+                  {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_BADGE}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.insightsCard}>
+              <Text style={styles.insightsNoticeText}>
+                {progress.currentMessage ||
+                  UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
+              </Text>
+            </View>
+          </View>
+
+          {errorMessage && (
+            <View style={styles.errorCard} testID='error-container'>
+              <View style={styles.errorHeader}>
+                <Feather name='alert-circle' size={20} color={palette.red500} />
+                <Text style={styles.errorCardTitle}>
+                  {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
+                </Text>
+              </View>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                activeOpacity={0.8}
+                onPress={handleConfirmError}
+                testID='error-confirm-button'>
+                <Text style={styles.confirmButtonText}>
+                  {UI_STRINGS.COMMON.CONFIRM}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
     </View>
   );
 };

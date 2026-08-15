@@ -82,6 +82,7 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
     expect(getByText('90분 소요')).toBeTruthy();
     expect(getByText('₩15,000')).toBeTruthy();
     expect(getByText('에메랄드빛 바다 전망 및 오션뷰 추천')).toBeTruthy();
+    expect(getByText('탁 트인 에메랄드빛 바다 산책')).toBeTruthy();
 
     // API-PLACE-1 연동으로 비동기 받아온 장소 정보 종합 렌더링
     expect(await findByText('함덕 해수욕장 (API)')).toBeTruthy();
