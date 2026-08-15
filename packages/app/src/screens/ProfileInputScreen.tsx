@@ -99,7 +99,6 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 
     try {
       const result = await updateProfileMutation.mutateAsync({
-        email: email || null,
         displayName: displayName.trim() || null,
         profileImage: avatarUrl || null,
       });

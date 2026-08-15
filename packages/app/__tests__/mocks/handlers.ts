@@ -614,6 +614,50 @@ export const handlers = [
     );
   }),
 
+  // Mock User Profile Update PATCH API-USER-1
+  http.patch('*/api/users/me/profile', async ({ request }) => {
+    let displayName: string | null = null;
+    let profileImageUrl: string | null =
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb';
+
+    const contentType = request.headers.get('Content-Type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      try {
+        const formData = await request.formData();
+        displayName =
+          ((formData as any)?.get?.('displayName') as string) || null;
+      } catch (_) {
+        // Fallback for environment without FormData parsing in test
+      }
+    } else {
+      try {
+        const body = (await request.json()) as any;
+        displayName = body?.displayName || null;
+      } catch (_) {
+        // Fallback for invalid JSON
+      }
+    }
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '사용자 프로필 수정 성공',
+        data: {
+          user: {
+            userId: '550e8400-e29b-41d4-a716-446655440000',
+            provider: 'google',
+            email: 'user@gmail.com',
+            displayName: displayName || '여로탐험가',
+            profileImageUrl,
+            status: 'active',
+            lastLoginAt: '2026-08-15T11:00:00Z',
+          },
+        },
+      },
+      { status: 200 },
+    );
+  }),
+
   // Mock Account Withdrawal DELETE API-USER-2
   http.delete('*/api/users/me', async () => {
     return HttpResponse.json(

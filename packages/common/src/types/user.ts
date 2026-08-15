@@ -4,9 +4,8 @@
  */
 
 export interface UpdateUserProfilePayload {
-  email: string | null;
-  displayName: string | null;
-  profileImage: string | File | null;
+  displayName?: string | null;
+  profileImage?: string | File | null;
 }
 
 export interface UserProfileData {

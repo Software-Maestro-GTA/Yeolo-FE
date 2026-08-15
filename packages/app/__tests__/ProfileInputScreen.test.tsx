@@ -104,10 +104,12 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
         expect.any(String),
         undefined,
         expect.objectContaining({
-          email: expect.any(String),
           displayName: '여로탐험가',
         }),
       );
+      const callArgs = spyUpdateApi.mock.calls[0];
+      const payload = callArgs[2] as any;
+      expect(payload).not.toHaveProperty('email');
       expect(mockOnSaveSuccess).toHaveBeenCalled();
     });
   });
