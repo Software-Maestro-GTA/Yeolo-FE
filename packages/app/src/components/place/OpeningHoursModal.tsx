@@ -33,7 +33,11 @@ export const OpeningHoursModal: React.FC<OpeningHoursModalProps> = ({
   const currentFullDay = DAYS_MAP[currentDayIdx];
   const currentShortDay = SHORT_DAYS_MAP[currentDayIdx];
 
-  const getIsToday = (item: { day: string; hours: string; isToday?: boolean }) => {
+  const getIsToday = (item: {
+    day: string;
+    hours: string;
+    isToday?: boolean;
+  }) => {
     if (typeof item.isToday === 'boolean') {
       return item.isToday;
     }
