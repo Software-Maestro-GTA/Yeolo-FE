@@ -6,13 +6,14 @@
 export interface PlaceDetail {
   placeId: string;
   placeName: string;
+  placeEngName: string;
   category: string;
   address: string;
   latitude: number;
   longitude: number;
-  rating?: number | null;
-  photoUrls?: string[];
-  openingHours?: string[];
+  rating: number | null;
+  photoUrl: string;
+  openingHours: string[];
 }
 
 export interface PlaceDetailResponse {
