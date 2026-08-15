@@ -62,14 +62,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
+  const effectiveCourseId = selectedCourseId || auth?.recentCourseId || null;
 
   const { data: tasteProfile } = useTasteProfileQuery();
   const hasTasteProfile = !!tasteProfile;
 
   const { data: recentCourse } = useCourseDetailQuery({
-    courseId: selectedCourseId || '',
+    courseId: effectiveCourseId || '',
     options: {
-      enabled: !!selectedCourseId,
+      enabled: !!effectiveCourseId,
     },
   });
 
@@ -224,7 +225,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </View>
 
           {/* Recent Course Section */}
-          {selectedCourseId ? (
+          {effectiveCourseId ? (
             <View
               style={styles.sectionContainer}
               testID='recent-course-section'>
@@ -244,7 +245,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     'Recent Course Card Click',
                   );
                   if (onSelectCourse) {
-                    onSelectCourse(selectedCourseId);
+                    onSelectCourse(effectiveCourseId);
                   } else {
                     onNavigateToExplore?.();
                   }

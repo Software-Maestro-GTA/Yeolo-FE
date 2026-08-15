@@ -106,6 +106,12 @@ export function NavigationRoot({
   }, [auth?.isAuthenticated, auth?.isLoading, selectedShareToken, step]);
 
   useEffect(() => {
+    if (auth?.recentCourseId && !selectedCourseId) {
+      setSelectedCourseId(auth.recentCourseId);
+    }
+  }, [auth?.recentCourseId, selectedCourseId]);
+
+  useEffect(() => {
     const handleBackPress = () => {
       if (step === NAV_STEPS.GENERATING_COURSE || step === NAV_STEPS.TASTE) {
         if (Platform.OS === 'android') {

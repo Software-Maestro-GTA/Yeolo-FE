@@ -474,4 +474,37 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       '예약 페이지를 열 수 없습니다. 잠시 후 다시 시도해주세요.',
     );
   });
+
+  it('CourseDetailScreen 마운트 시 AsyncStorage에 recentCourseId를 저장하고 AuthContext 상태를 갱신해야 한다', async () => {
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+
+    const mockSetRecentCourseId = jest.fn();
+    const { AuthContext } = require('../src/context/AuthContext');
+    const mockAuthValue = {
+      isAuthenticated: true,
+      user: { displayName: '테스터' },
+      isLoading: false,
+      recentCourseId: null,
+      setRecentCourseId: mockSetRecentCourseId,
+      loginWithGoogle: jest.fn(),
+      loginWithApple: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    await render(
+      <AuthContext.Provider value={mockAuthValue}>
+        <CourseDetailScreen courseId='test-course-id-123' />
+      </AuthContext.Provider>,
+    );
+
+    await waitFor(() => {
+      expect(mockSetRecentCourseId).toHaveBeenCalledWith('test-course-id-123');
+    });
+
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe(
+      'test-course-id-123',
+    );
+  });
 });
