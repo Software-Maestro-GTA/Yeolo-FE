@@ -3,6 +3,17 @@
  * @description Location autocomplete API request/response types for API-LOC-1 and API-LOC-2.
  */
 
+export interface CountryAutocompleteParams {
+  keyword: string;
+  limit?: number;
+}
+
+export interface CityAutocompleteParams {
+  keyword: string;
+  country?: string;
+  limit?: number;
+}
+
 export interface CountryAutocompleteItem {
   countryId: string;
   countryNameKo: string;

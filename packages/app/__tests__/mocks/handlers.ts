@@ -663,6 +663,7 @@ export const handlers = [
   http.get('*/api/locations/cities/autocomplete', ({ request }) => {
     const url = new URL(request.url);
     const keyword = url.searchParams.get('keyword') || '';
+    const country = url.searchParams.get('country') || '';
 
     const allCities = [
       {
@@ -709,13 +710,23 @@ export const handlers = [
       },
     ];
 
-    const filtered = keyword
-      ? allCities.filter(
-          (c) =>
-            c.cityNameKo.toLowerCase().includes(keyword.toLowerCase()) ||
-            c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
-        )
-      : allCities;
+    let filtered = allCities;
+
+    if (country) {
+      filtered = filtered.filter(
+        (c) =>
+          c.countryNameKo.toLowerCase() === country.toLowerCase() ||
+          c.countryId.toLowerCase() === country.toLowerCase(),
+      );
+    }
+
+    if (keyword) {
+      filtered = filtered.filter(
+        (c) =>
+          c.cityNameKo.toLowerCase().includes(keyword.toLowerCase()) ||
+          c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
+      );
+    }
 
     return HttpResponse.json(
       {
