@@ -73,7 +73,12 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
   const displayStay = stop?.stayMinutes ? `${stop.stayMinutes}분 소요` : '';
   const displayCost =
     stop?.cost !== undefined ? `₩${stop.cost.toLocaleString()}` : '';
-  const displayAiTip = stop?.reason || stop?.memo || '';
+  const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
+  const hasMemo = Boolean(
+    stop?.memo &&
+    stop.memo.trim() !== '' &&
+    stop.memo.trim() !== stop?.reason?.trim(),
+  );
 
   const mockMapCoordinates = [
     {
@@ -241,7 +246,40 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
                 {UI_STRINGS.PLACE_DETAIL.AI_RECOMMEND_TITLE}
               </Text>
             </View>
-            <Text style={styles.aiRecommendDesc}>{displayAiTip}</Text>
+
+            {hasReason && (
+              <View style={styles.tipRow}>
+                <Ionicons
+                  name='bulb-outline'
+                  size={14}
+                  color={palette.accent}
+                  style={styles.tipIcon}
+                />
+                <Text style={styles.aiRecommendDesc}>
+                  {stop?.reason?.trim()}
+                </Text>
+              </View>
+            )}
+
+            {hasReason && hasMemo && <View style={styles.tipDivider} />}
+
+            {hasMemo && (
+              <View style={styles.tipRow}>
+                <Ionicons
+                  name='document-text-outline'
+                  size={14}
+                  color={palette.primary}
+                  style={styles.tipIcon}
+                />
+                <Text style={styles.aiRecommendDesc}>{stop?.memo?.trim()}</Text>
+              </View>
+            )}
+
+            {!hasReason && !hasMemo && (
+              <Text style={styles.aiRecommendDesc}>
+                {UI_STRINGS.COURSE_DETAIL.NO_INFO}
+              </Text>
+            )}
           </View>
 
           {/* Location Section */}
@@ -481,6 +519,24 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: palette.subText,
     lineHeight: 20,
+    flex: 1,
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  tipIcon: {
+    marginTop: 3,
+  },
+  tipLabelText: {
+    fontWeight: '700',
+    color: palette.deepNavy,
+  },
+  tipDivider: {
+    height: 1,
+    backgroundColor: 'rgba(13, 33, 55, 0.08)',
+    marginVertical: 2,
   },
   gpsRow: {
     flexDirection: 'row',

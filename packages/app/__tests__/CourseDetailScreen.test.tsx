@@ -150,7 +150,8 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       expect(getByText('₩350,000')).toBeTruthy();
       expect(getByText(/10:00/)).toBeTruthy();
       expect(getByText(/90분/)).toBeTruthy();
-      expect(getByText('바다 전망 추천')).toBeTruthy();
+      expect(getByText(/바다 전망 추천/)).toBeTruthy();
+      expect(getByText('1일차: 서귀포 도심 감성 카페 투어')).toBeTruthy();
     });
     expect(getByText(/대중교통 30분/)).toBeTruthy();
   });
