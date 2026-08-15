@@ -49,6 +49,10 @@ export function useGoogleLoginMutation({
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
       if (recentCourseId) {
         await AsyncStorage.setItem('recentCourseId', recentCourseId);
@@ -96,6 +100,10 @@ export function useAppleLoginMutation({
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
       if (recentCourseId) {
         await AsyncStorage.setItem('recentCourseId', recentCourseId);

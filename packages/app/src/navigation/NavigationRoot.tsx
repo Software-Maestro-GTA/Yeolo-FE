@@ -95,7 +95,13 @@ export function NavigationRoot({
     if (!auth?.isLoading) {
       if (step === null) {
         if (auth?.isAuthenticated) {
-          setStep(selectedShareToken ? NAV_STEPS.COURSE_SHARE : NAV_STEPS.HOME);
+          if (selectedShareToken) {
+            setStep(NAV_STEPS.COURSE_SHARE);
+          } else if (auth?.hasCompletedOnboarding === false) {
+            setStep(NAV_STEPS.INTRO);
+          } else {
+            setStep(NAV_STEPS.HOME);
+          }
         } else {
           setStep(
             selectedShareToken ? NAV_STEPS.COURSE_SHARE : NAV_STEPS.LOGIN,
@@ -103,7 +109,13 @@ export function NavigationRoot({
         }
       }
     }
-  }, [auth?.isAuthenticated, auth?.isLoading, selectedShareToken, step]);
+  }, [
+    auth?.isAuthenticated,
+    auth?.isLoading,
+    auth?.hasCompletedOnboarding,
+    selectedShareToken,
+    step,
+  ]);
 
   useEffect(() => {
     if (auth?.recentCourseId && !selectedCourseId) {
@@ -191,7 +203,10 @@ export function NavigationRoot({
       return (
         <OnboardingLayout>
           <MbtiInputScreen
-            onNext={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onNext={() => {
+              auth?.setHasCompletedOnboarding?.(true);
+              navigateTo(NAV_STEPS.CREATE_COURSE);
+            }}
             onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
           />
         </OnboardingLayout>
@@ -207,6 +222,7 @@ export function NavigationRoot({
         <OnboardingLayout>
           <TasteAnalysisScreen
             onFinish={(tasteProfileId) => {
+              auth?.setHasCompletedOnboarding?.(true);
               setActiveTasteProfileId(tasteProfileId);
               navigateTo(NAV_STEPS.TASTE_PROFILE);
             }}
@@ -219,7 +235,10 @@ export function NavigationRoot({
         <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
           <TasteProfileScreen
             tasteProfileId={activeTasteProfileId}
-            onGenerateCourse={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onGenerateCourse={() => {
+              auth?.setHasCompletedOnboarding?.(true);
+              navigateTo(NAV_STEPS.CREATE_COURSE);
+            }}
             onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
             onNavigateToIntro={() => navigateTo(NAV_STEPS.INTRO)}
           />

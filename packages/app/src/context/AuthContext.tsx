@@ -32,7 +32,9 @@ export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   recentCourseId?: string | null;
+  hasCompletedOnboarding?: boolean | null;
   setRecentCourseId?: (id: string | null) => void;
+  setHasCompletedOnboarding?: (completed: boolean) => Promise<void>;
   loginWithGoogle: (code: string) => Promise<{
     user: User;
     isNewUser: boolean;
@@ -64,10 +66,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [isRestoring, setIsRestoring] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [recentCourseId, setRecentCourseId] = useState<string | null>(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboardingState] = useState<
+    boolean | null
+  >(null);
 
   const googleLoginMutation = useGoogleLoginMutation();
   const appleLoginMutation = useAppleLoginMutation();
   const logoutMutation = useLogoutMutation();
+
+  const setHasCompletedOnboarding = async (completed: boolean) => {
+    setHasCompletedOnboardingState(completed);
+    await AsyncStorage.setItem(
+      'hasCompletedOnboarding',
+      completed ? 'true' : 'false',
+    );
+  };
 
   useEffect(() => {
     setTokenGetter(async () => {
@@ -92,6 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
+      setHasCompletedOnboardingState(null);
     });
 
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -108,9 +122,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const savedUser = await AsyncStorage.getItem('user');
         const savedRecentCourseId =
           await AsyncStorage.getItem('recentCourseId');
+        const savedOnboarding = await AsyncStorage.getItem(
+          'hasCompletedOnboarding',
+        );
 
         if (savedRecentCourseId) {
           setRecentCourseId(savedRecentCourseId);
+        }
+
+        if (savedOnboarding !== null) {
+          setHasCompletedOnboardingState(savedOnboarding === 'true');
         }
 
         if (token && refreshToken) {
@@ -140,9 +161,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               );
               await clearLocalSession();
               await AsyncStorage.removeItem('recentCourseId');
+              await AsyncStorage.removeItem('hasCompletedOnboarding');
               setIsAuthenticated(false);
               setUser(null);
               setRecentCourseId(null);
+              setHasCompletedOnboardingState(null);
             } else {
               logger.warn(
                 `[AuthContext] Refresh API returned status ${status || 'network error'}, falling back to existing token session:`,
@@ -164,12 +187,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setIsAuthenticated(false);
           setUser(null);
           setRecentCourseId(null);
+          setHasCompletedOnboardingState(null);
         }
       } catch (error) {
         logger.error('[AuthContext] 세션 복원 실패:', error);
         setIsAuthenticated(false);
         setUser(null);
         setRecentCourseId(null);
+        setHasCompletedOnboardingState(null);
       } finally {
         setIsRestoring(false);
       }
@@ -195,6 +220,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const result = await googleLoginMutation.mutateAsync(code);
       setUser(result.user);
       setRecentCourseId(result.recentCourseId || null);
+      setHasCompletedOnboardingState(!result.doOnboarding);
       setIsAuthenticated(true);
       logger.info('[AuthContext] Google login successful:', result.user);
       return result;
@@ -218,6 +244,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const result = await appleLoginMutation.mutateAsync(payload);
       setUser(result.user);
       setRecentCourseId(result.recentCourseId || null);
+      setHasCompletedOnboardingState(!result.doOnboarding);
       setIsAuthenticated(true);
       logger.info('[AuthContext] Apple login successful:', result.user);
       return result;
@@ -243,9 +270,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await AsyncStorage.removeItem('refreshToken');
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('recentCourseId');
+      await AsyncStorage.removeItem('hasCompletedOnboarding');
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
+      setHasCompletedOnboardingState(null);
       logger.info('[AuthContext] Local session cleanup finished');
     }
   };
@@ -257,9 +286,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     await AsyncStorage.removeItem('refreshToken');
     await AsyncStorage.removeItem('user');
     await AsyncStorage.removeItem('recentCourseId');
+    await AsyncStorage.removeItem('hasCompletedOnboarding');
     setIsAuthenticated(false);
     setUser(null);
     setRecentCourseId(null);
+    setHasCompletedOnboardingState(null);
   };
 
   const updateUser = (updatedFields: Partial<User>) => {
@@ -281,7 +312,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         user,
         isLoading,
         recentCourseId,
+        hasCompletedOnboarding,
         setRecentCourseId,
+        setHasCompletedOnboarding,
         loginWithGoogle,
         loginWithApple,
         logout,
