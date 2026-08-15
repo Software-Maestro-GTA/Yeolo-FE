@@ -9,21 +9,38 @@ import type { ItineraryStop } from '@yeolo/common';
 
 const baseStop: ItineraryStop = {
   sequence: 1,
-  placeId: 'place-1',
-  placeName: '함덕 해수욕장',
-  category: '해변',
   arrivalTime: '10:00',
   stayMinutes: 90,
-  transportToNext: 'transit',
-  travelMinutesToNext: 30,
-  cost: 0,
   memo: '',
   reason: '',
-  latitude: 33.5434,
-  longitude: 126.6692,
+  place: {
+    placeId: 'place-1',
+    placeName: '함덕 해수욕장',
+    category: '해변',
+    latitude: 33.5434,
+    longitude: 126.6692,
+  },
+  transportToNext: {
+    type: 'transit',
+    distance: 15000,
+    minutes: 30,
+    cost: 0,
+    memo: '대중교통 이동',
+  },
 };
 
 describe('ItineraryTimelineItem', () => {
+  it('place 정보(장소명, 카테고리) 및 transportToNext 정보(이동수단, 소요시간)가 정상 노출되어야 한다', async () => {
+    const { getByText, getByTestId } = await render(
+      <ItineraryTimelineItem stop={baseStop} isLast={false} />,
+    );
+
+    expect(getByText('함덕 해수욕장')).toBeTruthy();
+    expect(getByTestId('place-card')).toBeTruthy();
+    expect(getByTestId('transit-card')).toBeTruthy();
+    expect(getByText('대중교통 30분 소요')).toBeTruthy();
+  });
+
   it('reason과 memo가 모두 존재할 때 아이콘 구분과 함께 둘 다 노출되어야 한다', async () => {
     const stop: ItineraryStop = {
       ...baseStop,

@@ -28,14 +28,14 @@ jest.mock('../src/hooks/queries', () => ({
       data: {
         placeId: placeId || 'place-123',
         placeName: '함덕 해수욕장 (API)',
+        placeEngName: 'Hamdeok Beach (API)',
         category: '해변',
         address: '제주특별자치도 제주시 조천읍 함덕리 1008',
         latitude: 33.5434,
         longitude: 126.6692,
         rating: 4.8,
-        photoUrls: [
+        photoUrl:
           'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
-        ],
         openingHours: [
           '월요일 09:00 - 18:00',
           '화요일 09:00 - 18:00',
@@ -56,18 +56,24 @@ jest.mock('../src/hooks/queries', () => ({
 
 const mockStop: ItineraryStop = {
   sequence: 1,
-  placeId: 'place-123',
-  placeName: '함덕 해수욕장',
-  category: '해변',
   arrivalTime: '10:00 AM',
   stayMinutes: 90,
   memo: '탁 트인 에메랄드빛 바다 산책',
-  transportToNext: 'none',
-  travelMinutesToNext: 0,
-  cost: 15000,
   reason: '에메랄드빛 바다 전망 및 오션뷰 추천',
-  latitude: 33.5434,
-  longitude: 126.6692,
+  place: {
+    placeId: 'place-123',
+    placeName: '함덕 해수욕장',
+    category: '해변',
+    latitude: 33.5434,
+    longitude: 126.6692,
+  },
+  transportToNext: {
+    type: 'none',
+    distance: null,
+    minutes: 0,
+    cost: 15000,
+    memo: null,
+  },
 };
 
 describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종합)', () => {
@@ -121,7 +127,12 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
 
   it('API 호출 실패(error-place-id) 시 에러 안내가 노출되거나 stop의 기본 정보로 fallback 처리되어야 한다', async () => {
     const { getByText, findByText } = await render(
-      <PlaceDetailScreen stop={{ ...mockStop, placeId: 'error-place-id' }} />,
+      <PlaceDetailScreen
+        stop={{
+          ...mockStop,
+          place: { ...mockStop.place, placeId: 'error-place-id' },
+        }}
+      />,
     );
 
     // 에러 발생 또는 fallback 시 stop의 장소 정보 사용
