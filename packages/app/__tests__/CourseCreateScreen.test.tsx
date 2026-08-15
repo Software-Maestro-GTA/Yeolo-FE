@@ -50,7 +50,7 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
 
     jest
       .spyOn(commonApi, 'fetchCityAutocomplete')
-      .mockImplementation(async (_, keyword) => {
+      .mockImplementation(async (_, keyword, country) => {
         const allCities = [
           {
             cityId: 'city-1',
@@ -71,9 +71,17 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
             countryNameKo: '태국',
           },
         ];
-        const filtered = keyword
-          ? allCities.filter((c) => c.cityNameKo.includes(keyword))
-          : allCities;
+        let filtered = allCities;
+        if (country) {
+          filtered = filtered.filter(
+            (c) =>
+              c.countryNameKo.toLowerCase() === country.toLowerCase() ||
+              c.countryId.toLowerCase() === country.toLowerCase(),
+          );
+        }
+        if (keyword) {
+          filtered = filtered.filter((c) => c.cityNameKo.includes(keyword));
+        }
         return {
           status: 200,
           message: '도시 자동완성 조회 성공',
@@ -333,5 +341,21 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     expect(
       getByTestId('submit-course-btn').props.accessibilityState?.disabled,
     ).toBe(true);
+  });
+
+  it('국가가 입력된 상태에서 도시 검색창에 텍스트 입력 시 fetchCityAutocomplete에 해당 국가명이 전달되어야 한다', async () => {
+    const fetchCitySpy = jest.spyOn(commonApi, 'fetchCityAutocomplete');
+    const { getByTestId, findByTestId } = await render(<CourseCreateScreen />);
+
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-country'), '일본');
+    });
+
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-city'), '도');
+    });
+
+    await findByTestId('city-dropdown');
+    expect(fetchCitySpy).toHaveBeenCalledWith(expect.any(String), '도', '일본');
   });
 });

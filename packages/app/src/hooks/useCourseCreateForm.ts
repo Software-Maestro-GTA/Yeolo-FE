@@ -124,7 +124,8 @@ export function useCourseCreateForm(
       return;
     }
     let isSubscribed = true;
-    fetchCityAutocomplete(apiUrl, destinationCity.trim())
+    const countryFilter = destinationCountry.trim() || undefined;
+    fetchCityAutocomplete(apiUrl, destinationCity.trim(), countryFilter)
       .then((res) => {
         if (isSubscribed) {
           if (res?.data?.cities) {
@@ -142,7 +143,7 @@ export function useCourseCreateForm(
     return () => {
       isSubscribed = false;
     };
-  }, [destinationCity, apiUrl]);
+  }, [destinationCity, destinationCountry, apiUrl]);
 
   useEffect(() => {
     if (isCalendarOpen) {

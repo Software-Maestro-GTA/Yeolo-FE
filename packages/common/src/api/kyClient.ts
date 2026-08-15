@@ -250,3 +250,26 @@ export function createHttpClient(
 
   return ky.create(options);
 }
+
+/**
+ * Creates an HTTP client (ky instance) for public endpoints that do not require Authorization header.
+ *
+ * @param baseUrl Base API URL
+ * @param customOptions Additional ky configuration options
+ * @returns KyInstance
+ */
+export function createPublicHttpClient(
+  baseUrl?: string,
+  customOptions?: Options,
+): KyInstance {
+  const options: Options = {
+    throwHttpErrors: false,
+    ...customOptions,
+  };
+
+  if (baseUrl) {
+    options.prefix = baseUrl.replace(/\/$/, '');
+  }
+
+  return ky.create(options);
+}
