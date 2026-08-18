@@ -120,7 +120,7 @@ export class CourseMiniMapView extends React.Component<
         <View style={styles.miniMapCard} testID='mini-map-card'>
           <MapView
             ref={this.mapRef}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            provider={PROVIDER_GOOGLE}
             testID='in-app-map-view'
             style={styles.mapView}
             initialRegion={safeRegion}

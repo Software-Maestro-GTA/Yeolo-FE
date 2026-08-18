@@ -26,6 +26,7 @@ describe('CourseMiniMapView', () => {
     );
 
     const mapView = getByTestId('in-app-map-view');
+    expect(mapView.props.provider).toBe('google');
     expect(mapView.props.scrollEnabled).toBe(true);
     expect(mapView.props.zoomEnabled).toBe(true);
     expect(mapView.props.pitchEnabled).toBe(false);
