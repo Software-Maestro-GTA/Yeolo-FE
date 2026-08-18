@@ -16,7 +16,16 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
-    plugins: [...(config.plugins || []), 'expo-apple-authentication'],
+    plugins: [
+      ...(config.plugins || []),
+      'expo-apple-authentication',
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
+    ],
     android: {
       ...config.android,
       config: {
