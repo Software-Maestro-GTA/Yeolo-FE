@@ -5,7 +5,7 @@
 import {
   getAdjustedCoordinates,
   calculateRegion,
-  getLeafletMapHtml,
+  isValidCoordinate,
   logger,
   type ItineraryStop,
   type MapCoordinate,
@@ -15,7 +15,6 @@ import {
 export interface ProcessedCourseMapData {
   coordinates: MapCoordinate[];
   region?: MapRegion;
-  leafletHtml: string;
 }
 
 /**
@@ -38,17 +37,15 @@ export async function processCourseStopsMapData(
     return {
       coordinates: [],
       region: defaultRegion,
-      leafletHtml: getLeafletMapHtml([]),
     };
   }
 
   const rawStops: MapCoordinate[] = stops
-    .filter(
-      (stop) =>
-        typeof stop.place?.latitude === 'number' &&
-        typeof stop.place?.longitude === 'number' &&
-        !isNaN(stop.place.latitude) &&
-        !isNaN(stop.place.longitude),
+    .filter((stop) =>
+      isValidCoordinate({
+        latitude: stop.place?.latitude,
+        longitude: stop.place?.longitude,
+      }),
     )
     .map((stop, index) => ({
       latitude: stop.place.latitude,
@@ -59,7 +56,6 @@ export async function processCourseStopsMapData(
 
   const coordinates = getAdjustedCoordinates(rawStops);
   const region = calculateRegion(coordinates);
-  const leafletHtml = getLeafletMapHtml(coordinates);
 
   logger.info(
     `[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`,
@@ -68,6 +64,5 @@ export async function processCourseStopsMapData(
   return {
     coordinates,
     region,
-    leafletHtml,
   };
 }

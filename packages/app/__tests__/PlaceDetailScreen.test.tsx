@@ -24,6 +24,44 @@ jest.mock('../src/hooks/queries', () => ({
         error: new Error('장소 정보를 찾을 수 없습니다.'),
       };
     }
+    if (placeId === 'no-hours-place-id') {
+      return {
+        data: {
+          placeId: 'no-hours-place-id',
+          placeName: '영업시간 없는 장소',
+          placeEngName: 'No Hours Place',
+          category: '관광지',
+          address: '제주특별자치도 서귀포시',
+          latitude: 33.2,
+          longitude: 126.5,
+          rating: 4.0,
+          photoUrl: '',
+          openingHours: [],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    }
+    if (placeId === 'single-hour-place-id') {
+      return {
+        data: {
+          placeId: 'single-hour-place-id',
+          placeName: '단일 영업시간 장소',
+          placeEngName: 'Single Hour Place',
+          category: '카페',
+          address: '제주특별자치도 제주시',
+          latitude: 33.5,
+          longitude: 126.5,
+          rating: 4.5,
+          photoUrl: '',
+          openingHours: ['매일 10:00 - 20:00'],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    }
     return {
       data: {
         placeId: placeId || 'place-123',
@@ -92,6 +130,7 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
 
     // API-PLACE-1 연동으로 비동기 받아온 장소 정보 종합 렌더링
     expect(await findByText('함덕 해수욕장 (API)')).toBeTruthy();
+    expect(await findByText('Hamdeok Beach (API)')).toBeTruthy();
     expect(
       await findByText('제주특별자치도 제주시 조천읍 함덕리 1008'),
     ).toBeTruthy();
@@ -99,6 +138,13 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
     expect(getByTestId('opening-hours-section')).toBeTruthy();
     expect(getByTestId('ai-recommend-card')).toBeTruthy();
     expect(getByTestId('location-section')).toBeTruthy();
+
+    // 지도 인터랙션 비활성화(정적 맵) 검증
+    const miniMapSection = getByTestId('mini-map-section');
+    expect(miniMapSection.props.pointerEvents).toBe('none');
+    const mapView = getByTestId('in-app-map-view');
+    expect(mapView.props.scrollEnabled).toBe(false);
+    expect(mapView.props.zoomEnabled).toBe(false);
   });
 
   it('"더보기 ▾" 버튼 클릭 시 영업시간 상세 모달이 오픈되어야 하고, 닫기 버튼으로 모달을 닫을 수 있어야 한다', async () => {
@@ -163,5 +209,33 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
     expect(getByText('월요일')).toBeTruthy();
     expect(getByText('일요일')).toBeTruthy();
     expect(getAllByText('10:00 - 22:00').length).toBe(7);
+  });
+
+  it('openingHours 원소가 1개 이하일 경우 "더보기 ▾" 버튼이 노출되지 않아야 한다', async () => {
+    const { queryByTestId, queryByText } = await render(
+      <PlaceDetailScreen
+        stop={{
+          ...mockStop,
+          place: { ...mockStop.place, placeId: 'single-hour-place-id' },
+        }}
+      />,
+    );
+
+    expect(queryByTestId('btn-more-hours')).toBeNull();
+    expect(queryByText('더보기 ▾')).toBeNull();
+  });
+
+  it('openingHours가 없을 경우 "정보 없음"이 노출되고 "영업중" 고정 문구가 노출되지 않아야 한다', async () => {
+    const { getByText, queryByText } = await render(
+      <PlaceDetailScreen
+        stop={{
+          ...mockStop,
+          place: { ...mockStop.place, placeId: 'no-hours-place-id' },
+        }}
+      />,
+    );
+
+    expect(getByText('정보 없음')).toBeTruthy();
+    expect(queryByText('영업중')).toBeNull();
   });
 });

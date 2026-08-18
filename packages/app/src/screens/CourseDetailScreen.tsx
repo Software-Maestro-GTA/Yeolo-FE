@@ -22,7 +22,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ItineraryStop } from '@yeolo/common';
+import type { ItineraryStop } from '@yeolo/common';
 import {
   CourseMiniMapView,
   CourseDayTabs,
@@ -158,8 +158,7 @@ export function CourseDetailScreen({
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
   const [mapData, setMapData] = useState<ProcessedCourseMapData>({
     coordinates: [],
-    region: APP_CONFIG.DEFAULT_MAP_REGION,
-    leafletHtml: '',
+    region: undefined,
   });
 
   useEffect(() => {
@@ -179,8 +178,7 @@ export function CourseDetailScreen({
         if (isMounted) {
           setMapData({
             coordinates: [],
-            region: APP_CONFIG.DEFAULT_MAP_REGION,
-            leafletHtml: '',
+            region: undefined,
           });
         }
         return;
@@ -244,7 +242,7 @@ export function CourseDetailScreen({
       return (
         acc +
         (d.stops?.reduce((sAcc, s) => {
-          return sAcc + (s.transportToNext?.cost || 0);
+          return sAcc + (s?.cost || 0) + (s?.transportToNext?.cost || 0);
         }, 0) || 0)
       );
     }, 0);
@@ -332,7 +330,6 @@ export function CourseDetailScreen({
           <CourseMiniMapView
             stopCoordinates={mapData.coordinates}
             mapRegion={mapData.region}
-            leafletHtml={mapData.leafletHtml}
             onInteractionStart={() => setIsMapInteracting(true)}
             onInteractionEnd={() => setIsMapInteracting(false)}
           />
