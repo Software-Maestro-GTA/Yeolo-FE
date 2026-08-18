@@ -114,4 +114,76 @@ describe('ItineraryTimelineItem', () => {
     expect(getByText('바다 전망 추천')).toBeTruthy();
     expect(getAllByText('바다 전망 추천').length).toBe(1);
   });
+
+  it('transportToNext의 cost와 memo가 정상적으로 렌더링되어야 한다', async () => {
+    const stopWithCost: ItineraryStop = {
+      ...baseStop,
+      cost: 15000,
+      transportToNext: {
+        type: 'transit',
+        distance: 15000,
+        minutes: 30,
+        cost: 2500,
+        memo: '101번 버스 탑승 후 서귀포 환승',
+      },
+    };
+
+    const { getByText } = await render(
+      <ItineraryTimelineItem stop={stopWithCost} isLast={false} />,
+    );
+
+    // Place cost
+    expect(getByText('₩15,000')).toBeTruthy();
+    // Transit cost
+    expect(getByText('₩2,500')).toBeTruthy();
+    // Transit memo tip
+    expect(getByText('101번 버스 탑승 후 서귀포 환승')).toBeTruthy();
+  });
+
+  it('도보 이동 시 도보 무료가 노출되어야 한다', async () => {
+    const stopWithWalking: ItineraryStop = {
+      ...baseStop,
+      cost: 0,
+      transportToNext: {
+        type: 'walking',
+        distance: 500,
+        minutes: 10,
+        cost: 0,
+        memo: '',
+      },
+    };
+
+    const { getByText } = await render(
+      <ItineraryTimelineItem stop={stopWithWalking} isLast={false} />,
+    );
+
+    expect(getByText('도보 무료')).toBeTruthy();
+    expect(
+      getByText('가장 효율적인 추천 동선으로 연결된 구간입니다.'),
+    ).toBeTruthy();
+  });
+
+  it('유료 이동수단(대중교통/택시 등)의 cost가 0 또는 null일 때 교통비 별도가 노출되어야 한다', async () => {
+    const stopWithUnspecifiedTransit: ItineraryStop = {
+      ...baseStop,
+      cost: 0,
+      transportToNext: {
+        type: 'transit',
+        distance: 5000,
+        minutes: 20,
+        cost: 0,
+        memo: '시내버스 이동',
+      },
+    };
+
+    const { getByText } = await render(
+      <ItineraryTimelineItem
+        stop={stopWithUnspecifiedTransit}
+        isLast={false}
+      />,
+    );
+
+    expect(getByText('교통비 별도')).toBeTruthy();
+    expect(getByText('시내버스 이동')).toBeTruthy();
+  });
 });

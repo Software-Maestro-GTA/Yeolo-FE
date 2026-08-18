@@ -96,17 +96,34 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
     }
   };
 
-  const hasReason = Boolean(stop.reason && stop.reason.trim() !== '');
+  const formatTransitCostBadge = (
+    transportType: TransportType,
+    cost?: number | null,
+  ): string => {
+    if (transportType === 'walking') {
+      return UI_STRINGS.COURSE_DETAIL.FREE_WALKING;
+    }
+    if (cost !== null && cost !== undefined && cost > 0) {
+      return `₩${cost.toLocaleString()}`;
+    }
+    return UI_STRINGS.COURSE_DETAIL.SEPARATE_TRANSIT_COST;
+  };
+
+  const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
   const hasMemo = Boolean(
-    stop.memo &&
+    stop?.memo &&
     stop.memo.trim() !== '' &&
-    stop.memo.trim() !== stop.reason?.trim(),
+    stop.memo.trim() !== stop?.reason?.trim(),
   );
 
+  const transport = stop?.transportToNext;
+  const place = stop?.place;
+
   const hasTransport =
-    stop.transportToNext.type !== 'none' &&
-    (stop.transportToNext.minutes !== null
-      ? stop.transportToNext.minutes > 0
+    Boolean(transport) &&
+    transport?.type !== 'none' &&
+    (transport?.minutes !== null && transport?.minutes !== undefined
+      ? transport.minutes > 0
       : true);
 
   return (
@@ -119,18 +136,22 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         <View style={styles.titleRow}>
           <View style={styles.placeTitleGroup}>
             <Ionicons
-              name={getCategoryIcon(stop.place.category)}
+              name={getCategoryIcon(place?.category)}
               size={18}
               color={palette.primary}
             />
-            <Text style={styles.placeNameText}>{stop.place.placeName}</Text>
+            <Text style={styles.placeNameText}>
+              {place?.placeName || '장소명 없음'}
+            </Text>
           </View>
           <View style={styles.mintBadge}>
             <Text style={styles.mintBadgeText}>
               ₩
-              {stop.transportToNext.cost !== null
-                ? stop.transportToNext.cost.toLocaleString()
-                : '0'}
+              {stop?.cost !== null && stop?.cost !== undefined
+                ? stop.cost.toLocaleString()
+                : transport?.cost !== null && transport?.cost !== undefined
+                  ? transport.cost.toLocaleString()
+                  : '0'}
             </Text>
           </View>
         </View>
@@ -198,24 +219,26 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <View style={styles.transitHeader}>
               <View style={styles.transitTitleGroup}>
                 <Ionicons
-                  name={getTransportIcon(stop.transportToNext.type)}
+                  name={getTransportIcon(transport?.type || 'walking')}
                   size={16}
                   color={palette.deepNavy}
                 />
                 <Text style={styles.transitTitleText}>
                   {formatTransportLabel(
-                    stop.transportToNext.type,
-                    stop.transportToNext.minutes,
+                    transport?.type || 'walking',
+                    transport?.minutes,
                   )}
                 </Text>
               </View>
-              {/* 교통비: 현재 API 단계에서 미지원으로 주석 처리
+              {/* 교통비 배지 */}
               <View style={styles.mintBadge}>
                 <Text style={styles.mintBadgeText}>
-                  {UI_STRINGS.COURSE_DETAIL.FREE_TRANSIT}
+                  {formatTransitCostBadge(
+                    transport?.type || 'walking',
+                    transport?.cost,
+                  )}
                 </Text>
               </View>
-              */}
             </View>
 
             {/* Route Visual Line */}
@@ -223,7 +246,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
               <View style={styles.routeDot} />
               <View style={styles.routeLine} />
               <Ionicons
-                name={getRouteVisualIcon(stop.transportToNext.type)}
+                name={getRouteVisualIcon(transport?.type || 'walking')}
                 size={12}
                 color={palette.primary}
               />
@@ -231,21 +254,22 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
               <View style={styles.routeDot} />
             </View>
 
-            {/* 이동 방법 상세 팁: 현재 API 단계에서 미지원으로 주석 처리
+            {/* 이동 방법 상세 팁 */}
             <View style={styles.aiTipBox}>
-              <Ionicons
-                name='bulb-outline'
-                size={14}
-                color={palette.accent}
-                style={styles.tipIcon}
-              />
-              <Text style={styles.aiTipText}>
-                {stop.memo && stop.memo.includes('이동')
-                  ? stop.memo
-                  : '가장 효율적인 추천 동선으로 연결된 구간입니다.'}
-              </Text>
+              <View style={styles.tipRow}>
+                <Ionicons
+                  name='bulb-outline'
+                  size={14}
+                  color={palette.accent}
+                  style={styles.tipIcon}
+                />
+                <Text style={styles.aiTipText}>
+                  {transport?.memo && transport.memo.trim() !== ''
+                    ? transport.memo.trim()
+                    : UI_STRINGS.COURSE_DETAIL.RECOMMENDED_ROUTE_TIP}
+                </Text>
+              </View>
             </View>
-            */}
           </View>
         </View>
       )}

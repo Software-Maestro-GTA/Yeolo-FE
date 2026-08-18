@@ -7,6 +7,8 @@ module.exports = ({ config }) => {
   const googleScheme =
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
 
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
   const androidGoogleServices =
     process.env.GOOGLE_SERVICES_JSON || './google-services.json';
   const iosGoogleServices =
@@ -17,10 +19,20 @@ module.exports = ({ config }) => {
     plugins: [...(config.plugins || []), 'expo-apple-authentication'],
     android: {
       ...config.android,
+      config: {
+        ...config.android?.config,
+        googleMaps: {
+          apiKey: googleMapsApiKey,
+        },
+      },
       googleServicesFile: androidGoogleServices,
     },
     ios: {
       ...config.ios,
+      config: {
+        ...config.ios?.config,
+        googleMapsApiKey: googleMapsApiKey,
+      },
       bundleIdentifier: 'com.yeolo-travel.app',
       usesAppleSignIn: true,
       entitlements: {

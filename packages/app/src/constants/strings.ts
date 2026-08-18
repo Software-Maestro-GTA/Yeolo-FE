@@ -191,6 +191,8 @@ export const UI_STRINGS = {
     TOTAL_BUDGET_LABEL: '총 예상 경비',
     TOTAL_BUDGET_VALUE: '₩78,000',
     FREE_TRANSIT: '교통비 무료',
+    FREE_WALKING: '도보 무료',
+    SEPARATE_TRANSIT_COST: '교통비 별도',
     MINUTES_SUFFIX: '분 소요',
     NO_INFO: '정보 없음',
     ERROR_TITLE: '코스 상세 조회 오류',

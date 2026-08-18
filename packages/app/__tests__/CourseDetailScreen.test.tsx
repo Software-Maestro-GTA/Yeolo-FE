@@ -36,6 +36,8 @@ jest.mock('react-native-maps', () => {
     default: MockMapView,
     Marker: MockMarker,
     Polyline: MockPolyline,
+    PROVIDER_GOOGLE: 'google',
+    PROVIDER_DEFAULT: 'default',
   };
 });
 
@@ -249,7 +251,7 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     expect(apiSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('iOS 환경에서는 앱 내부 네이티브 지도(MapView)가 렌더링되어야 한다', async () => {
+  it('Google Map(MapView) 기반 지도가 정상적으로 렌더링되어야 한다', async () => {
     jest
       .spyOn(commonApi, 'getCourseDetailApi')
       .mockResolvedValue(mockCourseDetail);
@@ -260,27 +262,9 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
 
     await waitFor(() => {
       expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+      expect(getByTestId('mini-map-card')).toBeTruthy();
       expect(getByTestId('in-app-map-view')).toBeTruthy();
     });
-  });
-
-  it('Android 환경에서는 API 키가 필요 없는 인앱 웹뷰(WebView)로 지도가 렌더링되어야 한다', async () => {
-    const originalOS = require('react-native').Platform.OS;
-    require('react-native').Platform.OS = 'android';
-    jest
-      .spyOn(commonApi, 'getCourseDetailApi')
-      .mockResolvedValue(mockCourseDetail);
-
-    const { getByTestId } = await render(
-      <CourseDetailScreen courseId='test-course-id-123' />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('mini-map-webview-card')).toBeTruthy();
-      expect(getByTestId('in-app-webview')).toBeTruthy();
-    });
-
-    require('react-native').Platform.OS = originalOS;
   });
 
   it('화면 하단에 총 예상 경비 카드가 정상적으로 렌더링되어야 한다', async () => {

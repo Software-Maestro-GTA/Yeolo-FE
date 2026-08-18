@@ -80,6 +80,7 @@ export interface ItineraryStop {
   stayMinutes: number;
   memo: string;
   reason: string;
+  cost?: number | null;
   place: ItineraryPlace;
   transportToNext: TransportInfo;
 }

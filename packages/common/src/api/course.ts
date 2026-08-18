@@ -142,7 +142,9 @@ export async function getCourseDetailApi(
   courseId: string,
 ): Promise<CourseDetail> {
   try {
-    logger.info('[CourseAPI] getCourseDetailApi request, courseId:', courseId);
+    logger.info(
+      `[CourseAPI] getCourseDetailApi request, courseId: ${courseId}`,
+    );
     const client = createHttpClient(apiUrl);
     const headers: Record<string, string> = {};
     if (accessToken) {
@@ -156,15 +158,15 @@ export async function getCourseDetailApi(
     const json = (await response
       .json()
       .catch(() => null)) as CourseDetailApiResponse | null;
-    logger.info(
-      '[CourseAPI] getCourseDetailApi response status:',
-      response.status,
-      'body:',
-      json,
-    );
 
-    if (response.ok && json && json.data && json.data.course) {
-      return json.data.course;
+    if (response.ok && json && json.data) {
+      if (json.data.course) {
+        return json.data.course;
+      }
+      // Fallback: If server returns course directly inside json.data without { course: ... }
+      if ((json.data as any).courseId || (json.data as any).itinerary) {
+        return json.data as unknown as CourseDetail;
+      }
     }
 
     const errorStatus = json?.status || response.status || 500;
@@ -172,10 +174,7 @@ export async function getCourseDetailApi(
       json?.message || '코스 상세 정보를 불러올 수 없습니다.';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
-    logger.error(
-      `[CourseAPI] getCourseDetailApi error (courseId: ${courseId}):`,
-      error,
-    );
+    logger.error(`[CourseAPI] getCourseDetailApi error:`, error);
     if (error instanceof ApiError) {
       throw error;
     }
