@@ -154,6 +154,7 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
       title: '로그인 응답 기반 최근 추천 코스',
       destinationCountry: '대한민국',
       destinationCity: '제주',
+      coverImageUrl: 'https://example.com/custom-cover-image.jpg',
       startDate: '2026-08-01',
       totalDays: 3,
       tags: ['최신', '추천'],
@@ -181,6 +182,11 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
     expect(getByTestId('recent-course-section')).toBeTruthy();
     const courseTitle = await findByText('로그인 응답 기반 최근 추천 코스');
     expect(courseTitle).toBeTruthy();
+
+    const thumbnail = getByTestId('recent-course-thumbnail');
+    expect(thumbnail.props.source.uri).toBe(
+      'https://example.com/custom-cover-image.jpg',
+    );
 
     fireEvent.press(getByTestId('recent-course-card'));
     expect(mockOnSelectCourse).toHaveBeenCalledWith(

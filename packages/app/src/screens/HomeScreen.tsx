@@ -251,11 +251,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   }
                 }}>
                 <Image
+                  testID='recent-course-thumbnail'
                   source={{
-                    uri: getDestinationImageUrl(
-                      recentCourse?.destinationCountry || '대한민국',
-                      recentCourse?.destinationCity || '서울',
-                    ),
+                    uri:
+                      recentCourse?.coverImageUrl ||
+                      getDestinationImageUrl(
+                        recentCourse?.destinationCountry || '대한민국',
+                        recentCourse?.destinationCity || '서울',
+                      ),
                   }}
                   style={styles.cardThumbnail}
                 />

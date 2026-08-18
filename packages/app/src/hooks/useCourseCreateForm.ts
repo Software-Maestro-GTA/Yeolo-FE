@@ -272,22 +272,26 @@ export function useCourseCreateForm(
         (c) => c.countryNameKo === destinationCountry.trim(),
       ));
 
+  const isKnownMismatchedCity =
+    POPULAR_DESTINATIONS.some(
+      (d) =>
+        d.city === destinationCity.trim() &&
+        d.country !== destinationCountry.trim(),
+    ) ||
+    citySuggestions.some(
+      (c) =>
+        c.cityNameKo === destinationCity.trim() &&
+        c.countryNameKo &&
+        c.countryNameKo !== destinationCountry.trim(),
+    ) ||
+    (validatedCityCountry !== null &&
+      validatedCityCountry !== destinationCountry.trim());
+
+  // API 목록에 없는 도시라도 사용자가 직접 입력한 도시명을 유효한 것으로 인정
   const isCityValid =
     destinationCity.trim().length > 0 &&
     isCountryValid &&
-    ((validatedCity === destinationCity.trim() &&
-      (!validatedCityCountry ||
-        validatedCityCountry === destinationCountry.trim())) ||
-      POPULAR_DESTINATIONS.some(
-        (d) =>
-          d.country === destinationCountry.trim() &&
-          d.city === destinationCity.trim(),
-      ) ||
-      citySuggestions.some(
-        (c) =>
-          c.cityNameKo === destinationCity.trim() &&
-          (c.countryNameKo === destinationCountry.trim() || !c.countryNameKo),
-      ));
+    !isKnownMismatchedCity;
 
   const isStartDateValid = !startDate || DATE_REGEX.test(startDate.trim());
   const isEndDateValid =
