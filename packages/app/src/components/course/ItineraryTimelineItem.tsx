@@ -172,7 +172,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
           {hasReason && (
             <View style={styles.tipRow}>
               <Ionicons
-                name='bulb-outline'
+                name='sparkles-outline'
                 size={14}
                 color={palette.accent}
                 style={styles.tipIcon}
@@ -198,7 +198,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
           {!hasReason && !hasMemo && (
             <View style={styles.tipRow}>
               <Ionicons
-                name='bulb-outline'
+                name='sparkles-outline'
                 size={14}
                 color={palette.accent}
                 style={styles.tipIcon}
@@ -258,9 +258,9 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <View style={styles.aiTipBox}>
               <View style={styles.tipRow}>
                 <Ionicons
-                  name='bulb-outline'
+                  name='document-text-outline'
                   size={14}
-                  color={palette.accent}
+                  color={palette.primary}
                   style={styles.tipIcon}
                 />
                 <Text style={styles.aiTipText}>
