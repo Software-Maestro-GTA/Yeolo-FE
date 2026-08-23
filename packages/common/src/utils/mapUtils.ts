@@ -18,16 +18,47 @@ export interface MapRegion {
 }
 
 /**
+ * 주어진 좌표가 유효한 위/경도인지 검증하는 유틸 (0, 0 Null Island, NaN, 범위 외 좌표 제외)
+ */
+export function isValidCoordinate(
+  coord?: Partial<MapCoordinate> | null,
+): coord is MapCoordinate {
+  if (!coord) return false;
+  const { latitude, longitude } = coord;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return false;
+  }
+  if (
+    isNaN(latitude) ||
+    isNaN(longitude) ||
+    !isFinite(latitude) ||
+    !isFinite(longitude)
+  ) {
+    return false;
+  }
+  // 0, 0 (대서양 Null Island, 누락 기본값) 제외
+  if (Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001) {
+    return false;
+  }
+  // 유효한 지구 위/경도 범위 검증
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * 인접한 장소 간의 노드 포개짐을 원천 방지하는 겹침 방지 알고리즘 (실제 좌표 오차 최소화)
  */
 export function getAdjustedCoordinates(
   stops: MapCoordinate[],
 ): MapCoordinate[] {
+  const validStops = (stops || []).filter(isValidCoordinate);
   const result: MapCoordinate[] = [];
   const THRESHOLD = 0.0003; // 약 30m 이내 극인접 감지 기준
 
-  for (let i = 0; i < stops.length; i++) {
-    const current = stops[i];
+  for (let i = 0; i < validStops.length; i++) {
+    const current = validStops[i];
     if (!current) continue;
 
     let lat = current.latitude;
@@ -64,6 +95,7 @@ export function getAdjustedCoordinates(
 
 /**
  * 주어진 마커 좌표들의 바운딩 박스(Bounding Box) 및 중앙 카메라 뷰포트 계산 유틸
+ * 유효하지 않은 좌표(0, 0 등)는 계산에서 제외합니다.
  */
 export function calculateRegion(
   stopCoordinates: MapCoordinate[],
@@ -71,12 +103,18 @@ export function calculateRegion(
   if (!stopCoordinates || stopCoordinates.length === 0) {
     return undefined;
   }
-  const first = stopCoordinates[0];
+
+  const validStops = stopCoordinates.filter(isValidCoordinate);
+  if (validStops.length === 0) {
+    return undefined;
+  }
+
+  const first = validStops[0];
   if (!first) {
     return undefined;
   }
 
-  if (stopCoordinates.length === 1) {
+  if (validStops.length === 1) {
     return {
       latitude: first.latitude,
       longitude: first.longitude,
@@ -90,13 +128,11 @@ export function calculateRegion(
   let minLng = first.longitude;
   let maxLng = first.longitude;
 
-  stopCoordinates.forEach((c) => {
-    if (c) {
-      minLat = Math.min(minLat, c.latitude);
-      maxLat = Math.max(maxLat, c.latitude);
-      minLng = Math.min(minLng, c.longitude);
-      maxLng = Math.max(maxLng, c.longitude);
-    }
+  validStops.forEach((c) => {
+    minLat = Math.min(minLat, c.latitude);
+    maxLat = Math.max(maxLat, c.latitude);
+    minLng = Math.min(minLng, c.longitude);
+    maxLng = Math.max(maxLng, c.longitude);
   });
 
   const midLat = (minLat + maxLat) / 2;
@@ -118,7 +154,10 @@ export function calculateRegion(
 export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
   if (!stopCoordinates || stopCoordinates.length === 0) return '';
 
-  const center = stopCoordinates[0];
+  const validStops = stopCoordinates.filter(isValidCoordinate);
+  if (validStops.length === 0) return '';
+
+  const center = validStops[0];
   if (!center) return '';
 
   return `

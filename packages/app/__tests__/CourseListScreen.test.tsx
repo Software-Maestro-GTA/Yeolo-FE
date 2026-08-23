@@ -19,6 +19,8 @@ const mockCourseList: commonApi.CourseSummary[] = [
     title: '2박 3일 서귀포 감성 가득 힐링 코스',
     destinationCountry: '대한민국',
     destinationCity: '제주',
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
     startDate: '2026-08-01',
     totalDays: 3,
     tags: ['힐링', '카페', '자연'],
@@ -30,6 +32,8 @@ const mockCourseList: commonApi.CourseSummary[] = [
     title: '도쿄 3박 4일 미식 & 쇼핑 투어',
     destinationCountry: '일본',
     destinationCity: '도쿄',
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26',
     startDate: '2026-09-10',
     totalDays: 4,
     tags: ['미식', '쇼핑', '도시'],

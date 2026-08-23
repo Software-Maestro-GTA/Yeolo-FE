@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description Types and interfaces for course recommendation, course list & course detail (DOM-2, API-FB-7, API-FB-10).
+ * @description Types and interfaces for course recommendation, course list & course detail (DOM-3, API-COURSE-2, API-COURSE-3, API-AI-2).
  */
 
 export interface CourseSummary {
@@ -8,6 +8,7 @@ export interface CourseSummary {
   title: string;
   destinationCountry: string;
   destinationCity: string;
+  coverImageUrl: string;
   startDate: string;
   totalDays: number;
   tags: string[];
@@ -57,20 +58,31 @@ export interface CourseState {
   errorCode: number | null;
 }
 
-export interface ItineraryStop {
-  sequence: number;
+export interface ItineraryPlace {
   placeId: string;
   placeName: string;
   category: string;
   latitude: number;
   longitude: number;
+}
+
+export interface TransportInfo {
+  type: TransportType;
+  distance: number | null;
+  minutes: number | null;
+  cost: number | null;
+  memo: string | null;
+}
+
+export interface ItineraryStop {
+  sequence: number;
   arrivalTime: string;
   stayMinutes: number;
   memo: string;
-  transportToNext: TransportType;
-  travelMinutesToNext: number;
-  cost: number;
   reason: string;
+  cost?: number | null;
+  place: ItineraryPlace;
+  transportToNext: TransportInfo;
 }
 
 export interface ItineraryDay {
@@ -90,12 +102,13 @@ export interface CourseDetail {
   title: string;
   destinationCountry: string;
   destinationCity: string;
+  coverImageUrl: string;
   startDate: string;
   totalDays: number;
-  totalCost: number;
   tags: string[];
   recommendationReason: string;
   itinerary: Itinerary;
+  totalCost?: number;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -58,6 +58,8 @@ jest.mock('react-native-maps', () => {
     default: MockMapView,
     Marker: MockMarker,
     Polyline: MockPolyline,
+    PROVIDER_GOOGLE: 'google',
+    PROVIDER_DEFAULT: 'default',
   };
 });
 

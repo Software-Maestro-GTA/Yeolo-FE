@@ -358,4 +358,51 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     await findByTestId('city-dropdown');
     expect(fetchCitySpy).toHaveBeenCalledWith(expect.any(String), '도', '일본');
   });
+
+  it('API 자동완성 응답에 등록되지 않은 임의의 도시를 입력해도 코스 생성이 가능해야 한다', async () => {
+    const mockOnSubmit = jest.fn();
+    const { getByTestId, getByText, getAllByText } = await render(
+      <CourseCreateScreen onSubmit={mockOnSubmit} />,
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByTestId('input-country'), '대한민국');
+      fireEvent.changeText(getByTestId('input-city'), '가평');
+    });
+
+    await act(async () => {
+      fireEvent.press(getByText('출발일'));
+    });
+
+    await act(async () => {
+      fireEvent.press(getAllByText('20')[0]);
+    });
+
+    await act(async () => {
+      fireEvent.press(getAllByText('25')[0]);
+    });
+
+    await act(async () => {
+      fireEvent.press(getByText('가성비'));
+    });
+
+    await waitFor(() => {
+      expect(
+        getByTestId('submit-course-btn').props.accessibilityState?.disabled,
+      ).toBeFalsy();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('submit-course-btn'));
+    });
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destinationCountry: '대한민국',
+          destinationCity: '가평',
+        }),
+      );
+    });
+  });
 });

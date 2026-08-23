@@ -26,11 +26,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onPress,
   onLongPress,
 }) => {
-  const summaryItem = item as any;
   const imageUrl =
-    summaryItem.imageUrl ||
+    item.coverImageUrl ||
     getDestinationImageUrl(item.destinationCountry, item.destinationCity);
-  const summaryText = item.recommendationReason || summaryItem.summary || '';
+  const summaryText = item.recommendationReason || '';
   const displayTags = item.tags ? item.tags.slice(0, 3) : [];
 
   return (

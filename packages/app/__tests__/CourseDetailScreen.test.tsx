@@ -36,6 +36,8 @@ jest.mock('react-native-maps', () => {
     default: MockMapView,
     Marker: MockMarker,
     Polyline: MockPolyline,
+    PROVIDER_GOOGLE: 'google',
+    PROVIDER_DEFAULT: 'default',
   };
 });
 
@@ -57,6 +59,7 @@ const mockCourseDetail: commonApi.CourseDetail = {
   title: '2박 3일 서귀포 감성 힐링 코스',
   destinationCountry: '대한민국',
   destinationCity: '제주',
+  coverImageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
   startDate: '2026-08-01',
   totalDays: 2,
   totalCost: 350000,
@@ -73,33 +76,45 @@ const mockCourseDetail: commonApi.CourseDetail = {
         stops: [
           {
             sequence: 1,
-            placeId: 'place-1',
-            placeName: '함덕 해수욕장',
-            category: '해변',
             arrivalTime: '10:00',
             stayMinutes: 90,
             memo: '오픈런 추천',
-            transportToNext: 'transit',
-            travelMinutesToNext: 30,
-            cost: 0,
             reason: '바다 전망 추천',
-            latitude: 33.5434,
-            longitude: 126.6692,
+            place: {
+              placeId: 'place-1',
+              placeName: '함덕 해수욕장',
+              category: '해변',
+              latitude: 33.5434,
+              longitude: 126.6692,
+            },
+            transportToNext: {
+              type: 'transit',
+              distance: 15000,
+              minutes: 30,
+              cost: 0,
+              memo: '대중교통 이동',
+            },
           },
           {
             sequence: 2,
-            placeId: 'place-2',
-            placeName: '감성 카페 델문도',
-            category: '카페',
             arrivalTime: '12:00',
             stayMinutes: 60,
             memo: '시그니처 라떼 추천',
-            transportToNext: 'none',
-            travelMinutesToNext: 0,
-            cost: 15000,
             reason: '커피 품질 및 바다 뷰 우수',
-            latitude: 33.5436,
-            longitude: 126.6695,
+            place: {
+              placeId: 'place-2',
+              placeName: '감성 카페 델문도',
+              category: '카페',
+              latitude: 33.5436,
+              longitude: 126.6695,
+            },
+            transportToNext: {
+              type: 'none',
+              distance: null,
+              minutes: null,
+              cost: 15000,
+              memo: null,
+            },
           },
         ],
       },
@@ -110,18 +125,24 @@ const mockCourseDetail: commonApi.CourseDetail = {
         stops: [
           {
             sequence: 1,
-            placeId: 'place-3',
-            placeName: '비자림',
-            category: '관광지',
             arrivalTime: '10:30',
             stayMinutes: 120,
             memo: '',
-            transportToNext: 'none',
-            travelMinutesToNext: 0,
-            cost: 4000,
             reason: '',
-            latitude: 33.4912,
-            longitude: 126.8114,
+            place: {
+              placeId: 'place-3',
+              placeName: '비자림',
+              category: '관광지',
+              latitude: 33.4912,
+              longitude: 126.8114,
+            },
+            transportToNext: {
+              type: 'none',
+              distance: null,
+              minutes: null,
+              cost: 4000,
+              memo: null,
+            },
           },
         ],
       },
@@ -230,7 +251,7 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     expect(apiSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('iOS 환경에서는 앱 내부 네이티브 지도(MapView)가 렌더링되어야 한다', async () => {
+  it('Google Map(MapView) 기반 지도가 정상적으로 렌더링되어야 한다', async () => {
     jest
       .spyOn(commonApi, 'getCourseDetailApi')
       .mockResolvedValue(mockCourseDetail);
@@ -241,27 +262,9 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
 
     await waitFor(() => {
       expect(getByText(/2박 3일 서귀포 감성 힐링 코스/)).toBeTruthy();
+      expect(getByTestId('mini-map-card')).toBeTruthy();
       expect(getByTestId('in-app-map-view')).toBeTruthy();
     });
-  });
-
-  it('Android 환경에서는 API 키가 필요 없는 인앱 웹뷰(WebView)로 지도가 렌더링되어야 한다', async () => {
-    const originalOS = require('react-native').Platform.OS;
-    require('react-native').Platform.OS = 'android';
-    jest
-      .spyOn(commonApi, 'getCourseDetailApi')
-      .mockResolvedValue(mockCourseDetail);
-
-    const { getByTestId } = await render(
-      <CourseDetailScreen courseId='test-course-id-123' />,
-    );
-
-    await waitFor(() => {
-      expect(getByTestId('mini-map-webview-card')).toBeTruthy();
-      expect(getByTestId('in-app-webview')).toBeTruthy();
-    });
-
-    require('react-native').Platform.OS = originalOS;
   });
 
   it('화면 하단에 총 예상 경비 카드가 정상적으로 렌더링되어야 한다', async () => {

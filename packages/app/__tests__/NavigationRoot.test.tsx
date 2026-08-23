@@ -52,8 +52,11 @@ jest.mock('../src/screens', () => {
         title='Select Place Stop'
         onPress={() =>
           onSelectPlace?.({
-            placeId: 'place-123',
-            placeName: '함덕 해수욕장',
+            sequence: 1,
+            place: {
+              placeId: 'place-123',
+              placeName: '함덕 해수욕장',
+            },
           })
         }
       />
@@ -66,7 +69,7 @@ jest.mock('../src/screens', () => {
     ),
     PlaceDetailScreen: ({ stop, placeId }: any) => (
       <Text testID='place-detail-screen'>
-        PlaceDetailScreen: {stop?.placeName || placeId}
+        PlaceDetailScreen: {stop?.place?.placeName || placeId}
       </Text>
     ),
   };

@@ -222,7 +222,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setRecentCourseId(result.recentCourseId || null);
       setHasCompletedOnboardingState(!result.doOnboarding);
       setIsAuthenticated(true);
-      logger.info('[AuthContext] Google login successful:', result.user);
+      logger.info('[AuthContext] Google login successful:', {
+        userId: result.user.userId,
+        email: result.user.email,
+        doOnboarding: result.doOnboarding,
+        hasCompletedOnboarding: !result.doOnboarding,
+        recentCourseId: result.recentCourseId,
+        isNewUser: result.isNewUser,
+      });
       return result;
     } catch (error) {
       logger.error('[AuthContext] Login flow API error:', error);
@@ -246,7 +253,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setRecentCourseId(result.recentCourseId || null);
       setHasCompletedOnboardingState(!result.doOnboarding);
       setIsAuthenticated(true);
-      logger.info('[AuthContext] Apple login successful:', result.user);
+      logger.info('[AuthContext] Apple login successful:', {
+        userId: result.user.userId,
+        email: result.user.email,
+        doOnboarding: result.doOnboarding,
+        hasCompletedOnboarding: !result.doOnboarding,
+        recentCourseId: result.recentCourseId,
+        isNewUser: result.isNewUser,
+      });
       return result;
     } catch (error) {
       logger.error('[AuthContext] Apple login flow API error:', error);

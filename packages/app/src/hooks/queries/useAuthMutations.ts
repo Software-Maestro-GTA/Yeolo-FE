@@ -11,6 +11,7 @@ import {
   withdrawApi,
   updatePreferencesApi,
   savePhotoConsentApi,
+  logger,
   type User,
   type LogoutResponse,
   type WithdrawResponse,
@@ -46,6 +47,14 @@ export function useGoogleLoginMutation({
       const doOnboarding = response.data.doOnboarding;
       const recentCourseId = response.data.recentCourseId || null;
 
+      logger.info('[AuthMutation] Google login API response parsed:', {
+        userId: fetchedUser.userId,
+        email: fetchedUser.email,
+        doOnboarding,
+        recentCourseId,
+        isNewUser,
+      });
+
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
@@ -60,6 +69,9 @@ export function useGoogleLoginMutation({
         await AsyncStorage.removeItem('recentCourseId');
       }
 
+      logger.info(
+        '[AuthMutation] Google auth credentials and flags persisted to AsyncStorage',
+      );
       return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,
@@ -97,6 +109,14 @@ export function useAppleLoginMutation({
       const doOnboarding = response.data.doOnboarding;
       const recentCourseId = response.data.recentCourseId || null;
 
+      logger.info('[AuthMutation] Apple login API response parsed:', {
+        userId: fetchedUser.userId,
+        email: fetchedUser.email,
+        doOnboarding,
+        recentCourseId,
+        isNewUser,
+      });
+
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
@@ -111,6 +131,9 @@ export function useAppleLoginMutation({
         await AsyncStorage.removeItem('recentCourseId');
       }
 
+      logger.info(
+        '[AuthMutation] Apple auth credentials and flags persisted to AsyncStorage',
+      );
       return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,

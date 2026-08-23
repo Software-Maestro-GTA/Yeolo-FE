@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ItineraryStop } from '@yeolo/common';
+import { isValidCoordinate } from '@yeolo/common';
 import { OpeningHoursModal } from '../components/place';
 import { CourseMiniMapView } from '../components/course';
 import { usePlaceDetailQuery } from '../hooks/queries';
@@ -44,35 +45,61 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     };
   }, [setBackground, resetBackground]);
 
-  const targetPlaceId = stop?.placeId;
+  const targetPlaceId = stop?.place?.placeId;
   const { data: placeDetail } = usePlaceDetailQuery({
     placeId: targetPlaceId,
   });
 
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
 
-  const displayPlaceName = placeDetail?.placeName || stop?.placeName || '';
-  const displayCategory = placeDetail?.category || stop?.category || '';
+  const displayPlaceName =
+    placeDetail?.placeName || stop?.place?.placeName || '';
+  const displayPlaceEngName = placeDetail?.placeEngName || '';
+  const displayCategory = placeDetail?.category || stop?.place?.category || '';
   const displayRating =
     placeDetail?.rating !== undefined && placeDetail?.rating !== null
       ? String(placeDetail.rating)
       : '';
   const displayAddress = placeDetail?.address || '';
-  const displayOpeningHours =
-    placeDetail?.openingHours && placeDetail.openingHours.length > 0
-      ? placeDetail.openingHours[0]
-      : '';
 
-  const displayLatitude = placeDetail?.latitude ?? stop?.latitude ?? 0;
-  const displayLongitude = placeDetail?.longitude ?? stop?.longitude ?? 0;
+  const currentDayIdx = new Date().getDay();
+  const currentFullDay = UI_STRINGS.PLACE_DETAIL.WEEKDAYS[currentDayIdx];
+  const currentShortDay = UI_STRINGS.PLACE_DETAIL.SHORT_WEEKDAYS[currentDayIdx];
+
+  const todayOpeningHours = placeDetail?.openingHours?.find((str) => {
+    if (!str) return false;
+    const trimmed = str.trim();
+    return (
+      trimmed.includes(currentFullDay) || trimmed.startsWith(currentShortDay)
+    );
+  });
+
+  const displayOpeningHours =
+    todayOpeningHours ||
+    (placeDetail?.openingHours && placeDetail.openingHours.length > 0
+      ? placeDetail.openingHours[0]
+      : '');
+
+  const rawLat = placeDetail?.latitude ?? stop?.place?.latitude;
+  const rawLng = placeDetail?.longitude ?? stop?.place?.longitude;
+  const hasValidLocation = isValidCoordinate({
+    latitude: rawLat,
+    longitude: rawLng,
+  });
+
+  const displayLatitude = hasValidLocation ? (rawLat as number) : 0;
+  const displayLongitude = hasValidLocation ? (rawLng as number) : 0;
   const displayHeroImageUrl =
-    placeDetail?.photoUrls?.[0] || getDestinationImageUrl('', displayPlaceName);
+    placeDetail?.photoUrl || getDestinationImageUrl('', displayPlaceName);
 
   // 코스 확인 창에서 보여준 정보 (일정 정보 종합)
   const displayTime = stop?.arrivalTime || '';
   const displayStay = stop?.stayMinutes ? `${stop.stayMinutes}분 소요` : '';
   const displayCost =
-    stop?.cost !== undefined ? `₩${stop.cost.toLocaleString()}` : '';
+    stop?.transportToNext?.cost !== undefined &&
+    stop?.transportToNext?.cost !== null
+      ? `₩${stop.transportToNext.cost.toLocaleString()}`
+      : '';
   const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
   const hasMemo = Boolean(
     stop?.memo &&
@@ -80,13 +107,15 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     stop.memo.trim() !== stop?.reason?.trim(),
   );
 
-  const mockMapCoordinates = [
-    {
-      placeName: displayPlaceName,
-      latitude: displayLatitude,
-      longitude: displayLongitude,
-    },
-  ];
+  const mockMapCoordinates = hasValidLocation
+    ? [
+        {
+          placeName: displayPlaceName,
+          latitude: displayLatitude,
+          longitude: displayLongitude,
+        },
+      ]
+    : [];
 
   const parsedHoursData = placeDetail?.openingHours?.map((str) => {
     if (!str) return { day: '', hours: '' };
@@ -104,6 +133,13 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     }
     return { day: str, hours: '' };
   });
+
+  const hasEngName = Boolean(
+    displayPlaceEngName &&
+    displayPlaceEngName.trim() !== '' &&
+    displayPlaceEngName.trim().toLowerCase() !==
+      displayPlaceName.trim().toLowerCase(),
+  );
 
   return (
     <View style={styles.screenContainer} testID='place-detail-screen'>
@@ -135,7 +171,14 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
             {/* Place Title & Tags Group */}
             <View style={[styles.heroContentGroup, { paddingTop: topPadding }]}>
               <View style={styles.placeTitleRow}>
-                <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
+                <View style={styles.titleTextContainer}>
+                  <Text style={styles.placeTitleText}>{displayPlaceName}</Text>
+                  {hasEngName && (
+                    <Text style={styles.placeEngTitleText}>
+                      {displayPlaceEngName}
+                    </Text>
+                  )}
+                </View>
                 <View style={styles.tagRow}>
                   {Boolean(displayCategory) && (
                     <View style={styles.categoryBadge}>
@@ -212,29 +255,26 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
             </View>
 
             <View style={styles.hoursContentRow}>
-              <View style={styles.hoursStatusGroup}>
-                <Text style={styles.openStatusText}>
-                  {UI_STRINGS.PLACE_DETAIL.OPENING_STATUS}
-                </Text>
-                <Text style={styles.statusDot}>·</Text>
-                <Text style={styles.hoursValueText}>
-                  {displayOpeningHours || UI_STRINGS.PLACE_DETAIL.OPENING_HOURS}
-                </Text>
-              </View>
-              <TouchableOpacity
-                testID='btn-more-hours'
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_open_hours_modal',
-                    'Open Opening Hours Modal',
-                  );
-                  setIsHoursModalOpen(true);
-                }}
-                activeOpacity={0.7}>
-                <Text style={styles.moreButtonText}>
-                  {UI_STRINGS.PLACE_DETAIL.MORE_BUTTON}
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.hoursValueText}>
+                {displayOpeningHours || UI_STRINGS.COURSE_DETAIL.NO_INFO}
+              </Text>
+              {placeDetail?.openingHours &&
+                placeDetail.openingHours.length > 1 && (
+                  <TouchableOpacity
+                    testID='btn-more-hours'
+                    onPress={() => {
+                      trackButtonClick(
+                        'btn_open_hours_modal',
+                        'Open Opening Hours Modal',
+                      );
+                      setIsHoursModalOpen(true);
+                    }}
+                    activeOpacity={0.7}>
+                    <Text style={styles.moreButtonText}>
+                      {UI_STRINGS.PLACE_DETAIL.MORE_BUTTON}
+                    </Text>
+                  </TouchableOpacity>
+                )}
             </View>
           </View>
 
@@ -292,26 +332,32 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
             </View>
 
             <CourseMiniMapView
+              interactive={false}
               stopCoordinates={mockMapCoordinates}
-              mapRegion={{
-                latitude: displayLatitude,
-                longitude: displayLongitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-              leafletHtml=''
+              mapRegion={
+                hasValidLocation
+                  ? {
+                      latitude: displayLatitude,
+                      longitude: displayLongitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }
+                  : undefined
+              }
             />
 
-            <View style={styles.gpsRow}>
-              <Ionicons
-                name='information-circle-outline'
-                size={14}
-                color={palette.subText}
-              />
-              <Text style={styles.gpsText}>
-                {`GPS: ${displayLatitude.toFixed(4)}, ${displayLongitude.toFixed(4)}`}
-              </Text>
-            </View>
+            {hasValidLocation && (
+              <View style={styles.gpsRow}>
+                <Ionicons
+                  name='information-circle-outline'
+                  size={14}
+                  color={palette.subText}
+                />
+                <Text style={styles.gpsText}>
+                  {`GPS: ${displayLatitude.toFixed(4)}, ${displayLongitude.toFixed(4)}`}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -358,13 +404,23 @@ const styles = StyleSheet.create({
   },
   placeTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  titleTextContainer: {
+    flex: 1,
+    gap: 2,
   },
   placeTitleText: {
     fontSize: 24,
     fontWeight: '900',
     color: palette.deepNavy,
+  },
+  placeEngTitleText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: palette.subText,
   },
   tagRow: {
     flexDirection: 'row',
