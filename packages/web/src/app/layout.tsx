@@ -18,11 +18,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://yeolo.site'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://yeolo.site',
+  ),
   title: '여로 (Yeolo) | AI 기반 초개인화 맞춤 여행 플랫폼',
   description:
     '당신의 취향, MBTI를 분석해 세상에 단 하나뿐인 최적의 여행 코스를 실시간으로 설계하는 초개인화 여행 플랫폼 여로(Yeolo)입니다.',
-  keywords: ['여로', 'Yeolo', '여행 코스 추천', 'AI 여행', '초개인화 여행', '여행 일정'],
+  keywords: [
+    '여로',
+    'Yeolo',
+    '여행 코스 추천',
+    'AI 여행',
+    '초개인화 여행',
+    '여행 일정',
+  ],
   icons: {
     icon: '/images/logo-mark.png',
     apple: '/images/logo-mark.png',
@@ -53,6 +62,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

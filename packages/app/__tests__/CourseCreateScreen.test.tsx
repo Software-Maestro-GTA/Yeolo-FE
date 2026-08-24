@@ -138,11 +138,11 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getAllByText('20')[0]);
+      fireEvent.press(getAllByText('25')[0]);
     });
 
     await act(async () => {
-      fireEvent.press(getAllByText('25')[0]);
+      fireEvent.press(getAllByText('28')[0]);
     });
 
     await act(async () => {
@@ -375,11 +375,11 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getAllByText('20')[0]);
+      fireEvent.press(getAllByText('25')[0]);
     });
 
     await act(async () => {
-      fireEvent.press(getAllByText('25')[0]);
+      fireEvent.press(getAllByText('28')[0]);
     });
 
     await act(async () => {

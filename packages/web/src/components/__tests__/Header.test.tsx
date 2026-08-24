@@ -17,8 +17,14 @@ describe('Header Component', () => {
   it('renders navigation links', () => {
     render(<Header />);
     expect(screen.getByText('주요 기능')).toHaveAttribute('href', '/#features');
-    expect(screen.getByText('이용 방법')).toHaveAttribute('href', '/#how-it-works');
-    expect(screen.getByText('인기 여행지')).toHaveAttribute('href', '/#destinations');
+    expect(screen.getByText('이용 방법')).toHaveAttribute(
+      'href',
+      '/#how-it-works',
+    );
+    expect(screen.getByText('인기 여행지')).toHaveAttribute(
+      'href',
+      '/#destinations',
+    );
   });
 
   it('renders download app CTA button', () => {

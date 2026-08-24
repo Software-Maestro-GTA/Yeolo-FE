@@ -36,37 +36,38 @@ export function FeaturesSection({ className = '' }: FeaturesSectionProps) {
   ];
 
   return (
-    <section id="features" className={`w-full bg-white py-20 lg:py-24 ${className}`}>
-      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20">
+    <section
+      id='features'
+      className={`w-full bg-white py-20 lg:py-24 ${className}`}>
+      <div className='max-w-7xl mx-auto px-6 sm:px-12 lg:px-20'>
         {/* Section Header */}
-        <div className="text-center flex flex-col items-center gap-3 mb-14 lg:mb-16">
-          <span className="text-[#00c9a7] text-[14px] font-bold tracking-[1px] uppercase">
+        <div className='text-center flex flex-col items-center gap-3 mb-14 lg:mb-16'>
+          <span className='text-[#00c9a7] text-[14px] font-bold tracking-[1px] uppercase'>
             KEY FEATURES
           </span>
-          <h2 className="text-[28px] sm:text-[34px] lg:text-[36px] font-extrabold text-[#0d2137]">
+          <h2 className='text-[28px] sm:text-[34px] lg:text-[36px] font-extrabold text-[#0d2137]'>
             더 스마트하고 완벽한 여정을 위한 제안
           </h2>
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8'>
           {features.map((item) => (
             <div
               key={item.id}
-              className="bg-white border border-[#e2e8f0] rounded-[20px] p-8 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-lg hover:shadow-slate-100 hover:border-[#00c9a7]/50 hover:-translate-y-1"
-            >
+              className='bg-white border border-[#e2e8f0] rounded-[20px] p-8 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-lg hover:shadow-slate-100 hover:border-[#00c9a7]/50 hover:-translate-y-1'>
               {/* Icon Container */}
-              <div className="w-14 h-14 rounded-[16px] bg-[#e0f7f1] flex items-center justify-center text-[#00c9a7] shrink-0">
+              <div className='w-14 h-14 rounded-[16px] bg-[#e0f7f1] flex items-center justify-center text-[#00c9a7] shrink-0'>
                 {item.icon}
               </div>
 
               {/* Title */}
-              <h3 className="text-[20px] font-bold text-[#0d2137] tracking-tight">
+              <h3 className='text-[20px] font-bold text-[#0d2137] tracking-tight'>
                 {item.title}
               </h3>
 
               {/* Description */}
-              <p className="text-[15px] text-[#64748b] leading-[1.6]">
+              <p className='text-[15px] text-[#64748b] leading-[1.6]'>
                 {item.description}
               </p>
             </div>

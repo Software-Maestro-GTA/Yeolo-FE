@@ -19,13 +19,17 @@ describe('HomePage Component', () => {
     expect(screen.getByText(/여행의 새로운 시작/i)).toBeInTheDocument();
 
     // Features
-    expect(screen.getByText('더 스마트하고 완벽한 여정을 위한 제안')).toBeInTheDocument();
+    expect(
+      screen.getByText('더 스마트하고 완벽한 여정을 위한 제안'),
+    ).toBeInTheDocument();
 
     // How It Works
     expect(screen.getByText('오직 나만을 위한 여행 코스')).toBeInTheDocument();
 
     // Destinations
-    expect(screen.getByText('여로 이용자들이 선택한 인기 탐험지')).toBeInTheDocument();
+    expect(
+      screen.getByText('여로 이용자들이 선택한 인기 탐험지'),
+    ).toBeInTheDocument();
 
     // CTA
     expect(screen.getByText(/지금 다운로드하고/i)).toBeInTheDocument();
