@@ -47,22 +47,32 @@ jest.mock('../src/screens', () => {
         onPress={() => onComplete?.('course-123')}
       />
     ),
-    CourseDetailScreen: ({ courseId, onSelectPlace }: any) => (
-      <Button
-        title='Select Place Stop'
-        onPress={() =>
-          onSelectPlace?.({
-            sequence: 1,
-            place: {
-              placeId: 'place-123',
-              placeName: '함덕 해수욕장',
-            },
-          })
-        }
-      />
+    CourseDetailScreen: ({ courseId, onSelectPlace, onBack }: any) => (
+      <React.Fragment>
+        <Button
+          title='Select Place Stop'
+          onPress={() =>
+            onSelectPlace?.({
+              sequence: 1,
+              place: {
+                placeId: 'place-123',
+                placeName: '함덕 해수욕장',
+              },
+            })
+          }
+        />
+        <Button title='Detail Back' onPress={() => onBack?.()} />
+      </React.Fragment>
     ),
-    CourseShareScreen: ({ courseId }: any) => (
-      <Text testID='course-share-screen'>CourseShareScreen: {courseId}</Text>
+    CourseShareScreen: ({ courseId, onSaveSuccess, onDecline }: any) => (
+      <React.Fragment>
+        <Text testID='course-share-screen'>CourseShareScreen: {courseId}</Text>
+        <Button
+          title='Accept Share'
+          onPress={() => onSaveSuccess?.('course-accepted-1')}
+        />
+        <Button title='Decline Share' onPress={() => onDecline?.()} />
+      </React.Fragment>
     ),
     ProfileInputScreen: () => (
       <Text testID='profile-input-screen'>ProfileInputScreen</Text>
@@ -179,4 +189,151 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       expect(getByText('Go to Explore')).toBeTruthy();
     });
   });
+
+  it('yeolo://invite/{shareToken} 딥링크 진입 시 CourseShareScreen으로 이동해야 한다', async () => {
+    const { Linking } = require('react-native');
+    jest
+      .spyOn(Linking, 'getInitialURL')
+      .mockResolvedValueOnce('yeolo://invite/test-share-token-123');
+
+    const { findByTestId } = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    const shareScreen = await findByTestId('course-share-screen');
+    expect(shareScreen).toBeTruthy();
+  });
+
+  it('공유 코스 수락(onSaveSuccess) 후 CourseDetailScreen에서 뒤로가기 시 CourseShareScreen이 아닌 HomeScreen으로 복귀해야 한다', async () => {
+    const { Linking } = require('react-native');
+    jest
+      .spyOn(Linking, 'getInitialURL')
+      .mockResolvedValueOnce('yeolo://invite/test-share-token-123');
+
+    const { findByTestId, getByText } = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    expect(await findByTestId('course-share-screen')).toBeTruthy();
+
+    // 1. 코스 저장(수락)
+    await act(async () => {
+      fireEvent.press(getByText('Accept Share'));
+    });
+
+    // 2. CourseDetailScreen으로 이동 확인
+    expect(getByText('Select Place Stop')).toBeTruthy();
+
+    // 3. CourseDetailScreen에서 뒤로가기 실행
+    await act(async () => {
+      fireEvent.press(getByText('Detail Back'));
+    });
+
+    // 4. CourseShareScreen으로 돌아가지 않고 HomeScreen(Go to Explore)으로 이동했는지 확인
+    expect(getByText('Go to Explore')).toBeTruthy();
+  });
+
+  it('공유 코스 거절(onDecline) 시 HomeScreen으로 바로 이동해야 한다', async () => {
+    const { Linking } = require('react-native');
+    jest
+      .spyOn(Linking, 'getInitialURL')
+      .mockResolvedValueOnce('yeolo://invite/test-share-token-123');
+
+    const { findByTestId, getByText } = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    expect(await findByTestId('course-share-screen')).toBeTruthy();
+
+    // 코스 거절 실행
+    await act(async () => {
+      fireEvent.press(getByText('Decline Share'));
+    });
+
+    // HomeScreen으로 이동 확인
+    expect(getByText('Go to Explore')).toBeTruthy();
+  });
+
+  it('비로그인 상태에서 공유 코스 거절(onDecline) 시 LoginScreen으로 이동해야 한다', async () => {
+    const { Linking } = require('react-native');
+    jest
+      .spyOn(Linking, 'getInitialURL')
+      .mockResolvedValueOnce('yeolo://invite/test-share-token-123');
+
+    const mockUnauthenticatedContext = {
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+      login: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const { findByTestId, getByText } = await render(
+      <AuthContext.Provider value={mockUnauthenticatedContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    expect(await findByTestId('course-share-screen')).toBeTruthy();
+
+    // 코스 거절 실행
+    await act(async () => {
+      fireEvent.press(getByText('Decline Share'));
+    });
+
+    // LoginScreen(Mock Login)으로 이동 확인
+    expect(getByText('Mock Login')).toBeTruthy();
+  });
+
+  it('hasCompletedOnboarding이 false인 사용자가 코스 생성을 시도하면 IntroScreen(온보딩)으로 유도해야 한다', async () => {
+    const mockAuthNeedsOnboarding = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: false,
+      user: { id: 'u1', name: 'New User' },
+    };
+
+    const { getByText } = await render(
+      <AuthContext.Provider value={mockAuthNeedsOnboarding as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+
+    // Initial state is IntroScreen because hasCompletedOnboarding is false
+    expect(getByText('Go to Intro Next')).toBeTruthy();
+  });
+
+  it('hasCompletedOnboarding이 false인 상태에서 하단 탭 코스 생성을 탭하면 IntroScreen으로 이동해야 한다', async () => {
+    const mockAuthNeedsOnboarding = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: false,
+      user: { id: 'u1', name: 'New User' },
+    };
+
+    // Render starting from HOME step
+    const { getByTestId, getByText } = await render(
+      <AuthContext.Provider value={mockAuthNeedsOnboarding as any}>
+        <NavigationRoot initialStep={'HOME' as any} />
+      </AuthContext.Provider>,
+    );
+
+    expect(getByText('Go to Explore')).toBeTruthy();
+
+    // Tab bar 'CREATE' 탭 클릭
+    const tabCreate = getByTestId('tab-create');
+    await act(async () => {
+      fireEvent.press(tabCreate);
+    });
+
+    // CourseCreateScreen 대신 IntroScreen(Go to Intro Next)이 렌더링되어야 함
+    expect(getByText('Go to Intro Next')).toBeTruthy();
+  });
 });
+

@@ -99,15 +99,19 @@ export function CourseDetailScreen({
       onSuccess: async (shareData) => {
         const shareTitle =
           course?.title || UI_STRINGS.COURSE_DETAIL.DEFAULT_COURSE_TITLE;
-        const shareMessage = `[여로] ${shareTitle} 여행 일정을 공유합니다!`;
+        const inviteUrl = shareData.shareToken
+          ? `${APP_CONFIG.INVITE_BASE_URL}/${shareData.shareToken}`
+          : shareData.shareUrl;
+        const shareMessage = `[여로] ${shareTitle} 여행 일정을 공유합니다!\n${inviteUrl}`;
 
         try {
           await Share.share({
+            title: shareTitle,
             message: shareMessage,
-            url: shareData.shareUrl,
+            url: inviteUrl,
           });
         } catch (shareError) {
-          Clipboard.setString(shareData.shareUrl);
+          Clipboard.setString(inviteUrl);
           if (Platform.OS === 'android') {
             ToastAndroid.show(
               UI_STRINGS.COURSE_DETAIL.SHARE_SUCCESS_TOAST,

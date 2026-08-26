@@ -87,4 +87,24 @@ describe('ProfileScreen (FUN-11: 프로필 화면 개편 및 마이페이지 연
       expect(mockOnNavigateToLogin).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('이용약관 및 개인정보 처리방침 클릭 시 웹 페이지 URL로 Linking.openURL을 호출해야 한다', async () => {
+    const spyOpenURL = jest
+      .spyOn(require('react-native').Linking, 'openURL')
+      .mockResolvedValue(undefined as any);
+
+    const { findByTestId } = await render(<ProfileScreen />);
+
+    const btnTerms = await findByTestId('btn-terms');
+    await act(async () => {
+      fireEvent.press(btnTerms);
+    });
+    expect(spyOpenURL).toHaveBeenCalledWith('https://www.yeolo.app/terms');
+
+    const btnPrivacy = await findByTestId('btn-privacy');
+    await act(async () => {
+      fireEvent.press(btnPrivacy);
+    });
+    expect(spyOpenURL).toHaveBeenCalledWith('https://www.yeolo.app/privacy');
+  });
 });

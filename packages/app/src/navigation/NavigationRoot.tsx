@@ -59,7 +59,7 @@ export function NavigationRoot({
       setHistory((old) => old.slice(0, -1));
       setStep(prev);
     } else {
-      setStep(NAV_STEPS.COURSE_LIST);
+      setStep(auth?.isAuthenticated ? NAV_STEPS.COURSE_LIST : NAV_STEPS.LOGIN);
     }
   };
 
@@ -75,10 +75,14 @@ export function NavigationRoot({
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       if (!url) return;
-      const match = /share-links\/([a-zA-Z0-9_-]+)/.exec(url);
+      const match = /(?:invite|share-links)\/([a-zA-Z0-9_-]+)/.exec(url);
       if (match && match[1]) {
         setSelectedShareToken(match[1]);
-        navigateTo(NAV_STEPS.COURSE_SHARE);
+        const fallbackStep = auth?.isAuthenticated
+          ? NAV_STEPS.HOME
+          : NAV_STEPS.LOGIN;
+        setHistory((prev) => (prev.length === 0 ? [fallbackStep] : prev));
+        setStep(NAV_STEPS.COURSE_SHARE);
       }
     };
 
@@ -89,13 +93,14 @@ export function NavigationRoot({
       handleUrl(event.url),
     );
     return () => subscription.remove();
-  }, []);
+  }, [auth?.isAuthenticated]);
 
   useEffect(() => {
     if (!auth?.isLoading) {
       if (step === null) {
         if (auth?.isAuthenticated) {
           if (selectedShareToken) {
+            setHistory([NAV_STEPS.HOME]);
             setStep(NAV_STEPS.COURSE_SHARE);
           } else if (auth?.hasCompletedOnboarding === false) {
             setStep(NAV_STEPS.INTRO);
@@ -103,9 +108,12 @@ export function NavigationRoot({
             setStep(NAV_STEPS.HOME);
           }
         } else {
-          setStep(
-            selectedShareToken ? NAV_STEPS.COURSE_SHARE : NAV_STEPS.LOGIN,
-          );
+          if (selectedShareToken) {
+            setHistory([NAV_STEPS.LOGIN]);
+            setStep(NAV_STEPS.COURSE_SHARE);
+          } else {
+            setStep(NAV_STEPS.LOGIN);
+          }
         }
       }
     }
@@ -176,7 +184,13 @@ export function NavigationRoot({
   const handleTabPress = (tab: NavTab) => {
     if (tab === NAV_TABS.HOME) navigateTo(NAV_STEPS.HOME);
     if (tab === NAV_TABS.EXPLORE) navigateTo(NAV_STEPS.COURSE_LIST);
-    if (tab === NAV_TABS.CREATE) navigateTo(NAV_STEPS.CREATE_COURSE);
+    if (tab === NAV_TABS.CREATE) {
+      if (auth?.hasCompletedOnboarding === false) {
+        navigateTo(NAV_STEPS.INTRO);
+      } else {
+        navigateTo(NAV_STEPS.CREATE_COURSE);
+      }
+    }
     if (tab === NAV_TABS.PROFILE) navigateTo(NAV_STEPS.PROFILE);
   };
 
@@ -248,7 +262,13 @@ export function NavigationRoot({
       return (
         <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
           <ProfileScreen
-            onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
+            onNavigateToTasteProfile={() => {
+              if (auth?.hasCompletedOnboarding === false) {
+                navigateTo(NAV_STEPS.INTRO);
+              } else {
+                navigateTo(NAV_STEPS.TASTE_PROFILE);
+              }
+            }}
             onReanalyzeTaste={() => navigateTo(NAV_STEPS.PHOTO)}
             onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
             onEditProfile={() => navigateTo(NAV_STEPS.PROFILE_INPUT)}
@@ -272,11 +292,24 @@ export function NavigationRoot({
               setSelectedCourseId(courseId);
               navigateTo(NAV_STEPS.COURSE_DETAIL);
             }}
-            onCreateCourse={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onCreateCourse={() => {
+              if (auth?.hasCompletedOnboarding === false) {
+                navigateTo(NAV_STEPS.INTRO);
+              } else {
+                navigateTo(NAV_STEPS.CREATE_COURSE);
+              }
+            }}
           />
         </MainLayout>
       );
     case NAV_STEPS.CREATE_COURSE:
+      if (auth?.hasCompletedOnboarding === false) {
+        return (
+          <OnboardingLayout>
+            <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
+          </OnboardingLayout>
+        );
+      }
       return (
         <MainLayout currentTab={NAV_TABS.CREATE} onTabPress={handleTabPress}>
           <CourseCreateScreen
@@ -326,10 +359,20 @@ export function NavigationRoot({
             if (acceptedCourseId) {
               setSelectedCourseId(acceptedCourseId);
             }
-            navigateTo(NAV_STEPS.COURSE_DETAIL);
+            setHistory([NAV_STEPS.HOME]);
+            setStep(NAV_STEPS.COURSE_DETAIL);
           }}
-          onDecline={() => navigateTo(NAV_STEPS.HOME)}
-          onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
+          onDecline={() => {
+            const fallback = auth?.isAuthenticated
+              ? NAV_STEPS.HOME
+              : NAV_STEPS.LOGIN;
+            setHistory([]);
+            setStep(fallback);
+          }}
+          onNavigateToLogin={() => {
+            setHistory([NAV_STEPS.COURSE_SHARE]);
+            setStep(NAV_STEPS.LOGIN);
+          }}
         />
       );
 
@@ -351,10 +394,22 @@ export function NavigationRoot({
           noTopEdges={true}>
           <HomeScreen
             selectedCourseId={selectedCourseId}
-            onNavigateToCreate={() => navigateTo(NAV_STEPS.CREATE_COURSE)}
+            onNavigateToCreate={() => {
+              if (auth?.hasCompletedOnboarding === false) {
+                navigateTo(NAV_STEPS.INTRO);
+              } else {
+                navigateTo(NAV_STEPS.CREATE_COURSE);
+              }
+            }}
             onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}
             onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
-            onNavigateToTasteProfile={() => navigateTo(NAV_STEPS.TASTE_PROFILE)}
+            onNavigateToTasteProfile={() => {
+              if (auth?.hasCompletedOnboarding === false) {
+                navigateTo(NAV_STEPS.INTRO);
+              } else {
+                navigateTo(NAV_STEPS.TASTE_PROFILE);
+              }
+            }}
             onNavigateToPhotoConsent={() => navigateTo(NAV_STEPS.PHOTO)}
             onSelectCourse={(courseId) => {
               setSelectedCourseId(courseId);
