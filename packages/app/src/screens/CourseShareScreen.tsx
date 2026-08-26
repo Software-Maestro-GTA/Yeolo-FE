@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
 import { AuthContext } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -344,19 +345,19 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
               {/* Google Login Button */}
               <TouchableOpacity
                 testID='btn-google-login'
-                style={[styles.googleBtn, isLoggingIn && styles.disabledButton]}
-                activeOpacity={0.85}
+                style={[
+                  styles.googleLoginButton,
+                  isLoggingIn && styles.disabledButton,
+                ]}
+                activeOpacity={0.8}
                 disabled={isLoggingIn}
                 onPress={() => handleSocialLogin('google')}>
-                <Ionicons
-                  name='logo-google'
-                  size={18}
-                  color={palette.googleBlue}
-                  style={styles.socialIcon}
-                />
-                <Text style={styles.googleBtnText}>
-                  {UI_STRINGS.COURSE_SHARE.GOOGLE_LOGIN_BUTTON}
-                </Text>
+                <View style={styles.buttonContent}>
+                  <GoogleLogoIcon size={20} style={styles.logoIcon} />
+                  <Text style={styles.googleButtonText}>
+                    {UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               {/* Apple Login Button */}
@@ -364,21 +365,23 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
                 <TouchableOpacity
                   testID='btn-apple-login'
                   style={[
-                    styles.appleBtn,
+                    styles.appleLoginButton,
                     isLoggingIn && styles.disabledButton,
                   ]}
-                  activeOpacity={0.85}
+                  activeOpacity={0.8}
                   disabled={isLoggingIn}
                   onPress={() => handleSocialLogin('apple')}>
-                  <Ionicons
-                    name='logo-apple'
-                    size={20}
-                    color={palette.white}
-                    style={styles.socialIcon}
-                  />
-                  <Text style={styles.appleBtnText}>
-                    {UI_STRINGS.COURSE_SHARE.APPLE_LOGIN_BUTTON}
-                  </Text>
+                  <View style={styles.buttonContent}>
+                    <Ionicons
+                      name='logo-apple'
+                      size={20}
+                      color={palette.white}
+                      style={styles.logoIcon}
+                    />
+                    <Text style={styles.appleButtonText}>
+                      {UI_STRINGS.AUTH.APPLE_BUTTON_TEXT}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
@@ -599,38 +602,55 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
   },
-  googleBtn: {
+  googleLoginButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: palette.white,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: palette.lightTeal,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: palette.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  appleLoginButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: palette.black,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: palette.black,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: palette.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 52,
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 16,
-    gap: 10,
   },
-  googleBtnText: {
-    fontSize: 15,
+  logoIcon: {
+    marginRight: 10,
+  },
+  googleButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: palette.deepNavy,
+    letterSpacing: 0.3,
   },
-  appleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    backgroundColor: palette.deepNavy,
-    borderRadius: 16,
-    gap: 10,
-  },
-  appleBtnText: {
-    fontSize: 15,
+  appleButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: palette.white,
-  },
-  socialIcon: {
-    marginRight: 4,
+    letterSpacing: 0.3,
   },
   disabledButton: {
     opacity: 0.6,

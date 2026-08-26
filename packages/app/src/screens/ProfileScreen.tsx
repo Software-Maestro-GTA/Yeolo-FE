@@ -157,18 +157,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const handleOpenTerms = async (type: 'terms' | 'privacy' | 'support') => {
     if (type === 'terms') {
-      trackButtonClick('btn_profile_terms', 'Open Terms Modal');
-      setTermsModalType('service');
-      setShowTermsModal(true);
+      trackButtonClick('btn_profile_terms', 'Open Terms Web URL');
+      try {
+        await Linking.openURL(APP_CONFIG.TERMS_OF_SERVICE_URL);
+      } catch (err) {
+        logger.error('Failed to open terms of service web url:', err);
+        setTermsModalType('service');
+        setShowTermsModal(true);
+      }
     } else if (type === 'privacy') {
       trackButtonClick(
-        'btn_profile_privacy_notion',
-        'Open Privacy Policy Notion URL',
+        'btn_profile_privacy',
+        'Open Privacy Policy Web URL',
       );
       try {
         await Linking.openURL(APP_CONFIG.PRIVACY_POLICY_URL);
       } catch (err) {
-        logger.error('Failed to open privacy policy notion url:', err);
+        logger.error('Failed to open privacy policy web url:', err);
         setTermsModalType('privacy');
         setShowTermsModal(true);
       }
@@ -336,6 +341,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <TouchableOpacity
               style={styles.settingRow}
               activeOpacity={0.7}
+              testID='btn-terms'
               onPress={() => handleOpenTerms('terms')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.TERMS_LABEL}
@@ -351,6 +357,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <TouchableOpacity
               style={styles.settingRow}
               activeOpacity={0.7}
+              testID='btn-privacy'
               onPress={() => handleOpenTerms('privacy')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.PRIVACY_LABEL}
@@ -366,6 +373,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <TouchableOpacity
               style={[styles.settingRow, { borderBottomWidth: 0 }]}
               activeOpacity={0.7}
+              testID='btn-support'
               onPress={() => handleOpenTerms('support')}>
               <Text style={styles.settingLabelText}>
                 {UI_STRINGS.PROFILE.SUPPORT_LABEL}

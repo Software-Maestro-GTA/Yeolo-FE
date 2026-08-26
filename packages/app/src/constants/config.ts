@@ -6,12 +6,14 @@
 import { Platform } from 'react-native';
 
 export const APP_CONFIG = {
-  DEFAULT_API_URL: 'https://api.yeolo.com',
+  DEFAULT_API_URL: 'https://api.yeolo.app',
+  WEB_BASE_URL: 'https://www.yeolo.app',
+  INVITE_BASE_URL: 'https://www.yeolo.app/invite',
+  PRIVACY_POLICY_URL: 'https://www.yeolo.app/privacy',
+  TERMS_OF_SERVICE_URL: 'https://www.yeolo.app/terms',
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
   DEFAULT_SUPPORT_EMAIL: 'ksk85628781@gmail.com',
-  PRIVACY_POLICY_URL:
-    'https://app.notion.com/p/sunq925/Yeolo-3ad1d7341cda80c592faf203e9db0ed5?source=copy_link',
   /** Maximum number of recent photos retrieved from media library for taste analysis */
   ANALYSIS_PHOTO_LIMIT: 100,
   /** Default staleTime for TanStack Query (5 minutes) */
@@ -57,5 +59,9 @@ export const ANALYSIS_PHOTO_LIMIT = APP_CONFIG.ANALYSIS_PHOTO_LIMIT;
 export const DEFAULT_MAP_REGION = APP_CONFIG.DEFAULT_MAP_REGION;
 export const DEFAULT_SUPPORT_EMAIL = APP_CONFIG.DEFAULT_SUPPORT_EMAIL;
 export const DEFAULT_API_URL = APP_CONFIG.DEFAULT_API_URL;
+export const INVITE_BASE_URL = APP_CONFIG.INVITE_BASE_URL;
+export const WEB_BASE_URL = APP_CONFIG.WEB_BASE_URL;
+export const PRIVACY_POLICY_URL = APP_CONFIG.PRIVACY_POLICY_URL;
+export const TERMS_OF_SERVICE_URL = APP_CONFIG.TERMS_OF_SERVICE_URL;
 
 export default APP_CONFIG;
