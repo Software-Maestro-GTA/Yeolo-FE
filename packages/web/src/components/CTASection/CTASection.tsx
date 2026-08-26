@@ -40,7 +40,9 @@ export function CTASection({ className = '' }: CTASectionProps) {
             <div className='flex flex-wrap gap-4 pt-2'>
               {/* Google Play Button */}
               <a
-                href='#google-play'
+                href='https://play.google.com/store/apps/details?id=com.yeolo.app'
+                target='_blank'
+                rel='noopener noreferrer'
                 className='bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3 rounded-[12px] inline-flex items-center gap-2.5 transition-all active:scale-95 shadow-sm'>
                 <PlayIcon size={20} className='text-white' />
                 <span>Google Play</span>
@@ -48,7 +50,9 @@ export function CTASection({ className = '' }: CTASectionProps) {
 
               {/* App Store Button */}
               <a
-                href='https://apps.apple.com/kr/app/%EC%97%AC%EB%A1%9C/id6796231811'
+                href='https://apps.apple.com/app/id6796231811'
+                target='_blank'
+                rel='noopener noreferrer'
                 className='bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3 rounded-[12px] inline-flex items-center gap-2.5 transition-all active:scale-95 shadow-sm'>
                 <AppleIcon size={20} className='text-white' />
                 <span>App Store</span>

@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://yeolo.site',
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://www.yeolo.app',
   ),
-  title: '여로 (Yeolo) | AI 기반 초개인화 맞춤 여행 플랫폼',
+  title: '여로 - 초개인화 여행 플랫폼',
   description:
     '당신의 취향, MBTI를 분석해 세상에 단 하나뿐인 최적의 여행 코스를 실시간으로 설계하는 초개인화 여행 플랫폼 여로(Yeolo)입니다.',
   keywords: [
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     apple: '/images/logo-mark.png',
   },
   openGraph: {
-    title: '여로 (Yeolo) | AI 기반 초개인화 맞춤 여행 플랫폼',
+    title: '여로 - 초개인화 여행 플랫폼',
     description:
       '당신의 취향, MBTI를 분석해 세상에 단 하나뿐인 최적의 여행 코스를 실시간으로 설계합니다.',
     siteName: '여로 (Yeolo)',
@@ -52,6 +52,11 @@ export const metadata: Metadata = {
       },
     ],
   },
+  verification: {
+    other: {
+      'naver-site-verification': 'ca292c86b14febd51d46b46cb73272f3beafddab',
+    },
+  },
 };
 
 export default function RootLayout({
@@ -61,11 +66,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ko"
-      data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+      lang='ko'
+      data-scroll-behavior='smooth'
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}>
+      <body className='min-h-full flex flex-col'>{children}</body>
     </html>
   );
 }

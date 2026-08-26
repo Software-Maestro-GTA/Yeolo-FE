@@ -6,3 +6,5 @@ log.md
 .agents/progress.md
 .agents/log.md
 .DS_Store
+.vercel
+.env*

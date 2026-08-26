@@ -1,0 +1,19 @@
+# 모바일 앱 패키지 제외 (웹 배포에 불필요)
+packages/app
+
+# 의존성 및 빌드 캐시
+**/node_modules
+**/.next
+**/.swc
+**/.expo
+
+# 하네스 및 에이전트 파일
+.agents
+log.md
+progress.md
+
+# Git 및 에디터 설정
+.git
+.github
+.vscode
+.DS_Store
