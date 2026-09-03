@@ -1,7 +1,6 @@
 /**
  * @file logger.test.ts
  * @description Unit tests for logger utility and isDev environment check.
- * @author Antigravity Agent
  */
 
 import { isDev, logger } from '../logger';
@@ -46,7 +45,9 @@ describe('logger & isDev', () => {
     it('logs console.log with [DEV] prefix', () => {
       const spy = jest.spyOn(console, 'log').mockImplementation();
       logger.log('test log message', { data: 123 });
-      expect(spy).toHaveBeenCalledWith('[DEV]', 'test log message', { data: 123 });
+      expect(spy).toHaveBeenCalledWith('[DEV]', 'test log message', {
+        data: 123,
+      });
     });
 
     it('logs console.info with [DEV] prefix', () => {

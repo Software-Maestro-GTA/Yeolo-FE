@@ -1,179 +1,489 @@
 /**
  * @file TasteAnalysisScreen.tsx
- * @description Taste analysis progress loading screen integrated with photo service, SSE stream, and stepper component.
- * @requirements REQ-8, REQ-11, REQ-22
- * @functional FUN-1, FUN-GA4
- * @api API-FB-2
- * @author Antigravity Agent
+ * @description Taste analysis progress screen with dynamic insights container and step indicators.
  */
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Animated, Easing } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { analyzeTastePreferenceStream, useTasteStore } from '@yeolo/common';
-import { AnalysisProgressStepper } from '../components/taste';
-import { fetchPhotosWithExifData } from '../services';
-import { theme } from '../theme';
-import { APP_CONFIG, ANALYSIS_PHOTO_LIMIT, UI_STRINGS } from '../constants';
-import { useGA4ScreenTracking } from '../hooks';
+import React, { useEffect, useRef } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ActivityIndicator,
+  Animated,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { palette } from '../theme/colors';
+import { UI_STRINGS } from '../constants';
+import { useGA4ScreenTracking, useTasteAnalysisPipeline } from '../hooks';
 
-export interface TasteAnalysisScreenProps {
-  onFinish: (tasteProfileId?: string) => void;
-  onFail: () => void;
-  fetcher?: typeof analyzeTastePreferenceStream;
+interface TasteAnalysisScreenProps {
+  onFinish: (tasteProfileId: string) => void;
+  onFail?: () => void;
 }
 
 export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   onFinish,
   onFail,
-  fetcher,
 }) => {
   useGA4ScreenTracking('TasteAnalysisScreen');
-  const [stepIndex, setStepIndex] = useState(0); // 0: Idle, 1: Loading Assets, 2: SSE Request, 3: Completed
+  const {
+    runPipeline,
+    error: errorMessage,
+    progress,
+  } = useTasteAnalysisPipeline();
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const pulseLoop = Animated.loop(
+    // Pulse animation for live badge
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.3,
-          duration: 750,
-          easing: Easing.inOut(Easing.ease),
+          toValue: 0.4,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
-          toValue: 1.0,
-          duration: 750,
-          easing: Easing.inOut(Easing.ease),
+          toValue: 1,
+          duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
-    pulseLoop.start();
+    pulseAnimation.start();
 
+    return () => {
+      pulseAnimation.stop();
+    };
+  }, [pulseAnim]);
+
+  useEffect(() => {
     let isSubscribed = true;
     let completionTimeout: ReturnType<typeof setTimeout>;
 
-    const startStreaming = async () => {
-      try {
-        const token = await AsyncStorage.getItem('accessToken');
-        if (!token) {
-          throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_TOKEN_ERROR);
-        }
+    const executePipeline = async () => {
+      const profileId = await runPipeline();
 
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+      if (!isSubscribed) return;
 
-        if (isSubscribed) {
-          setStepIndex(1); // Fetching Media
-        }
-
-        // Delegate photo permission check and EXIF parsing to photoService
-        const parsedImages = await fetchPhotosWithExifData(ANALYSIS_PHOTO_LIMIT, 'UTC');
-
-        if (isSubscribed) {
-          setStepIndex(2); // Analyzing Preference
-        }
-
-        const profileId = await useTasteStore.getState().analyzeTaste(
-          apiUrl,
-          token,
-          { images: parsedImages },
-          fetcher || analyzeTastePreferenceStream
-        );
-
-        if (isSubscribed && profileId) {
-          setStepIndex(3);
-          completionTimeout = setTimeout(() => {
+      if (profileId) {
+        // 3단계 완료 후 1초(1000ms) 텀을 두고 다음 화면으로 전환
+        completionTimeout = setTimeout(() => {
+          if (isSubscribed) {
             onFinish(profileId);
-          }, 1000);
-        }
-      } catch (err: unknown) {
-        console.error('Taste analysis stream error:', err);
-        if (isSubscribed) {
-          onFail();
-        }
+          }
+        }, 1000);
       }
     };
 
-    startStreaming();
+    executePipeline();
 
     return () => {
       isSubscribed = false;
-      if (completionTimeout) {
-        clearTimeout(completionTimeout);
-      }
-      pulseLoop.stop();
+      if (completionTimeout) clearTimeout(completionTimeout);
     };
-  }, [onFinish, onFail, fetcher, pulseAnim]);
+  }, [runPipeline, onFinish]);
+
+  const handleConfirmError = () => {
+    onFail?.();
+  };
+
+  const handleOpenSettings = () => {
+    Linking.openSettings().catch(() => {});
+  };
+
+  const isPermissionError =
+    errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR;
+
+  const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
+    if (status === 'COMPLETED') {
+      return (
+        <View style={styles.checkedCircleIcon}>
+          <Feather name='check' size={14} color={palette.white} />
+        </View>
+      );
+    }
+    if (status === 'IN_PROGRESS') {
+      return (
+        <View style={styles.loadingCircleIcon}>
+          <ActivityIndicator size='small' color={palette.primary} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.pendingCircleIcon}>
+        <View style={styles.pendingDotInner} />
+      </View>
+    );
+  };
+
+  const getStepLabel = (
+    baseText: string,
+    status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED',
+  ) => {
+    if (status === 'COMPLETED') {
+      return `${baseText} 완료`;
+    }
+    if (status === 'IN_PROGRESS') {
+      return `${baseText} 중`;
+    }
+    return baseText;
+  };
 
   return (
-    <LinearGradient
-      colors={theme.colors.gradient.background}
-      style={styles.gradientContainer}
-    >
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Top Header */}
-          <View style={styles.topContent} testID="top-content">
-            <View style={styles.heroText}>
-              <Text style={styles.mainTitle} testID="loading-title">
-                {UI_STRINGS.TASTE_ANALYSIS.TITLE}
+    <View style={styles.screenContainer}>
+      <View style={styles.contentContainer}>
+        {/* Header Title Section */}
+        <View style={styles.headerSection} testID='top-content'>
+          <Text style={styles.mainTitle}>
+            {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
+          </Text>
+          <Text style={styles.subTitle}>
+            {UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}
+          </Text>
+        </View>
+
+        {/* Main Body Section */}
+        <View style={styles.mainBodyContainer} testID='main-content'>
+          {/* Checklist Step Container */}
+          <View style={styles.checklistContainer} testID='checklist-container'>
+            <Text style={styles.checklistTitle}>
+              {UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}
+            </Text>
+
+            <View style={styles.stepsList}>
+              {/* Step 1: 메타데이터 추출 / 사진 데이터 수집 */}
+              <View style={styles.stepRow} testID='step-1'>
+                {renderStepIcon(progress.step1Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step1Status !== 'IDLE' && styles.activeStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_1,
+                    progress.step1Status,
+                  )}
+                </Text>
+              </View>
+
+              {/* Step 2: 장소 정보 수집 */}
+              <View style={styles.stepRow} testID='step-2'>
+                {renderStepIcon(progress.step2Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step2Status !== 'IDLE' && styles.activeStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_2,
+                    progress.step2Status,
+                  )}
+                </Text>
+              </View>
+
+              {/* Step 3: 사용자 취향 분석 */}
+              <View style={styles.stepRow} testID='step-3'>
+                {renderStepIcon(progress.step3Status)}
+                <Text
+                  style={[
+                    styles.stepText,
+                    progress.step3Status !== 'IDLE'
+                      ? styles.activeStepText
+                      : styles.pendingStepText,
+                  ]}>
+                  {getStepLabel(
+                    UI_STRINGS.TASTE_ANALYSIS.STEP_3,
+                    progress.step3Status,
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Insights Live Container */}
+          <View style={styles.insightsContainer} testID='insights-container'>
+            <View style={styles.insightsHeader}>
+              <Text style={styles.insightsTitle}>
+                {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_TITLE}
               </Text>
-              <Text style={styles.subTitle}>
-                {UI_STRINGS.TASTE_ANALYSIS.SUBTITLE}
+              <View style={styles.liveBadge}>
+                <Animated.View
+                  style={[styles.liveDot, { opacity: pulseAnim }]}
+                />
+                <Text style={styles.liveBadgeText}>
+                  {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_BADGE}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.insightsCard}>
+              <Text style={styles.insightsNoticeText}>
+                {progress.currentMessage ||
+                  UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
               </Text>
             </View>
           </View>
 
-          {/* 3-step Loading Stepper Component */}
-          <AnalysisProgressStepper
-            stepIndex={stepIndex}
-            pulseAnim={pulseAnim}
-          />
-
-          <View style={styles.bottomSpacer} />
+          {errorMessage && (
+            <View style={styles.errorCard} testID='error-container'>
+              <View style={styles.errorHeader}>
+                <Feather name='alert-circle' size={20} color={palette.red500} />
+                <Text style={styles.errorCardTitle}>
+                  {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
+                </Text>
+              </View>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              <View style={styles.errorActionsRow}>
+                {isPermissionError && (
+                  <TouchableOpacity
+                    style={styles.settingsButton}
+                    activeOpacity={0.8}
+                    onPress={handleOpenSettings}
+                    testID='error-settings-button'>
+                    <Text style={styles.settingsButtonText}>
+                      {UI_STRINGS.TASTE_ANALYSIS.OPEN_SETTINGS_BUTTON}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    isPermissionError && styles.secondaryConfirmButton,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={handleConfirmError}
+                  testID='error-confirm-button'>
+                  <Text
+                    style={[
+                      styles.confirmButtonText,
+                      isPermissionError && styles.secondaryConfirmButtonText,
+                    ]}>
+                    {UI_STRINGS.COMMON.CONFIRM}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
-      </SafeAreaView>
-    </LinearGradient>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  gradientContainer: {
+  screenContainer: {
     flex: 1,
-  },
-  safeArea: {
-    flex: 1,
+    backgroundColor: palette.softMint,
   },
   contentContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingBottom: 34,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  topContent: {
-    height: 190,
+  headerSection: {
+    gap: 8,
     width: '100%',
   },
-  heroText: {
-    gap: 12,
-    paddingTop: 24,
-    paddingHorizontal: 24,
-  },
   mainTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
-    color: theme.colors.text.primary,
-    lineHeight: 36,
+    color: palette.deepNavy,
+    lineHeight: 34,
     letterSpacing: -0.6,
   },
   subTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '400',
-    color: theme.colors.text.secondary,
-    lineHeight: 24,
+    color: palette.subText,
+    lineHeight: 21,
   },
-  bottomSpacer: {
-    height: 34,
+  mainBodyContainer: {
+    flex: 1,
+    gap: 24,
+    paddingTop: 20,
+  },
+  checklistContainer: {
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  checklistTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.deepNavy,
+    letterSpacing: -0.16,
+  },
+  stepsList: {
+    gap: 14,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkedCircleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: palette.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  loadingCircleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pendingCircleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: palette.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pendingDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: palette.mutedText,
+  },
+  stepText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  activeStepText: {
+    color: palette.deepNavy,
+  },
+  pendingStepText: {
+    color: palette.mutedText,
+  },
+  insightsContainer: {
+    gap: 12,
+  },
+  insightsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  insightsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.deepNavy,
+    letterSpacing: -0.16,
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.primary,
+  },
+  liveBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.primary,
+  },
+  insightsCard: {
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightsNoticeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.subText,
+  },
+  errorCard: {
+    backgroundColor: palette.red50,
+    borderWidth: 1,
+    borderColor: palette.red200,
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    alignItems: 'center',
+    shadowColor: palette.red500,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  errorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  errorCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.red800,
+  },
+  errorText: {
+    fontSize: 14,
+    color: palette.red700,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  confirmButton: {
+    backgroundColor: palette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  confirmButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.white,
+  },
+  errorActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 6,
+    width: '100%',
+  },
+  settingsButton: {
+    backgroundColor: palette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  settingsButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.white,
+  },
+  secondaryConfirmButton: {
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+  },
+  secondaryConfirmButtonText: {
+    color: palette.deepNavy,
   },
 });

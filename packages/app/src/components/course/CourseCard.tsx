@@ -1,201 +1,158 @@
 /**
  * @file CourseCard.tsx
- * @description Card component displaying previous course recommendation details in Bento Grid layout (FUN-7, DOM-2).
- * @requirements REQ-9
- * @functional FUN-7
- * @api API-FB-10
- * @author Antigravity Agent
+ * @description Course card component displaying photo area, title, itinerary summary, and tags for CourseListScreen matching UI v2 design system.
  */
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ImageBackground,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { CourseSummary } from '@yeolo/common';
-
-import { theme } from '../../theme';
-import { UI_STRINGS } from '../../constants';
-
-/**
- * Helper function to dynamically construct an online image search URL based on country and city search terms.
- * Queries LoremFlickr dynamic photo search endpoint by country/city keywords.
- */
-export function getDestinationImageUrl(country: string, city: string): string {
-  const keyword = (city || country || UI_STRINGS.COMPONENTS.DEFAULT_TRAVEL_KEYWORD).trim();
-  return `https://loremflickr.com/600/400/${encodeURIComponent(keyword)}`;
-}
+import { getDestinationImageUrl } from '../../services';
+import { palette, hexToRgba } from '../../theme/colors';
 
 export interface CourseCardProps {
-  course: CourseSummary;
-  onPress: (courseId: string) => void;
-  viewMode?: 'grid' | 'list';
+  item: CourseSummary;
+  onPress?: (courseId: string) => void;
+  onLongPress?: (course: CourseSummary) => void;
 }
 
-export const CourseCard = React.memo<CourseCardProps>(function CourseCard({
-  course,
+export const CourseCard: React.FC<CourseCardProps> = ({
+  item,
   onPress,
-  viewMode = 'grid',
-}) {
-  const durationText =
-    course.totalDays && course.totalDays > 1
-      ? `${course.totalDays - 1}${UI_STRINGS.COMPONENTS.DURATION_NIGHTS_SUFFIX} ${course.totalDays}${UI_STRINGS.COMPONENTS.DURATION_DAYS_SUFFIX}`
-      : UI_STRINGS.COMPONENTS.DURATION_SAME_DAY;
+  onLongPress,
+}) => {
+  const imageUrl =
+    item.coverImageUrl ||
+    getDestinationImageUrl(item.destinationCountry, item.destinationCity);
+  const summaryText = item.recommendationReason || '';
+  const displayTags = item.tags ? item.tags.slice(0, 3) : [];
 
-  const isList = viewMode === 'list';
-
-  // Fallback banner image gradient/color based on course id hash
-  const defaultColors = [theme.colors.primary, '#6c5ce7', '#00cec9', '#e84393', '#fdcb6e'];
-  const colorIndex = Math.abs(
-    course.courseId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  ) % defaultColors.length;
-  const accentColor = defaultColors[colorIndex];
-
-  const imageUrl = getDestinationImageUrl(course.destinationCountry, course.destinationCity);
-  
   return (
     <TouchableOpacity
-      testID={`course-card-${course.courseId}`}
-      style={[styles.card, isList ? styles.listCard : styles.gridCard]}
-      activeOpacity={0.8}
-      onPress={() => onPress(course.courseId)}
-    >
-      <View style={[styles.bannerContainer, { backgroundColor: accentColor }]}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.thumbnailImage} />
-        ) : (
-          <View style={styles.placeholderBanner}>
-            <Text style={styles.placeholderText}>{course.destinationCity || course.destinationCountry}</Text>
-          </View>
-        )}
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{durationText}</Text>
-        </View>
-      </View>
+      style={styles.heroRouteCard}
+      activeOpacity={0.9}
+      onPress={() => onPress?.(item.courseId)}
+      onLongPress={() => onLongPress?.(item)}
+      testID={`course-card-${item.courseId}`}>
+      {/* Photo Area Header */}
+      <ImageBackground
+        source={{ uri: imageUrl }}
+        style={styles.photoArea}
+        resizeMode='cover'>
+        <View style={styles.photoDimOverlay} />
 
-      <View style={styles.contentContainer}>
-        {!isList ? (
-          <Text style={styles.titleText} numberOfLines={1}>
-            {course.destinationCountry} {course.destinationCity}
+        {/* Card Title & Meta Overlay */}
+        <View style={styles.photoContentOverlay}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.title}
           </Text>
-        ) : (
-          <>
-            <Text style={styles.locationText}>
-              {course.destinationCountry} {course.destinationCity}
-            </Text>
-            <Text style={styles.titleText} numberOfLines={2}>
-              {course.title}
-            </Text>
-          </>
-        )}
+          <Text style={styles.cardMeta} numberOfLines={1}>
+            {item.destinationCountry} {item.destinationCity}
+            {item.startDate ? ` • ${item.startDate}` : ''}
+            {item.totalDays ? ` • ${item.totalDays}일` : ''}
+          </Text>
+        </View>
+      </ImageBackground>
 
-        {course.tags && course.tags.length > 0 && (
-          <View style={styles.tagContainer}>
-            {course.tags.slice(0, 3).map((tag, idx) => (
-              <View key={idx} style={styles.tagChip}>
+      {/* Hero Card Body */}
+      <View style={styles.heroBody}>
+        {summaryText ? (
+          <View style={styles.locationRow}>
+            <Ionicons
+              name='location-outline'
+              size={14}
+              color={palette.subText}
+            />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {summaryText}
+            </Text>
+          </View>
+        ) : null}
+
+        {displayTags.length > 0 && (
+          <View style={styles.tagsRow}>
+            {displayTags.map((tag, idx) => (
+              <View key={`${item.courseId}-tag-${idx}`} style={styles.tagChip}>
                 <Text style={styles.tagText}>#{tag}</Text>
               </View>
             ))}
           </View>
         )}
-
-        <Text style={styles.dateText}>
-          {course.startDate ? `${course.startDate} 출발` : ''}
-        </Text>
       </View>
     </TouchableOpacity>
   );
-});
+};
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.bg.card,
+  heroRouteCard: {
+    backgroundColor: palette.white,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
     marginBottom: 16,
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  gridCard: {
-    width: '100%',
-  },
-  listCard: {
-    width: '100%',
-    flexDirection: 'row',
-  },
-  bannerContainer: {
-    height: 100,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  placeholderBanner: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: theme.colors.bg.glass,
-  },
-  placeholderText: {
-    color: theme.colors.text.inverse,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(3, 6, 18, 0.65)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: theme.colors.text.inverse,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  contentContainer: {
+  photoArea: {
+    height: 160,
+    justifyContent: 'flex-end',
     padding: 12,
-    flex: 1,
+  },
+  photoDimOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: hexToRgba(palette.deepNavy, 0.35),
+  },
+  photoContentOverlay: {
+    gap: 2,
+    zIndex: 2,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: palette.white,
+  },
+  cardMeta: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: hexToRgba(palette.white, 0.9),
+  },
+  heroBody: {
+    height: 85,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   locationText: {
-    fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: '700',
-    marginBottom: 4,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: palette.subText,
   },
-  titleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  tagContainer: {
+  tagsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 8,
+    alignItems: 'center',
+    gap: 6,
   },
   tagChip: {
-    backgroundColor: theme.colors.primaryContainer,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: palette.lightTeal,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 99,
   },
   tagText: {
     fontSize: 11,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  dateText: {
-    fontSize: 11,
-    color: theme.colors.text.placeholder,
-    marginTop: 'auto',
+    fontWeight: '700',
+    color: palette.primary,
   },
 });

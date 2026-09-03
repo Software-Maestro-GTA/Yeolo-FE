@@ -1,15 +1,24 @@
 /**
  * @file TasteProfileView.tsx
- * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI v1 specifications.
- * @requirements REQ-11
- * @functional FUN-4
- * @api API-FB-8
- * @author Antigravity Agent
+ * @description Modern, premium UI component for visually presenting taste profile analysis with gradient progress bars and hero cards matching Figma UI specifications.
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TasteProfile } from '@yeolo/common';
+import {
+  TasteProfile,
+  TRAVEL_PACE_DENSITY_MAP,
+  TRAVEL_PURPOSE_MAP,
+  PREFERRED_LOCATION_TYPE_MAP,
+  FOOD_PREFERENCE_MAP,
+  SEASONAL_ENVIRONMENT_MAP,
+} from '@yeolo/common';
 import { Ionicons } from '@expo/vector-icons';
 
 import { theme } from '../../theme';
@@ -20,18 +29,103 @@ export interface TasteProfileViewProps {
   onReanalyze?: () => void;
 }
 
-const PACE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PACE;
-const SPENDING_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SPENDING;
-const COMPANION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.COMPANION;
-const PURPOSE_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.PURPOSE;
-const LOCATION_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.LOCATION;
-const FOOD_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.FOOD;
-const SEASON_LABELS: Record<string, string> = UI_STRINGS.TASTE_LABELS.SEASON;
+const PACE_LABELS: Record<string, string> = {
+  RELAXED: '여유로운',
+  BALANCED: '균형잡힌',
+  BUSY: '빽빽한',
+  slow_stay: TRAVEL_PACE_DENSITY_MAP.slow_stay.label,
+  balanced: TRAVEL_PACE_DENSITY_MAP.balanced.label,
+  dense_schedule: TRAVEL_PACE_DENSITY_MAP.dense_schedule.label,
+  spontaneous: TRAVEL_PACE_DENSITY_MAP.spontaneous.label,
+  long_stay: TRAVEL_PACE_DENSITY_MAP.long_stay.label,
+};
+const SPENDING_LABELS: Record<string, string> = {
+  BUDGET: '가성비',
+  MODERATE: '적정',
+  LUXURY: '럭셔리',
+  cost_effective: '가성비형',
+  moderate: '중간 소비형',
+  luxury: '럭셔리형',
+};
+const COMPANION_LABELS: Record<string, string> = {
+  SOLO: '혼자',
+  COUPLE: '커플',
+  FAMILY: '가족',
+  FRIENDS: '친구',
+  solo: '혼자 여행형',
+  couple: '연인 여행형',
+  friends: '친구 여행형',
+  family: '가족 여행형',
+};
+const PURPOSE_LABELS: Record<string, string> = {
+  GOURMET: '미식형',
+  HEALING: '휴양형',
+  NATURE: '자연 탐방형',
+  CULTURE: '문화 탐방형',
+  relaxation: TRAVEL_PURPOSE_MAP.relaxation.label,
+  sightseeing: TRAVEL_PURPOSE_MAP.sightseeing.label,
+  culturalExperience: TRAVEL_PURPOSE_MAP.culturalExperience.label,
+  gourmet: TRAVEL_PURPOSE_MAP.gourmet.label,
+  natureExploration: TRAVEL_PURPOSE_MAP.natureExploration.label,
+  activity: TRAVEL_PURPOSE_MAP.activity.label,
+  shopping: TRAVEL_PURPOSE_MAP.shopping.label,
+  festivalEvent: TRAVEL_PURPOSE_MAP.festivalEvent.label,
+  wellness: TRAVEL_PURPOSE_MAP.wellness.label,
+  selfDevelopment: TRAVEL_PURPOSE_MAP.selfDevelopment.label,
+};
+const LOCATION_LABELS: Record<string, string> = {
+  BEACH: '해변·휴양지',
+  CITY: '대도시',
+  NATURE: '자연·비경',
+  SMALL_TOWN: '소도시',
+  bigCity: PREFERRED_LOCATION_TYPE_MAP.bigCity.label,
+  smallTownAlley: PREFERRED_LOCATION_TYPE_MAP.smallTownAlley.label,
+  natureHinterland: PREFERRED_LOCATION_TYPE_MAP.natureHinterland.label,
+  beachResort: PREFERRED_LOCATION_TYPE_MAP.beachResort.label,
+  mountainPlateau: PREFERRED_LOCATION_TYPE_MAP.mountainPlateau.label,
+  historicalCity: PREFERRED_LOCATION_TYPE_MAP.historicalCity.label,
+  themeParkResort: PREFERRED_LOCATION_TYPE_MAP.themeParkResort.label,
+  famousSpotPreferred: PREFERRED_LOCATION_TYPE_MAP.famousSpotPreferred.label,
+  hiddenSpotPreferred: PREFERRED_LOCATION_TYPE_MAP.hiddenSpotPreferred.label,
+};
+const FOOD_LABELS: Record<string, string> = {
+  LOCAL: '현지 로컬 푸드',
+  CAFE: '카페·디저트',
+  GOURMET: '유명 맛집',
+  localFoodActive: FOOD_PREFERENCE_MAP.localFoodActive.label,
+  famousRestaurantCentered: FOOD_PREFERENCE_MAP.famousRestaurantCentered.label,
+  streetFood: FOOD_PREFERENCE_MAP.streetFood.label,
+  cafeDessert: FOOD_PREFERENCE_MAP.cafeDessert.label,
+  fineDining: FOOD_PREFERENCE_MAP.fineDining.label,
+  familiarFoodPreferred: FOOD_PREFERENCE_MAP.familiarFoodPreferred.label,
+  dietaryRestriction: FOOD_PREFERENCE_MAP.dietaryRestriction.label,
+  sightseeingOverFood: FOOD_PREFERENCE_MAP.sightseeingOverFood.label,
+};
+const SEASON_LABELS: Record<string, string> = {
+  WARM: '따뜻한 지역 선호',
+  COOL: '시원한 지역 선호',
+  ALL: '사계절 무관',
+  warm_region: SEASONAL_ENVIRONMENT_MAP.warm_region.label,
+  cold_region: SEASONAL_ENVIRONMENT_MAP.cold_region.label,
+  summer_resort: SEASONAL_ENVIRONMENT_MAP.summer_resort.label,
+  winter_sports: SEASONAL_ENVIRONMENT_MAP.winter_sports.label,
+  spring_flower_autumn_foliage:
+    SEASONAL_ENVIRONMENT_MAP.spring_flower_autumn_foliage.label,
+  dry_weather: SEASONAL_ENVIRONMENT_MAP.dry_weather.label,
+  off_season: SEASONAL_ENVIRONMENT_MAP.off_season.label,
+  peak_season: SEASONAL_ENVIRONMENT_MAP.peak_season.label,
+};
 
-export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onReanalyze }) => {
+export const TasteProfileView: React.FC<TasteProfileViewProps> = ({
+  profile,
+  onReanalyze,
+}) => {
   const renderTraitBar = (label: string, score: number = 3, index: number) => {
     const formattedScore = Math.min(Math.max(score, 1), 5).toFixed(1);
-    const percentage = Math.min(Math.max(Math.round((score / 5) * 100), 0), 100);
+    const percentage = Math.min(
+      Math.max(Math.round((score / 5) * 100), 0),
+      100,
+    );
 
     const gradientColors =
       index % 2 === 0
@@ -43,7 +137,9 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
       <View key={label} style={styles.traitRow}>
         <View style={styles.traitHeader}>
           <View style={styles.labelContainer}>
-            <View style={[styles.bulletDot, { backgroundColor: accentTextColor }]} />
+            <View
+              style={[styles.bulletDot, { backgroundColor: accentTextColor }]}
+            />
             <Text style={styles.traitLabel}>{label}</Text>
           </View>
           <Text style={[styles.traitPercentage, { color: accentTextColor }]}>
@@ -66,7 +162,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
     title: string,
     dataObj: Record<string, number | undefined>,
     labelsMap: Record<string, string>,
-    iconName: keyof typeof Ionicons.glyphMap
+    iconName: keyof typeof Ionicons.glyphMap,
   ) => {
     const entries = Object.entries(dataObj || {})
       .filter(([, val]) => typeof val === 'number' && val > 0)
@@ -84,7 +180,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
         {entries.map(([key, score], idx) =>
-          renderTraitBar(labelsMap[key] || key, score, idx)
+          renderTraitBar(labelsMap[key] || key, score, idx),
         )}
       </View>
     );
@@ -94,24 +190,25 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
+      showsVerticalScrollIndicator={false}>
       {/* 1. Premium Hero Persona Card with Natural Top-Right Reanalyze Button */}
       <View style={styles.heroWrapper}>
         <LinearGradient
           colors={['#EEF2FF', '#F5F3FF', '#F0FDFA']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
+          style={styles.heroCard}>
           {onReanalyze && (
             <TouchableOpacity
-              testID="btn-reanalyze-icon"
+              testID='btn-reanalyze-icon'
               style={styles.topRightScrollButton}
               onPress={onReanalyze}
-              activeOpacity={0.75}
-            >
-              <Ionicons name="refresh-outline" size={18} color={theme.colors.primary} />
+              activeOpacity={0.75}>
+              <Ionicons
+                name='refresh-outline'
+                size={18}
+                color={theme.colors.primary}
+              />
             </TouchableOpacity>
           )}
 
@@ -120,9 +217,8 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
               colors={theme.colors.gradient.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.heroIconGradient}
-            >
-              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              style={styles.heroIconGradient}>
+              <Ionicons name='sparkles' size={24} color='#FFFFFF' />
             </LinearGradient>
           </View>
 
@@ -134,8 +230,12 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
       {/* 2. Unified Core Travel Keywords Section (Friendly Title) */}
       {(() => {
         const EXCLUDED_KEYS = [
-          'solo', 'moderate', 'medium',
-          '혼자 여행형', '중간소비형', '중간 소비형'
+          'solo',
+          'moderate',
+          'medium',
+          '혼자 여행형',
+          '중간소비형',
+          '중간 소비형',
         ];
 
         const rawKeywords: { key: string; label: string }[] = [];
@@ -143,19 +243,24 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         if (profile.travelPaceDensity) {
           rawKeywords.push({
             key: profile.travelPaceDensity,
-            label: PACE_LABELS[profile.travelPaceDensity] || profile.travelPaceDensity,
+            label:
+              PACE_LABELS[profile.travelPaceDensity] ||
+              profile.travelPaceDensity,
           });
         }
         if (profile.companionType) {
           rawKeywords.push({
             key: profile.companionType,
-            label: COMPANION_LABELS[profile.companionType] || profile.companionType,
+            label:
+              COMPANION_LABELS[profile.companionType] || profile.companionType,
           });
         }
         if (profile.spendingTendency) {
           rawKeywords.push({
             key: profile.spendingTendency,
-            label: SPENDING_LABELS[profile.spendingTendency] || profile.spendingTendency,
+            label:
+              SPENDING_LABELS[profile.spendingTendency] ||
+              profile.spendingTendency,
           });
         }
         if (Array.isArray(profile.seasonalEnvironmentPreference)) {
@@ -168,7 +273,8 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         }
 
         const validKeywords = rawKeywords.filter(
-          (k) => !EXCLUDED_KEYS.includes(k.key) && !EXCLUDED_KEYS.includes(k.label)
+          (k) =>
+            !EXCLUDED_KEYS.includes(k.key) && !EXCLUDED_KEYS.includes(k.label),
         );
 
         if (validKeywords.length === 0) return null;
@@ -177,7 +283,11 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
           <View style={styles.summaryCard}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardTitleIconContainer}>
-                <Ionicons name="sparkles-outline" size={18} color={theme.colors.primary} />
+                <Ionicons
+                  name='sparkles-outline'
+                  size={18}
+                  color={theme.colors.primary}
+                />
               </View>
               <Text style={styles.cardTitle}>한눈에 보는 나의 취향</Text>
             </View>
@@ -191,8 +301,7 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
                       colors={['#8B5CF6', '#6366F1']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.badgePillGradientPrimary}
-                    >
+                      style={styles.badgePillGradientPrimary}>
                       <Text style={styles.badgeTextLight}>{item.label}</Text>
                     </LinearGradient>
                   );
@@ -204,14 +313,15 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
                       colors={['#10B981', '#059669']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      style={styles.badgePillGradientSecondary}
-                    >
+                      style={styles.badgePillGradientSecondary}>
                       <Text style={styles.badgeTextLight}>{item.label}</Text>
                     </LinearGradient>
                   );
                 }
                 return (
-                  <View key={`${item.key}-${idx}`} style={styles.badgeOutlinePill}>
+                  <View
+                    key={`${item.key}-${idx}`}
+                    style={styles.badgeOutlinePill}>
                     <Text style={styles.badgeOutlineText}>{item.label}</Text>
                   </View>
                 );
@@ -226,23 +336,22 @@ export const TasteProfileView: React.FC<TasteProfileViewProps> = ({ profile, onR
         '내가 여행을 떠나는 이유',
         profile.travelPurpose as Record<string, number | undefined>,
         PURPOSE_LABELS,
-        'flag-outline'
+        'flag-outline',
       )}
 
       {renderSection(
         '마음이 끌리는 공간',
         profile.preferredLocationType as Record<string, number | undefined>,
         LOCATION_LABELS,
-        'map-outline'
+        'map-outline',
       )}
 
       {renderSection(
         '즐거운 미식 스펙트럼',
         profile.foodPreference as Record<string, number | undefined>,
         FOOD_LABELS,
-        'restaurant-outline'
+        'restaurant-outline',
       )}
-
     </ScrollView>
   );
 };

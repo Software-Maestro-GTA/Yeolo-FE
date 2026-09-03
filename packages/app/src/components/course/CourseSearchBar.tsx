@@ -1,13 +1,11 @@
 /**
  * @file CourseSearchBar.tsx
- * @description Destination search input bar component for course list screen.
- * @requirements REQ-9
- * @functional FUN-7
- * @author Antigravity Agent
+ * @description Destination search input bar component for course list screen matching UI v2 design system, complying with colors.ts palette and strings.ts UI_STRINGS.
  */
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { theme } from '../../theme';
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 
 export interface CourseSearchBarProps {
@@ -22,15 +20,30 @@ export const CourseSearchBar: React.FC<CourseSearchBarProps> = ({
   return (
     <View style={styles.searchRow}>
       <View style={styles.searchInputWrapper}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons
+          name='search'
+          size={18}
+          color={palette.mutedText}
+          style={styles.searchIcon}
+        />
         <TextInput
-          testID="search-input"
+          testID='search-input'
           style={styles.searchInput}
           placeholder={UI_STRINGS.COURSE_LIST.SEARCH_PLACEHOLDER}
-          placeholderTextColor={theme.colors.text.placeholder}
+          placeholderTextColor={palette.mutedText}
           value={value}
           onChangeText={onChangeText}
         />
+        {value.length > 0 && (
+          <TouchableOpacity
+            testID='clear-search-button'
+            style={styles.clearButton}
+            onPress={() => onChangeText('')}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name='close-circle' size={18} color={palette.mutedText} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -43,23 +56,25 @@ const styles = StyleSheet.create({
   },
   searchInputWrapper: {
     flex: 1,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.bg.card,
-    borderRadius: 14,
+    backgroundColor: palette.gray100,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
   },
   searchIcon: {
     marginRight: 8,
-    fontSize: 16,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.text.primary,
+    color: palette.deepNavy,
     padding: 0,
+  },
+  clearButton: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

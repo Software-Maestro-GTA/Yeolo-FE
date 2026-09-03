@@ -1,14 +1,12 @@
 /**
  * @file CourseDayTabs.tsx
- * @description Horizontal scrollable day selection tab pills for course itinerary.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
+ * @description Horizontal scrollable day selection tab pills component.
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import type { ItineraryDay } from '@yeolo/common';
-import { theme } from '../../theme';
+import { palette } from '../../theme/colors';
+import { UI_STRINGS } from '../../constants';
 
 export interface CourseDayTabsProps {
   days?: ItineraryDay[];
@@ -27,8 +25,7 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.dayTabContainer}
-    >
+      contentContainerStyle={styles.dayTabContainer}>
       {days.map((dayItem) => {
         const isSelected = dayItem.day === selectedDay;
         return (
@@ -37,9 +34,14 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
             testID={`day-tab-${dayItem.day}`}
             style={[styles.dayPill, isSelected && styles.dayPillSelected]}
             onPress={() => onSelectDay(dayItem.day)}
-          >
-            <Text style={[styles.dayPillText, isSelected && styles.dayPillTextSelected]}>
-              Day {dayItem.day}
+            activeOpacity={0.8}>
+            <Text
+              style={[
+                styles.dayPillText,
+                isSelected && styles.dayPillTextSelected,
+              ]}>
+              {UI_STRINGS.COURSE_DETAIL.DAY_PREFIX}
+              {dayItem.day}
             </Text>
           </TouchableOpacity>
         );
@@ -50,29 +52,29 @@ export const CourseDayTabs: React.FC<CourseDayTabsProps> = ({
 
 const styles = StyleSheet.create({
   dayTabContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     gap: 8,
-    marginBottom: 20,
+    marginVertical: 4,
   },
   dayPill: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 9999,
-    backgroundColor: theme.colors.bg.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border.light,
+    borderRadius: 20,
+    backgroundColor: palette.white,
+    borderWidth: 1.5,
+    borderColor: palette.gray200,
   },
   dayPillSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
   dayPillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
+    fontSize: 13,
+    fontWeight: '500',
+    color: palette.subText,
   },
   dayPillTextSelected: {
-    color: theme.colors.text.inverse,
+    color: palette.white,
     fontWeight: '700',
   },
 });

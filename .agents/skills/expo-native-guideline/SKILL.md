@@ -17,9 +17,6 @@ description: Expo v57 및 React Native를 사용하는 모바일 앱 프로젝�
 /**
  * @file CourseCard.tsx
  * @description 코스 리스트 및 상세 화면에서 사용되는 여행 코스 요약 카드 컴포넌트
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @author Coder Agent
  */
 ```
 

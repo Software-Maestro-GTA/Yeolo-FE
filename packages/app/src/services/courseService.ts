@@ -1,15 +1,11 @@
 /**
  * @file courseService.ts
- * @description Course detail geocoding helper and location coordinate transformation service.
- * @requirements REQ-9
- * @functional FUN-3
- * @author Antigravity Agent
+ * @description Course detail location coordinate transformation service using server provided coordinates.
  */
 import {
-  geocodePlace,
   getAdjustedCoordinates,
   calculateRegion,
-  getLeafletMapHtml,
+  isValidCoordinate,
   logger,
   type ItineraryStop,
   type MapCoordinate,
@@ -19,53 +15,54 @@ import {
 export interface ProcessedCourseMapData {
   coordinates: MapCoordinate[];
   region?: MapRegion;
-  leafletHtml: string;
 }
 
 /**
- * Perform geocoding for all stops in an itinerary day and produce adjusted map coordinates.
+ * Generate fallback destination image URL for a given country and city.
+ */
+export function getDestinationImageUrl(country: string, city: string): string {
+  const keyword = (city || country || '여행').trim();
+  return `https://loremflickr.com/600/400/${encodeURIComponent(keyword)}`;
+}
+
+/**
+ * Process itinerary day stops using server-provided coordinates to produce map data.
  */
 export async function processCourseStopsMapData(
   stops: ItineraryStop[] = [],
-  city: string = ''
+  city: string = '',
 ): Promise<ProcessedCourseMapData> {
   if (!stops || stops.length === 0) {
     const defaultRegion = calculateRegion([]);
     return {
       coordinates: [],
       region: defaultRegion,
-      leafletHtml: getLeafletMapHtml([]),
     };
   }
 
-  const rawStops = (
-    await Promise.all(
-      stops.map(async (stop, index) => {
-        const coords = await geocodePlace(stop.placeName, city);
-        if (coords) {
-          logger.info(`[CourseService] Geocoded coords for "${stop.placeName}" (${city}):`, coords);
-          return {
-            ...coords,
-            placeName: stop.placeName,
-            sequence: stop.sequence ?? index + 1,
-          };
-        }
-
-        logger.warn(`[CourseService] Failed to geocode coords for "${stop.placeName}" (${city})`);
-        return null;
-      })
+  const rawStops: MapCoordinate[] = stops
+    .filter((stop) =>
+      isValidCoordinate({
+        latitude: stop.place?.latitude,
+        longitude: stop.place?.longitude,
+      }),
     )
-  ).filter((item): item is NonNullable<typeof item> => item !== null);
+    .map((stop, index) => ({
+      latitude: stop.place.latitude,
+      longitude: stop.place.longitude,
+      placeName: stop.place.placeName,
+      sequence: stop.sequence ?? index + 1,
+    }));
 
   const coordinates = getAdjustedCoordinates(rawStops);
   const region = calculateRegion(coordinates);
-  const leafletHtml = getLeafletMapHtml(coordinates);
 
-  logger.info(`[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`);
+  logger.info(
+    `[CourseService] Final processed map data: ${coordinates.length} valid coordinates for city "${city}"`,
+  );
 
   return {
     coordinates,
     region,
-    leafletHtml,
   };
 }

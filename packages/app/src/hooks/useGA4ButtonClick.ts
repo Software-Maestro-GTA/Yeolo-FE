@@ -1,10 +1,6 @@
 /**
  * @file useGA4ButtonClick.ts
  * @description Hook providing a helper function to log button_click events in mobile app components.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import { useCallback } from 'react';
@@ -15,7 +11,7 @@ export function useGA4ButtonClick() {
     (buttonId: string, buttonName?: string, params?: GA4EventParams) => {
       analyticsService.logButtonClick(buttonId, buttonName, params);
     },
-    []
+    [],
   );
 
   return { trackButtonClick };

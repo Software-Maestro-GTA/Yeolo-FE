@@ -1,30 +1,48 @@
 /**
  * @file app.config.js
  * @description Dynamic Expo configuration file resolving Google client keys safely from local environment variables.
- * @requirements REQ-11
- * @functional FUN-1
- * @api N/A
- * @author Antigravity Agent
  */
 
 module.exports = ({ config }) => {
-  const googleScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
+  const googleScheme =
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
 
-  const androidGoogleServices = process.env.GOOGLE_SERVICES_JSON || './google-services.json';
-  const iosGoogleServices = process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+  const androidGoogleServices =
+    process.env.GOOGLE_SERVICES_JSON || './google-services.json';
+  const iosGoogleServices =
+    process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
 
   return {
     ...config,
     plugins: [
       ...(config.plugins || []),
       'expo-apple-authentication',
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: googleMapsApiKey,
+          androidGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
     ],
     android: {
       ...config.android,
+      config: {
+        ...config.android?.config,
+        googleMaps: {
+          apiKey: googleMapsApiKey,
+        },
+      },
       googleServicesFile: androidGoogleServices,
     },
     ios: {
       ...config.ios,
+      config: {
+        ...config.ios?.config,
+        googleMapsApiKey: googleMapsApiKey,
+      },
       bundleIdentifier: 'com.yeolo-travel.app',
       usesAppleSignIn: true,
       entitlements: {
@@ -36,12 +54,10 @@ module.exports = ({ config }) => {
         ...config.ios?.infoPlist,
         CFBundleURLTypes: [
           {
-            CFBundleURLSchemes: [
-              googleScheme
-            ].filter(Boolean)
-          }
-        ]
-      }
-    }
+            CFBundleURLSchemes: ['yeolo', googleScheme].filter(Boolean),
+          },
+        ],
+      },
+    },
   };
 };

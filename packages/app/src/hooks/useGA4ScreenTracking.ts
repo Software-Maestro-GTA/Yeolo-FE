@@ -1,10 +1,6 @@
 /**
  * @file useGA4ScreenTracking.ts
  * @description Hook to automatically track screen_view events in mobile app screens.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import { useEffect } from 'react';

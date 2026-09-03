@@ -91,16 +91,10 @@ Yeolo-FE (대상 프로젝트 루트)
 
 ## 5. 필수로 준수해야 하는 공통 규칙 (Global Rules)
 
-1.  **System.md의 절대 준수**:
-    - [system.md](./system.md)에 기술된 제약 조건을 위반하지 않습니다. (테스트 없는 코딩 금지, 모노레포 패키지 독립성 보존 등)
-2.  **API 모킹 의무화 (MSW)**:
-    - 백엔드 서버와의 API 결합 품질 확보 및 외부 데이터 간섭 배제를 위해, API 호출이 일어나는 모든 컴포넌트의 테스트 작성 시 [msw-api-mocking/SKILL.md](./skills/msw-api-mocking/SKILL.md)에 맞추어 MSW 핸들러를 모킹합니다.
-3.  **프레임워크 개발 지침 가동**:
-    - 웹 구현 시 [nextjs-app-router-guideline](./skills/nextjs-app-router-guideline/SKILL.md)을, 모바일 앱 구현 시 [expo-native-guideline](./skills/expo-native-guideline/SKILL.md)을 우선 참고하여 폴더 구조와 컴포넌트 설계 스타일을 일치시킵니다.
-4.  **문서 주석 규격화**:
-    - 새로 만들거나 수정한 모든 소스 코드 상단에는 [module-explain-formatter](./skills/module-explain-formatter/SKILL.md) 지침에 명시된 JSDoc 헤더 주석을 필수로 포함합니다.
-5.  **커밋 메시지 표준**:
-    - Git 커밋 시 반드시 [git-commit-formatter](./skills/git-commit-formatter/SKILL.md)에 명시된 커밋 메시지 규격을 준수합니다.
+1.  **전역 운영 규칙 준수**:
+    - [system.md](./system.md)에 기술된 제약 조건을 최우선 준수합니다. (CLI 우선 작업 표준, 테스트 없는 코딩 금지, 모노레포 아키텍처 보존 등)
+2.  **스킬 지침서 준수**:
+    - 화면 개발([Next.js](./skills/nextjs-app-router-guideline/SKILL.md), [Expo](./skills/expo-native-guideline/SKILL.md)), [API 모킹](./skills/msw-api-mocking/SKILL.md), [문서 주석](./skills/module-explain-formatter/SKILL.md), [커밋 메시지](./skills/git-commit-formatter/SKILL.md), [PR 포맷](./skills/pr-formatter/SKILL.md) 등 상황별 전용 스킬 규칙을 적용합니다.
 
 ---
 

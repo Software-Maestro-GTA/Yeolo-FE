@@ -1,10 +1,6 @@
 /**
  * @file course.ts
  * @description Zustand store for managing course creation and SSE streaming progress states.
- * @requirements REQ-7
- * @functional FUN-6
- * @api API-FB-4
- * @author Antigravity Agent
  */
 import { create } from 'zustand';
 import type { CourseCreateRequest, CourseState } from '../types/course';
@@ -20,7 +16,7 @@ export interface CourseStoreState extends CourseState {
     apiUrl: string,
     payload: CourseCreateRequest,
     accessToken?: string,
-    fetcher?: typeof createCourseStreamApi
+    fetcher?: typeof createCourseStreamApi,
   ) => Promise<string | null>;
 }
 
@@ -74,7 +70,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
     apiUrl: string,
     payload: CourseCreateRequest,
     accessToken?: string,
-    fetcher = createCourseStreamApi
+    fetcher = createCourseStreamApi,
   ) => {
     set({
       isGenerating: true,

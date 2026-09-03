@@ -1,10 +1,6 @@
 /**
  * @file authService.ts
  * @description Google Sign-in helper functions encapsulating native @react-native-google-signin/google-signin SDK.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -19,18 +15,23 @@ import { UI_STRINGS } from '../constants';
  */
 export const initializeGoogleSignin = (
   webClientId?: string,
-  iosClientId?: string
+  iosClientId?: string,
 ): void => {
-  logger.info('[AuthService] Initializing GoogleSignin with webClientId:', webClientId);
+  logger.info(
+    '[AuthService] Initializing GoogleSignin with webClientId:',
+    webClientId,
+  );
   try {
     if (!webClientId) {
-      logger.warn('[AuthService] webClientId가 설정되지 않아 GoogleSignin 구성을 건너뜁니다.');
+      logger.warn(
+        '[AuthService] webClientId가 설정되지 않아 GoogleSignin 구성을 건너뜁니다.',
+      );
       return;
     }
     GoogleSignin.configure({
       webClientId,
       iosClientId,
-      offlineAccess: true
+      offlineAccess: true,
     });
   } catch (error) {
     logger.error('[AuthService] GoogleSignin initialize error:', error);
@@ -69,7 +70,10 @@ export const isAppleAuthAvailable = async (): Promise<boolean> => {
  * Execute native Apple login and extract authorization code & identity token.
  * @returns Promise<{ code: string; idToken: string | null }> representing authorization credentials.
  */
-export const signInWithApple = async (): Promise<{ code: string; idToken: string | null }> => {
+export const signInWithApple = async (): Promise<{
+  code: string;
+  idToken: string | null;
+}> => {
   logger.info('[AuthService] Executing signInWithApple...');
   const isAvailable = await isAppleAuthAvailable();
   if (!isAvailable) {
@@ -100,7 +104,7 @@ export const signOutGoogle = async (): Promise<void> => {
   try {
     await GoogleSignin.signOut();
   } catch (error) {
-    console.warn('Google signout warning:', error);
+    logger.warn('[AuthService] Google signout warning:', error);
   }
 };
 
@@ -119,7 +123,9 @@ const unauthorizedListeners = new Set<UnauthorizedListener>();
 /**
  * Register a listener to be called when 401 Unauthorized occurs.
  */
-export const onUnauthorized = (listener: UnauthorizedListener): (() => void) => {
+export const onUnauthorized = (
+  listener: UnauthorizedListener,
+): (() => void) => {
   unauthorizedListeners.add(listener);
   return () => {
     unauthorizedListeners.delete(listener);
@@ -130,13 +136,15 @@ export const onUnauthorized = (listener: UnauthorizedListener): (() => void) => 
  * Trigger session cleanup and notify all registered listeners to redirect to login.
  */
 export const notifyUnauthorized = async (): Promise<void> => {
-  logger.warn('[AuthService] 401 Unauthorized detected! Clearing local session and redirecting to login...');
+  logger.warn(
+    '[AuthService] 401 Unauthorized detected! Clearing local session and redirecting to login...',
+  );
   await clearLocalSession();
   unauthorizedListeners.forEach((listener) => {
     try {
       listener();
     } catch (e) {
-      console.error('[AuthService] Error executing 401 listener:', e);
+      logger.error('[AuthService] Error executing 401 listener:', e);
     }
   });
 };

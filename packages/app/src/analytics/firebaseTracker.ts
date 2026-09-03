@@ -1,10 +1,6 @@
 /**
  * @file firebaseTracker.ts
  * @description React Native Firebase Analytics implementation of AnalyticsTracker for @yeolo/app using Modular SDK API.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import analytics, {
@@ -21,7 +17,10 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
     return typeof getAnalytics === 'function' ? getAnalytics() : analytics();
   }
 
-  public async logEvent(eventName: string, params?: GA4EventParams): Promise<void> {
+  public async logEvent(
+    eventName: string,
+    params?: GA4EventParams,
+  ): Promise<void> {
     logger.info(`[AppAnalyticsTracker] logEvent "${eventName}":`, params);
     try {
       if (typeof modularLogEvent === 'function') {
@@ -30,27 +29,44 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
         await analytics().logEvent(eventName, params);
       }
     } catch (error) {
-      console.warn(`[AppAnalyticsTracker] Failed to log event "${eventName}":`, error);
+      console.warn(
+        `[AppAnalyticsTracker] Failed to log event "${eventName}":`,
+        error,
+      );
     }
   }
 
-  public async logScreenView(screenName: string, screenClass?: string): Promise<void> {
+  public async logScreenView(
+    screenName: string,
+    screenClass?: string,
+  ): Promise<void> {
     try {
       const eventParams = {
         screen_name: screenName,
         screen_class: screenClass || screenName,
       };
       if (typeof modularLogEvent === 'function') {
-        await modularLogEvent(this.getAnalyticsInstance(), 'screen_view', eventParams);
+        await modularLogEvent(
+          this.getAnalyticsInstance(),
+          'screen_view',
+          eventParams,
+        );
       } else {
         await analytics().logEvent('screen_view', eventParams);
       }
     } catch (error) {
-      console.warn(`[AppAnalyticsTracker] Failed to log screen_view "${screenName}":`, error);
+      console.warn(
+        `[AppAnalyticsTracker] Failed to log screen_view "${screenName}":`,
+        error,
+      );
     }
   }
 
-  public async logButtonClick(buttonId: string, buttonName?: string, params?: GA4EventParams): Promise<void> {
+  public async logButtonClick(
+    buttonId: string,
+    buttonName?: string,
+    params?: GA4EventParams,
+  ): Promise<void> {
     try {
       const eventParams = {
         button_id: buttonId,
@@ -58,12 +74,19 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
         ...params,
       };
       if (typeof modularLogEvent === 'function') {
-        await modularLogEvent(this.getAnalyticsInstance(), 'button_click', eventParams);
+        await modularLogEvent(
+          this.getAnalyticsInstance(),
+          'button_click',
+          eventParams,
+        );
       } else {
         await analytics().logEvent('button_click', eventParams);
       }
     } catch (error) {
-      console.warn(`[AppAnalyticsTracker] Failed to log button_click "${buttonId}":`, error);
+      console.warn(
+        `[AppAnalyticsTracker] Failed to log button_click "${buttonId}":`,
+        error,
+      );
     }
   }
 
@@ -79,15 +102,23 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
     }
   }
 
-  public async setUserProperty(name: string, value: string | null): Promise<void> {
+  public async setUserProperty(
+    name: string,
+    value: string | null,
+  ): Promise<void> {
     try {
       if (typeof modularSetUserProperties === 'function') {
-        await modularSetUserProperties(this.getAnalyticsInstance(), { [name]: value });
+        await modularSetUserProperties(this.getAnalyticsInstance(), {
+          [name]: value,
+        });
       } else {
         await analytics().setUserProperty(name, value);
       }
     } catch (error) {
-      console.warn(`[AppAnalyticsTracker] Failed to set user property "${name}":`, error);
+      console.warn(
+        `[AppAnalyticsTracker] Failed to set user property "${name}":`,
+        error,
+      );
     }
   }
 }

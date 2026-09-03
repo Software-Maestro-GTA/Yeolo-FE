@@ -1,9 +1,6 @@
 /**
  * @file dateUtils.ts
  * @description Shared date validation, auto-hyphen formatting, and itinerary day calculation utilities.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 
 export const DATE_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
@@ -25,7 +22,10 @@ export function formatYYYYMMDD(text: string): string {
 /**
  * Calculate total days automatically from start and end dates using explicit local Date components.
  */
-export function calculateTotalDays(startDate: string, endDate: string): number | null {
+export function calculateTotalDays(
+  startDate: string,
+  endDate: string,
+): number | null {
   const startTrim = startDate.trim();
   const endTrim = endDate.trim();
 

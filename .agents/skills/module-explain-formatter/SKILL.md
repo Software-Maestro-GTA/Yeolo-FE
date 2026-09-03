@@ -17,10 +17,6 @@ description: Standardize docstrings and header comments for newly created or mod
 /**
  * @file [파일명]
  * @description [모듈의 핵심 목적 및 담당 기능 간략 설명]
- * @requirements [REQ-XX (연관된 요구사항 번호)]
- * @functional [FUN-XX (연관된 기능명세 번호)]
- * @api [API-FB-XX (연관된 API 명세서 번호, 없을 시 N/A)]
- * @author Antigravity Agent
  */
 ```
 

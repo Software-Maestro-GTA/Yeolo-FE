@@ -47,14 +47,19 @@ jest.mock('expo-apple-authentication', () => ({
 jest.mock('react-native-maps', () => {
   const mockReact = require('react');
   const { View: mockView } = require('react-native');
-  const MockMapView = (props) => mockReact.createElement(mockView, props, props.children);
-  const MockMarker = (props) => mockReact.createElement(mockView, props, props.children);
-  const MockPolyline = (props) => mockReact.createElement(mockView, props, props.children);
+  const MockMapView = (props) =>
+    mockReact.createElement(mockView, props, props.children);
+  const MockMarker = (props) =>
+    mockReact.createElement(mockView, props, props.children);
+  const MockPolyline = (props) =>
+    mockReact.createElement(mockView, props, props.children);
   return {
     __esModule: true,
     default: MockMapView,
     Marker: MockMarker,
     Polyline: MockPolyline,
+    PROVIDER_GOOGLE: 'google',
+    PROVIDER_DEFAULT: 'default',
   };
 });
 
@@ -62,16 +67,52 @@ jest.mock('react-native-webview', () => {
   const mockReact = require('react');
   const { View: mockView } = require('react-native');
   return {
-    WebView: (props) => mockReact.createElement(mockView, props, props.children),
+    WebView: (props) =>
+      mockReact.createElement(mockView, props, props.children),
   };
 });
 
-jest.mock('expo-media-library', () => ({
-  requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-  getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
-  MediaType: {},
-  AssetField: {},
-  Query: {},
+jest.mock('expo-media-library', () => {
+  class MockQuery {
+    eq() {
+      return this;
+    }
+    orderBy() {
+      return this;
+    }
+    limit() {
+      return this;
+    }
+    exe() {
+      return Promise.resolve([
+        {
+          id: 'asset-1',
+          getLocation: () =>
+            Promise.resolve({ latitude: 37.5665, longitude: 126.978 }),
+          getCreationTime: () => Promise.resolve(Date.now()),
+        },
+      ]);
+    }
+  }
+
+  return {
+    requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+    getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
+    MediaType: { IMAGE: 'photo' },
+    AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },
+    Query: MockQuery,
+  };
+});
+
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest
+    .fn()
+    .mockResolvedValue({ status: 'granted' }),
+  launchImageLibraryAsync: jest.fn().mockResolvedValue({
+    canceled: false,
+    assets: [{ uri: 'https://example.com/mock-avatar.jpg' }],
+  }),
+  MediaTypeOptions: { Images: 'Images' },
 }));
 
 const mockAnalyticsLogEvent = jest.fn();

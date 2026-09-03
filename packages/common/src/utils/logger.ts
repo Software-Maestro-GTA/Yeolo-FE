@@ -1,7 +1,6 @@
 /**
  * @file logger.ts
  * @description Logger utility wrapper that outputs logs only when __DEV__ or development environment is active.
- * @author Antigravity Agent
  */
 
 /**
@@ -11,7 +10,9 @@ export const isDev = (): boolean => {
   if (typeof __DEV__ !== 'undefined') {
     return Boolean(__DEV__);
   }
-  const proc = (globalThis as unknown as { process?: { env?: { NODE_ENV?: string } } }).process;
+  const proc = (
+    globalThis as unknown as { process?: { env?: { NODE_ENV?: string } } }
+  ).process;
   if (typeof proc !== 'undefined' && proc?.env) {
     return proc.env.NODE_ENV !== 'production';
   }

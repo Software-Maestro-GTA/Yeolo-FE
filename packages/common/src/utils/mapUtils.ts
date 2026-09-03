@@ -1,7 +1,6 @@
 /**
  * @file mapUtils.ts
  * @description Common map calculations and Leaflet HTML generator utilities shared between web and app.
- * @author Antigravity Agent
  */
 
 export interface MapCoordinate {
@@ -19,14 +18,47 @@ export interface MapRegion {
 }
 
 /**
+ * 주어진 좌표가 유효한 위/경도인지 검증하는 유틸 (0, 0 Null Island, NaN, 범위 외 좌표 제외)
+ */
+export function isValidCoordinate(
+  coord?: Partial<MapCoordinate> | null,
+): coord is MapCoordinate {
+  if (!coord) return false;
+  const { latitude, longitude } = coord;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return false;
+  }
+  if (
+    isNaN(latitude) ||
+    isNaN(longitude) ||
+    !isFinite(latitude) ||
+    !isFinite(longitude)
+  ) {
+    return false;
+  }
+  // 0, 0 (대서양 Null Island, 누락 기본값) 제외
+  if (Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001) {
+    return false;
+  }
+  // 유효한 지구 위/경도 범위 검증
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * 인접한 장소 간의 노드 포개짐을 원천 방지하는 겹침 방지 알고리즘 (실제 좌표 오차 최소화)
  */
-export function getAdjustedCoordinates(stops: MapCoordinate[]): MapCoordinate[] {
+export function getAdjustedCoordinates(
+  stops: MapCoordinate[],
+): MapCoordinate[] {
+  const validStops = (stops || []).filter(isValidCoordinate);
   const result: MapCoordinate[] = [];
   const THRESHOLD = 0.0003; // 약 30m 이내 극인접 감지 기준
 
-  for (let i = 0; i < stops.length; i++) {
-    const current = stops[i];
+  for (let i = 0; i < validStops.length; i++) {
+    const current = validStops[i];
     if (!current) continue;
 
     let lat = current.latitude;
@@ -63,17 +95,26 @@ export function getAdjustedCoordinates(stops: MapCoordinate[]): MapCoordinate[] 
 
 /**
  * 주어진 마커 좌표들의 바운딩 박스(Bounding Box) 및 중앙 카메라 뷰포트 계산 유틸
+ * 유효하지 않은 좌표(0, 0 등)는 계산에서 제외합니다.
  */
-export function calculateRegion(stopCoordinates: MapCoordinate[]): MapRegion | undefined {
+export function calculateRegion(
+  stopCoordinates: MapCoordinate[],
+): MapRegion | undefined {
   if (!stopCoordinates || stopCoordinates.length === 0) {
     return undefined;
   }
-  const first = stopCoordinates[0];
+
+  const validStops = stopCoordinates.filter(isValidCoordinate);
+  if (validStops.length === 0) {
+    return undefined;
+  }
+
+  const first = validStops[0];
   if (!first) {
     return undefined;
   }
 
-  if (stopCoordinates.length === 1) {
+  if (validStops.length === 1) {
     return {
       latitude: first.latitude,
       longitude: first.longitude,
@@ -87,13 +128,11 @@ export function calculateRegion(stopCoordinates: MapCoordinate[]): MapRegion | u
   let minLng = first.longitude;
   let maxLng = first.longitude;
 
-  stopCoordinates.forEach((c) => {
-    if (c) {
-      minLat = Math.min(minLat, c.latitude);
-      maxLat = Math.max(maxLat, c.latitude);
-      minLng = Math.min(minLng, c.longitude);
-      maxLng = Math.max(maxLng, c.longitude);
-    }
+  validStops.forEach((c) => {
+    minLat = Math.min(minLat, c.latitude);
+    maxLat = Math.max(maxLat, c.latitude);
+    minLng = Math.min(minLng, c.longitude);
+    maxLng = Math.max(maxLng, c.longitude);
   });
 
   const midLat = (minLat + maxLat) / 2;
@@ -115,7 +154,10 @@ export function calculateRegion(stopCoordinates: MapCoordinate[]): MapRegion | u
 export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
   if (!stopCoordinates || stopCoordinates.length === 0) return '';
 
-  const center = stopCoordinates[0];
+  const validStops = stopCoordinates.filter(isValidCoordinate);
+  if (validStops.length === 0) return '';
+
+  const center = validStops[0];
   if (!center) return '';
 
   return `
@@ -128,18 +170,18 @@ export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
       <style>
         html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; background: #eaeef2; }
         .custom-marker {
-          background-color: #4f45e5;
-          color: #ffffff;
-          border-radius: 50%;
-          width: 26px;
-          height: 26px;
+          background-color: #ffffff;
+          color: #2d7dd2;
+          border-radius: 14px;
+          width: 28px;
+          height: 28px;
           display: flex;
           justify-content: center;
           align-items: center;
-          font-weight: 800;
-          font-size: 13px;
-          border: 2px solid #ffffff;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          font-weight: 700;
+          font-size: 12px;
+          border: 2px solid #2d7dd2;
+          box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
       </style>
     </head>
@@ -162,15 +204,15 @@ export function getLeafletMapHtml(stopCoordinates: MapCoordinate[]): string {
           var customIcon = L.divIcon({
             className: 'custom-marker',
             html: (index + 1).toString(),
-            iconSize: [26, 26],
-            iconAnchor: [13, 13]
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
           });
 
           L.marker(latlng, { icon: customIcon }).addTo(map).bindPopup(stop.placeName);
         });
 
         if (latlngs.length > 1) {
-          var polyline = L.polyline(latlngs, { color: '#4f45e5', weight: 4, opacity: 0.9 }).addTo(map);
+          var polyline = L.polyline(latlngs, { color: '#2d7dd2', weight: 3, opacity: 0.9 }).addTo(map);
           map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
         }
       </script>

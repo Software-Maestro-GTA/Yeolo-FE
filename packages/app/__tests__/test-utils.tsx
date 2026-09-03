@@ -1,7 +1,6 @@
 /**
  * @file test-utils.tsx
  * @description Testing utility helpers providing QueryClientProvider wrapper for unit tests.
- * @author Antigravity Agent
  */
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -24,7 +23,7 @@ export const createTestQueryClient = () =>
 
 export function renderWithQueryClient(
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
+  options?: Omit<RenderOptions, 'wrapper'>,
 ) {
   const testQueryClient = createTestQueryClient();
   const initialMetrics = {
@@ -35,7 +34,7 @@ export function renderWithQueryClient(
     <QueryClientProvider client={testQueryClient}>
       <SafeAreaProvider initialMetrics={initialMetrics}>{ui}</SafeAreaProvider>
     </QueryClientProvider>,
-    options
+    options,
   );
 }
 

@@ -1,10 +1,6 @@
 /**
  * @file AuthContext.test.tsx
  * @description Unit tests for AuthContext state management and auto-login restore.
- * @requirements REQ-11
- * @functional FUN-1
- * @api API-AUTH-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
@@ -19,70 +15,110 @@ const originalFetch = globalThis.fetch;
 beforeAll(() => {
   globalThis.fetch = jest.fn(async (url: any, options: any) => {
     const requestUrl = typeof url === 'string' ? url : (url && url.url) || '';
-    if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/apple')) {
+    if (
+      typeof requestUrl === 'string' &&
+      requestUrl.includes('/api/auth/apple')
+    ) {
       if (shouldFail) {
-        return new Response(JSON.stringify({
-          status: 400,
-          message: '유효하지 않은 Apple OAuth 인가 코드입니다.',
-          data: null,
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({
-        status: 200,
-        message: '로그인 성공',
-        data: {
-          user: {
-            userId: '550e8400-e29b-41d4-a716-446655440001',
-            provider: 'apple',
-            email: 'appleuser@privacy.apple.com',
-            displayName: 'Apple User',
-            profileImageUrl: null,
-            status: 'active',
-            lastLoginAt: '2026-08-04T10:00:00Z',
+        return new Response(
+          JSON.stringify({
+            status: 400,
+            message: '유효하지 않은 Apple OAuth 인가 코드입니다.',
+            data: null,
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
           },
-          doOnboarding: false,
-          accessToken: 'mock-apple-access-token',
-          refreshToken: 'mock-apple-refresh-token',
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          status: 200,
+          message: '로그인 성공',
+          data: {
+            user: {
+              userId: '550e8400-e29b-41d4-a716-446655440001',
+              provider: 'apple',
+              email: 'appleuser@privacy.apple.com',
+              displayName: 'Apple User',
+              profileImageUrl: null,
+              status: 'active',
+              lastLoginAt: '2026-08-04T10:00:00Z',
+            },
+            doOnboarding: false,
+            recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
+            accessToken: 'mock-apple-access-token',
+            refreshToken: 'mock-apple-refresh-token',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
         },
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      );
     }
-    if (typeof requestUrl === 'string' && requestUrl.includes('/api/auth/google')) {
-      if (shouldFail) {
-        return new Response(JSON.stringify({
-          status: 400,
-          message: '인가 코드가 유효하지 않습니다.',
-          data: null,
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({
-        status: 200,
-        message: '로그인 성공',
-        data: {
-          user: {
-            userId: '550e8400-e29b-41d4-a716-446655440000',
-            provider: 'google',
-            email: 'user@gmail.com',
-            displayName: '최고민수',
-            profileImageUrl: 'https://lh3.googleusercontent.com/avatar',
-            status: 'active',
-            lastLoginAt: '2026-07-16T11:00:00Z',
+    if (
+      typeof requestUrl === 'string' &&
+      requestUrl.includes('/api/auth/refresh')
+    ) {
+      return new Response(
+        JSON.stringify({
+          status: 200,
+          message: '토큰 재발급 성공',
+          data: {
+            accessToken: 'new-refreshed-access-token',
+            refreshToken: 'new-refreshed-refresh-token',
           },
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
         },
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      );
+    }
+    if (
+      typeof requestUrl === 'string' &&
+      requestUrl.includes('/api/auth/google')
+    ) {
+      if (shouldFail) {
+        return new Response(
+          JSON.stringify({
+            status: 400,
+            message: '인가 코드가 유효하지 않습니다.',
+            data: null,
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          status: 200,
+          message: '로그인 성공',
+          data: {
+            user: {
+              userId: '550e8400-e29b-41d4-a716-446655440000',
+              provider: 'google',
+              email: 'user@gmail.com',
+              displayName: '최고민수',
+              profileImageUrl: 'https://lh3.googleusercontent.com/avatar',
+              status: 'active',
+              lastLoginAt: '2026-07-16T11:00:00Z',
+            },
+            doOnboarding: true,
+            recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
+            accessToken: 'mock-access-token',
+            refreshToken: 'mock-refresh-token',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     }
     return originalFetch(url, options);
   }) as any;
@@ -119,7 +155,9 @@ describe('AuthContext', () => {
   };
 
   it('기본 상태는 비인증 상태(isAuthenticated: false)여야 한다', async () => {
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
@@ -127,60 +165,175 @@ describe('AuthContext', () => {
   });
 
   it('loginWithGoogle 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
+    let res: any;
     await act(async () => {
-      await result.current.loginWithGoogle('mock-code');
+      res = await result.current.loginWithGoogle('mock-code');
     });
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('최고민수');
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+    expect(res?.doOnboarding).toBe(true);
+    expect(res?.recentCourseId).toBe('550e8400-e29b-41d4-a716-446655440030');
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
   });
 
-  it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+  it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰, recentCourseId를 저장해야 한다', async () => {
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
+    let res: any;
     await act(async () => {
-      await result.current.loginWithApple({ code: 'mock-apple-code', idToken: 'mock-apple-id-token' });
+      res = await result.current.loginWithApple({
+        code: 'mock-apple-code',
+        idToken: 'mock-apple-id-token',
+      });
     });
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.displayName).toBe('Apple User');
     expect(result.current.user?.provider).toBe('apple');
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(true);
+    expect(res?.recentCourseId).toBe('550e8400-e29b-41d4-a716-446655440030');
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
   });
 
   it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
     shouldFail = true;
 
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     await act(async () => {
-      await expect(result.current.loginWithGoogle('invalid-code')).rejects.toThrow(
-        '인가 코드가 유효하지 않습니다.'
-      );
+      await expect(
+        result.current.loginWithGoogle('invalid-code'),
+      ).rejects.toThrow('인가 코드가 유효하지 않습니다.');
     });
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
   });
 
+  it('기존에 저장된 세션 복원 시 AsyncStorage의 recentCourseId 및 hasCompletedOnboarding을 복원해야 한다', async () => {
+    await AsyncStorage.setItem('accessToken', 'mock-valid-token');
+    await AsyncStorage.setItem('refreshToken', 'mock-valid-refresh-token');
+    await AsyncStorage.setItem(
+      'user',
+      JSON.stringify({ userId: 'u1', email: 'test@example.com' }),
+    );
+    await AsyncStorage.setItem(
+      'recentCourseId',
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    await AsyncStorage.setItem('hasCompletedOnboarding', 'false');
+
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+  });
+
+  it('setHasCompletedOnboarding 호출 시 상태와 AsyncStorage가 업데이트되어야 한다', async () => {
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.setHasCompletedOnboarding?.(true);
+    });
+
+    expect(result.current.hasCompletedOnboarding).toBe(true);
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+  });
+
+  it('resetAuthState 호출 시 recentCourseId, hasCompletedOnboarding 및 세션 데이터가 모두 초기화되어야 한다', async () => {
+    await AsyncStorage.setItem('accessToken', 'mock-token');
+    await AsyncStorage.setItem('refreshToken', 'mock-refresh-token');
+    await AsyncStorage.setItem(
+      'user',
+      JSON.stringify({ userId: 'u1', email: 'test@example.com' }),
+    );
+    await AsyncStorage.setItem(
+      'recentCourseId',
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    await AsyncStorage.setItem('hasCompletedOnboarding', 'false');
+
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.recentCourseId).toBe(
+      '550e8400-e29b-41d4-a716-446655440030',
+    );
+    expect(result.current.hasCompletedOnboarding).toBe(false);
+
+    await act(async () => {
+      await result.current.resetAuthState?.();
+    });
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.recentCourseId).toBeNull();
+    expect(result.current.hasCompletedOnboarding).toBeNull();
+    expect(await AsyncStorage.getItem('recentCourseId')).toBeNull();
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBeNull();
+  });
+
   it('401 Unauthorized 이벤트(notifyUnauthorized) 발생 시 토큰을 비우고 비인증 상태로 초기화되어야 한다', async () => {
     await AsyncStorage.setItem('accessToken', 'mock-expired-token');
-    await AsyncStorage.setItem('user', JSON.stringify({ userId: 'u1', email: 'test@example.com' }));
+    await AsyncStorage.setItem('refreshToken', 'mock-refresh-token');
+    await AsyncStorage.setItem(
+      'user',
+      JSON.stringify({ userId: 'u1', email: 'test@example.com' }),
+    );
 
-    const { result } = await renderHook(() => React.useContext(AuthContext)!, { wrapper: createWrapper() });
+    const { result } = await renderHook(() => React.useContext(AuthContext)!, {
+      wrapper: createWrapper(),
+    });
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -198,4 +351,3 @@ describe('AuthContext', () => {
     expect(await AsyncStorage.getItem('accessToken')).toBeNull();
   });
 });
-

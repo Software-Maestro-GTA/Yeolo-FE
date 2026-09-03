@@ -1,10 +1,6 @@
 /**
  * @file useAuthMutations.ts
- * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-FB-12).
- * @requirements REQ-11, REQ-12
- * @functional FUN-4
- * @api API-FB-11, API-FB-12
- * @author Antigravity Agent
+ * @description Custom TanStack Query mutations for user logout and account withdrawal actions (FUN-4, API-FB-11, API-USER-2).
  */
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,32 +9,70 @@ import {
   loginWithAppleApi,
   logoutApi,
   withdrawApi,
-  DEFAULT_API_URL,
+  updatePreferencesApi,
+  savePhotoConsentApi,
+  logger,
   type User,
   type LogoutResponse,
   type WithdrawResponse,
+  type UpdatePreferencesPayload,
+  type UpdatePreferencesResponse,
+  type SavePhotoConsentPayload,
+  type SavePhotoConsentResponse,
 } from '@yeolo/common';
-import { UI_STRINGS, APP_CONFIG } from '../../constants';
+import { APP_CONFIG, UI_STRINGS } from '../../constants';
 
-export interface UseGoogleLoginMutationOptions {
-  options?: UseMutationOptions<{ user: User; isNewUser: boolean }, Error, string>;
+export interface LoginMutationResult {
+  user: User;
+  isNewUser: boolean;
+  doOnboarding: boolean;
+  recentCourseId?: string | null;
 }
 
-export function useGoogleLoginMutation({ options }: UseGoogleLoginMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+export interface UseGoogleLoginMutationOptions {
+  options?: UseMutationOptions<LoginMutationResult, Error, string>;
+}
 
-  return useMutation<{ user: User; isNewUser: boolean }, Error, string>({
+export function useGoogleLoginMutation({
+  options,
+}: UseGoogleLoginMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
+
+  return useMutation<LoginMutationResult, Error, string>({
     mutationFn: async (code: string) => {
       const response = await loginWithGoogleApi(apiUrl, { code, redirectUri });
       const fetchedUser = response.data.user;
       const isNewUser = !fetchedUser.lastLoginAt;
+      const doOnboarding = response.data.doOnboarding;
+      const recentCourseId = response.data.recentCourseId || null;
+
+      logger.info('[AuthMutation] Google login API response parsed:', {
+        userId: fetchedUser.userId,
+        email: fetchedUser.email,
+        doOnboarding,
+        recentCourseId,
+        isNewUser,
+      });
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
-      return { user: fetchedUser, isNewUser };
+      if (recentCourseId) {
+        await AsyncStorage.setItem('recentCourseId', recentCourseId);
+      } else {
+        await AsyncStorage.removeItem('recentCourseId');
+      }
+
+      logger.info(
+        '[AuthMutation] Google auth credentials and flags persisted to AsyncStorage',
+      );
+      return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,
   });
@@ -50,25 +84,57 @@ export interface AppleAuthPayloadInput {
 }
 
 export interface UseAppleLoginMutationOptions {
-  options?: UseMutationOptions<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>;
+  options?: UseMutationOptions<
+    LoginMutationResult,
+    Error,
+    AppleAuthPayloadInput
+  >;
 }
 
-export function useAppleLoginMutation({ options }: UseAppleLoginMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
-  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || APP_CONFIG.DEFAULT_REDIRECT_URI;
+export function useAppleLoginMutation({
+  options,
+}: UseAppleLoginMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+  const redirectUri = process.env.EXPO_PUBLIC_REDIRECT_URI || '';
 
-  return useMutation<{ user: User; isNewUser: boolean; doOnboarding?: boolean }, Error, AppleAuthPayloadInput>({
+  return useMutation<LoginMutationResult, Error, AppleAuthPayloadInput>({
     mutationFn: async ({ code, idToken }: AppleAuthPayloadInput) => {
-      const response = await loginWithAppleApi(apiUrl, { code, redirectUri, idToken });
+      const response = await loginWithAppleApi(apiUrl, {
+        code,
+        redirectUri,
+        idToken,
+      });
       const fetchedUser = response.data.user;
       const isNewUser = !fetchedUser.lastLoginAt;
       const doOnboarding = response.data.doOnboarding;
+      const recentCourseId = response.data.recentCourseId || null;
+
+      logger.info('[AuthMutation] Apple login API response parsed:', {
+        userId: fetchedUser.userId,
+        email: fetchedUser.email,
+        doOnboarding,
+        recentCourseId,
+        isNewUser,
+      });
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        doOnboarding ? 'false' : 'true',
+      );
 
-      return { user: fetchedUser, isNewUser, doOnboarding };
+      if (recentCourseId) {
+        await AsyncStorage.setItem('recentCourseId', recentCourseId);
+      } else {
+        await AsyncStorage.removeItem('recentCourseId');
+      }
+
+      logger.info(
+        '[AuthMutation] Apple auth credentials and flags persisted to AsyncStorage',
+      );
+      return { user: fetchedUser, isNewUser, doOnboarding, recentCourseId };
     },
     ...options,
   });
@@ -79,7 +145,7 @@ export interface UseLogoutMutationOptions {
 }
 
 export function useLogoutMutation({ options }: UseLogoutMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useMutation<LogoutResponse, Error, void>({
     mutationFn: async () => {
@@ -97,15 +163,67 @@ export interface UseWithdrawMutationOptions {
   options?: UseMutationOptions<WithdrawResponse, Error, string | void>;
 }
 
-export function useWithdrawMutation({ options }: UseWithdrawMutationOptions = {}) {
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+export function useWithdrawMutation({
+  options,
+}: UseWithdrawMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
 
   return useMutation<WithdrawResponse, Error, string | void>({
     mutationFn: async (reason) => {
       const token = await AsyncStorage.getItem('accessToken');
       return await withdrawApi(apiUrl, token || undefined, {
-        reason: (typeof reason === 'string' && reason) || UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
+        reason:
+          (typeof reason === 'string' && reason) ||
+          UI_STRINGS.PROFILE.WITHDRAW_REASON_DEFAULT,
       });
+    },
+    ...options,
+  });
+}
+
+export interface UseUpdatePreferencesMutationOptions {
+  options?: UseMutationOptions<
+    UpdatePreferencesResponse,
+    Error,
+    UpdatePreferencesPayload
+  >;
+}
+
+export function useUpdatePreferencesMutation({
+  options,
+}: UseUpdatePreferencesMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+
+  return useMutation<
+    UpdatePreferencesResponse,
+    Error,
+    UpdatePreferencesPayload
+  >({
+    mutationFn: async (payload: UpdatePreferencesPayload) => {
+      const token = await AsyncStorage.getItem('accessToken');
+      return await updatePreferencesApi(apiUrl, token || undefined, payload);
+    },
+    ...options,
+  });
+}
+
+export interface UseSavePhotoConsentMutationOptions {
+  options?: UseMutationOptions<
+    SavePhotoConsentResponse,
+    Error,
+    SavePhotoConsentPayload
+  >;
+}
+
+export function useSavePhotoConsentMutation({
+  options,
+}: UseSavePhotoConsentMutationOptions = {}) {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+
+  return useMutation<SavePhotoConsentResponse, Error, SavePhotoConsentPayload>({
+    mutationFn: async (payload: SavePhotoConsentPayload) => {
+      const token = await AsyncStorage.getItem('accessToken');
+      return await savePhotoConsentApi(apiUrl, token || undefined, payload);
     },
     ...options,
   });

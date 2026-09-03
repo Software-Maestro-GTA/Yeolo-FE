@@ -1,16 +1,16 @@
 /**
  * @file photoService.ts
  * @description Device photo library access and EXIF metadata extraction service.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
- * @api API-FB-2
- * @author Antigravity Agent
  */
-import { requestPermissionsAsync, Query, AssetField, MediaType } from 'expo-media-library';
+import {
+  requestPermissionsAsync,
+  Query,
+  AssetField,
+  MediaType,
+} from 'expo-media-library';
 import type { ImageMetadata } from '@yeolo/common';
 import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
-
 
 /**
  * Request device photo library permission and fetch recent images with EXIF location & time metadata.
@@ -20,11 +20,12 @@ import { UI_STRINGS } from '../constants';
  */
 export async function fetchPhotosWithExifData(
   limit: number = 100,
-  timezone: string = 'UTC'
+  timezone: string = 'UTC',
 ): Promise<ImageMetadata[]> {
   // 1. Request permission
-  const { status } = await requestPermissionsAsync();
+  const { status } = await requestPermissionsAsync(false, ['photo']);
   if (status !== 'granted') {
+    logger.error('[PhotoService] Permission denied for media library');
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR);
   }
 
@@ -36,11 +37,13 @@ export async function fetchPhotosWithExifData(
     .exe();
 
   if (!assets || assets.length === 0) {
+    logger.error('[PhotoService] No photo assets found on device library');
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_PHOTOS_ERROR);
   }
 
   // 3. Extract latitude, longitude, and creation time metadata
   const parsedImages: ImageMetadata[] = [];
+
   for (const asset of assets) {
     try {
       const location = await asset.getLocation();
@@ -65,15 +68,23 @@ export async function fetchPhotosWithExifData(
         timezone,
       });
     } catch (err) {
-      console.warn(`Failed to fetch location metadata for asset ${asset.id}:`, err);
+      logger.warn(
+        `[PhotoService] Failed to fetch location metadata for asset ${asset.id}:`,
+        err,
+      );
     }
   }
 
   if (parsedImages.length === 0) {
+    logger.error(
+      `[PhotoService] All ${assets.length} photos were skipped because none contained valid EXIF GPS coordinates (latitude/longitude).`,
+    );
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.NO_EXIF_ERROR);
   }
 
-  logger.info(`[PhotoService] Successfully extracted EXIF metadata from ${parsedImages.length} of ${assets.length} photos`);
+  logger.info(
+    `[PhotoService] Successfully extracted EXIF metadata from ${parsedImages.length} of ${assets.length} photos`,
+  );
 
   return parsedImages;
 }

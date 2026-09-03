@@ -1,9 +1,6 @@
 /**
  * @file BudgetTypeSelector.tsx
  * @description Radio selection component for choosing budget and spending preference.
- * @requirements REQ-7
- * @functional FUN-6
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -24,78 +21,90 @@ export const BudgetTypeSelector: React.FC<BudgetTypeSelectorProps> = ({
   return (
     <View style={styles.inputGroup}>
       <View style={styles.labelRow}>
-        <Ionicons name="wallet-outline" size={16} color={theme.colors.primary} />
-        <Text style={styles.label}>{UI_STRINGS.COURSE_CREATE.BUDGET_LABEL}</Text>
+        <Ionicons
+          name='wallet-outline'
+          size={16}
+          color={theme.colors.primary}
+        />
+        <Text style={styles.label}>
+          {UI_STRINGS.COURSE_CREATE.BUDGET_LABEL}
+        </Text>
       </View>
       <View style={styles.radioGroup}>
         <TouchableOpacity
-          testID="budget-cost_effective"
+          testID='budget-cost_effective'
           activeOpacity={0.8}
           style={[
             styles.radioButton,
             selectedType === 'cost_effective' && styles.radioButtonActive,
           ]}
-          onPress={() => onSelect('cost_effective')}
-        >
+          onPress={() => onSelect('cost_effective')}>
           <Ionicons
-            name="wallet-outline"
+            name='wallet-outline'
             size={18}
-            color={selectedType === 'cost_effective' ? theme.colors.primary : theme.colors.text.subtle}
+            color={
+              selectedType === 'cost_effective'
+                ? theme.colors.primary
+                : theme.colors.text.subtle
+            }
           />
           <Text
             style={[
               styles.radioText,
               selectedType === 'cost_effective' && styles.radioTextActive,
-            ]}
-          >
+            ]}>
             {UI_STRINGS.COURSE_CREATE.BUDGET_COST_EFFECTIVE}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          testID="budget-standard"
+          testID='budget-moderate'
           activeOpacity={0.8}
           style={[
             styles.radioButton,
-            selectedType === 'standard' && styles.radioButtonActive,
+            selectedType === 'moderate' && styles.radioButtonActive,
           ]}
-          onPress={() => onSelect('standard')}
-        >
+          onPress={() => onSelect('moderate')}>
           <Ionicons
-            name="card-outline"
+            name='card-outline'
             size={18}
-            color={selectedType === 'standard' ? theme.colors.primary : theme.colors.text.subtle}
+            color={
+              selectedType === 'moderate'
+                ? theme.colors.primary
+                : theme.colors.text.subtle
+            }
           />
           <Text
             style={[
               styles.radioText,
-              selectedType === 'standard' && styles.radioTextActive,
-            ]}
-          >
+              selectedType === 'moderate' && styles.radioTextActive,
+            ]}>
             {UI_STRINGS.COURSE_CREATE.BUDGET_STANDARD}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          testID="budget-luxury"
+          testID='budget-luxury'
           activeOpacity={0.8}
           style={[
             styles.radioButton,
             selectedType === 'luxury' && styles.radioButtonActive,
           ]}
-          onPress={() => onSelect('luxury')}
-        >
+          onPress={() => onSelect('luxury')}>
           <Ionicons
-            name="diamond-outline"
+            name='diamond-outline'
             size={18}
-            color={selectedType === 'luxury' ? theme.colors.primary : theme.colors.text.subtle}
+            color={
+              selectedType === 'luxury'
+                ? theme.colors.primary
+                : theme.colors.text.subtle
+            }
           />
           <Text
             style={[
               styles.radioText,
               selectedType === 'luxury' && styles.radioTextActive,
-            ]}
-          >
+            ]}>
             {UI_STRINGS.COURSE_CREATE.BUDGET_LUXURY}
           </Text>
         </TouchableOpacity>

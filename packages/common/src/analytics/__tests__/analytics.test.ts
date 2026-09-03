@@ -1,10 +1,6 @@
 /**
  * @file analytics.test.ts
  * @description Unit tests for AnalyticsService in @yeolo/common.
- * @requirements REQ-22
- * @functional FUN-GA4
- * @api N/A
- * @author Antigravity Agent
  */
 
 import { analyticsService, AnalyticsService, AnalyticsTracker } from '../index';
@@ -35,21 +31,32 @@ describe('AnalyticsService (@yeolo/common)', () => {
     analyticsService.registerTracker(mockTracker);
     await analyticsService.logEvent('test_event', { key: 'value' });
 
-    expect(mockTracker.logEvent).toHaveBeenCalledWith('test_event', { key: 'value' });
+    expect(mockTracker.logEvent).toHaveBeenCalledWith('test_event', {
+      key: 'value',
+    });
   });
 
   test('should dispatch logScreenView to all registered trackers', async () => {
     analyticsService.registerTracker(mockTracker);
     await analyticsService.logScreenView('HomeScreen', 'HomeScreenClass');
 
-    expect(mockTracker.logScreenView).toHaveBeenCalledWith('HomeScreen', 'HomeScreenClass');
+    expect(mockTracker.logScreenView).toHaveBeenCalledWith(
+      'HomeScreen',
+      'HomeScreenClass',
+    );
   });
 
   test('should dispatch logButtonClick to all registered trackers', async () => {
     analyticsService.registerTracker(mockTracker);
-    await analyticsService.logButtonClick('btn_submit', 'Submit Button', { step: 1 });
+    await analyticsService.logButtonClick('btn_submit', 'Submit Button', {
+      step: 1,
+    });
 
-    expect(mockTracker.logButtonClick).toHaveBeenCalledWith('btn_submit', 'Submit Button', { step: 1 });
+    expect(mockTracker.logButtonClick).toHaveBeenCalledWith(
+      'btn_submit',
+      'Submit Button',
+      { step: 1 },
+    );
   });
 
   test('should set user ID and user properties on trackers', async () => {
@@ -58,7 +65,10 @@ describe('AnalyticsService (@yeolo/common)', () => {
     await analyticsService.setUserProperty('user_role', 'admin');
 
     expect(mockTracker.setUserId).toHaveBeenCalledWith('user_123');
-    expect(mockTracker.setUserProperty).toHaveBeenCalledWith('user_role', 'admin');
+    expect(mockTracker.setUserProperty).toHaveBeenCalledWith(
+      'user_role',
+      'admin',
+    );
   });
 
   test('should handle tracker errors gracefully without throwing', async () => {
@@ -71,6 +81,8 @@ describe('AnalyticsService (@yeolo/common)', () => {
     };
 
     analyticsService.registerTracker(errorTracker);
-    await expect(analyticsService.logEvent('failing_event')).resolves.not.toThrow();
+    await expect(
+      analyticsService.logEvent('failing_event'),
+    ).resolves.not.toThrow();
   });
 });

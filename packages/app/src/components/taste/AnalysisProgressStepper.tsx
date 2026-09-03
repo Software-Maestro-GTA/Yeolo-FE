@@ -1,9 +1,6 @@
 /**
  * @file AnalysisProgressStepper.tsx
  * @description Stepper loading view component for taste analysis onboarding progress.
- * @requirements REQ-8, REQ-11
- * @functional FUN-1
- * @author Antigravity Agent
  */
 import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
@@ -16,10 +13,9 @@ export interface AnalysisProgressStepperProps {
   pulseAnim: Animated.Value;
 }
 
-export const AnalysisProgressStepper: React.FC<AnalysisProgressStepperProps> = ({
-  stepIndex,
-  pulseAnim,
-}) => {
+export const AnalysisProgressStepper: React.FC<
+  AnalysisProgressStepperProps
+> = ({ stepIndex, pulseAnim }) => {
   const steps = [
     { id: 1, text: UI_STRINGS.TASTE_ANALYSIS.STEP_1 },
     { id: 2, text: UI_STRINGS.TASTE_ANALYSIS.STEP_2 },
@@ -27,17 +23,24 @@ export const AnalysisProgressStepper: React.FC<AnalysisProgressStepperProps> = (
   ];
 
   return (
-    <View style={styles.stepperContainer} testID="stepper">
+    <View style={styles.stepperContainer} testID='stepper'>
       {steps.map((step) => {
         const isCompleted = stepIndex > step.id;
         const isActive = stepIndex === step.id;
         const isInactive = stepIndex < step.id;
 
         return (
-          <View key={step.id} style={styles.stepNode} testID={`step-${step.id}`}>
+          <View
+            key={step.id}
+            style={styles.stepNode}
+            testID={`step-${step.id}`}>
             {isCompleted && (
               <View style={[styles.stepCircle, styles.stepCircleCompleted]}>
-                <AntDesign name="check" size={12} color={theme.colors.text.inverse} />
+                <AntDesign
+                  name='check'
+                  size={12}
+                  color={theme.colors.text.inverse}
+                />
               </View>
             )}
             {isActive && (
@@ -46,8 +49,7 @@ export const AnalysisProgressStepper: React.FC<AnalysisProgressStepperProps> = (
                   styles.stepCircle,
                   styles.stepCircleActive,
                   { transform: [{ scale: pulseAnim }] },
-                ]}
-              >
+                ]}>
                 <View style={styles.pulseInner} />
               </Animated.View>
             )}
@@ -62,8 +64,7 @@ export const AnalysisProgressStepper: React.FC<AnalysisProgressStepperProps> = (
                 isCompleted && styles.stepTextCompleted,
                 isActive && styles.stepTextActive,
                 isInactive && styles.stepTextInactive,
-              ]}
-            >
+              ]}>
               {step.text}
             </Text>
           </View>
