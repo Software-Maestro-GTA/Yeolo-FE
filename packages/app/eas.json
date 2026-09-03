@@ -6,16 +6,40 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-dev.yeolo.app",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "902358830088-7gr77qg2f5l8fvh4ejvpr0lce4cdc8li.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE": "com.googleusercontent.apps.902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2",
+        "EXPO_PUBLIC_REDIRECT_URI": "https://yeolo-gta.firebaseapp.com/__/auth/handler",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDuI57GPI3GbwO22l1XVEp-PTDScX_Q2UA"
+      }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api-dev.yeolo.app",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "902358830088-7gr77qg2f5l8fvh4ejvpr0lce4cdc8li.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE": "com.googleusercontent.apps.902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2",
+        "EXPO_PUBLIC_REDIRECT_URI": "https://yeolo-gta.firebaseapp.com/__/auth/handler",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDuI57GPI3GbwO22l1XVEp-PTDScX_Q2UA"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.yeolo.app",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "902358830088-7gr77qg2f5l8fvh4ejvpr0lce4cdc8li.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE": "com.googleusercontent.apps.902358830088-8qaiua94d91ocurvs6afpsg0kl5hl1s2",
+        "EXPO_PUBLIC_REDIRECT_URI": "https://yeolo-gta.firebaseapp.com/__/auth/handler",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDuI57GPI3GbwO22l1XVEp-PTDScX_Q2UA"
+      }
     }
   },
   "submit": {
