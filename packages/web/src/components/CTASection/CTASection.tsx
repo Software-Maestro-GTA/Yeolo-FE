@@ -40,7 +40,7 @@ export function CTASection({ className = '' }: CTASectionProps) {
             <div className='flex flex-wrap gap-4 pt-2'>
               {/* Google Play Button */}
               <a
-                href='https://play.google.com/store/apps/details?id=com.yeolo.app'
+                href='https://play.google.com/store/apps/details?id=com.yeolo.app&pcampaignid=web_share'
                 target='_blank'
                 rel='noopener noreferrer'
                 className='bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3 rounded-[12px] inline-flex items-center gap-2.5 transition-all active:scale-95 shadow-sm'>

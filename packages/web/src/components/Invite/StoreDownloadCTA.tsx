@@ -38,7 +38,7 @@ export function StoreDownloadCTA({
 
   const appStoreUrl = 'https://apps.apple.com/kr/app/id6796231811';
   const playStoreUrl =
-    'https://play.google.com/store/apps/details?id=com.yeolo.app';
+    'https://play.google.com/store/apps/details?id=com.yeolo.app&pcampaignid=web_share';
 
   return (
     <div
