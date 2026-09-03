@@ -3,7 +3,7 @@
  * @description Unit test for TasteAnalysisScreen component matching Figma UI specifications.
  */
 import React from 'react';
-import { act, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';
 import { TasteAnalysisScreen } from '../src/screens/TasteAnalysisScreen';

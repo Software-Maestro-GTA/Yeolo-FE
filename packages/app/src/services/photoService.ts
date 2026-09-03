@@ -23,7 +23,7 @@ export async function fetchPhotosWithExifData(
   timezone: string = 'UTC',
 ): Promise<ImageMetadata[]> {
   // 1. Request permission
-  const { status } = await requestPermissionsAsync();
+  const { status } = await requestPermissionsAsync(false, ['photo']);
   if (status !== 'granted') {
     logger.error('[PhotoService] Permission denied for media library');
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR);

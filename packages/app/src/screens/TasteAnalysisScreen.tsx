@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
@@ -87,6 +88,13 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
   const handleConfirmError = () => {
     onFail?.();
   };
+
+  const handleOpenSettings = () => {
+    Linking.openSettings().catch(() => {});
+  };
+
+  const isPermissionError =
+    errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR;
 
   const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
     if (status === 'COMPLETED') {
@@ -227,15 +235,35 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                 </Text>
               </View>
               <Text style={styles.errorText}>{errorMessage}</Text>
-              <TouchableOpacity
-                style={styles.confirmButton}
-                activeOpacity={0.8}
-                onPress={handleConfirmError}
-                testID='error-confirm-button'>
-                <Text style={styles.confirmButtonText}>
-                  {UI_STRINGS.COMMON.CONFIRM}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.errorActionsRow}>
+                {isPermissionError && (
+                  <TouchableOpacity
+                    style={styles.settingsButton}
+                    activeOpacity={0.8}
+                    onPress={handleOpenSettings}
+                    testID='error-settings-button'>
+                    <Text style={styles.settingsButtonText}>
+                      {UI_STRINGS.TASTE_ANALYSIS.OPEN_SETTINGS_BUTTON}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    isPermissionError && styles.secondaryConfirmButton,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={handleConfirmError}
+                  testID='error-confirm-button'>
+                  <Text
+                    style={[
+                      styles.confirmButtonText,
+                      isPermissionError && styles.secondaryConfirmButtonText,
+                    ]}>
+                    {UI_STRINGS.COMMON.CONFIRM}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -422,14 +450,40 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     backgroundColor: palette.primary,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
-    marginTop: 4,
   },
   confirmButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: palette.white,
+  },
+  errorActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 6,
+    width: '100%',
+  },
+  settingsButton: {
+    backgroundColor: palette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  settingsButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.white,
+  },
+  secondaryConfirmButton: {
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+  },
+  secondaryConfirmButtonText: {
+    color: palette.deepNavy,
   },
 });

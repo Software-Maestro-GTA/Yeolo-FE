@@ -145,21 +145,10 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 
   const handlePickImageFromGallery = async () => {
     try {
-      if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+      if (!ImagePicker || !ImagePicker.launchImageLibraryAsync) {
         Alert.alert(
           UI_STRINGS.PROFILE_INPUT.ALERT_TITLE,
-          '네이티브 기기 모듈을 찾을 수 없습니다. 개발 빌드를 재기동(yarn android 또는 ios)해주세요.',
-        );
-        return;
-      }
-
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permissionResult.granted) {
-        Alert.alert(
-          UI_STRINGS.PROFILE_INPUT.ALERT_TITLE,
-          UI_STRINGS.PROFILE_INPUT.AVATAR_PERMISSION_ERROR,
+          '사진 보관함을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.',
         );
         return;
       }
