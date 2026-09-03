@@ -33,8 +33,11 @@ jest.mock('../src/screens', () => {
     PhotoConsentScreen: ({ onNext }: any) => (
       <Button title='Go to Photo Next' onPress={onNext} />
     ),
-    TasteAnalysisScreen: ({ onFinish }: any) => (
-      <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
+    TasteAnalysisScreen: ({ onFinish, onFail }: any) => (
+      <React.Fragment>
+        <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
+        <Button title='Fail Taste' onPress={() => onFail?.()} />
+      </React.Fragment>
     ),
     TasteProfileScreen: ({ onGenerateCourse }: any) => (
       <Button title='Go Home from Taste' onPress={onGenerateCourse} />
@@ -334,6 +337,52 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
 
     // CourseCreateScreen 대신 IntroScreen(Go to Intro Next)이 렌더링되어야 함
     expect(getByText('Go to Intro Next')).toBeTruthy();
+  });
+
+  it('온보딩 중 TasteAnalysisScreen에서 onFail 발생 시 MBTI 화면(MbtiInputScreen)으로 이동해야 한다', async () => {
+    const mockAuthNeedsOnboarding = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: false,
+      user: { id: 'u1', name: 'New User' },
+    };
+
+    const { getByText } = await render(
+      <AuthContext.Provider value={mockAuthNeedsOnboarding as any}>
+        <NavigationRoot initialStep={NAV_STEPS.TASTE} />
+      </AuthContext.Provider>,
+    );
+
+    expect(getByText('Fail Taste')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByText('Fail Taste'));
+    });
+
+    expect(getByText('Go to MBTI Next')).toBeTruthy();
+  });
+
+  it('온보딩 완료 후 TasteAnalysisScreen에서 onFail 발생 시 ProfileScreen으로 이동해야 한다', async () => {
+    const mockAuthCompleted = {
+      isAuthenticated: true,
+      isLoading: false,
+      hasCompletedOnboarding: true,
+      user: { id: 'u1', name: 'Existing User' },
+    };
+
+    const { getByText } = await render(
+      <AuthContext.Provider value={mockAuthCompleted as any}>
+        <NavigationRoot initialStep={NAV_STEPS.TASTE} />
+      </AuthContext.Provider>,
+    );
+
+    expect(getByText('Fail Taste')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(getByText('Fail Taste'));
+    });
+
+    expect(getByText('ProfileScreen')).toBeTruthy();
   });
 });
 

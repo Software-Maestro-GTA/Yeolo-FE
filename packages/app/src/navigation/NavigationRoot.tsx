@@ -240,7 +240,13 @@ export function NavigationRoot({
               setActiveTasteProfileId(tasteProfileId);
               navigateTo(NAV_STEPS.TASTE_PROFILE);
             }}
-            onFail={() => navigateTo(NAV_STEPS.PHOTO)}
+            onFail={() => {
+              if (auth?.hasCompletedOnboarding === false) {
+                navigateTo(NAV_STEPS.MBTI);
+              } else {
+                navigateTo(NAV_STEPS.PROFILE);
+              }
+            }}
           />
         </OnboardingLayout>
       );
