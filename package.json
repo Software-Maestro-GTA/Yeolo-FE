@@ -16,6 +16,7 @@
     "android:build": "yarn workspace @yeolo/app android:build",
     "ios:dev": "yarn workspace @yeolo/app ios",
     "ios:build": "yarn workspace @yeolo/app ios:build",
+    "ios:submit": "yarn workspace @yeolo/app submit:ios",
     "app:test": "yarn workspace @yeolo/app test",
     "app:lint": "yarn workspace @yeolo/app lint",
     "common:build": "yarn workspace @yeolo/common build",

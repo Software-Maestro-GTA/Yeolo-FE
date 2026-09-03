@@ -23,6 +23,7 @@ module.exports = ({ config }) => {
         'react-native-maps',
         {
           iosGoogleMapsApiKey: googleMapsApiKey,
+          androidGoogleMapsApiKey: googleMapsApiKey,
         },
       ],
     ],
@@ -53,7 +54,7 @@ module.exports = ({ config }) => {
         ...config.ios?.infoPlist,
         CFBundleURLTypes: [
           {
-            CFBundleURLSchemes: [googleScheme].filter(Boolean),
+            CFBundleURLSchemes: ['yeolo', googleScheme].filter(Boolean),
           },
         ],
       },
