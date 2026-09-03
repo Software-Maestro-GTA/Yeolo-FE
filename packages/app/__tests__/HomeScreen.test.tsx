@@ -132,20 +132,41 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
       itinerary: { days: [] },
     } as any);
 
-    const { getByTestId, findByText } = await render(
+    const { getByTestId, findByText, findByTestId } = await render(
       <HomeScreen
         selectedCourseId='mock-course-id-1'
         onSelectCourse={mockOnSelectCourse}
       />,
     );
 
-    expect(getByTestId('recent-course-section')).toBeTruthy();
+    const recentSection = await findByTestId('recent-course-section');
+    expect(recentSection).toBeTruthy();
 
     const courseTitle = await findByText('2박 3일 제주 서귀포 감성 힐링 코스');
     expect(courseTitle).toBeTruthy();
 
     fireEvent.press(getByTestId('recent-course-card'));
     expect(mockOnSelectCourse).toHaveBeenCalledWith('mock-course-id-1');
+  });
+
+  it('selectedCourseId가 존재하더라도 API 조회 실패(404 등) 시 최근 코스 영역이 표시되지 않아야 한다', async () => {
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockRejectedValue(new commonApi.ApiError(404, 'Course not found'));
+
+    const { queryByTestId } = await render(
+      <HomeScreen
+        selectedCourseId='invalid-course-id'
+        onSelectCourse={mockOnSelectCourse}
+      />,
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(queryByTestId('recent-course-section')).toBeNull();
+    expect(queryByTestId('recent-course-card')).toBeNull();
   });
 
   it('selectedCourseId가 props로 제공되지 않더라도 AuthContext에 recentCourseId가 있을 경우 최근 코스를 표시하고 클릭 시 이동해야 한다', async () => {
@@ -173,13 +194,14 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
       logout: jest.fn(),
     };
 
-    const { getByTestId, findByText } = await render(
+    const { getByTestId, findByText, findByTestId } = await render(
       <AuthContext.Provider value={mockAuthValue}>
         <HomeScreen onSelectCourse={mockOnSelectCourse} />
       </AuthContext.Provider>,
     );
 
-    expect(getByTestId('recent-course-section')).toBeTruthy();
+    const recentSection = await findByTestId('recent-course-section');
+    expect(recentSection).toBeTruthy();
     const courseTitle = await findByText('로그인 응답 기반 최근 추천 코스');
     expect(courseTitle).toBeTruthy();
 

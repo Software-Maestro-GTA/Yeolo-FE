@@ -225,7 +225,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </View>
 
           {/* Recent Course Section */}
-          {effectiveCourseId ? (
+          {effectiveCourseId && recentCourse ? (
             <View
               style={styles.sectionContainer}
               testID='recent-course-section'>
@@ -254,30 +254,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   testID='recent-course-thumbnail'
                   source={{
                     uri:
-                      recentCourse?.coverImageUrl ||
+                      recentCourse.coverImageUrl ||
                       getDestinationImageUrl(
-                        recentCourse?.destinationCountry || '대한민국',
-                        recentCourse?.destinationCity || '서울',
+                        recentCourse.destinationCountry || '',
+                        recentCourse.destinationCity || '',
                       ),
                   }}
                   style={styles.cardThumbnail}
                 />
                 <View style={styles.cardInfoStack}>
                   <Text style={styles.cardTitle} numberOfLines={1}>
-                    {recentCourse?.title ||
-                      UI_STRINGS.HOME.DEFAULT_COURSE_TITLE}
+                    {recentCourse.title}
                   </Text>
                   <Text style={styles.cardMeta}>
-                    {recentCourse
-                      ? `${recentCourse.destinationCountry || ''} ${recentCourse.destinationCity || ''} • ${recentCourse.totalDays || 0}일`
-                      : UI_STRINGS.HOME.DEFAULT_COURSE_META}
+                    {`${recentCourse.destinationCountry || ''} ${recentCourse.destinationCity || ''} • ${recentCourse.totalDays || 0}일`}
                   </Text>
-                  {recentCourse?.recommendationReason ? (
+                  {recentCourse.recommendationReason ? (
                     <Text style={styles.cardDesc} numberOfLines={1}>
                       {recentCourse.recommendationReason}
                     </Text>
                   ) : null}
-                  {recentCourse?.tags && recentCourse.tags.length > 0 ? (
+                  {recentCourse.tags && recentCourse.tags.length > 0 ? (
                     <View style={styles.tagsRow}>
                       {recentCourse.tags.slice(0, 3).map((tag, idx) => (
                         <Text key={idx} style={styles.tagText}>
