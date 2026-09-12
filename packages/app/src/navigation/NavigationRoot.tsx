@@ -1,5 +1,15 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { BackHandler, ToastAndroid, Platform, Linking } from 'react-native';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  BackHandler,
+  ToastAndroid,
+  Platform,
+  Linking,
+  PanResponder,
+  View,
+  StyleSheet,
+  GestureResponderEvent,
+  PanResponderGestureState,
+} from 'react-native';
 import type { ItineraryStop } from '@yeolo/common';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
@@ -33,6 +43,55 @@ const MAX_HISTORY_LENGTH = 10;
 export interface NavigationRootProps {
   initialStep?: NavStep;
   initialShareToken?: string;
+}
+
+export interface EdgeSwipeParams {
+  step: NavStep | null;
+  history: NavStep[];
+  x0: number;
+  dx: number;
+  dy: number;
+  isIos?: boolean;
+}
+
+export function shouldHandleEdgeSwipe({
+  step,
+  history,
+  x0,
+  dx,
+  dy,
+  isIos = Platform.OS === 'ios',
+}: EdgeSwipeParams): boolean {
+  if (!isIos) return false;
+
+  if (
+    !step ||
+    history.length === 0 ||
+    step === NAV_STEPS.HOME ||
+    step === NAV_STEPS.LOGIN ||
+    NON_HISTORY_STEPS.includes(step)
+  ) {
+    return false;
+  }
+
+  const isEdgeStart = x0 <= 45;
+  const isHorizontalSwipe = dx > 15 && Math.abs(dx) > Math.abs(dy) * 1.5;
+
+  return isEdgeStart && isHorizontalSwipe;
+}
+
+export function handlePanResponderRelease(
+  gestureState: { dx: number; vx?: number },
+  onBack: () => void,
+): boolean {
+  if (
+    gestureState.dx > 60 ||
+    (gestureState.dx > 30 && (gestureState.vx ?? 0) > 0.5)
+  ) {
+    onBack();
+    return true;
+  }
+  return false;
 }
 
 export function NavigationRoot({
@@ -148,14 +207,18 @@ export function NavigationRoot({
         step !== NAV_STEPS.LOGIN &&
         history.length > 0
       ) {
-        const prev = history[history.length - 1];
-        setHistory((old) => old.slice(0, -1));
-        setStep(prev);
+        goBack();
+        return true;
+      }
+      if (step !== NAV_STEPS.HOME && step !== NAV_STEPS.LOGIN) {
+        setStep(
+          auth?.isAuthenticated ? NAV_STEPS.COURSE_LIST : NAV_STEPS.LOGIN,
+        );
         return true;
       }
 
       const now = Date.now();
-      if (lastBackPressRef.current && now - lastBackPressRef.current < 2000) {
+      if (now - lastBackPressRef.current < 2000) {
         BackHandler.exitApp();
         return true;
       }
@@ -177,6 +240,45 @@ export function NavigationRoot({
     return () => subscription.remove();
   }, [step, history]);
 
+  const navStateRef = useRef({ step, history });
+  useEffect(() => {
+    navStateRef.current = { step, history };
+  }, [step, history]);
+
+  const goBackRef = useRef(goBack);
+  useEffect(() => {
+    goBackRef.current = goBack;
+  }, [goBack]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (evt, gestureState) =>
+          shouldHandleEdgeSwipe({
+            step: navStateRef.current.step,
+            history: navStateRef.current.history,
+            x0: gestureState.x0 || evt?.nativeEvent?.pageX || 0,
+            dx: gestureState.dx,
+            dy: gestureState.dy,
+          }),
+        onMoveShouldSetPanResponderCapture: (evt, gestureState) =>
+          shouldHandleEdgeSwipe({
+            step: navStateRef.current.step,
+            history: navStateRef.current.history,
+            x0: gestureState.x0 || evt?.nativeEvent?.pageX || 0,
+            dx: gestureState.dx,
+            dy: gestureState.dy,
+          }),
+        onPanResponderRelease: (_evt, gestureState) => {
+          handlePanResponderRelease(gestureState, () => goBackRef.current());
+        },
+        onPanResponderTerminationRequest: () => false,
+      }),
+    [],
+  );
+
   if (step === null) {
     return null;
   }
@@ -194,237 +296,254 @@ export function NavigationRoot({
     if (tab === NAV_TABS.PROFILE) navigateTo(NAV_STEPS.PROFILE);
   };
 
-  switch (step) {
-    case NAV_STEPS.LOGIN:
-      return (
-        <LoginScreen
-          onLoginSuccess={(doOnboarding) => {
-            if (doOnboarding) {
-              navigateTo(NAV_STEPS.INTRO);
-            } else {
-              navigateTo(NAV_STEPS.HOME);
-            }
-          }}
-        />
-      );
-    case NAV_STEPS.INTRO:
-      return (
-        <OnboardingLayout>
-          <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
-        </OnboardingLayout>
-      );
-    case NAV_STEPS.MBTI:
-      return (
-        <OnboardingLayout>
-          <MbtiInputScreen
-            onNext={() => {
-              auth?.setHasCompletedOnboarding?.(true);
-              navigateTo(NAV_STEPS.CREATE_COURSE);
-            }}
-            onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
-          />
-        </OnboardingLayout>
-      );
-    case NAV_STEPS.PHOTO:
-      return (
-        <OnboardingLayout>
-          <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />
-        </OnboardingLayout>
-      );
-    case NAV_STEPS.TASTE:
-      return (
-        <OnboardingLayout>
-          <TasteAnalysisScreen
-            onFinish={(tasteProfileId) => {
-              auth?.setHasCompletedOnboarding?.(true);
-              setActiveTasteProfileId(tasteProfileId);
-              navigateTo(NAV_STEPS.TASTE_PROFILE);
-            }}
-            onFail={() => {
-              if (auth?.hasCompletedOnboarding === false) {
-                navigateTo(NAV_STEPS.MBTI);
-              } else {
-                navigateTo(NAV_STEPS.PROFILE);
-              }
-            }}
-          />
-        </OnboardingLayout>
-      );
-    case NAV_STEPS.TASTE_PROFILE:
-      return (
-        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
-          <TasteProfileScreen
-            tasteProfileId={activeTasteProfileId}
-            onGenerateCourse={() => {
-              auth?.setHasCompletedOnboarding?.(true);
-              navigateTo(NAV_STEPS.CREATE_COURSE);
-            }}
-            onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
-            onNavigateToIntro={() => navigateTo(NAV_STEPS.INTRO)}
-          />
-        </MainLayout>
-      );
-    case NAV_STEPS.PROFILE:
-      return (
-        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
-          <ProfileScreen
-            onNavigateToTasteProfile={() => {
-              if (auth?.hasCompletedOnboarding === false) {
+  const renderCurrentScreen = () => {
+    switch (step) {
+      case NAV_STEPS.LOGIN:
+        return (
+          <LoginScreen
+            onLoginSuccess={(doOnboarding) => {
+              if (doOnboarding) {
                 navigateTo(NAV_STEPS.INTRO);
               } else {
-                navigateTo(NAV_STEPS.TASTE_PROFILE);
-              }
-            }}
-            onReanalyzeTaste={() => navigateTo(NAV_STEPS.PHOTO)}
-            onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
-            onEditProfile={() => navigateTo(NAV_STEPS.PROFILE_INPUT)}
-          />
-        </MainLayout>
-      );
-    case NAV_STEPS.PROFILE_INPUT:
-      return (
-        <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
-          <ProfileInputScreen
-            onGoBack={() => navigateTo(NAV_STEPS.PROFILE)}
-            onSaveSuccess={() => navigateTo(NAV_STEPS.PROFILE)}
-          />
-        </MainLayout>
-      );
-    case NAV_STEPS.COURSE_LIST:
-      return (
-        <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
-          <CourseListScreen
-            onSelectCourse={(courseId) => {
-              setSelectedCourseId(courseId);
-              navigateTo(NAV_STEPS.COURSE_DETAIL);
-            }}
-            onCreateCourse={() => {
-              if (auth?.hasCompletedOnboarding === false) {
-                navigateTo(NAV_STEPS.INTRO);
-              } else {
-                navigateTo(NAV_STEPS.CREATE_COURSE);
+                navigateTo(NAV_STEPS.HOME);
               }
             }}
           />
-        </MainLayout>
-      );
-    case NAV_STEPS.CREATE_COURSE:
-      if (auth?.hasCompletedOnboarding === false) {
+        );
+      case NAV_STEPS.INTRO:
         return (
           <OnboardingLayout>
             <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
           </OnboardingLayout>
         );
-      }
-      return (
-        <MainLayout currentTab={NAV_TABS.CREATE} onTabPress={handleTabPress}>
-          <CourseCreateScreen
-            onSubmit={() => navigateTo(NAV_STEPS.GENERATING_COURSE)}
-          />
-        </MainLayout>
-      );
-    case NAV_STEPS.GENERATING_COURSE:
-      return (
-        <CourseGeneratingScreen
-          onComplete={(courseId) => {
-            if (courseId) {
-              setSelectedCourseId(courseId);
-            }
-            navigateTo(NAV_STEPS.COURSE_DETAIL);
-          }}
-          onRetry={() => {
-            navigateTo(NAV_STEPS.CREATE_COURSE);
-          }}
-          onNavigateToIntro={() => {
-            navigateTo(NAV_STEPS.INTRO);
-          }}
-        />
-      );
-    case NAV_STEPS.COURSE_DETAIL:
-      return (
-        <MainLayout
-          currentTab={NAV_TABS.EXPLORE}
-          onTabPress={handleTabPress}
-          noTopEdges={true}>
-          <CourseDetailScreen
-            courseId={selectedCourseId || ''}
-            onSelectPlace={(stop) => {
-              setSelectedPlaceStop(stop);
-              navigateTo(NAV_STEPS.PLACE_DETAIL);
-            }}
-            onBack={goBack}
-          />
-        </MainLayout>
-      );
-    case NAV_STEPS.COURSE_SHARE:
-      return (
-        <CourseShareScreen
-          shareToken={selectedShareToken}
-          courseId={selectedCourseId}
-          onSaveSuccess={(acceptedCourseId) => {
-            if (acceptedCourseId) {
-              setSelectedCourseId(acceptedCourseId);
-            }
-            setHistory([NAV_STEPS.HOME]);
-            setStep(NAV_STEPS.COURSE_DETAIL);
-          }}
-          onDecline={() => {
-            const fallback = auth?.isAuthenticated
-              ? NAV_STEPS.HOME
-              : NAV_STEPS.LOGIN;
-            setHistory([]);
-            setStep(fallback);
-          }}
-          onNavigateToLogin={() => {
-            setHistory([NAV_STEPS.COURSE_SHARE]);
-            setStep(NAV_STEPS.LOGIN);
-          }}
-        />
-      );
-
-    case NAV_STEPS.PLACE_DETAIL:
-      return (
-        <MainLayout
-          currentTab={NAV_TABS.EXPLORE}
-          onTabPress={handleTabPress}
-          noTopEdges={true}>
-          <PlaceDetailScreen stop={selectedPlaceStop} />
-        </MainLayout>
-      );
-    case NAV_STEPS.HOME:
-    default:
-      return (
-        <MainLayout
-          currentTab={NAV_TABS.HOME}
-          onTabPress={handleTabPress}
-          noTopEdges={true}>
-          <HomeScreen
-            selectedCourseId={selectedCourseId}
-            onNavigateToCreate={() => {
-              if (auth?.hasCompletedOnboarding === false) {
-                navigateTo(NAV_STEPS.INTRO);
-              } else {
+      case NAV_STEPS.MBTI:
+        return (
+          <OnboardingLayout>
+            <MbtiInputScreen
+              onNext={() => {
+                auth?.setHasCompletedOnboarding?.(true);
                 navigateTo(NAV_STEPS.CREATE_COURSE);
-              }
-            }}
-            onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}
-            onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
-            onNavigateToTasteProfile={() => {
-              if (auth?.hasCompletedOnboarding === false) {
-                navigateTo(NAV_STEPS.INTRO);
-              } else {
+              }}
+              onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
+            />
+          </OnboardingLayout>
+        );
+      case NAV_STEPS.PHOTO:
+        return (
+          <OnboardingLayout>
+            <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />
+          </OnboardingLayout>
+        );
+      case NAV_STEPS.TASTE:
+        return (
+          <OnboardingLayout>
+            <TasteAnalysisScreen
+              onFinish={(tasteProfileId) => {
+                auth?.setHasCompletedOnboarding?.(true);
+                setActiveTasteProfileId(tasteProfileId);
                 navigateTo(NAV_STEPS.TASTE_PROFILE);
+              }}
+              onFail={() => {
+                if (auth?.hasCompletedOnboarding === false) {
+                  navigateTo(NAV_STEPS.MBTI);
+                } else {
+                  navigateTo(NAV_STEPS.PROFILE);
+                }
+              }}
+            />
+          </OnboardingLayout>
+        );
+      case NAV_STEPS.TASTE_PROFILE:
+        return (
+          <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
+            <TasteProfileScreen
+              tasteProfileId={activeTasteProfileId}
+              onGenerateCourse={() => {
+                auth?.setHasCompletedOnboarding?.(true);
+                navigateTo(NAV_STEPS.CREATE_COURSE);
+              }}
+              onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
+              onNavigateToIntro={() => navigateTo(NAV_STEPS.INTRO)}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.PROFILE:
+        return (
+          <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
+            <ProfileScreen
+              onNavigateToTasteProfile={() => {
+                if (auth?.hasCompletedOnboarding === false) {
+                  navigateTo(NAV_STEPS.INTRO);
+                } else {
+                  navigateTo(NAV_STEPS.TASTE_PROFILE);
+                }
+              }}
+              onReanalyzeTaste={() => navigateTo(NAV_STEPS.PHOTO)}
+              onNavigateToLogin={() => navigateTo(NAV_STEPS.LOGIN)}
+              onEditProfile={() => navigateTo(NAV_STEPS.PROFILE_INPUT)}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.PROFILE_INPUT:
+        return (
+          <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
+            <ProfileInputScreen
+              onGoBack={() => navigateTo(NAV_STEPS.PROFILE)}
+              onSaveSuccess={() => navigateTo(NAV_STEPS.PROFILE)}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.COURSE_LIST:
+        return (
+          <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
+            <CourseListScreen
+              onSelectCourse={(courseId) => {
+                setSelectedCourseId(courseId);
+                navigateTo(NAV_STEPS.COURSE_DETAIL);
+              }}
+              onCreateCourse={() => {
+                if (auth?.hasCompletedOnboarding === false) {
+                  navigateTo(NAV_STEPS.INTRO);
+                } else {
+                  navigateTo(NAV_STEPS.CREATE_COURSE);
+                }
+              }}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.CREATE_COURSE:
+        if (auth?.hasCompletedOnboarding === false) {
+          return (
+            <OnboardingLayout>
+              <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
+            </OnboardingLayout>
+          );
+        }
+        return (
+          <MainLayout currentTab={NAV_TABS.CREATE} onTabPress={handleTabPress}>
+            <CourseCreateScreen
+              onSubmit={() => navigateTo(NAV_STEPS.GENERATING_COURSE)}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.GENERATING_COURSE:
+        return (
+          <CourseGeneratingScreen
+            onComplete={(courseId) => {
+              if (courseId) {
+                setSelectedCourseId(courseId);
               }
-            }}
-            onNavigateToPhotoConsent={() => navigateTo(NAV_STEPS.PHOTO)}
-            onSelectCourse={(courseId) => {
-              setSelectedCourseId(courseId);
               navigateTo(NAV_STEPS.COURSE_DETAIL);
             }}
+            onRetry={() => {
+              navigateTo(NAV_STEPS.CREATE_COURSE);
+            }}
+            onNavigateToIntro={() => {
+              navigateTo(NAV_STEPS.INTRO);
+            }}
           />
-        </MainLayout>
-      );
-  }
+        );
+      case NAV_STEPS.COURSE_DETAIL:
+        return (
+          <MainLayout
+            currentTab={NAV_TABS.EXPLORE}
+            onTabPress={handleTabPress}
+            noTopEdges={true}>
+            <CourseDetailScreen
+              courseId={selectedCourseId || ''}
+              onSelectPlace={(stop) => {
+                setSelectedPlaceStop(stop);
+                navigateTo(NAV_STEPS.PLACE_DETAIL);
+              }}
+              onBack={goBack}
+            />
+          </MainLayout>
+        );
+      case NAV_STEPS.COURSE_SHARE:
+        return (
+          <CourseShareScreen
+            shareToken={selectedShareToken}
+            courseId={selectedCourseId}
+            onSaveSuccess={(acceptedCourseId) => {
+              if (acceptedCourseId) {
+                setSelectedCourseId(acceptedCourseId);
+              }
+              setHistory([NAV_STEPS.HOME]);
+              setStep(NAV_STEPS.COURSE_DETAIL);
+            }}
+            onDecline={() => {
+              const fallback = auth?.isAuthenticated
+                ? NAV_STEPS.HOME
+                : NAV_STEPS.LOGIN;
+              setHistory([]);
+              setStep(fallback);
+            }}
+            onNavigateToLogin={() => {
+              setHistory([NAV_STEPS.COURSE_SHARE]);
+              setStep(NAV_STEPS.LOGIN);
+            }}
+          />
+        );
+
+      case NAV_STEPS.PLACE_DETAIL:
+        return (
+          <MainLayout
+            currentTab={NAV_TABS.EXPLORE}
+            onTabPress={handleTabPress}
+            noTopEdges={true}>
+            <PlaceDetailScreen stop={selectedPlaceStop} />
+          </MainLayout>
+        );
+      case NAV_STEPS.HOME:
+      default:
+        return (
+          <MainLayout
+            currentTab={NAV_TABS.HOME}
+            onTabPress={handleTabPress}
+            noTopEdges={true}>
+            <HomeScreen
+              selectedCourseId={selectedCourseId}
+              onNavigateToCreate={() => {
+                if (auth?.hasCompletedOnboarding === false) {
+                  navigateTo(NAV_STEPS.INTRO);
+                } else {
+                  navigateTo(NAV_STEPS.CREATE_COURSE);
+                }
+              }}
+              onNavigateToExplore={() => navigateTo(NAV_STEPS.COURSE_LIST)}
+              onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
+              onNavigateToTasteProfile={() => {
+                if (auth?.hasCompletedOnboarding === false) {
+                  navigateTo(NAV_STEPS.INTRO);
+                } else {
+                  navigateTo(NAV_STEPS.TASTE_PROFILE);
+                }
+              }}
+              onNavigateToPhotoConsent={() => navigateTo(NAV_STEPS.PHOTO)}
+              onSelectCourse={(courseId) => {
+                setSelectedCourseId(courseId);
+                navigateTo(NAV_STEPS.COURSE_DETAIL);
+              }}
+            />
+          </MainLayout>
+        );
+    }
+  };
+
+  return (
+    <View
+      style={styles.container}
+      testID='navigation-root-container'
+      {...panResponder.panHandlers}>
+      {renderCurrentScreen()}
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default NavigationRoot;

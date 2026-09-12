@@ -4,7 +4,11 @@
  */
 import React from 'react';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
-import { NavigationRoot } from '../src/navigation/NavigationRoot';
+import {
+  NavigationRoot,
+  shouldHandleEdgeSwipe,
+  handlePanResponderRelease,
+} from '../src/navigation/NavigationRoot';
 import { AuthContext } from '../src/context';
 import { renderWithQueryClient as render } from './test-utils';
 
@@ -384,5 +388,117 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
 
     expect(getByText('ProfileScreen')).toBeTruthy();
   });
-});
 
+  describe('iOS Edge Swipe to Go Back (PanResponder & shouldHandleEdgeSwipe)', () => {
+    it('shouldHandleEdgeSwipe: iOS에서 좌측 엣지(x0 <= 45) 및 가로 스와이프 시 true를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(true);
+    });
+
+    it('shouldHandleEdgeSwipe: x0 > 45(비 엣지 영역)이면 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 100,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: 세로 스크롤(dy > dx)인 경우 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 10,
+          dy: 70,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: history가 비어있거나 홈/로그인/생성중 단계인 경우 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.HOME,
+          history: [],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.GENERATING_COURSE,
+          history: [NAV_STEPS.HOME],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: iOS가 아닌 환경(Android 등)에서는 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: false,
+        }),
+      ).toBe(false);
+    });
+
+    it('handlePanResponderRelease: dx > 60 또는 dx > 30 & vx > 0.5인 경우 onBack을 호출해야 한다', () => {
+      const onBack1 = jest.fn();
+      const res1 = handlePanResponderRelease({ dx: 70 }, onBack1);
+      expect(res1).toBe(true);
+      expect(onBack1).toHaveBeenCalledTimes(1);
+
+      const onBack2 = jest.fn();
+      const res2 = handlePanResponderRelease({ dx: 40, vx: 0.8 }, onBack2);
+      expect(res2).toBe(true);
+      expect(onBack2).toHaveBeenCalledTimes(1);
+
+      const onBack3 = jest.fn();
+      const res3 = handlePanResponderRelease({ dx: 20, vx: 0.1 }, onBack3);
+      expect(res3).toBe(false);
+      expect(onBack3).not.toHaveBeenCalled();
+    });
+
+    it('최상위 네비게이션 컨테이너에 PanResponder panHandlers가 정상 바인딩되어 있어야 한다', async () => {
+      const mockAuth = {
+        isAuthenticated: true,
+        isLoading: false,
+        hasCompletedOnboarding: true,
+      };
+
+      const { getByTestId } = await render(
+        <AuthContext.Provider value={mockAuth as any}>
+          <NavigationRoot initialStep={NAV_STEPS.COURSE_LIST} />
+        </AuthContext.Provider>,
+      );
+
+      const container = getByTestId('navigation-root-container');
+      expect(container.props.onMoveShouldSetResponder).toBeDefined();
+      expect(container.props.onResponderRelease).toBeDefined();
+    });
+  });
+});
