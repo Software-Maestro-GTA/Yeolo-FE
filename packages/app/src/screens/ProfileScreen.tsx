@@ -166,10 +166,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         setShowTermsModal(true);
       }
     } else if (type === 'privacy') {
-      trackButtonClick(
-        'btn_profile_privacy',
-        'Open Privacy Policy Web URL',
-      );
+      trackButtonClick('btn_profile_privacy', 'Open Privacy Policy Web URL');
       try {
         await Linking.openURL(APP_CONFIG.PRIVACY_POLICY_URL);
       } catch (err) {

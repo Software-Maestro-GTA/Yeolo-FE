@@ -98,6 +98,7 @@ const mockStop: ItineraryStop = {
   stayMinutes: 90,
   memo: '탁 트인 에메랄드빛 바다 산책',
   reason: '에메랄드빛 바다 전망 및 오션뷰 추천',
+  cost: 25000,
   place: {
     placeId: 'place-123',
     placeName: '함덕 해수욕장',
@@ -116,7 +117,7 @@ const mockStop: ItineraryStop = {
 
 describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종합)', () => {
   it('stop 전달 시 API-PLACE-1 데이터와 코스 확인 창 정보가 종합되어 올바르게 렌더링되어야 한다', async () => {
-    const { getByText, getByTestId, findByText } = await render(
+    const { getByText, queryByText, getByTestId, findByText } = await render(
       <PlaceDetailScreen stop={mockStop} />,
     );
 
@@ -124,7 +125,9 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
     expect(getByTestId('summary-bar-card')).toBeTruthy();
     expect(getByText('10:00 AM')).toBeTruthy();
     expect(getByText('90분 소요')).toBeTruthy();
-    expect(getByText('₩15,000')).toBeTruthy();
+    // 장소 비용(25,000)이 노출되고 교통 비용(15,000)은 노출되지 않아야 함
+    expect(getByText('₩25,000')).toBeTruthy();
+    expect(queryByText('₩15,000')).toBeNull();
     expect(getByText('에메랄드빛 바다 전망 및 오션뷰 추천')).toBeTruthy();
     expect(getByText('탁 트인 에메랄드빛 바다 산책')).toBeTruthy();
 

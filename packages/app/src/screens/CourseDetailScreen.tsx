@@ -106,7 +106,6 @@ export function CourseDetailScreen({
 
         try {
           await Share.share({
-            title: shareTitle,
             message: shareMessage,
             url: inviteUrl,
           });

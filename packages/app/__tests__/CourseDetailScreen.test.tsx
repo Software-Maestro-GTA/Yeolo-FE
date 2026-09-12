@@ -339,7 +339,6 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     );
 
     expect(shareSpy).toHaveBeenCalledWith({
-      title: '2박 3일 서귀포 감성 힐링 코스',
       message:
         '[여로] 2박 3일 서귀포 감성 힐링 코스 여행 일정을 공유합니다!\nhttps://www.yeolo.app/invite/token-123',
       url: 'https://www.yeolo.app/invite/token-123',

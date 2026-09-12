@@ -96,9 +96,8 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
   const displayTime = stop?.arrivalTime || '';
   const displayStay = stop?.stayMinutes ? `${stop.stayMinutes}분 소요` : '';
   const displayCost =
-    stop?.transportToNext?.cost !== undefined &&
-    stop?.transportToNext?.cost !== null
-      ? `₩${stop.transportToNext.cost.toLocaleString()}`
+    stop?.cost !== undefined && stop?.cost !== null
+      ? `₩${stop.cost.toLocaleString()}`
       : '';
   const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
   const hasMemo = Boolean(
