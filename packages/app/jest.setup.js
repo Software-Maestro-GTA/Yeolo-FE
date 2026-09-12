@@ -21,6 +21,7 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
     signIn: jest.fn().mockResolvedValue({
       data: { serverAuthCode: 'mock-google-auth-code' },
     }),
+    signOut: jest.fn().mockResolvedValue(null),
   },
 }));
 

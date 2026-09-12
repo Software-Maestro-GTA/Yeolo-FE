@@ -40,18 +40,38 @@ export const initializeGoogleSignin = (
 
 /**
  * Execute native Google login and extract the authorization code.
+ * Cleans up any residual session prior to login to guarantee a fresh authorization code.
  * @returns Promise<string> representing the Google server auth code.
  */
 export const signInWithGoogle = async (): Promise<string> => {
   await GoogleSignin.hasPlayServices();
-  const response = await GoogleSignin.signIn();
-  const code = response.data?.serverAuthCode;
 
-  if (!code) {
-    throw new Error(UI_STRINGS.AUTH.MISSING_AUTH_CODE_ERROR);
+  try {
+    await GoogleSignin.signOut();
+  } catch (error) {
+    logger.debug(
+      '[AuthService] No prior Google session to clear before signIn:',
+      error,
+    );
   }
 
-  return code;
+  try {
+    const response = await GoogleSignin.signIn();
+    const code = response.data?.serverAuthCode;
+
+    if (!code) {
+      throw new Error(UI_STRINGS.AUTH.MISSING_AUTH_CODE_ERROR);
+    }
+
+    return code;
+  } catch (error) {
+    try {
+      await GoogleSignin.signOut();
+    } catch (_) {
+      // Ignore cleanup error on failed sign in
+    }
+    throw error;
+  }
 };
 
 /**

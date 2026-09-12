@@ -23,6 +23,7 @@ import { AuthContext } from '../context';
 import {
   signInWithGoogle,
   signInWithApple,
+  signOutGoogle,
   isAppleAuthAvailable,
   openCustomerSupportMail,
 } from '../services';
@@ -72,6 +73,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       ) {
         return;
       }
+      await signOutGoogle();
       showAuthErrorAlert(err, UI_STRINGS.AUTH.GOOGLE_LOGIN_FAIL_DEFAULT);
     } finally {
       setIsLocalLoggingIn(false);

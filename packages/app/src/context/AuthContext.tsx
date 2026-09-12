@@ -233,6 +233,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return result;
     } catch (error) {
       logger.error('[AuthContext] Login flow API error:', error);
+      await signOutGoogle();
+      await clearLocalSession();
+      setIsAuthenticated(false);
+      setUser(null);
+      setRecentCourseId(null);
+      setHasCompletedOnboardingState(null);
       throw error;
     }
   };
@@ -264,6 +270,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return result;
     } catch (error) {
       logger.error('[AuthContext] Apple login flow API error:', error);
+      await clearLocalSession();
+      setIsAuthenticated(false);
+      setUser(null);
+      setRecentCourseId(null);
+      setHasCompletedOnboardingState(null);
       throw error;
     }
   };

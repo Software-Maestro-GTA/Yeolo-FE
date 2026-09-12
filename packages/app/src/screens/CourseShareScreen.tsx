@@ -28,6 +28,7 @@ import {
   getDestinationImageUrl,
   signInWithGoogle,
   signInWithApple,
+  signOutGoogle,
   isAppleAuthAvailable,
 } from '../services';
 import { showAuthErrorAlert } from '../utils/errorUtils';
@@ -198,6 +199,9 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
         err?.code === 'SIGN_IN_CANCELLED'
       ) {
         return;
+      }
+      if (provider === 'google') {
+        await signOutGoogle();
       }
       showAuthErrorAlert(
         err,

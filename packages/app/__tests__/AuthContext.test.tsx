@@ -223,7 +223,11 @@ describe('AuthContext', () => {
     expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
   });
 
-  it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
+  it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 세션 정리(signOut)가 수행되어야 한다', async () => {
+    const {
+      GoogleSignin,
+    } = require('@react-native-google-signin/google-signin');
+    const signOutSpy = jest.spyOn(GoogleSignin, 'signOut');
     shouldFail = true;
 
     const { result } = await renderHook(() => React.useContext(AuthContext)!, {
@@ -242,6 +246,7 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
+    expect(signOutSpy).toHaveBeenCalled();
   });
 
   it('기존에 저장된 세션 복원 시 AsyncStorage의 recentCourseId 및 hasCompletedOnboarding을 복원해야 한다', async () => {
