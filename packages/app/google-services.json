@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "902358830088-38qauml8me0lch8rs1hdj8goipfe10ut.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yeolo.app",
+            "certificate_hash": "9e52baac3a78a721760e4fd8658642d8777d92c5"
+          }
+        },
+        {
+          "client_id": "902358830088-500q1jn4hgg8hoaf2k7liuma9e924dam.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yeolo.app",
+            "certificate_hash": "8d277c53390c474194d90a53bc6abb0180538465"
+          }
+        },
+        {
           "client_id": "902358830088-qqe77jo77mafpand1243h7qlcdlsei68.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
