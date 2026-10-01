@@ -6,6 +6,7 @@ import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   type User,
+  analyticsService,
   logger,
   setTokenGetter,
   setTokenSetter,
@@ -73,6 +74,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const googleLoginMutation = useGoogleLoginMutation();
   const appleLoginMutation = useAppleLoginMutation();
   const logoutMutation = useLogoutMutation();
+
+  useEffect(() => {
+    void analyticsService.setUserId(
+      user?.userId === undefined || user?.userId === null
+        ? null
+        : String(user.userId),
+    );
+  }, [user]);
 
   const setHasCompletedOnboarding = async (completed: boolean) => {
     setHasCompletedOnboardingState(completed);

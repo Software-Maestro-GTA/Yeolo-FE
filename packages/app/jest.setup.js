@@ -1,3 +1,8 @@
+/**
+ * @file jest.setup.js
+ * @description Global native-module mocks for isolated @yeolo/app Jest tests.
+ */
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = {};
   return {
@@ -147,3 +152,27 @@ jest.mock('@react-native-firebase/analytics', () => {
     setUserProperty: mockAnalyticsSetUserProperty,
   };
 });
+
+const mockAirbridgeTrackEvent = jest.fn();
+const mockAirbridgeSetUserID = jest.fn();
+const mockAirbridgeClearUserID = jest.fn();
+const mockAirbridgeSetUserAttribute = jest.fn();
+const mockAirbridgeRemoveUserAttribute = jest.fn();
+
+jest.mock('airbridge-react-native-sdk', () => ({
+  Airbridge: {
+    trackEvent: mockAirbridgeTrackEvent,
+    setUserID: mockAirbridgeSetUserID,
+    clearUserID: mockAirbridgeClearUserID,
+    setUserAttribute: mockAirbridgeSetUserAttribute,
+    removeUserAttribute: mockAirbridgeRemoveUserAttribute,
+  },
+  AirbridgeCategory: {
+    SIGN_IN: 'airbridge.user.signin',
+    SIGN_UP: 'airbridge.user.signup',
+    SIGN_OUT: 'airbridge.user.signout',
+    COMPLETE_TUTORIAL: 'airbridge.user.completeTutorial',
+    SHARE: 'airbridge.share',
+    ORDER_COMPLETED: 'airbridge.ecommerce.order.completed',
+  },
+}));

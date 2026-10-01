@@ -12,7 +12,7 @@ import {
   MutationCache,
 } from '@tanstack/react-query';
 import { analyticsService, ApiError } from '@yeolo/common';
-import { appAnalyticsTracker } from './analytics';
+import { airbridgeAnalyticsTracker, appAnalyticsTracker } from './analytics';
 import { AuthProvider, BackgroundProvider } from './context';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
@@ -63,6 +63,12 @@ const queryClient = new QueryClient({
 export default function App() {
   useEffect(() => {
     analyticsService.registerTracker(appAnalyticsTracker);
+    analyticsService.registerTracker(airbridgeAnalyticsTracker);
+
+    return () => {
+      analyticsService.unregisterTracker(appAnalyticsTracker);
+      analyticsService.unregisterTracker(airbridgeAnalyticsTracker);
+    };
   }, []);
 
   return (

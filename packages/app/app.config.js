@@ -1,6 +1,6 @@
 /**
  * @file app.config.js
- * @description Dynamic Expo configuration file resolving Google client keys safely from local environment variables.
+ * @description Dynamic Expo configuration resolving Google and Airbridge native SDK settings from environment variables.
  */
 
 module.exports = ({ config }) => {
@@ -8,6 +8,9 @@ module.exports = ({ config }) => {
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID_REVERSE || '';
 
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+  const airbridgeAppName = process.env.AIRBRIDGE_APP_NAME || 'yeolo';
+  const airbridgeAppToken = process.env.AIRBRIDGE_APP_SDK_TOKEN || '';
 
   const androidGoogleServices =
     process.env.GOOGLE_SERVICES_JSON || './google-services.json';
@@ -24,6 +27,13 @@ module.exports = ({ config }) => {
         {
           iosGoogleMapsApiKey: googleMapsApiKey,
           androidGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
+      [
+        'airbridge-expo-sdk',
+        {
+          appName: airbridgeAppName,
+          appToken: airbridgeAppToken,
         },
       ],
     ],

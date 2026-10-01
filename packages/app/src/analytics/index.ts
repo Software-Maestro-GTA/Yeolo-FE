@@ -1,6 +1,7 @@
 /**
  * @file index.ts
- * @description Export mobile app analytics tracker.
+ * @description Export Firebase and Airbridge mobile analytics trackers.
  */
 
+export * from './airbridgeTracker';
 export * from './firebaseTracker';
