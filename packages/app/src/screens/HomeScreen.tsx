@@ -13,8 +13,6 @@ import {
   ImageBackground,
   Platform,
   StatusBar,
-  Linking,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,9 +20,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getDestinationImageUrl } from '../services';
 import { AuthContext, useBackground } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
-import { UI_STRINGS, APP_IMAGES, APP_CONFIG } from '../constants';
+import { UI_STRINGS, APP_IMAGES } from '../constants';
 
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import {
+  courseBookingContext,
+  type OpenBooking,
+} from '../services/bookingService';
+import type { BookingKind } from '@yeolo/common';
 import { useTasteProfileQuery, useCourseDetailQuery } from '../hooks/queries';
 
 export interface HomeScreenProps {
@@ -35,6 +38,7 @@ export interface HomeScreenProps {
   onNavigateToPhotoConsent?: () => void;
   onSelectCourse?: (courseId: string) => void;
   selectedCourseId?: string | null;
+  onOpenBooking?: OpenBooking;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -45,6 +49,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToPhotoConsent,
   onSelectCourse,
   selectedCourseId,
+  onOpenBooking,
 }) => {
   useGA4ScreenTracking('HomeScreen');
   const { trackButtonClick } = useGA4ButtonClick();
@@ -74,20 +79,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     },
   });
 
-  const handleOpenBookingPartner = async (
-    url: string,
+  const handleOpenBookingPartner = (
+    kind: BookingKind,
     buttonId: string,
     buttonLabel: string,
   ) => {
     trackButtonClick(buttonId, buttonLabel);
-    try {
-      await Linking.openURL(url);
-    } catch (_err) {
-      Alert.alert(
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
-      );
-    }
+    onOpenBooking?.(kind, courseBookingContext(recentCourse));
   };
 
   const handleTasteQuickAction = () => {
@@ -310,7 +308,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 activeOpacity={0.8}
                 onPress={() =>
                   handleOpenBookingPartner(
-                    APP_CONFIG.TRIP_FLIGHT_URL,
+                    'flight',
                     'btn_home_booking_flight',
                     'Booking Flight Click',
                   )
@@ -337,7 +335,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 activeOpacity={0.8}
                 onPress={() =>
                   handleOpenBookingPartner(
-                    APP_CONFIG.TRIP_HOTEL_URL,
+                    'hotel',
                     'btn_home_booking_hotel',
                     'Booking Hotel Click',
                   )
@@ -354,33 +352,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </Text>
               </TouchableOpacity>
 
-              {/* 🚄 기차 */}
-              <TouchableOpacity
-                testID='booking-tile-train'
-                style={[
-                  styles.bookingTile,
-                  { backgroundColor: hexToRgba(palette.warning, 0.08) },
-                ]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  handleOpenBookingPartner(
-                    APP_CONFIG.TRIP_TRAIN_URL,
-                    'btn_home_booking_train',
-                    'Booking Train Click',
-                  )
-                }>
-                <View
-                  style={[
-                    styles.bookingIconCircle,
-                    { backgroundColor: hexToRgba(palette.warning, 0.18) },
-                  ]}>
-                  <Text style={styles.bookingEmoji}>🚄</Text>
-                </View>
-                <Text style={styles.bookingLabel}>
-                  {UI_STRINGS.HOME.BOOKING_TRAIN}
-                </Text>
-              </TouchableOpacity>
-
               {/* 🎫 투어·티켓 */}
               <TouchableOpacity
                 testID='booking-tile-ticket'
@@ -391,7 +362,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 activeOpacity={0.8}
                 onPress={() =>
                   handleOpenBookingPartner(
-                    APP_CONFIG.TRIP_TICKET_URL,
+                    'ticket',
                     'btn_home_booking_ticket',
                     'Booking Ticket Click',
                   )

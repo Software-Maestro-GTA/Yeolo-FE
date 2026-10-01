@@ -15,14 +15,13 @@ import {
   Alert,
   Platform,
   ToastAndroid,
-  Linking,
   StatusBar,
 } from 'react-native';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ItineraryStop } from '@yeolo/common';
+import type { ItineraryStop, BookingKind } from '@yeolo/common';
 import {
   CourseMiniMapView,
   CourseDayTabs,
@@ -40,6 +39,10 @@ import {
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import {
+  courseBookingContext,
+  type OpenBooking,
+} from '../services/bookingService';
 import ctaFlightBg from '../../assets/images/cta_flight_bg.png';
 import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
 
@@ -52,12 +55,14 @@ export interface CourseDetailScreenProps {
   courseId: string;
   onSelectPlace?: (stop: ItineraryStop) => void;
   onBack?: () => void;
+  onOpenBooking?: OpenBooking;
 }
 
 export function CourseDetailScreen({
   courseId,
   onSelectPlace,
   onBack,
+  onOpenBooking,
 }: CourseDetailScreenProps) {
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
@@ -133,28 +138,9 @@ export function CourseDetailScreen({
     });
   };
 
-  const handleOpenTripFlight = async () => {
-    trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner');
-    try {
-      await Linking.openURL(APP_CONFIG.TRIP_FLIGHT_URL);
-    } catch (_err) {
-      Alert.alert(
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
-      );
-    }
-  };
-
-  const handleOpenTripHotel = async () => {
-    trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner');
-    try {
-      await Linking.openURL(APP_CONFIG.TRIP_HOTEL_URL);
-    } catch (_err) {
-      Alert.alert(
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
-      );
-    }
+  const handleOpenBooking = (kind: BookingKind) => {
+    trackButtonClick(`btn_${kind}_cta`, `Open ${kind} Booking`);
+    onOpenBooking?.(kind, courseBookingContext(course));
   };
 
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -370,7 +356,7 @@ export function CourseDetailScreen({
             testID='btn-flight-cta'
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={handleOpenTripFlight}>
+            onPress={() => handleOpenBooking('flight')}>
             <ImageBackground
               source={ctaFlightBg}
               style={styles.bannerImageBg}
@@ -425,7 +411,7 @@ export function CourseDetailScreen({
             testID='btn-hotel-cta'
             style={styles.ctaBanner}
             activeOpacity={0.85}
-            onPress={handleOpenTripHotel}>
+            onPress={() => handleOpenBooking('hotel')}>
             <ImageBackground
               source={ctaHotelBg}
               style={styles.bannerImageBg}
@@ -455,6 +441,15 @@ export function CourseDetailScreen({
             </ImageBackground>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            testID='btn-ticket-cta'
+            accessibilityRole='button'
+            style={styles.dayMemoCard}
+            onPress={() => handleOpenBooking('ticket')}>
+            <Text style={styles.dayMemoText}>
+              {UI_STRINGS.BOOKING.TICKET_CTA}
+            </Text>
+          </TouchableOpacity>
           {/* Summary Section (총 예상 경비) */}
           <View style={styles.summarySection} testID='summary-section'>
             <View style={styles.summaryCard}>

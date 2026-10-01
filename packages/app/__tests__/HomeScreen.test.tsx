@@ -38,10 +38,9 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
 
     expect(getByTestId('booking-section')).toBeTruthy();
     expect(getByText('여행 예약')).toBeTruthy();
-    expect(getByText('Trip.com')).toBeTruthy();
+    expect(getByText('마이리얼트립')).toBeTruthy();
     expect(getByText('항공')).toBeTruthy();
     expect(getByText('숙소')).toBeTruthy();
-    expect(getByText('기차')).toBeTruthy();
     expect(getByText('투어·티켓')).toBeTruthy();
   });
 
@@ -216,34 +215,16 @@ describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)',
     );
   });
 
-  it('여행 예약 파트너스 타일(항공, 숙소, 기차, 투어·티켓) 클릭 시 각각의 Trip.com 파트너스 URL로 Linking.openURL이 구동되어야 한다', async () => {
-    const { Linking } = require('react-native');
-    const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-
-    const { getByTestId } = await render(<HomeScreen />);
-
-    // 1. 항공
-    fireEvent.press(getByTestId('booking-tile-flight'));
-    expect(openURLSpy).toHaveBeenCalledWith(
-      'https://kr.trip.com/flights/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
-    );
-
-    // 2. 숙소
-    fireEvent.press(getByTestId('booking-tile-hotel'));
-    expect(openURLSpy).toHaveBeenCalledWith(
-      'https://kr.trip.com/hotels/w/home?Allianceid=9936872&SID=327895947',
-    );
-
-    // 3. 기차
-    fireEvent.press(getByTestId('booking-tile-train'));
-    expect(openURLSpy).toHaveBeenCalledWith(
-      'https://kr.trip.com/trains/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
-    );
-
-    // 4. 투어·티켓
-    fireEvent.press(getByTestId('booking-tile-ticket'));
-    expect(openURLSpy).toHaveBeenCalledWith(
-      'https://kr.trip.com/things-to-do/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
-    );
-  });
+  it.each(['flight', 'hotel', 'ticket'])(
+    '예약 %s 타일은 마이리얼트립 검색창을 연다',
+    async (kind) => {
+      const onOpenBooking = jest.fn();
+      const { getByTestId, queryByTestId } = await render(
+        <HomeScreen onOpenBooking={onOpenBooking} />,
+      );
+      await fireEvent.press(getByTestId(`booking-tile-${kind}`));
+      expect(onOpenBooking).toHaveBeenCalledWith(kind, expect.any(Object));
+      expect(queryByTestId('booking-tile-train')).toBeNull();
+    },
+  );
 });

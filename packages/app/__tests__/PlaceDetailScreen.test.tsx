@@ -16,6 +16,12 @@ jest.mock('../src/components/navigation/BottomNavBar', () => ({
 jest.mock('../src/hooks/queries', () => ({
   ...jest.requireActual('../src/hooks/queries'),
   usePlaceDetailQuery: ({ placeId }: { placeId?: string }) => {
+    if (placeId === 'hotel-place-id') {
+      return {
+        data: { placeName: '제주 호텔', category: '호텔' },
+        isLoading: false,
+      };
+    }
     if (placeId === 'error-place-id') {
       return {
         data: undefined,
@@ -114,6 +120,17 @@ const mockStop: ItineraryStop = {
     memo: null,
   },
 };
+
+it('장소 상세 상단 뒤로가기 버튼은 이전 화면으로 이동한다', async () => {
+  const onBack = jest.fn();
+  const { getByTestId } = await render(
+    <PlaceDetailScreen stop={mockStop} onBack={onBack} />,
+  );
+  const backButton = getByTestId('btn-place-back');
+  expect(backButton.props.accessibilityRole).toBe('button');
+  fireEvent.press(backButton);
+  expect(onBack).toHaveBeenCalledTimes(1);
+});
 
 describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종합)', () => {
   it('stop 전달 시 API-PLACE-1 데이터와 코스 확인 창 정보가 종합되어 올바르게 렌더링되어야 한다', async () => {
@@ -241,4 +258,31 @@ describe('PlaceDetailScreen & OpeningHoursModal (API-PLACE-1 & 코스 정보 종
     expect(getByText('정보 없음')).toBeTruthy();
     expect(queryByText('영업중')).toBeNull();
   });
+});
+
+it('장소 예약은 해당 장소 이름으로 투어·티켓을 검색하도록 연다', async () => {
+  const onOpenBooking = jest.fn();
+  const { getByTestId } = await render(
+    <PlaceDetailScreen stop={mockStop} onOpenBooking={onOpenBooking} />,
+  );
+  await fireEvent.press(getByTestId('btn-place-booking'));
+  expect(onOpenBooking).toHaveBeenCalledWith('ticket', {
+    keyword: '함덕 해수욕장 (API)',
+    autoSearch: true,
+  });
+});
+
+it('숙소 장소는 숙소 검색으로 연결된다', async () => {
+  const onOpenBooking = jest.fn();
+  const { getByTestId } = await render(
+    <PlaceDetailScreen
+      onOpenBooking={onOpenBooking}
+      stop={{
+        ...mockStop,
+        place: { ...mockStop.place, placeId: 'hotel-place-id' },
+      }}
+    />,
+  );
+  await fireEvent.press(getByTestId('btn-place-booking'));
+  expect(onOpenBooking).toHaveBeenCalledWith('hotel', { keyword: '제주 호텔' });
 });

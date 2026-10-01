@@ -19,8 +19,14 @@ jest.mock('../src/screens', () => {
     LoginScreen: ({ onLoginSuccess }: any) => (
       <Button title='Mock Login' onPress={() => onLoginSuccess?.(false)} />
     ),
-    HomeScreen: ({ onNavigateToExplore }: any) => (
-      <Button title='Go to Explore' onPress={onNavigateToExplore} />
+    HomeScreen: ({ onNavigateToExplore, onOpenBooking }: any) => (
+      <React.Fragment>
+        <Button title='Go to Explore' onPress={onNavigateToExplore} />
+        <Button
+          title='Open Ticket Booking'
+          onPress={() => onOpenBooking?.('ticket', { keyword: '도쿄' })}
+        />
+      </React.Fragment>
     ),
     CourseListScreen: ({ onSelectCourse }: any) => (
       <Button
@@ -84,10 +90,13 @@ jest.mock('../src/screens', () => {
     ProfileInputScreen: () => (
       <Text testID='profile-input-screen'>ProfileInputScreen</Text>
     ),
-    PlaceDetailScreen: ({ stop, placeId }: any) => (
-      <Text testID='place-detail-screen'>
-        PlaceDetailScreen: {stop?.place?.placeName || placeId}
-      </Text>
+    PlaceDetailScreen: ({ stop, placeId, onBack }: any) => (
+      <React.Fragment>
+        <Text testID='place-detail-screen'>
+          PlaceDetailScreen: {stop?.place?.placeName || placeId}
+        </Text>
+        <Button title='Place Back' onPress={() => onBack?.()} />
+      </React.Fragment>
     ),
   };
 });
@@ -153,6 +162,10 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     const placeDetailScreen = await findByTestId('place-detail-screen');
     expect(placeDetailScreen).toBeTruthy();
     expect(getByText(/함덕 해수욕장/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(getByText('Place Back'));
+    });
+    expect(getByText('Select Place Stop')).toBeTruthy();
   });
 
   it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 IntroScreen(온보딩)으로 진입해야 한다', async () => {
@@ -500,5 +513,30 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       expect(container.props.onMoveShouldSetResponder).toBeDefined();
       expect(container.props.onResponderRelease).toBeDefined();
     });
+  });
+});
+
+describe('예약 화면의 앱 공통 내비게이션', () => {
+  const auth = {
+    isAuthenticated: true,
+    isLoading: false,
+    hasCompletedOnboarding: true,
+  };
+  it('예약에서도 하단 탭을 유지하고 뒤로 가기와 탭 이동이 동작한다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={auth as any}>
+        <NavigationRoot initialStep={NAV_STEPS.HOME} />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Open Ticket Booking'));
+    expect(ui.getByTestId('booking-screen-ticket')).toBeTruthy();
+    expect(ui.getByTestId('bottom-nav-bar')).toBeTruthy();
+    expect(ui.getByLabelText('도시 또는 장소 이름').props.value).toBe('도쿄');
+    await fireEvent.press(ui.getByLabelText('예약 이전 화면으로'));
+    expect(ui.getByText('Open Ticket Booking')).toBeTruthy();
+    await fireEvent.press(ui.getByText('Open Ticket Booking'));
+    await fireEvent.press(ui.getByTestId('tab-profile'));
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.queryByTestId('booking-screen-ticket')).toBeNull();
   });
 });

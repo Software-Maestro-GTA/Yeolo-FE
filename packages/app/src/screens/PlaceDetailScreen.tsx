@@ -20,18 +20,30 @@ import type { ItineraryStop } from '@yeolo/common';
 import { isValidCoordinate } from '@yeolo/common';
 import { OpeningHoursModal } from '../components/place';
 import { CourseMiniMapView } from '../components/course';
-import { usePlaceDetailQuery } from '../hooks/queries';
+import { usePlaceDetailQuery, useCourseDetailQuery } from '../hooks/queries';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { getDestinationImageUrl } from '../services';
+import {
+  courseBookingContext,
+  type OpenBooking,
+} from '../services/bookingService';
 import { useBackground } from '../context';
 
 export interface PlaceDetailScreenProps {
   stop?: ItineraryStop;
+  courseId?: string;
+  onBack?: () => void;
+  onOpenBooking?: OpenBooking;
 }
 
-export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
+export function PlaceDetailScreen({
+  stop,
+  courseId,
+  onBack,
+  onOpenBooking,
+}: PlaceDetailScreenProps) {
   useGA4ScreenTracking('PlaceDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const { setBackground, resetBackground } = useBackground();
@@ -50,12 +62,20 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
     placeId: targetPlaceId,
   });
 
+  const { data: bookingCourse } = useCourseDetailQuery({
+    courseId: courseId || '',
+    options: { enabled: !!courseId },
+  });
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
 
   const displayPlaceName =
     placeDetail?.placeName || stop?.place?.placeName || '';
   const displayPlaceEngName = placeDetail?.placeEngName || '';
   const displayCategory = placeDetail?.category || stop?.place?.category || '';
+  const isAccommodation =
+    /숙소|호텔|리조트|펜션|게스트하우스|hotel|lodging|accommodation/i.test(
+      displayCategory,
+    );
   const displayRating =
     placeDetail?.rating !== undefined && placeDetail?.rating !== null
       ? String(placeDetail.rating)
@@ -167,6 +187,23 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
               style={styles.heroGradient}
             />
 
+            <TouchableOpacity
+              testID='btn-place-back'
+              accessibilityRole='button'
+              accessibilityLabel={UI_STRINGS.PLACE_DETAIL.BACK}
+              style={[styles.heroBackButton, { top: topPadding }]}
+              activeOpacity={0.8}
+              onPress={() => {
+                trackButtonClick('btn_place_detail_back', 'Back Button Click');
+                onBack?.();
+              }}>
+              <Ionicons
+                name='chevron-back'
+                size={18}
+                color={palette.deepNavy}
+              />
+            </TouchableOpacity>
+
             {/* Place Title & Tags Group */}
             <View style={[styles.heroContentGroup, { paddingTop: topPadding }]}>
               <View style={styles.placeTitleRow}>
@@ -239,6 +276,31 @@ export function PlaceDetailScreen({ stop }: PlaceDetailScreenProps) {
               <Text style={styles.metricCostText}>{displayCost}</Text>
             </View>
           </View>
+
+          {!!displayPlaceName && (
+            <View style={styles.sectionContainer}>
+              <TouchableOpacity
+                testID='btn-place-booking'
+                accessibilityRole='button'
+                style={styles.aiRecommendCard}
+                onPress={() => {
+                  trackButtonClick('btn_place_booking', 'Open Place Booking');
+                  onOpenBooking?.(isAccommodation ? 'hotel' : 'ticket', {
+                    ...courseBookingContext(bookingCourse),
+                    keyword: isAccommodation
+                      ? bookingCourse?.destinationCity || displayPlaceName
+                      : displayPlaceName,
+                    ...(!isAccommodation && { autoSearch: true }),
+                  });
+                }}>
+                <Text style={styles.aiRecommendTitle}>
+                  {isAccommodation
+                    ? UI_STRINGS.BOOKING.HOTEL_CTA
+                    : UI_STRINGS.BOOKING.TICKET_CTA}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Opening Hours Section */}
           <View style={styles.sectionContainer} testID='opening-hours-section'>
@@ -396,6 +458,22 @@ const styles = StyleSheet.create({
   },
   heroGradient: {
     ...StyleSheet.absoluteFill,
+  },
+  heroBackButton: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 3,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: hexToRgba(palette.white, 0.85),
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: palette.deepNavy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   heroContentGroup: {
     gap: 8,

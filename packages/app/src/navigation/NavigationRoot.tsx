@@ -1,3 +1,7 @@
+/**
+ * @file NavigationRoot.tsx
+ * @description App routes, back history and shared tab layout including affiliate booking screens.
+ */
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
@@ -10,7 +14,9 @@ import {
   GestureResponderEvent,
   PanResponderGestureState,
 } from 'react-native';
-import type { ItineraryStop } from '@yeolo/common';
+import type { ItineraryStop, BookingKind } from '@yeolo/common';
+import { BookingScreen } from '../screens/BookingScreen';
+import type { BookingContext, OpenBooking } from '../services/bookingService';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout, OnboardingLayout } from '../layouts';
@@ -108,6 +114,11 @@ export function NavigationRoot({
   const [selectedPlaceStop, setSelectedPlaceStop] = useState<
     ItineraryStop | undefined
   >();
+  const [bookingRequest, setBookingRequest] = useState<{
+    kind: BookingKind;
+    context: BookingContext;
+    tab: NavTab;
+  } | null>(null);
   const [history, setHistory] = useState<NavStep[]>([]);
   const [step, setStep] = useState<NavStep | null>(initialStep || null);
   const lastBackPressRef = useRef<number>(0);
@@ -296,8 +307,29 @@ export function NavigationRoot({
     if (tab === NAV_TABS.PROFILE) navigateTo(NAV_STEPS.PROFILE);
   };
 
+  const openBooking: OpenBooking = (kind, context) => {
+    setBookingRequest({
+      kind,
+      context,
+      tab: step === NAV_STEPS.HOME ? NAV_TABS.HOME : NAV_TABS.EXPLORE,
+    });
+    navigateTo(NAV_STEPS.BOOKING);
+  };
+
   const renderCurrentScreen = () => {
     switch (step) {
+      case NAV_STEPS.BOOKING:
+        return (
+          <MainLayout
+            currentTab={bookingRequest?.tab || NAV_TABS.HOME}
+            onTabPress={handleTabPress}>
+            <BookingScreen
+              kind={bookingRequest?.kind || 'ticket'}
+              context={bookingRequest?.context}
+              onBack={goBack}
+            />
+          </MainLayout>
+        );
       case NAV_STEPS.LOGIN:
         return (
           <LoginScreen
@@ -450,6 +482,7 @@ export function NavigationRoot({
             onTabPress={handleTabPress}
             noTopEdges={true}>
             <CourseDetailScreen
+              onOpenBooking={openBooking}
               courseId={selectedCourseId || ''}
               onSelectPlace={(stop) => {
                 setSelectedPlaceStop(stop);
@@ -491,7 +524,12 @@ export function NavigationRoot({
             currentTab={NAV_TABS.EXPLORE}
             onTabPress={handleTabPress}
             noTopEdges={true}>
-            <PlaceDetailScreen stop={selectedPlaceStop} />
+            <PlaceDetailScreen
+              onOpenBooking={openBooking}
+              onBack={goBack}
+              stop={selectedPlaceStop}
+              courseId={selectedCourseId}
+            />
           </MainLayout>
         );
       case NAV_STEPS.HOME:
@@ -502,6 +540,7 @@ export function NavigationRoot({
             onTabPress={handleTabPress}
             noTopEdges={true}>
             <HomeScreen
+              onOpenBooking={openBooking}
               selectedCourseId={selectedCourseId}
               onNavigateToCreate={() => {
                 if (auth?.hasCompletedOnboarding === false) {

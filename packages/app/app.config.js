@@ -1,6 +1,6 @@
 /**
  * @file app.config.js
- * @description Dynamic Expo configuration resolving Google and Airbridge native SDK settings from environment variables.
+ * @description Dynamic Expo configuration resolving Google, Airbridge and MyRealTrip settings from environment variables.
  */
 
 module.exports = ({ config }) => {
@@ -19,6 +19,11 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    extra: {
+      ...config.extra,
+      // Direct app integration: this value is embedded in the public Expo configuration.
+      myRealTripApiKey: process.env.MY_REAL_TRIP_API_KEY || '',
+    },
     plugins: [
       ...(config.plugins || []),
       'expo-apple-authentication',

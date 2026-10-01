@@ -1,3 +1,7 @@
+/**
+ * @file navigation.ts
+ * @description App navigation steps and persistent bottom tab identifiers.
+ */
 export const NAV_STEPS = {
   LOGIN: 'LOGIN',
   INTRO: 'INTRO',
@@ -8,6 +12,7 @@ export const NAV_STEPS = {
   PROFILE: 'PROFILE',
   PROFILE_INPUT: 'PROFILE_INPUT',
   HOME: 'HOME',
+  BOOKING: 'BOOKING',
   COURSE_LIST: 'COURSE_LIST',
   CREATE_COURSE: 'CREATE_COURSE',
   GENERATING_COURSE: 'GENERATING_COURSE',
