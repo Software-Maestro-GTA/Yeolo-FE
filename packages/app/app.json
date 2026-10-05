@@ -60,6 +60,9 @@
             "useFrameworks": "static"
           },
           "android": {
+            "extraMavenRepos": [
+              "https://sdk-download.airbridge.io/maven"
+            ],
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
