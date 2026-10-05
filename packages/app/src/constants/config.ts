@@ -6,6 +6,19 @@
 import { Platform } from 'react-native';
 
 export const APP_CONFIG = {
+  REEL: {
+    WIDTH: 720,
+    HEIGHT: 1280,
+    FPS: 24,
+    MAX_PHOTOS: 5,
+    CAPTION_LIMIT: 80,
+    TITLE_LIMIT: 40,
+    PHOTO_SECONDS: 3,
+    INTRO_SECONDS: 2,
+    ROUTE_SECONDS: 2,
+    ENDING_SECONDS: 3,
+    MAP_TIMEOUT_MS: 20000,
+  },
   DEFAULT_API_URL: 'https://api.yeolo.app',
   WEB_BASE_URL: 'https://www.yeolo.app',
   INVITE_BASE_URL: 'https://www.yeolo.app/invite',

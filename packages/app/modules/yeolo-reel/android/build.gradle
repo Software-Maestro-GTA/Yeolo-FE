@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'expo.modules.yeoloreel'
+version = '1.0.0'
+android {
+  namespace 'expo.modules.yeoloreel'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+    testInstrumentationRunner 'expo.modules.yeoloreel.ReelVerification'
+  }
+}
+dependencies {
+  implementation 'androidx.core:core-ktx:1.17.0'
+  implementation 'androidx.exifinterface:exifinterface:1.4.1'
+  implementation 'com.google.android.gms:play-services-maps:19.1.0'
+  implementation 'androidx.fragment:fragment:1.6.1'
+}

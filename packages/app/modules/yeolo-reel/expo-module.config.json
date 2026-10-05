@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["YeoloReelModule"] },
+  "android": { "modules": ["expo.modules.yeoloreel.YeoloReelModule"] }
+}

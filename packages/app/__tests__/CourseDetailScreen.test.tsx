@@ -156,6 +156,31 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     await AsyncStorage.setItem('accessToken', 'mock-token');
   });
 
+  it('공유 왼쪽의 릴스 버튼으로 현재 선택한 날짜의 편집기를 연다', async () => {
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+    const { findByTestId, getByTestId, findByText } = await render(
+      <CourseDetailScreen courseId='test-course-id-123' />,
+    );
+    await findByTestId('btn-share');
+    await fireEvent.press(getByTestId('day-tab-2'));
+    const actions = getByTestId('course-share-actions');
+    expect(
+      actions.children
+        .filter((node) => typeof node !== 'string')
+        .map((node) => (typeof node === 'string' ? '' : node.props.testID)),
+    ).toEqual(['btn-reel', 'btn-share']);
+    await fireEvent.press(getByTestId('btn-reel'));
+    await findByText('감성 릴스 만들기');
+    expect(getByTestId('reel-day-2').props.accessibilityState.selected).toBe(
+      true,
+    );
+    expect(getByTestId('reel-photo-place-3')).toBeTruthy();
+    await fireEvent.press(getByTestId('reel-close'));
+    expect(getByTestId('btn-share')).toBeTruthy();
+  });
+
   it('코스 상세 데이터 조회 후 타임라인, 방문지 카드, 추천 이유를 올바르게 렌더링해야 한다', async () => {
     jest
       .spyOn(commonApi, 'getCourseDetailApi')

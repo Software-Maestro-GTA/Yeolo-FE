@@ -48,6 +48,7 @@ import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { CourseReelComposer } from '../components/course/CourseReelComposer';
 
 import { useBackground, AuthContext } from '../context';
 
@@ -144,6 +145,7 @@ export function CourseDetailScreen({
   };
 
   const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [reelOpen, setReelOpen] = useState(false);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
   const [mapData, setMapData] = useState<ProcessedCourseMapData>({
     coordinates: [],
@@ -287,17 +289,39 @@ export function CourseDetailScreen({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                testID='btn-share'
-                style={styles.actionCircleBtn}
-                onPress={handleShareCourse}
-                activeOpacity={0.8}>
-                <Ionicons
-                  name='share-outline'
-                  size={18}
-                  color={palette.deepNavy}
-                />
-              </TouchableOpacity>
+              <View style={styles.shareActions} testID='course-share-actions'>
+                <TouchableOpacity
+                  testID='btn-reel'
+                  accessibilityRole='button'
+                  accessibilityLabel={UI_STRINGS.REEL.BUTTON}
+                  hitSlop={4}
+                  style={styles.actionCircleBtn}
+                  onPress={() => {
+                    trackButtonClick(
+                      'btn_course_detail_reel',
+                      'Create Course Reel',
+                    );
+                    setReelOpen(true);
+                  }}
+                  activeOpacity={0.8}>
+                  <Ionicons
+                    name='film-outline'
+                    size={18}
+                    color={palette.deepNavy}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID='btn-share'
+                  style={styles.actionCircleBtn}
+                  onPress={handleShareCourse}
+                  activeOpacity={0.8}>
+                  <Ionicons
+                    name='share-outline'
+                    size={18}
+                    color={palette.deepNavy}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Title Content Group at the bottom of hero */}
@@ -466,6 +490,14 @@ export function CourseDetailScreen({
           </View>
         </View>
       </ScrollView>
+      {reelOpen && (
+        <CourseReelComposer
+          key={course.courseId}
+          course={course}
+          initialDay={selectedDay}
+          onClose={() => setReelOpen(false)}
+        />
+      )}
     </View>
   );
 }
@@ -627,6 +659,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 10,
+  },
+  shareActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   actionCircleBtn: {
     width: 36,
