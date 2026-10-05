@@ -16,6 +16,7 @@ import {
 } from '@yeolo/common';
 import { APP_CONFIG } from '../../constants';
 import { COURSE_LIST_QUERY_KEY } from './useCourseListQuery';
+import { createBackgroundCourseStreamApi } from '../../services/courseBackgroundService';
 
 export interface UseCourseCreateMutationOptions {
   options?: UseMutationOptions<string | null, Error, CourseCreateRequest>;
@@ -33,7 +34,7 @@ export function useCourseCreateMutation({
         const token = (await AsyncStorage.getItem('accessToken')) || '';
         return await useCourseStore
           .getState()
-          .createCourse(apiUrl, data, token);
+          .createCourse(apiUrl, data, token, createBackgroundCourseStreamApi);
       } catch (err: unknown) {
         logger.error('Failed to trigger createCourse store action:', err);
         throw err;

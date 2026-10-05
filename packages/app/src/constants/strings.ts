@@ -304,6 +304,15 @@ export const UI_STRINGS = {
     ERROR_TITLE: '코스 생성 중 오류가 발생했습니다',
     GO_INTRO_BTN: '시작 화면으로 이동',
     RETRY_BTN: '다시 시도하기',
+    BACKGROUND_CHANNEL: '여행 코스 생성',
+    BACKGROUND_TITLE: '여행 코스를 생성하고 있어요',
+    BACKGROUND_MESSAGE: '다른 앱을 사용하는 동안에도 코스를 만들고 있어요.',
+    BACKGROUND_UNAVAILABLE:
+      '백그라운드 코스 생성을 사용하려면 앱을 최신 버전으로 업데이트해주세요.',
+    BACKGROUND_START_ERROR:
+      '코스 생성을 시작하지 못했습니다. 앱 화면에서 다시 시도해주세요.',
+    BACKGROUND_EXPIRED:
+      '기기에서 백그라운드 작업이 중단되었습니다. 코스 목록에서 생성 결과를 먼저 확인해주세요.',
   },
   COURSE_DETAIL: {
     MAIN_TITLE: '일본 도쿄',
