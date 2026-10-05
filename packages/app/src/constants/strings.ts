@@ -88,6 +88,15 @@ export const UI_STRINGS = {
     TICKET: '투어·티켓 검색',
     TICKET_CTA: '🎫 마이리얼트립 투어·티켓 찾기',
     HOTEL_CTA: '🏨 마이리얼트립 숙소 찾기',
+    COUPON_TITLE: '해외 투어·티켓 할인 쿠폰팩',
+    COUPON_SUMMARY: '누구나 1천·3천·5천원 할인',
+    COUPON_HIDE: '쿠폰 접기',
+    COUPON_DISCOUNT: '할인',
+    COUPON_CONDITION: '이상 구매 시',
+    COUPON_COPY: '복사',
+    COUPON_COPIED: '복사됨',
+    COUPON_NOTE:
+      '코드를 복사해 마이리얼트립 결제 화면에 입력해 주세요. 적용 가능 여부는 결제 화면에서 확인할 수 있어요.',
     PRICE_NOTE:
       '가격은 조회 시점 기준이며 최종 요금과 예약 조건은 마이리얼트립에서 확인해주세요.',
     EMPTY: '검색 결과가 없습니다. 지역이나 검색어를 바꿔 다시 검색해주세요.',

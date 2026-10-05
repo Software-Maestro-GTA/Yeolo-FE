@@ -36,6 +36,7 @@ import {
 import { APP_CONFIG } from '../constants/config';
 import { UI_STRINGS } from '../constants/strings';
 import { palette } from '../theme/colors';
+import { TicketCouponPack } from '../components/booking/TicketCouponPack';
 
 const S = UI_STRINGS.BOOKING;
 type Choice = { id: string; label: string; product?: BookingProduct };
@@ -973,6 +974,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                   </>
                 )}
               </View>
+              {kind === 'ticket' && <TicketCouponPack />}
               {productResults}
             </View>
           }

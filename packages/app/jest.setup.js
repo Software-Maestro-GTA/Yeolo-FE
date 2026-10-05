@@ -19,6 +19,11 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: { setString: jest.fn() },
+}));
+
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),

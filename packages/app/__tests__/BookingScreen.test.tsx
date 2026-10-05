@@ -5,6 +5,7 @@
 import React from 'react';
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Linking, StyleSheet } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { MyRealTripError } from '@yeolo/common';
 import { BookingScreen } from '../src/screens/BookingScreen';
 import {
@@ -14,6 +15,12 @@ import {
 } from '../src/services/bookingService';
 import { UI_STRINGS } from '../src/constants/strings';
 import { renderWithQueryClient as render } from './test-utils';
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: { setString: jest.fn() },
+}));
+
 const S = UI_STRINGS.BOOKING;
 const product = {
   itemName: '성산일출봉 투어',
@@ -45,6 +52,35 @@ beforeEach(() => {
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 afterEach(() => jest.restoreAllMocks());
+
+test('투어·티켓 쿠폰팩에서 해외 전용 할인 조건을 확인하고 코드를 복사한다', async () => {
+  const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
+  expect(ui.getByTestId('ticket-coupon-pack')).toBeTruthy();
+  expect(ui.queryByText('PACKMKTP1000')).toBeNull();
+
+  await fireEvent.press(ui.getByTestId('ticket-coupon-toggle'));
+  for (const [code, minimum, discount] of [
+    ['PACKMKTP1000', '₩50,000', '₩1,000'],
+    ['PACKMKTP3000', '₩100,000', '₩3,000'],
+    ['PACKMKTP5000', '₩150,000', '₩5,000'],
+  ]) {
+    expect(ui.getByText(code)).toBeTruthy();
+    expect(ui.getByText(`${minimum} 이상 구매 시`)).toBeTruthy();
+    expect(ui.getByText(`${discount} 할인`)).toBeTruthy();
+  }
+
+  await fireEvent.press(ui.getByTestId('ticket-coupon-copy-PACKMKTP3000'));
+  expect(Clipboard.setString).toHaveBeenCalledWith('PACKMKTP3000');
+  expect(ui.getByText(S.COUPON_COPIED)).toBeTruthy();
+});
+
+test.each(['flight', 'hotel'] as const)(
+  '%s 예약에는 투어·티켓 쿠폰팩을 표시하지 않는다',
+  async (kind) => {
+    const ui = await render(<BookingScreen kind={kind} onBack={jest.fn()} />);
+    expect(ui.queryByTestId('ticket-coupon-pack')).toBeNull();
+  },
+);
 
 test('장소 검색 → 상품 선택 → 생성한 제휴 링크만 연다', async () => {
   const search = jest
