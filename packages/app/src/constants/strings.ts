@@ -161,8 +161,13 @@ export const UI_STRINGS = {
     PERMISSION_ERROR:
       '사진 보관함 접근 권한이 필요합니다.\n\n취향 분석을 이용하시려면 기기 [설정 > 여로 > 사진]에서 접근 권한을 허용해 주세요.',
     OPEN_SETTINGS_BUTTON: '설정으로 이동',
-    NO_PHOTOS_ERROR: '분석할 사진이 존재하지 않습니다.',
-    NO_EXIF_ERROR: '사진 메타데이터 추출에 실패했습니다.',
+    NO_PHOTOS_ERROR: '최근 1년 내에 분석할 사진이 없습니다.',
+    NO_EXIF_ERROR:
+      '최근 사진에서 위치와 시간 정보를 찾지 못했습니다. 위치 정보가 포함된 사진으로 다시 시도해 주세요.',
+    INSUFFICIENT_PHOTOS_ERROR:
+      '취향을 분석하려면 여러 날짜의 위치 정보가 포함된 사진이 필요합니다. 최소 3일에 걸친 5개 이상의 방문 기록이 필요해요.',
+    LIMITED_PHOTOS_ERROR:
+      '선택한 사진만으로는 분석 근거가 부족합니다. 사진 접근 설정에서 여러 날짜의 위치 정보가 포함된 사진을 추가로 선택해 주세요. 최소 3일에 걸친 5개 이상의 방문 기록이 필요해요.',
   },
   TASTE_LABELS: {
     PACING: '여정 속도',

@@ -20,8 +20,21 @@ export const APP_CONFIG = {
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
   DEFAULT_SUPPORT_EMAIL: 'ksk85628781@gmail.com',
-  /** Maximum number of recent photos retrieved from media library for taste analysis */
+  /** Maximum representative metadata records sent for taste analysis */
   ANALYSIS_PHOTO_LIMIT: 100,
+  /** Initial sampling heuristics; calibrate against real libraries and recommendation quality. */
+  PHOTO_SAMPLING: {
+    LOOKBACK_DAYS: 365,
+    PERIOD_COUNT: 12,
+    CANDIDATES_PER_PERIOD: 250,
+    PAGE_SIZE: 100,
+    METADATA_CONCURRENCY: 4,
+    VISIT_RADIUS_METERS: 100,
+    VISIT_WINDOW_MINUTES: 120,
+    MAX_PER_DAY: 5,
+    MIN_REPRESENTATIVES: 5,
+    MIN_DAYS: 3,
+  },
   /** Default staleTime for TanStack Query (5 minutes) */
   QUERY_STALE_TIME: 5 * 60 * 1000,
   /** Default fallback map region (Seoul City Hall) for in-app mini map view */

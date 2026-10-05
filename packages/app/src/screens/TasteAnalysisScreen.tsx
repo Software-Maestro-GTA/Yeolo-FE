@@ -93,8 +93,9 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
     Linking.openSettings().catch(() => {});
   };
 
-  const isPermissionError =
-    errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR;
+  const needsPhotoSettings =
+    errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR ||
+    errorMessage === UI_STRINGS.TASTE_ANALYSIS.LIMITED_PHOTOS_ERROR;
 
   const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
     if (status === 'COMPLETED') {
@@ -236,7 +237,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
               </View>
               <Text style={styles.errorText}>{errorMessage}</Text>
               <View style={styles.errorActionsRow}>
-                {isPermissionError && (
+                {needsPhotoSettings && (
                   <TouchableOpacity
                     style={styles.settingsButton}
                     activeOpacity={0.8}
@@ -250,7 +251,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.confirmButton,
-                    isPermissionError && styles.secondaryConfirmButton,
+                    needsPhotoSettings && styles.secondaryConfirmButton,
                   ]}
                   activeOpacity={0.8}
                   onPress={handleConfirmError}
@@ -258,7 +259,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
                   <Text
                     style={[
                       styles.confirmButtonText,
-                      isPermissionError && styles.secondaryConfirmButtonText,
+                      needsPhotoSettings && styles.secondaryConfirmButtonText,
                     ]}>
                     {UI_STRINGS.COMMON.CONFIRM}
                   </Text>

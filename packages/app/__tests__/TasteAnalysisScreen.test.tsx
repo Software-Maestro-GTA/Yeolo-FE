@@ -42,6 +42,39 @@ describe('TasteAnalysisScreen UI & Progress', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it('표본이 부족하면 서버 분석을 요청하지 않고 오류를 안내해야 한다', async () => {
+    const useTasteStore = require('@yeolo/common').useTasteStore;
+    const analyze = jest.spyOn(useTasteStore.getState(), 'analyzeTaste');
+    (fetchPhotosWithExifData as jest.Mock).mockRejectedValueOnce(
+      new Error(UI_STRINGS.TASTE_ANALYSIS.INSUFFICIENT_PHOTOS_ERROR),
+    );
+    const { getByText } = await render(
+      <TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />,
+    );
+    await waitFor(() =>
+      expect(
+        getByText(UI_STRINGS.TASTE_ANALYSIS.INSUFFICIENT_PHOTOS_ERROR),
+      ).toBeTruthy(),
+    );
+    expect(analyze).not.toHaveBeenCalled();
+    expect(mockOnFinish).not.toHaveBeenCalled();
+  });
+
+  it('제한 접근 표본 부족 시 사진 선택을 바꿀 수 있도록 설정 버튼을 제공해야 한다', async () => {
+    (fetchPhotosWithExifData as jest.Mock).mockRejectedValueOnce(
+      new Error(UI_STRINGS.TASTE_ANALYSIS.LIMITED_PHOTOS_ERROR),
+    );
+    const { getByText } = await render(
+      <TasteAnalysisScreen onFinish={mockOnFinish} onFail={mockOnFail} />,
+    );
+    await waitFor(() =>
+      expect(
+        getByText(UI_STRINGS.TASTE_ANALYSIS.OPEN_SETTINGS_BUTTON),
+      ).toBeTruthy(),
+    );
   });
 
   it('Figma 스펙 타이틀, 스텝 3개, 실시간 인사이트 안내가 정상 렌더링되어야 한다', async () => {
