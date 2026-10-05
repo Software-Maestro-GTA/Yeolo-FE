@@ -1,6 +1,6 @@
 /**
  * @file app.config.js
- * @description Dynamic Expo configuration resolving Google, Airbridge and MyRealTrip settings from environment variables.
+ * @description Expo environment configuration and iOS background course generation capabilities.
  */
 
 module.exports = ({ config }) => {
@@ -67,6 +67,19 @@ module.exports = ({ config }) => {
       googleServicesFile: iosGoogleServices,
       infoPlist: {
         ...config.ios?.infoPlist,
+        UIBackgroundModes: [
+          ...new Set([
+            ...(config.ios?.infoPlist?.UIBackgroundModes || []),
+            'processing',
+          ]),
+        ],
+        BGTaskSchedulerPermittedIdentifiers: [
+          ...new Set([
+            ...(config.ios?.infoPlist?.BGTaskSchedulerPermittedIdentifiers ||
+              []),
+            'com.yeolo-travel.app.course-generation.*',
+          ]),
+        ],
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: ['yeolo', googleScheme].filter(Boolean),
