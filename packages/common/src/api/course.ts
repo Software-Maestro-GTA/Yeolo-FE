@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description API service for initiating course generation SSE stream (API-FB-4) and retrieving course details (API-FB-7).
+ * @description Course API with cancellable SSE generation and terminal completion, plus detail, list and delete requests.
  */
 import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
@@ -21,6 +21,10 @@ export interface CourseStreamCallbacks {
   onComplete?: (event: CourseCompleteEvent) => void;
 }
 
+export interface CourseStreamOptions {
+  signal?: AbortSignal;
+}
+
 /**
  * Sends POST /api/courses request and parses SSE progress & complete events.
  *
@@ -28,6 +32,7 @@ export interface CourseStreamCallbacks {
  * @param accessToken User JWT access token
  * @param payload Course creation parameters
  * @param callbacks Event callbacks for progress and complete
+ * @param options Optional cancellation signal owned by the generation task
  * @returns Generated courseId string
  */
 export async function createCourseStreamApi(
@@ -35,6 +40,7 @@ export async function createCourseStreamApi(
   accessToken: string,
   payload: CourseCreateRequest,
   callbacks?: CourseStreamCallbacks,
+  options?: CourseStreamOptions,
 ): Promise<string> {
   let courseId: string | undefined;
 
@@ -50,6 +56,7 @@ export async function createCourseStreamApi(
         Authorization: `Bearer ${accessToken}`,
       },
       timeout: false,
+      signal: options?.signal ?? null,
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -87,10 +94,18 @@ export async function createCourseStreamApi(
         if (event.type === 'progress') {
           callbacks?.onProgress?.(parsed as CourseProgressEvent);
         } else if (event.type === 'complete') {
+          if (!parsed.data?.courseId || parsed.status !== 200) {
+            throw new ApiError(
+              parsed.status || 500,
+              parsed.message || '여행 코스 생성에 실패했습니다.',
+            );
+          }
+          courseId = parsed.data.courseId;
           callbacks?.onComplete?.(parsed as CourseCompleteEvent);
-          courseId = parsed.data?.courseId;
+          break;
         }
       } catch (jsonError) {
+        if (jsonError instanceof ApiError) throw jsonError;
         logger.error(
           '[CourseAPI] Error parsing SSE event in course generation:',
           jsonError,
@@ -98,6 +113,8 @@ export async function createCourseStreamApi(
       }
     }
   } catch (error: any) {
+    // Closing a terminal stream must never turn an already completed course into a failure.
+    if (courseId) return courseId;
     logger.error('[CourseAPI] createCourseStreamApi error:', error);
     if (error instanceof ApiError) {
       throw error;

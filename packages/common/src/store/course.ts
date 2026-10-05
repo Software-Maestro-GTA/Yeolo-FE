@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description Zustand store for managing course creation and SSE streaming progress states.
+ * @description Screen-independent course creation state with duplicate submission protection and terminal completion.
  */
 import { create } from 'zustand';
 import type { CourseCreateRequest, CourseState } from '../types/course';
@@ -20,7 +20,7 @@ export interface CourseStoreState extends CourseState {
   ) => Promise<string | null>;
 }
 
-export const useCourseStore = create<CourseStoreState>((set) => ({
+export const useCourseStore = create<CourseStoreState>((set, get) => ({
   createdCourseId: null,
   isGenerating: false,
   progressStep: null,
@@ -72,6 +72,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
     accessToken?: string,
     fetcher = createCourseStreamApi,
   ) => {
+    if (get().isGenerating) return null;
     set({
       isGenerating: true,
       error: null,
@@ -107,6 +108,8 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
 
       return courseId;
     } catch (err: any) {
+      // The complete callback is authoritative even if transport cleanup fails.
+      if (get().createdCourseId) return get().createdCourseId;
       const status = err instanceof ApiError ? err.status : 400;
       const message = err?.message || '여행 조건 입력값이 올바르지 않습니다.';
       set({
