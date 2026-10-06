@@ -71,6 +71,8 @@ export function useCourseCreateForm(
 
   const setDestinationCountry = (text: string) => {
     setDestinationCountryState(text);
+    setCountrySuggestions([]);
+    setCitySuggestions([]);
     if (validatedCountry !== text) {
       setValidatedCountry(null);
     }
@@ -83,6 +85,7 @@ export function useCourseCreateForm(
 
   const setDestinationCity = (text: string) => {
     setDestinationCityState(text);
+    setCitySuggestions([]);
     if (validatedCity !== text) {
       setValidatedCity(null);
     }
@@ -96,26 +99,35 @@ export function useCourseCreateForm(
       setCountrySuggestions([]);
       return;
     }
-    let isSubscribed = true;
-    fetchCountryAutocomplete(apiUrl, destinationCountry.trim())
-      .then((res) => {
-        if (isSubscribed) {
-          if (res?.data?.countries) {
-            setCountrySuggestions(res.data.countries);
-          } else {
+    if (validatedCountry === destinationCountry.trim()) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchCountryAutocomplete(
+        apiUrl,
+        destinationCountry.trim(),
+        undefined,
+        controller.signal,
+      )
+        .then((res) => {
+          if (!controller.signal.aborted) {
+            if (res?.data?.countries) {
+              setCountrySuggestions(res.data.countries);
+            } else {
+              setCountrySuggestions([]);
+            }
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
             setCountrySuggestions([]);
           }
-        }
-      })
-      .catch(() => {
-        if (isSubscribed) {
-          setCountrySuggestions([]);
-        }
-      });
+        });
+    }, APP_CONFIG.AUTOCOMPLETE_DEBOUNCE_MS);
     return () => {
-      isSubscribed = false;
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [destinationCountry, apiUrl]);
+  }, [destinationCountry, validatedCountry, apiUrl]);
 
   // API-LOC-2: 도시 자동완성 API 연동
   useEffect(() => {
@@ -123,27 +135,37 @@ export function useCourseCreateForm(
       setCitySuggestions([]);
       return;
     }
-    let isSubscribed = true;
+    if (validatedCity === destinationCity.trim()) return;
+    const controller = new AbortController();
     const countryFilter = destinationCountry.trim() || undefined;
-    fetchCityAutocomplete(apiUrl, destinationCity.trim(), countryFilter)
-      .then((res) => {
-        if (isSubscribed) {
-          if (res?.data?.cities) {
-            setCitySuggestions(res.data.cities);
-          } else {
+    const timer = setTimeout(() => {
+      fetchCityAutocomplete(
+        apiUrl,
+        destinationCity.trim(),
+        countryFilter,
+        undefined,
+        controller.signal,
+      )
+        .then((res) => {
+          if (!controller.signal.aborted) {
+            if (res?.data?.cities) {
+              setCitySuggestions(res.data.cities);
+            } else {
+              setCitySuggestions([]);
+            }
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
             setCitySuggestions([]);
           }
-        }
-      })
-      .catch(() => {
-        if (isSubscribed) {
-          setCitySuggestions([]);
-        }
-      });
+        });
+    }, APP_CONFIG.AUTOCOMPLETE_DEBOUNCE_MS);
     return () => {
-      isSubscribed = false;
+      clearTimeout(timer);
+      controller.abort();
     };
-  }, [destinationCity, destinationCountry, apiUrl]);
+  }, [destinationCity, destinationCountry, validatedCity, apiUrl]);
 
   useEffect(() => {
     if (isCalendarOpen) {

@@ -14,12 +14,14 @@ import type {
  * @param baseUrl Base API URL
  * @param keyword Country name search keyword
  * @param limit Optional maximum number of suggestions
+ * @param signal Cancellation signal for obsolete autocomplete requests
  * @returns Promise resolving to CountryAutocompleteResponse
  */
 export async function fetchCountryAutocomplete(
   baseUrl: string,
   keyword: string,
   limit?: number,
+  signal?: AbortSignal,
 ): Promise<CountryAutocompleteResponse> {
   const client = createPublicHttpClient(baseUrl);
   const searchParams: Record<string, string | number> = { keyword };
@@ -29,6 +31,7 @@ export async function fetchCountryAutocomplete(
   const response = await client
     .get('api/locations/countries/autocomplete', {
       searchParams,
+      signal: signal ?? null,
     })
     .json<CountryAutocompleteResponse>();
   return response;
@@ -41,6 +44,7 @@ export async function fetchCountryAutocomplete(
  * @param keyword City name search keyword
  * @param country Optional country name or ID filter
  * @param limit Optional maximum number of suggestions
+ * @param signal Cancellation signal for obsolete autocomplete requests
  * @returns Promise resolving to CityAutocompleteResponse
  */
 export async function fetchCityAutocomplete(
@@ -48,6 +52,7 @@ export async function fetchCityAutocomplete(
   keyword: string,
   country?: string,
   limit?: number,
+  signal?: AbortSignal,
 ): Promise<CityAutocompleteResponse> {
   const client = createPublicHttpClient(baseUrl);
   const searchParams: Record<string, string | number> = { keyword };
@@ -60,6 +65,7 @@ export async function fetchCityAutocomplete(
   const response = await client
     .get('api/locations/cities/autocomplete', {
       searchParams,
+      signal: signal ?? null,
     })
     .json<CityAutocompleteResponse>();
   return response;

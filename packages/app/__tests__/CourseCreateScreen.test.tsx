@@ -356,7 +356,13 @@ describe('CourseCreateScreen (FUN-6: 여행 조건 입력 폼)', () => {
     });
 
     await findByTestId('city-dropdown');
-    expect(fetchCitySpy).toHaveBeenCalledWith(expect.any(String), '도', '일본');
+    expect(fetchCitySpy).toHaveBeenCalledWith(
+      expect.any(String),
+      '도',
+      '일본',
+      undefined,
+      expect.any(AbortSignal),
+    );
   });
 
   it('API 자동완성 응답에 등록되지 않은 임의의 도시를 입력해도 코스 생성이 가능해야 한다', async () => {
