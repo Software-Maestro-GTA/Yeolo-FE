@@ -2,7 +2,14 @@
  * @file AuthContext.tsx
  * @description Context provider for managing user authentication state, Google/Apple Sign-In, and automatic session restore.
  */
-import React, { createContext, useState, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   type User,
@@ -56,6 +63,14 @@ export interface AuthContextType {
   updateUser?: (updatedFields: Partial<User>) => void;
 }
 
+const SESSION_STORAGE_KEYS = [
+  'accessToken',
+  'refreshToken',
+  'user',
+  'recentCourseId',
+  'hasCompletedOnboarding',
+];
+
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
@@ -71,9 +86,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     boolean | null
   >(null);
 
-  const googleLoginMutation = useGoogleLoginMutation();
-  const appleLoginMutation = useAppleLoginMutation();
-  const logoutMutation = useLogoutMutation();
+  const { mutateAsync: googleLogin, isPending: googleLoginPending } =
+    useGoogleLoginMutation();
+  const { mutateAsync: appleLogin, isPending: appleLoginPending } =
+    useAppleLoginMutation();
+  const { mutateAsync: logoutUser, isPending: logoutPending } =
+    useLogoutMutation();
 
   useEffect(() => {
     void analyticsService.setUserId(
@@ -81,26 +99,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         ? null
         : String(user.userId),
     );
-  }, [user]);
+  }, [user?.userId]);
 
-  const setHasCompletedOnboarding = async (completed: boolean) => {
+  const setHasCompletedOnboarding = useCallback(async (completed: boolean) => {
     setHasCompletedOnboardingState(completed);
     await AsyncStorage.setItem(
       'hasCompletedOnboarding',
       completed ? 'true' : 'false',
     );
-  };
+  }, []);
 
   useEffect(() => {
     setTokenGetter(async () => {
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      const { accessToken, refreshToken } = await AsyncStorage.getMany([
+        'accessToken',
+        'refreshToken',
+      ]);
       return { accessToken, refreshToken };
     });
 
     setTokenSetter(async (newAccessToken, newRefreshToken) => {
-      await AsyncStorage.setItem('accessToken', newAccessToken);
-      await AsyncStorage.setItem('refreshToken', newRefreshToken);
+      await AsyncStorage.setMany({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
     });
 
     setUnauthorizedHandler(async () => {
@@ -126,14 +148,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const apiUrl =
         process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
       try {
-        const token = await AsyncStorage.getItem('accessToken');
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
-        const savedUser = await AsyncStorage.getItem('user');
-        const savedRecentCourseId =
-          await AsyncStorage.getItem('recentCourseId');
-        const savedOnboarding = await AsyncStorage.getItem(
-          'hasCompletedOnboarding',
-        );
+        const {
+          accessToken: token,
+          refreshToken,
+          user: savedUser,
+          recentCourseId: savedRecentCourseId,
+          hasCompletedOnboarding: savedOnboarding,
+        } = await AsyncStorage.getMany(SESSION_STORAGE_KEYS);
 
         if (savedRecentCourseId) {
           setRecentCourseId(savedRecentCourseId);
@@ -146,14 +167,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (token && refreshToken) {
           try {
             const newTokens = await refreshTokenApi(apiUrl, refreshToken);
-            await AsyncStorage.setItem(
-              'accessToken',
-              newTokens.data.accessToken,
-            );
-            await AsyncStorage.setItem(
-              'refreshToken',
-              newTokens.data.refreshToken,
-            );
+            await AsyncStorage.setMany({
+              accessToken: newTokens.data.accessToken,
+              refreshToken: newTokens.data.refreshToken,
+            });
             setIsAuthenticated(true);
             if (savedUser) {
               setUser(JSON.parse(savedUser));
@@ -169,8 +186,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 refreshErr,
               );
               await clearLocalSession();
-              await AsyncStorage.removeItem('recentCourseId');
-              await AsyncStorage.removeItem('hasCompletedOnboarding');
+              await AsyncStorage.removeMany([
+                'recentCourseId',
+                'hasCompletedOnboarding',
+              ]);
               setIsAuthenticated(false);
               setUser(null);
               setRecentCourseId(null);
@@ -216,82 +235,88 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
-  const loginWithGoogle = async (
-    code: string,
-  ): Promise<{
-    user: User;
-    isNewUser: boolean;
-    doOnboarding: boolean;
-    recentCourseId?: string | null;
-  }> => {
-    logger.info('[AuthContext] Executing loginWithGoogle...');
-    try {
-      const result = await googleLoginMutation.mutateAsync(code);
-      setUser(result.user);
-      setRecentCourseId(result.recentCourseId || null);
-      setHasCompletedOnboardingState(!result.doOnboarding);
-      setIsAuthenticated(true);
-      logger.info('[AuthContext] Google login successful:', {
-        userId: result.user.userId,
-        email: result.user.email,
-        doOnboarding: result.doOnboarding,
-        hasCompletedOnboarding: !result.doOnboarding,
-        recentCourseId: result.recentCourseId,
-        isNewUser: result.isNewUser,
-      });
-      return result;
-    } catch (error) {
-      logger.error('[AuthContext] Login flow API error:', error);
-      await signOutGoogle();
-      await clearLocalSession();
-      setIsAuthenticated(false);
-      setUser(null);
-      setRecentCourseId(null);
-      setHasCompletedOnboardingState(null);
-      throw error;
-    }
-  };
+  const loginWithGoogle = useCallback(
+    async (
+      code: string,
+    ): Promise<{
+      user: User;
+      isNewUser: boolean;
+      doOnboarding: boolean;
+      recentCourseId?: string | null;
+    }> => {
+      logger.info('[AuthContext] Executing loginWithGoogle...');
+      try {
+        const result = await googleLogin(code);
+        setUser(result.user);
+        setRecentCourseId(result.recentCourseId || null);
+        setHasCompletedOnboardingState(!result.doOnboarding);
+        setIsAuthenticated(true);
+        logger.info('[AuthContext] Google login successful:', {
+          userId: result.user.userId,
+          email: result.user.email,
+          doOnboarding: result.doOnboarding,
+          hasCompletedOnboarding: !result.doOnboarding,
+          recentCourseId: result.recentCourseId,
+          isNewUser: result.isNewUser,
+        });
+        return result;
+      } catch (error) {
+        logger.error('[AuthContext] Login flow API error:', error);
+        await signOutGoogle();
+        await clearLocalSession();
+        setIsAuthenticated(false);
+        setUser(null);
+        setRecentCourseId(null);
+        setHasCompletedOnboardingState(null);
+        throw error;
+      }
+    },
+    [googleLogin],
+  );
 
-  const loginWithApple = async (payload: {
-    code: string;
-    idToken?: string | null;
-  }): Promise<{
-    user: User;
-    isNewUser: boolean;
-    doOnboarding: boolean;
-    recentCourseId?: string | null;
-  }> => {
-    logger.info('[AuthContext] Executing loginWithApple...');
-    try {
-      const result = await appleLoginMutation.mutateAsync(payload);
-      setUser(result.user);
-      setRecentCourseId(result.recentCourseId || null);
-      setHasCompletedOnboardingState(!result.doOnboarding);
-      setIsAuthenticated(true);
-      logger.info('[AuthContext] Apple login successful:', {
-        userId: result.user.userId,
-        email: result.user.email,
-        doOnboarding: result.doOnboarding,
-        hasCompletedOnboarding: !result.doOnboarding,
-        recentCourseId: result.recentCourseId,
-        isNewUser: result.isNewUser,
-      });
-      return result;
-    } catch (error) {
-      logger.error('[AuthContext] Apple login flow API error:', error);
-      await clearLocalSession();
-      setIsAuthenticated(false);
-      setUser(null);
-      setRecentCourseId(null);
-      setHasCompletedOnboardingState(null);
-      throw error;
-    }
-  };
+  const loginWithApple = useCallback(
+    async (payload: {
+      code: string;
+      idToken?: string | null;
+    }): Promise<{
+      user: User;
+      isNewUser: boolean;
+      doOnboarding: boolean;
+      recentCourseId?: string | null;
+    }> => {
+      logger.info('[AuthContext] Executing loginWithApple...');
+      try {
+        const result = await appleLogin(payload);
+        setUser(result.user);
+        setRecentCourseId(result.recentCourseId || null);
+        setHasCompletedOnboardingState(!result.doOnboarding);
+        setIsAuthenticated(true);
+        logger.info('[AuthContext] Apple login successful:', {
+          userId: result.user.userId,
+          email: result.user.email,
+          doOnboarding: result.doOnboarding,
+          hasCompletedOnboarding: !result.doOnboarding,
+          recentCourseId: result.recentCourseId,
+          isNewUser: result.isNewUser,
+        });
+        return result;
+      } catch (error) {
+        logger.error('[AuthContext] Apple login flow API error:', error);
+        await clearLocalSession();
+        setIsAuthenticated(false);
+        setUser(null);
+        setRecentCourseId(null);
+        setHasCompletedOnboardingState(null);
+        throw error;
+      }
+    },
+    [appleLogin],
+  );
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     logger.info('[AuthContext] Executing logout...');
     try {
-      await logoutMutation.mutateAsync();
+      await logoutUser();
       logger.info('[AuthContext] Logout API call completed');
     } catch (error) {
       logger.warn(
@@ -300,62 +325,65 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       );
     } finally {
       await signOutGoogle();
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('recentCourseId');
-      await AsyncStorage.removeItem('hasCompletedOnboarding');
+      await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
       setHasCompletedOnboardingState(null);
       logger.info('[AuthContext] Local session cleanup finished');
     }
-  };
+  }, [logoutUser]);
 
-  const resetAuthState = async () => {
+  const resetAuthState = useCallback(async () => {
     logger.info('[AuthContext] Resetting local auth state without API call...');
     await signOutGoogle();
-    await AsyncStorage.removeItem('accessToken');
-    await AsyncStorage.removeItem('refreshToken');
-    await AsyncStorage.removeItem('user');
-    await AsyncStorage.removeItem('recentCourseId');
-    await AsyncStorage.removeItem('hasCompletedOnboarding');
+    await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
     setIsAuthenticated(false);
     setUser(null);
     setRecentCourseId(null);
     setHasCompletedOnboardingState(null);
-  };
+  }, []);
 
-  const updateUser = (updatedFields: Partial<User>) => {
+  const updateUser = useCallback((updatedFields: Partial<User>) => {
     setUser((prevUser) =>
       prevUser ? { ...prevUser, ...updatedFields } : null,
     );
-  };
+  }, []);
 
   const isLoading =
-    isRestoring ||
-    googleLoginMutation.isPending ||
-    appleLoginMutation.isPending ||
-    logoutMutation.isPending;
+    isRestoring || googleLoginPending || appleLoginPending || logoutPending;
+
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      isAuthenticated,
+      user,
+      isLoading,
+      recentCourseId,
+      hasCompletedOnboarding,
+      setRecentCourseId,
+      setHasCompletedOnboarding,
+      loginWithGoogle,
+      loginWithApple,
+      logout,
+      resetAuthState,
+      updateUser,
+    }),
+    [
+      isAuthenticated,
+      user,
+      isLoading,
+      recentCourseId,
+      hasCompletedOnboarding,
+      setHasCompletedOnboarding,
+      loginWithGoogle,
+      loginWithApple,
+      logout,
+      resetAuthState,
+      updateUser,
+    ],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        isLoading,
-        recentCourseId,
-        hasCompletedOnboarding,
-        setRecentCourseId,
-        setHasCompletedOnboarding,
-        loginWithGoogle,
-        loginWithApple,
-        logout,
-        resetAuthState,
-        updateUser,
-      }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };

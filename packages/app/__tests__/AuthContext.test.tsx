@@ -164,6 +164,18 @@ describe('AuthContext', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('keeps the context value stable when a parent renders with the same session', async () => {
+    const { result, rerender } = await renderHook(
+      () => React.useContext(AuthContext)!,
+      {
+        wrapper: createWrapper(),
+      },
+    );
+    const session = result.current;
+    await rerender({});
+    expect(result.current).toBe(session);
+  });
+
   it('loginWithGoogle 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
     const { result } = await renderHook(() => React.useContext(AuthContext)!, {
       wrapper: createWrapper(),

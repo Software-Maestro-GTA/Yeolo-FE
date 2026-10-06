@@ -10,6 +10,17 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       store[key] = value;
     }),
     getItem: jest.fn(async (key) => store[key] || null),
+    getMany: jest.fn(async (keys) =>
+      Object.fromEntries(keys.map((key) => [key, store[key] ?? null])),
+    ),
+    setMany: jest.fn(async (entries) => {
+      Object.assign(store, entries);
+    }),
+    removeMany: jest.fn(async (keys) => {
+      keys.forEach((key) => {
+        delete store[key];
+      });
+    }),
     removeItem: jest.fn(async (key) => {
       delete store[key];
     }),
