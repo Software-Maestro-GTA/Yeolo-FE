@@ -4,7 +4,12 @@
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCourseDetailApi, logger, type CourseDetail } from '@yeolo/common';
+import {
+  getCourseDetailApi,
+  logger,
+  ApiError,
+  type CourseDetail,
+} from '@yeolo/common';
 import { UI_STRINGS, APP_CONFIG } from '../../constants';
 
 export const getCourseDetailQueryKey = (courseId: string) => [
@@ -36,6 +41,7 @@ export function useCourseDetailQuery({
           `[useCourseDetailQuery] Query failed for "${targetCourseId}":`,
           err,
         );
+        if (err instanceof ApiError) throw err;
         const errorObj = err as { message?: string };
         throw new Error(
           errorObj?.message || UI_STRINGS.COURSE_DETAIL.ERROR_TITLE,

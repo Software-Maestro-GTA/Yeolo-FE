@@ -4,7 +4,7 @@
  */
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getPlaceDetailApi, type PlaceDetail } from '@yeolo/common';
+import { getPlaceDetailApi, ApiError, type PlaceDetail } from '@yeolo/common';
 import { APP_CONFIG } from '../../constants';
 
 export const getPlaceDetailQueryKey = (placeId: string) => [
@@ -31,6 +31,7 @@ export function usePlaceDetailQuery({
         const token = (await AsyncStorage.getItem('accessToken')) || '';
         return await getPlaceDetailApi(apiUrl, token, targetPlaceId);
       } catch (err: unknown) {
+        if (err instanceof ApiError) throw err;
         const errorObj = err as { message?: string };
         throw new Error(
           errorObj?.message || '장소 정보를 불러오지 못했습니다.',
