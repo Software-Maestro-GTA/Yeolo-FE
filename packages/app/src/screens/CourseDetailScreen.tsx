@@ -2,7 +2,7 @@
  * @file CourseDetailScreen.tsx
  * @description Screen component for rendering recommended travel course details and timeline itinerary.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -69,6 +69,8 @@ export function CourseDetailScreen({
   const { trackButtonClick } = useGA4ButtonClick();
   const { setBackground, resetBackground } = useBackground();
   const auth = React.useContext(AuthContext);
+  const recentCourseId = auth?.recentCourseId;
+  const setRecentCourseId = auth?.setRecentCourseId;
   const insets = useSafeAreaInsets();
   const topPadding = (insets.top || 24) + 12;
 
@@ -80,11 +82,11 @@ export function CourseDetailScreen({
   }, [setBackground, resetBackground]);
 
   useEffect(() => {
-    if (courseId) {
-      auth?.setRecentCourseId?.(courseId);
+    if (courseId && courseId !== recentCourseId) {
+      setRecentCourseId?.(courseId);
       AsyncStorage.setItem('recentCourseId', courseId).catch(() => {});
     }
-  }, [courseId, auth]);
+  }, [courseId, recentCourseId, setRecentCourseId]);
 
   const {
     data: course,
@@ -147,6 +149,14 @@ export function CourseDetailScreen({
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [reelOpen, setReelOpen] = useState(false);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
+  const handleMapInteractionStart = useCallback(
+    () => setIsMapInteracting(true),
+    [],
+  );
+  const handleMapInteractionEnd = useCallback(
+    () => setIsMapInteracting(false),
+    [],
+  );
   const [mapData, setMapData] = useState<ProcessedCourseMapData>({
     coordinates: [],
     region: undefined,
@@ -343,8 +353,8 @@ export function CourseDetailScreen({
           <CourseMiniMapView
             stopCoordinates={mapData.coordinates}
             mapRegion={mapData.region}
-            onInteractionStart={() => setIsMapInteracting(true)}
-            onInteractionEnd={() => setIsMapInteracting(false)}
+            onInteractionStart={handleMapInteractionStart}
+            onInteractionEnd={handleMapInteractionEnd}
           />
 
           {/* Day Selector Tabs Component */}

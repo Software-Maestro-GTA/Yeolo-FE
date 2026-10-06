@@ -9,6 +9,49 @@ import { Ionicons } from '@expo/vector-icons';
 import type { MapCoordinate, MapRegion } from '@yeolo/common';
 import { isValidCoordinate } from '@yeolo/common';
 import { palette, hexToRgba } from '../../theme/colors';
+import { APP_CONFIG } from '../../constants/config';
+
+/** Freezes static marker content only after its first layout has been captured. */
+const CourseMapMarker = React.memo(function CourseMapMarker({
+  stop,
+  index,
+}: {
+  stop: MapCoordinate;
+  index: number;
+}) {
+  const markerRef = React.useRef<React.ComponentRef<typeof Marker>>(null);
+  const [hasLayout, setHasLayout] = React.useState(false);
+  const [tracksViewChanges, setTracksViewChanges] = React.useState(true);
+  React.useEffect(() => {
+    if (!hasLayout) return;
+    const timer = setTimeout(() => {
+      markerRef.current?.redraw?.();
+      setTracksViewChanges(false);
+    }, APP_CONFIG.MAP_MARKER_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [hasLayout]);
+  return (
+    <Marker
+      ref={markerRef}
+      testID={`course-map-marker-${index}`}
+      tracksViewChanges={tracksViewChanges}
+      coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
+      anchor={{ x: 0.5, y: 1 }}
+      title={`${index + 1}. ${stop.placeName || '장소'}`}>
+      <View
+        testID={`course-map-pin-${index}`}
+        style={styles.customMarkerPin}
+        onLayout={() => setHasLayout(true)}>
+        <View style={styles.markerHead}>
+          <View style={styles.markerBadge}>
+            <Text style={styles.markerNumberText}>{index + 1}</Text>
+          </View>
+        </View>
+        <View style={styles.markerTail} />
+      </View>
+    </Marker>
+  );
+});
 
 export interface CourseMiniMapViewProps {
   stopCoordinates: MapCoordinate[];
@@ -22,7 +65,7 @@ interface MiniMapState {
   hasError: boolean;
 }
 
-export class CourseMiniMapView extends React.Component<
+export class CourseMiniMapView extends React.PureComponent<
   CourseMiniMapViewProps,
   MiniMapState
 > {
@@ -134,23 +177,11 @@ export class CourseMiniMapView extends React.Component<
             showsIndoorLevelPicker={false}
             mapType='standard'>
             {validCoordinates.map((stop, idx) => (
-              <Marker
-                key={`${stop.placeName || idx}-${idx}`}
-                coordinate={{
-                  latitude: stop.latitude,
-                  longitude: stop.longitude,
-                }}
-                anchor={{ x: 0.5, y: 1 }}
-                title={`${idx + 1}. ${stop.placeName || '장소'}`}>
-                <View style={styles.customMarkerPin}>
-                  <View style={styles.markerHead}>
-                    <View style={styles.markerBadge}>
-                      <Text style={styles.markerNumberText}>{idx + 1}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.markerTail} />
-                </View>
-              </Marker>
+              <CourseMapMarker
+                key={`${stop.placeName}-${stop.latitude}-${stop.longitude}-${idx}`}
+                stop={stop}
+                index={idx}
+              />
             ))}
             {validCoordinates.length > 1 && (
               <Polyline

@@ -3,6 +3,11 @@
  * @description Unit tests for CourseMiniMapView component, verifying interactive and non-interactive modes.
  */
 import React from 'react';
+import {
+  act,
+  fireEvent,
+  render as renderNative,
+} from '@testing-library/react-native';
 import { renderWithQueryClient as render } from './test-utils';
 import { CourseMiniMapView } from '../src/components/course/CourseMiniMapView';
 
@@ -49,5 +54,42 @@ describe('CourseMiniMapView', () => {
 
     const miniMapSection = getByTestId('mini-map-section');
     expect(miniMapSection.props.pointerEvents).toBe('none');
+  });
+
+  it('captures the first marker layout, freezes it, and refreshes a changed day', async () => {
+    jest.useFakeTimers();
+    try {
+      const { getByTestId, rerender } = await renderNative(
+        <CourseMiniMapView stopCoordinates={mockCoordinates} />,
+      );
+      expect(getByTestId('course-map-marker-0').props.tracksViewChanges).toBe(
+        true,
+      );
+      await fireEvent(getByTestId('course-map-pin-0'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 0, width: 28, height: 36 } },
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(200);
+      });
+      expect(getByTestId('course-map-marker-0').props.tracksViewChanges).toBe(
+        false,
+      );
+      await rerender(
+        <CourseMiniMapView
+          stopCoordinates={[
+            { placeName: '다음날 장소', latitude: 34, longitude: 127 },
+          ]}
+        />,
+      );
+      const nextMarker = getByTestId('course-map-marker-0');
+      expect(nextMarker.props.title).toBe('1. 다음날 장소');
+      expect(nextMarker.props.coordinate).toEqual({
+        latitude: 34,
+        longitude: 127,
+      });
+      expect(nextMarker.props.tracksViewChanges).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

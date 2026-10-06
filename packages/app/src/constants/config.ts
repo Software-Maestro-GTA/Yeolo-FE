@@ -51,6 +51,7 @@ export const APP_CONFIG = {
   /** Default staleTime for TanStack Query (5 minutes) */
   QUERY_STALE_TIME: 5 * 60 * 1000,
   AUTOCOMPLETE_DEBOUNCE_MS: 300,
+  MAP_MARKER_SETTLE_MS: 100,
   /** Default fallback map region (Seoul City Hall) for in-app mini map view */
   DEFAULT_MAP_REGION: {
     latitude: 37.5665,

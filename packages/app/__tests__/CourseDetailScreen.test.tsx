@@ -10,6 +10,7 @@ import { CourseDetailScreen } from '../src/screens/CourseDetailScreen';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { renderWithQueryClient as render } from './test-utils';
+import { AuthContext, type AuthContextType } from '../src/context/AuthContext';
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
@@ -151,6 +152,45 @@ const mockCourseDetail: commonApi.CourseDetail = {
 };
 
 describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 표시 & API-SHARE-1)', () => {
+  it('does not rewrite the recent course when unrelated user profile context changes', async () => {
+    jest.clearAllMocks();
+    jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(mockCourseDetail);
+    const setRecentCourseId = jest.fn();
+    const session: AuthContextType = {
+      isAuthenticated: true,
+      user: null,
+      isLoading: false,
+      recentCourseId: null,
+      setRecentCourseId,
+      loginWithGoogle: jest.fn(),
+      loginWithApple: jest.fn(),
+      logout: jest.fn(),
+    };
+    const screen = (name: string) => (
+      <AuthContext.Provider
+        value={{ ...session, user: { displayName: name } as commonApi.User }}>
+        <CourseDetailScreen courseId={mockCourseDetail.courseId} />
+      </AuthContext.Provider>
+    );
+    let updateProfile!: React.Dispatch<React.SetStateAction<string>>;
+    function ProfileHarness() {
+      const [name, setName] = React.useState('처음');
+      updateProfile = setName;
+      return screen(name);
+    }
+    const { findByTestId } = await render(<ProfileHarness />);
+    await findByTestId('in-app-map-view');
+    const recentWrites = () =>
+      jest
+        .mocked(AsyncStorage.setItem)
+        .mock.calls.filter(([key]) => key === 'recentCourseId');
+    expect(recentWrites()).toHaveLength(1);
+    await act(() => updateProfile('새 이름'));
+    expect(recentWrites()).toHaveLength(1);
+    expect(setRecentCourseId).toHaveBeenCalledTimes(1);
+  });
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.setItem('accessToken', 'mock-token');
