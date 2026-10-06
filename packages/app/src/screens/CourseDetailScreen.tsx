@@ -43,8 +43,8 @@ import {
   courseBookingContext,
   type OpenBooking,
 } from '../services/bookingService';
-import ctaFlightBg from '../../assets/images/cta_flight_bg.png';
-import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
+import ctaFlightBg from '../../assets/images/cta_flight_bg.jpg';
+import ctaHotelBg from '../../assets/images/cta_hotel_bg.jpg';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';

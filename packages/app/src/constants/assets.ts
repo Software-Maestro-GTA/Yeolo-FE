@@ -4,7 +4,7 @@
  */
 
 export const APP_IMAGES = {
-  HOME_HERO_BG: require('../../assets/images/home_hero_bg.png'),
+  HOME_HERO_BG: require('../../assets/images/home_hero_bg.jpg'),
   INTRO_PHOTO_ANALYSIS: require('../../assets/images/intro_photo_analysis.jpg'),
   INTRO_MAP_ROUTE: require('../../assets/images/intro_map_route.jpg'),
 } as const;
