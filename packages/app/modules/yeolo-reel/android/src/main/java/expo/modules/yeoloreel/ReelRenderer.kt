@@ -10,7 +10,6 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import android.media.Image
 import android.net.Uri
 import android.text.Layout
 import android.text.StaticLayout
@@ -33,10 +32,16 @@ internal class ReelRenderer(private val context: Context) {
       (seconds * fps).toInt()
     }
     require(totalFrames in 1..fps * 30)
+    val bg = Color.parseColor(plan.getString("backgroundColor"))
+    val accent = Color.parseColor(plan.getString("accentColor"))
+    val text = Color.parseColor(plan.getString("textColor"))
+    val gradient = LinearGradient(0f, height*.55f, 0f, height.toFloat(), Color.TRANSPARENT, Color.argb(191, 0, 0, 0), Shader.TileMode.CLAMP)
     val codec = MediaCodec.createEncoderByType("video/avc")
     val muxer = MediaMuxer(output.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val pixels = IntArray(width * height)
+    val yuvWriter = YuvFrameWriter(width, height)
+
     var started = false; var codecStarted = false; var frame = 0; var track = -1
     val info = MediaCodec.BufferInfo()
     val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -86,13 +91,27 @@ internal class ReelRenderer(private val context: Context) {
         val image = loadPhoto(scene.getString("uri"))
         try {
           val count = (scene.getDouble("seconds") * fps).toInt()
+          val title = TextLayer(scene.getString("title"), width*.08f, height*.70f, (width*.84f).toInt(), 40f, accent, 2)
+          val caption = TextLayer(scene.getString("caption"), width*.08f, height*.79f, (width*.84f).toInt(), 34f, text, 4)
+          val points = scene.getJSONArray("points")
+          val routePoints = (0 until points.length()).map { i ->
+            val point = points.getJSONObject(i)
+            val x = point.getDouble("x").toFloat() * width
+            val y = point.getDouble("y").toFloat() * height
+            RoutePoint(x, y, TextLayer(point.getString("label"), x-25, y-17, 50, 26f, bg, 1))
+          }
+          val route = scene.getString("kind") == "route"
           for (localFrame in 0 until count) {
             checkCanceled()
-            draw(canvas, paint, plan, scene, image, localFrame.toFloat() / max(1, count - 1), width, height)
+            draw(canvas, paint, image, route, routePoints, title, caption, gradient, bg, accent, localFrame.toFloat() / max(1, count - 1), width, height)
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
             val input = inputBuffer()
             val yuv = requireNotNull(codec.getInputImage(input)) { "Encoder does not support YUV image input" }
-            writeYuv(pixels, width, height, yuv)
+            val planes = yuv.planes
+            yuvWriter.write(pixels,
+              YuvPlane(planes[0].buffer, planes[0].rowStride, planes[0].pixelStride),
+              YuvPlane(planes[1].buffer, planes[1].rowStride, planes[1].pixelStride),
+              YuvPlane(planes[2].buffer, planes[2].rowStride, planes[2].pixelStride))
             codec.queueInputBuffer(input, 0, width * height * 3 / 2, frame.toLong() * 1_000_000 / fps, 0)
             frame++
             if (frame % fps == 0) progress(frame.toDouble() / totalFrames)
@@ -147,12 +166,23 @@ internal class ReelRenderer(private val context: Context) {
     return rotated
   }
 
-  private fun draw(canvas: Canvas, paint: Paint, plan: JSONObject, scene: JSONObject, image: Bitmap?, fraction: Float, width: Int, height: Int) {
-    val bg = Color.parseColor(plan.getString("backgroundColor"))
-    val accent = Color.parseColor(plan.getString("accentColor"))
-    val text = Color.parseColor(plan.getString("textColor"))
+  private data class RoutePoint(val x: Float, val y: Float, val label: TextLayer)
+
+  /** Text shaping and line layout are scene-invariant; only opacity changes per frame. */
+  private class TextLayer(text: String, private val x: Float, private val y: Float, width: Int, size: Float, color: Int, lines: Int) {
+    private val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+      textSize = size; this.color = color; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    }
+    private val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
+      .setAlignment(Layout.Alignment.ALIGN_CENTER).setMaxLines(lines).setIncludePad(false).build()
+    fun draw(canvas: Canvas, alpha: Float = 1f) {
+      paint.alpha = (alpha*255).toInt()
+      canvas.save(); canvas.translate(x, y); layout.draw(canvas); canvas.restore()
+    }
+  }
+
+  private fun draw(canvas: Canvas, paint: Paint, image: Bitmap?, route: Boolean, points: List<RoutePoint>, title: TextLayer, caption: TextLayer, gradient: LinearGradient, bg: Int, accent: Int, fraction: Float, width: Int, height: Int) {
     canvas.drawColor(bg); paint.shader = null; paint.alpha = 255
-    val route = scene.getString("kind") == "route"
     if (route && image != null) {
       canvas.drawBitmap(image, null, RectF(0f, height*.1f, width.toFloat(), height*.1f+width), paint)
     } else if (image != null) {
@@ -161,50 +191,23 @@ internal class ReelRenderer(private val context: Context) {
       canvas.drawBitmap(image, null, RectF((width-w)/2, (height-h)/2, (width+w)/2, (height+h)/2), paint)
     }
     if (route) {
-      val points = scene.getJSONArray("points")
-      val distance = fraction * max(0, points.length() - 1)
+      val distance = fraction * max(0, points.size - 1)
       paint.color = accent; paint.strokeWidth = 6f
-      for (i in 1 until points.length()) {
-        val a = points.getJSONObject(i-1); val b = points.getJSONObject(i)
-        val x = a.getDouble("x").toFloat() * width; val y = a.getDouble("y").toFloat() * height
+      for (i in 1 until points.size) {
+        val a = points[i-1]; val b = points[i]
         val amount = min(1f, max(0f, distance - (i - 1)))
-        canvas.drawLine(x, y, x + (b.getDouble("x").toFloat()*width - x)*amount, y + (b.getDouble("y").toFloat()*height - y)*amount, paint)
+        canvas.drawLine(a.x, a.y, a.x + (b.x - a.x)*amount, a.y + (b.y - a.y)*amount, paint)
       }
-      for (i in 0 until points.length()) {
-        val p = points.getJSONObject(i); val x = p.getDouble("x").toFloat()*width; val y = p.getDouble("y").toFloat()*height
-        paint.color = accent; canvas.drawCircle(x, y, 22f, paint)
-        drawText(canvas, p.getString("label"), x-25, y-17, 50, 26f, bg, 1f, 1)
+      for (point in points) {
+        paint.color = accent; canvas.drawCircle(point.x, point.y, 22f, paint)
+        point.label.draw(canvas)
       }
     }
     if (!route) {
-    paint.shader = LinearGradient(0f, height*.55f, 0f, height.toFloat(), Color.TRANSPARENT, Color.argb(191, 0, 0, 0), Shader.TileMode.CLAMP)
-    canvas.drawRect(0f, height*.55f, width.toFloat(), height.toFloat(), paint); paint.shader = null
+      paint.shader = gradient
+      canvas.drawRect(0f, height*.55f, width.toFloat(), height.toFloat(), paint); paint.shader = null
     }
     val alpha = min(1f, fraction * 8 + .2f)
-    drawText(canvas, scene.getString("title"), width*.08f, height*.70f, (width*.84f).toInt(), 40f, accent, alpha, 2)
-    drawText(canvas, scene.getString("caption"), width*.08f, height*.79f, (width*.84f).toInt(), 34f, text, alpha, 4)
-  }
-
-  private fun drawText(canvas: Canvas, text: String, x: Float, y: Float, width: Int, size: Float, color: Int, alpha: Float, lines: Int) {
-    val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = size; this.color = color; this.alpha = (alpha*255).toInt(); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL) }
-    val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-      .setAlignment(Layout.Alignment.ALIGN_CENTER).setMaxLines(lines).setIncludePad(false).build()
-    canvas.save(); canvas.translate(x, y); layout.draw(canvas); canvas.restore()
-  }
-
-  private fun writeYuv(pixels: IntArray, width: Int, height: Int, image: Image) {
-    val planes = image.planes
-    val yPlane = planes[0]; val uPlane = planes[1]; val vPlane = planes[2]
-    for (y in 0 until height) for (x in 0 until width) {
-      val rgb = pixels[y*width+x]; val r = (rgb shr 16) and 255; val g = (rgb shr 8) and 255; val b = rgb and 255
-      val luma = (((66*r+129*g+25*b+128) shr 8)+16).coerceIn(0,255)
-      yPlane.buffer.put(y*yPlane.rowStride + x*yPlane.pixelStride, luma.toByte())
-      if ((y and 1) == 0 && (x and 1) == 0) {
-        val u = (((-38*r-74*g+112*b+128) shr 8)+128).coerceIn(0,255)
-        val v = (((112*r-94*g-18*b+128) shr 8)+128).coerceIn(0,255)
-        uPlane.buffer.put((y/2)*uPlane.rowStride + (x/2)*uPlane.pixelStride, u.toByte())
-        vPlane.buffer.put((y/2)*vPlane.rowStride + (x/2)*vPlane.pixelStride, v.toByte())
-      }
-    }
+    title.draw(canvas, alpha); caption.draw(canvas, alpha)
   }
 }

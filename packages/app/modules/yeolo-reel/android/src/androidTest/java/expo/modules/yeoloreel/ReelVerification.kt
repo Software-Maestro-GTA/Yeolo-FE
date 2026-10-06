@@ -23,6 +23,7 @@ class ReelVerification : Instrumentation() {
   override fun onStart() {
     val result = Bundle()
     try {
+      verifyYuvStrides()
       val dir = targetContext.cacheDir
       val photo = File(dir, "reel-test.jpg")
       val bitmap = Bitmap.createBitmap(900, 1400, Bitmap.Config.ARGB_8888)
@@ -75,5 +76,25 @@ class ReelVerification : Instrumentation() {
       result.putString("result",JSONObject().apply { put("passed",true); put("mapBackground",true); put("attributionStrip",true); put("width",width); put("height",height); put("durationMs",duration); put("frames",frames); put("cancelCleanup",canceled); put("encodeSeconds",(System.nanoTime()-start)/1e9) }.toString())
       finish(Activity.RESULT_OK,result)
     } catch (e: Throwable) { result.putString("error",e.stackTraceToString()); finish(Activity.RESULT_CANCELED,result) }
+  }
+
+  /** Known color samples verify padded rows and shared UV storage without reproducing conversion formulas. */
+  private fun verifyYuvStrides() {
+    val writer = YuvFrameWriter(2, 2)
+    val pixels = intArrayOf(Color.RED, Color.GREEN, Color.BLUE, Color.WHITE)
+    val y = ByteBuffer.allocate(8).apply { for (i in 0 until capacity()) put(i, 7) }
+    val u = ByteBuffer.allocate(2).apply { put(1, 7) }
+    val v = ByteBuffer.allocate(2).apply { put(1, 7) }
+    writer.write(pixels, YuvPlane(y, 4, 1), YuvPlane(u, 2, 1), YuvPlane(v, 2, 1))
+    check(listOf(0, 1, 4, 5).map { y.get(it).toInt() and 255 } == listOf(82, 144, 41, 235))
+    check(y.get(2).toInt() == 7 && y.get(6).toInt() == 7)
+    check((u.get(0).toInt() and 255) == 90 && (v.get(0).toInt() and 255) == 240)
+    check(u.get(1).toInt() == 7 && v.get(1).toInt() == 7)
+    val uv = ByteBuffer.allocate(4).apply { put(2, 7); put(3, 7) }
+    val vSlice = uv.duplicate().apply { position(1) }.slice()
+    writer.write(pixels, YuvPlane(y, 4, 2), YuvPlane(uv, 4, 2), YuvPlane(vSlice, 4, 2))
+    check((uv.get(0).toInt() and 255) == 90 && (uv.get(1).toInt() and 255) == 240)
+    check(uv.get(2).toInt() == 7 && uv.get(3).toInt() == 7)
+    check(listOf(0, 2, 4, 6).map { y.get(it).toInt() and 255 } == listOf(82, 144, 41, 235))
   }
 }
