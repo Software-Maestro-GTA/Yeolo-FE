@@ -2,7 +2,7 @@
  * @file photoService.test.ts
  * @description Representative photo metadata selection and bounded native library access regressions.
  */
-import { requestPermissionsAsync } from 'expo-media-library';
+import { getPermissionsAsync } from 'expo-media-library';
 import { fetchPhotosWithExifData } from '../src/services/photoService';
 
 const mockQueries: {
@@ -56,7 +56,7 @@ jest.mock('expo-media-library', () => {
   }
   return {
     Query,
-    requestPermissionsAsync: jest.fn(),
+    getPermissionsAsync: jest.fn(),
     AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },
     MediaType: { IMAGE: 'photo' },
   };
@@ -90,7 +90,7 @@ describe('representative photo collection', () => {
     jest.spyOn(Date, 'now').mockReturnValue(NOW);
     mockQueries.length = 0;
     mockAssets = diverse();
-    (requestPermissionsAsync as jest.Mock).mockResolvedValue({
+    (getPermissionsAsync as jest.Mock).mockResolvedValue({
       status: 'granted',
       accessPrivileges: 'all',
     });
@@ -183,7 +183,7 @@ describe('representative photo collection', () => {
   });
 
   it('fails before querying when permission is denied', async () => {
-    (requestPermissionsAsync as jest.Mock).mockResolvedValue({
+    (getPermissionsAsync as jest.Mock).mockResolvedValue({
       status: 'denied',
     });
     await expect(fetchPhotosWithExifData()).rejects.toThrow();
@@ -258,14 +258,14 @@ describe('representative photo collection', () => {
     await expect(fetchPhotosWithExifData()).rejects.toThrow(/여러 날짜/);
   });
 
-  it('uses only accessible assets under limited permission', async () => {
-    (requestPermissionsAsync as jest.Mock).mockResolvedValue({
+  it('does not read any photos under limited permission', async () => {
+    (getPermissionsAsync as jest.Mock).mockResolvedValue({
       status: 'granted',
       accessPrivileges: 'limited',
     });
-    expect(await fetchPhotosWithExifData()).toHaveLength(6);
-    mockAssets = [asset('only-one', 2)];
-    await expect(fetchPhotosWithExifData()).rejects.toThrow(/선택한 사진/);
+    await expect(fetchPhotosWithExifData()).rejects.toThrow(/전체 사진 접근/);
+    expect(mockQueries).toHaveLength(0);
+    expect(mockAssets[0].getLocation).not.toHaveBeenCalled();
   });
 
   it('bounds dense-library reads to 250 candidates per period', async () => {

@@ -163,29 +163,46 @@ export const UI_STRINGS = {
     LOADING: '예약 정보를 불러오는 중...',
     SELECTED: '선택됨',
   },
-  INTRO: {
-    MAIN_TITLE: '여로가 당신의\n여행을 설계합니다',
-    SUB_TITLE:
-      'AI가 당신의 취향을 분석하고,\n세상에 단 하나뿐인 여행 코스를 만들어요.',
-    NEXT_BUTTON: '다음으로',
-    SLIDE_0_CARD_1_TITLE: 'AI 취향 분석',
-    SLIDE_0_CARD_1_DESC: '몇 장의 사진으로 발견하는 나만의 여행 취향',
-    SLIDE_0_CARD_2_TITLE: '맞춤 코스 생성',
-    SLIDE_0_CARD_2_DESC: '동선과 운영 시간을 계산한 최적의 일정 설계',
-    SLIDE_0_CARD_3_TITLE: '코스 공유',
-    SLIDE_0_CARD_3_DESC: '나만의 여행 코스를 친구와 공유하고 즐기기',
-    SLIDE_1_BADGE_1: '🌿 자연/힐링',
-    SLIDE_1_BADGE_2: '🌊 오션뷰',
-    SLIDE_1_BADGE_3: '📸 감성사진',
-    SLIDE_1_PROGRESS_TITLE: '취향 분석 중...',
-    SLIDE_1_PROGRESS_PERCENT: '65%',
-    SLIDE_1_PROGRESS_SUBTEXT: '342장의 사진 데이터 파싱 완료',
-    SLIDE_2_BADGE_TEXT: '나만을 위한 최적의 여행 경로 탐색 중',
+  ONBOARDING: {
+    ERROR_TITLE: '오류',
+    BACK: '이전으로',
+  },
+  MBTI_CONSENT: {
+    TITLE: '사진이 부담스럽다면,\nMBTI로 여행 취향을 알아볼게요.',
+    START: 'MBTI기반으로 알아보기',
+    PHOTO: '사진 허용하고 빠르게 알아보기',
+  },
+  PHOTO_AUTH: {
+    TITLE: '완벽한 여행지를 위해\n전체 접근을 허용해주세요.',
+    DESCRIPTION: '사진 원본은 서버에 저장되지 않아요.',
+    IOS_STEPS: ['설정에서 ‘여로’ 검색', '사진 선택', '전체 접근에 체크'],
+    ANDROID_STEPS: [
+      '설정에서 ‘여로’ 앱 선택',
+      '권한에서 사진 및 동영상 선택',
+      '모든 사진 접근 허용',
+    ],
+    START: '내 여행 취향 알아보기',
+    OPEN_SETTINGS: '설정 열기',
+    REQUIRED: '전체 사진 접근을 허용한 뒤 다시 눌러주세요.',
+    READY: '전체 접근이 허용되었어요. 여행 취향을 알아볼 수 있어요.',
+    PERMISSION_CHECK_ERROR:
+      '사진 접근 권한을 확인하지 못했습니다. 다시 시도해주세요.',
+    SETTINGS_ERROR:
+      '설정을 열 수 없습니다. 기기 설정에서 여로의 사진 권한을 변경해주세요.',
+  },
+  MBTI_RESULT: {
+    TITLE: '여행 취향 분석 결과예요!',
+    SOURCE: 'MBTI 유형에 따른 여행 취향 예시예요.',
+    PACE: '여행페이스',
+    PHOTO: '사진 취향',
+    WEATHER: '날씨 취향',
+    COURSE: '여행코스추천받기',
+    PHOTO_ACTION: '사진 허용하고 찰떡 여행지 추천받기',
   },
   MBTI: {
     MAIN_TITLE: '당신의 MBTI는\n무엇인가요?',
     SUB_TITLE: 'MBTI를 알려주시면 성향에 맞는 여행 코스를 추천해드려요.',
-    NEXT_BUTTON: '다음으로',
+    NEXT_BUTTON: '여행 취향 알아보기',
     ACCURATE_RECOMMEND_BUTTON: '더 정확한 추천 받기',
   },
   PHOTO_CONSENT: {
@@ -199,8 +216,11 @@ export const UI_STRINGS = {
     CARD_2_DESC:
       'AI 취향 분석을 위한 연산 처리가 완료되는\n즉시 메타데이터는 영구 소멸됩니다.',
     START_BUTTON: '동의하고 시작하기',
+    SAVE_ERROR: '사진 데이터 분석 동의 저장 중 오류가 발생했습니다.',
   },
   TASTE_ANALYSIS: {
+    LIMITED_TITLE: '열심히 분석하고 있어요',
+    LIMITED_NOTICE: '잠시 후 사진 접근 설정을 안내해드릴게요.',
     MAIN_TITLE: '취향 분석 중',
     SUB_TITLE: '당신의 성향을 파악하고 있어요.',
     STEP_TITLE: '분석 단계',

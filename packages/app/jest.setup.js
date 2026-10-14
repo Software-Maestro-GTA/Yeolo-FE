@@ -118,7 +118,12 @@ jest.mock('expo-media-library', () => {
   }
 
   return {
-    requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+    requestPermissionsAsync: jest
+      .fn()
+      .mockResolvedValue({ status: 'granted', accessPrivileges: 'all' }),
+    getPermissionsAsync: jest
+      .fn()
+      .mockResolvedValue({ status: 'granted', accessPrivileges: 'all' }),
     getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
     MediaType: { IMAGE: 'photo' },
     AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },

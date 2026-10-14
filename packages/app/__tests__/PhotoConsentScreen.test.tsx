@@ -9,6 +9,7 @@ import { PhotoConsentScreen } from '../src/screens/PhotoConsentScreen';
 import { UI_STRINGS } from '../src/constants';
 import { renderWithQueryClient as render } from './test-utils';
 import { Alert } from 'react-native';
+import { requestPermissionsAsync } from 'expo-media-library';
 
 describe('PhotoConsentScreen UI & Navigation', () => {
   const mockOnNext = jest.fn();
@@ -65,6 +66,35 @@ describe('PhotoConsentScreen UI & Navigation', () => {
       expect(mockOnNext).toHaveBeenCalledTimes(1);
     });
   });
+
+  it.each([
+    ['all', 'granted', 'all'],
+    ['limited', 'granted', 'limited'],
+    ['none', 'denied', 'denied'],
+  ])(
+    '권한 %s 응답 이후에만 현재 화면에서 분기한다',
+    async (accessPrivileges, status, expected) => {
+      let resolvePermission!: (value: unknown) => void;
+      (requestPermissionsAsync as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePermission = resolve;
+          }),
+      );
+      jest
+        .spyOn(yeoloCommon, 'savePhotoConsentApi')
+        .mockResolvedValueOnce({ status: 200, data: {} } as any);
+      const { getByTestId, getByText } = await render(
+        <PhotoConsentScreen onNext={mockOnNext} />,
+      );
+      await fireEvent.press(getByTestId('consent-start-button'));
+      await waitFor(() => expect(requestPermissionsAsync).toHaveBeenCalled());
+      expect(getByText(UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE)).toBeTruthy();
+      expect(mockOnNext).not.toHaveBeenCalled();
+      await act(async () => resolvePermission({ status, accessPrivileges }));
+      await waitFor(() => expect(mockOnNext).toHaveBeenCalledWith(expected));
+    },
+  );
 
   it('API 동의 저장 실패 시 Alert 에러 안내 메시지가 표기되고 onNext가 호출되지 않아야 한다', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

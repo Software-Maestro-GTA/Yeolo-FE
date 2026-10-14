@@ -14,15 +14,51 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
-import { UI_STRINGS } from '../constants';
+import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useTasteAnalysisPipeline } from '../hooks';
 
 interface TasteAnalysisScreenProps {
   onFinish: (tasteProfileId: string) => void;
   onFail?: () => void;
+  mode?: 'full' | 'limited';
+  onLimitedFinish?: () => void;
 }
 
-export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
+/** Displays either the real pipeline or a timer-only limited-access transition. */
+export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = (
+  props,
+) =>
+  props.mode === 'limited' ? (
+    <LimitedTasteAnalysis onFinish={props.onLimitedFinish} />
+  ) : (
+    <FullTasteAnalysis {...props} />
+  );
+
+function LimitedTasteAnalysis({ onFinish }: { onFinish?: () => void }) {
+  useGA4ScreenTracking('TasteAnalysisScreen');
+  const finishRef = useRef(onFinish);
+  finishRef.current = onFinish;
+  useEffect(() => {
+    const timer = setTimeout(
+      () => finishRef.current?.(),
+      APP_CONFIG.LIMITED_ANALYSIS_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <View style={styles.limitedContainer}>
+      <Text style={styles.mainTitle}>
+        {UI_STRINGS.TASTE_ANALYSIS.LIMITED_TITLE}
+      </Text>
+      <ActivityIndicator size='large' color={palette.primary} />
+      <Text style={styles.subTitle}>
+        {UI_STRINGS.TASTE_ANALYSIS.LIMITED_NOTICE}
+      </Text>
+    </View>
+  );
+}
+
+const FullTasteAnalysis: React.FC<TasteAnalysisScreenProps> = ({
   onFinish,
   onFail,
 }) => {
@@ -32,6 +68,9 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
     error: errorMessage,
     progress,
   } = useTasteAnalysisPipeline();
+
+  const finishRef = useRef(onFinish);
+  finishRef.current = onFinish;
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -71,7 +110,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
         // 3단계 완료 후 1초(1000ms) 텀을 두고 다음 화면으로 전환
         completionTimeout = setTimeout(() => {
           if (isSubscribed) {
-            onFinish(profileId);
+            finishRef.current(profileId);
           }
         }, 1000);
       }
@@ -83,7 +122,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
       isSubscribed = false;
       if (completionTimeout) clearTimeout(completionTimeout);
     };
-  }, [runPipeline, onFinish]);
+  }, [runPipeline]);
 
   const handleConfirmError = () => {
     onFail?.();
@@ -95,6 +134,7 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
 
   const needsPhotoSettings =
     errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR ||
+    errorMessage === UI_STRINGS.PHOTO_AUTH.REQUIRED ||
     errorMessage === UI_STRINGS.TASTE_ANALYSIS.LIMITED_PHOTOS_ERROR;
 
   const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
@@ -274,6 +314,12 @@ export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  limitedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 32,
+  },
   screenContainer: {
     flex: 1,
     backgroundColor: palette.softMint,

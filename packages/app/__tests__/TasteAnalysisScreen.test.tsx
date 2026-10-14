@@ -45,6 +45,49 @@ describe('TasteAnalysisScreen UI & Progress', () => {
     jest.restoreAllMocks();
   });
 
+  it('제한 접근에서는 5초간 UI만 표시하고 사진 수집과 분석을 실행하지 않는다', async () => {
+    const analyze = jest.spyOn(
+      require('@yeolo/common').useTasteStore.getState(),
+      'analyzeTaste',
+    );
+    const onLimitedFinish = jest.fn();
+    await render(
+      <TasteAnalysisScreen
+        mode='limited'
+        onFinish={mockOnFinish}
+        onLimitedFinish={onLimitedFinish}
+      />,
+    );
+    await act(async () => {
+      jest.advanceTimersByTime(4999);
+    });
+    expect(onLimitedFinish).not.toHaveBeenCalled();
+    expect(fetchPhotosWithExifData).not.toHaveBeenCalled();
+    expect(analyze).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(onLimitedFinish).toHaveBeenCalledTimes(1);
+    expect(mockOnFinish).not.toHaveBeenCalled();
+  });
+
+  it('제한 접근 화면에서 나가면 예약된 전환을 취소한다', async () => {
+    const onLimitedFinish = jest.fn();
+    const screen = await render(
+      <TasteAnalysisScreen
+        mode='limited'
+        onFinish={mockOnFinish}
+        onLimitedFinish={onLimitedFinish}
+      />,
+    );
+    await screen.unmount();
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(onLimitedFinish).not.toHaveBeenCalled();
+    expect(fetchPhotosWithExifData).not.toHaveBeenCalled();
+  });
+
   it('표본이 부족하면 서버 분석을 요청하지 않고 오류를 안내해야 한다', async () => {
     const useTasteStore = require('@yeolo/common').useTasteStore;
     const analyze = jest.spyOn(useTasteStore.getState(), 'analyzeTaste');

@@ -17,6 +17,8 @@ import {
 import type { ItineraryStop, BookingKind } from '@yeolo/common';
 import { BookingScreen } from '../screens/BookingScreen';
 import type { BookingContext, OpenBooking } from '../services/bookingService';
+import type { PhotoAccess } from '../services/photoPermissionService';
+import type { MbtiType } from '../constants/mbtiProfiles';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout, OnboardingLayout } from '../layouts';
@@ -25,7 +27,9 @@ import {
   LoginScreen,
   HomeScreen,
   CourseListScreen,
-  IntroScreen,
+  PhotoAuthExplainScreen,
+  MBTIConsentScreen,
+  MBTIResultScreen,
   MbtiInputScreen,
   PhotoConsentScreen,
   TasteAnalysisScreen,
@@ -40,6 +44,7 @@ import {
 } from '../screens';
 
 const NON_HISTORY_STEPS: NavStep[] = [
+  NAV_STEPS.LOGIN,
   NAV_STEPS.GENERATING_COURSE,
   NAV_STEPS.TASTE,
 ];
@@ -105,6 +110,8 @@ export function NavigationRoot({
   initialShareToken = '',
 }: NavigationRootProps = {}) {
   const auth = useContext(AuthContext);
+  const [analysisMode, setAnalysisMode] = useState<'full' | 'limited'>('full');
+  const [selectedMbti, setSelectedMbti] = useState<MbtiType | null>(null);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<
     string | undefined
   >();
@@ -173,7 +180,7 @@ export function NavigationRoot({
             setHistory([NAV_STEPS.HOME]);
             setStep(NAV_STEPS.COURSE_SHARE);
           } else if (auth?.hasCompletedOnboarding === false) {
-            setStep(NAV_STEPS.INTRO);
+            setStep(NAV_STEPS.PHOTO);
           } else {
             setStep(NAV_STEPS.HOME);
           }
@@ -299,7 +306,7 @@ export function NavigationRoot({
     if (tab === NAV_TABS.EXPLORE) navigateTo(NAV_STEPS.COURSE_LIST);
     if (tab === NAV_TABS.CREATE) {
       if (auth?.hasCompletedOnboarding === false) {
-        navigateTo(NAV_STEPS.INTRO);
+        navigateTo(NAV_STEPS.PHOTO);
       } else {
         navigateTo(NAV_STEPS.CREATE_COURSE);
       }
@@ -314,6 +321,15 @@ export function NavigationRoot({
       tab: step === NAV_STEPS.HOME ? NAV_TABS.HOME : NAV_TABS.EXPLORE,
     });
     navigateTo(NAV_STEPS.BOOKING);
+  };
+
+  const routePhotoAccess = (access: PhotoAccess) => {
+    if (access === 'denied') {
+      navigateTo(NAV_STEPS.MBTI_CONSENT);
+      return;
+    }
+    setAnalysisMode(access === 'limited' ? 'limited' : 'full');
+    navigateTo(NAV_STEPS.TASTE);
   };
 
   const renderCurrentScreen = () => {
@@ -335,41 +351,69 @@ export function NavigationRoot({
           <LoginScreen
             onLoginSuccess={(doOnboarding) => {
               if (doOnboarding) {
-                navigateTo(NAV_STEPS.INTRO);
+                navigateTo(NAV_STEPS.PHOTO);
               } else {
                 navigateTo(NAV_STEPS.HOME);
               }
             }}
           />
         );
-      case NAV_STEPS.INTRO:
+      case NAV_STEPS.MBTI_CONSENT:
         return (
           <OnboardingLayout>
-            <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
+            <MBTIConsentScreen
+              onNext={() => navigateTo(NAV_STEPS.MBTI)}
+              onPhoto={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
+            />
           </OnboardingLayout>
         );
       case NAV_STEPS.MBTI:
         return (
           <OnboardingLayout>
             <MbtiInputScreen
-              onNext={() => {
-                auth?.setHasCompletedOnboarding?.(true);
-                navigateTo(NAV_STEPS.CREATE_COURSE);
+              onNext={(mbti) => {
+                setSelectedMbti(mbti);
+                navigateTo(NAV_STEPS.MBTI_RESULT);
               }}
-              onDetailRecommend={() => navigateTo(NAV_STEPS.PHOTO)}
             />
+          </OnboardingLayout>
+        );
+      case NAV_STEPS.MBTI_RESULT:
+        return (
+          <OnboardingLayout>
+            {selectedMbti ? (
+              <MBTIResultScreen
+                mbti={selectedMbti}
+                onBack={goBack}
+                onGenerateCourse={async () => {
+                  await auth?.setHasCompletedOnboarding?.(true);
+                  navigateTo(NAV_STEPS.CREATE_COURSE);
+                }}
+                onPhoto={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
+              />
+            ) : (
+              <MbtiInputScreen onNext={setSelectedMbti} />
+            )}
           </OnboardingLayout>
         );
       case NAV_STEPS.PHOTO:
         return (
           <OnboardingLayout>
-            <PhotoConsentScreen onNext={() => navigateTo(NAV_STEPS.TASTE)} />
+            <PhotoConsentScreen onNext={routePhotoAccess} />
+          </OnboardingLayout>
+        );
+      case NAV_STEPS.PHOTO_AUTH:
+        return (
+          <OnboardingLayout>
+            <PhotoAuthExplainScreen onNext={() => routePhotoAccess('all')} />
           </OnboardingLayout>
         );
       case NAV_STEPS.TASTE:
         return (
           <OnboardingLayout>
             <TasteAnalysisScreen
+              mode={analysisMode}
+              onLimitedFinish={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
               onFinish={(tasteProfileId) => {
                 auth?.setHasCompletedOnboarding?.(true);
                 setActiveTasteProfileId(tasteProfileId);
@@ -377,7 +421,7 @@ export function NavigationRoot({
               }}
               onFail={() => {
                 if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.MBTI);
+                  navigateTo(NAV_STEPS.MBTI_CONSENT);
                 } else {
                   navigateTo(NAV_STEPS.PROFILE);
                 }
@@ -394,8 +438,8 @@ export function NavigationRoot({
                 auth?.setHasCompletedOnboarding?.(true);
                 navigateTo(NAV_STEPS.CREATE_COURSE);
               }}
-              onReanalyze={() => navigateTo(NAV_STEPS.TASTE)}
-              onNavigateToIntro={() => navigateTo(NAV_STEPS.INTRO)}
+              onReanalyze={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
+              onNavigateToIntro={() => navigateTo(NAV_STEPS.PHOTO)}
             />
           </MainLayout>
         );
@@ -405,7 +449,7 @@ export function NavigationRoot({
             <ProfileScreen
               onNavigateToTasteProfile={() => {
                 if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.INTRO);
+                  navigateTo(NAV_STEPS.PHOTO);
                 } else {
                   navigateTo(NAV_STEPS.TASTE_PROFILE);
                 }
@@ -435,7 +479,7 @@ export function NavigationRoot({
               }}
               onCreateCourse={() => {
                 if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.INTRO);
+                  navigateTo(NAV_STEPS.PHOTO);
                 } else {
                   navigateTo(NAV_STEPS.CREATE_COURSE);
                 }
@@ -447,7 +491,7 @@ export function NavigationRoot({
         if (auth?.hasCompletedOnboarding === false) {
           return (
             <OnboardingLayout>
-              <IntroScreen onNext={() => navigateTo(NAV_STEPS.MBTI)} />
+              <PhotoConsentScreen onNext={routePhotoAccess} />
             </OnboardingLayout>
           );
         }
@@ -471,7 +515,7 @@ export function NavigationRoot({
               navigateTo(NAV_STEPS.CREATE_COURSE);
             }}
             onNavigateToIntro={() => {
-              navigateTo(NAV_STEPS.INTRO);
+              navigateTo(NAV_STEPS.PHOTO);
             }}
           />
         );
@@ -544,7 +588,7 @@ export function NavigationRoot({
               selectedCourseId={selectedCourseId}
               onNavigateToCreate={() => {
                 if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.INTRO);
+                  navigateTo(NAV_STEPS.PHOTO);
                 } else {
                   navigateTo(NAV_STEPS.CREATE_COURSE);
                 }
@@ -553,7 +597,7 @@ export function NavigationRoot({
               onNavigateToProfile={() => navigateTo(NAV_STEPS.PROFILE)}
               onNavigateToTasteProfile={() => {
                 if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.INTRO);
+                  navigateTo(NAV_STEPS.PHOTO);
                 } else {
                   navigateTo(NAV_STEPS.TASTE_PROFILE);
                 }

@@ -6,6 +6,7 @@
 import { Platform } from 'react-native';
 
 export const APP_CONFIG = {
+  LIMITED_ANALYSIS_DELAY_MS: 5000,
   REEL: {
     WIDTH: 720,
     HEIGHT: 1280,

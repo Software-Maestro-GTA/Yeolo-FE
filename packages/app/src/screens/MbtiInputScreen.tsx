@@ -17,11 +17,12 @@ import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useUpdatePreferencesMutation } from '../hooks/queries/useAuthMutations';
+import type { MbtiType } from '../constants/mbtiProfiles';
 import { getAuthErrorMessage } from '../utils/errorUtils';
 
 interface MbtiInputScreenProps {
-  onNext: () => void; // "다음으로" 클릭 시 코스 생성 화면으로 이동
-  onDetailRecommend: () => void; // "더 정확한 추천 받기" 클릭 시 사진 분석 동의 화면으로 이동
+  onNext: (mbti: MbtiType) => void; // 저장된 MBTI 결과 화면으로 이동
+  onDetailRecommend?: () => void; // "더 정확한 추천 받기" 클릭 시 사진 분석 동의 화면으로 이동
 }
 
 type EI = 'E' | 'I';
@@ -65,7 +66,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
       {
         onSuccess: () => {
           trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
-          onNext();
+          onNext(selectedMbti as MbtiType);
         },
         onError: (err: any) => {
           const errorMessage = getAuthErrorMessage(
@@ -87,7 +88,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
       'btn_mbti_accurate_recommend',
       `MBTI Accurate Recommend (${selectedMbti})`,
     );
-    onDetailRecommend();
+    onDetailRecommend?.();
   };
 
   return (
@@ -371,22 +372,23 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
             />
           </TouchableOpacity>
 
-          {/* Secondary Button: 📷 더 정확한 추천 받기 */}
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            activeOpacity={0.8}
-            onPress={handlePressAccurate}
-            testID='accurate-recommend-button'>
-            <Ionicons
-              name='camera-outline'
-              size={18}
-              color={palette.accent}
-              style={styles.cameraIconMargin}
-            />
-            <Text style={styles.secondaryButtonText}>
-              {UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON}
-            </Text>
-          </TouchableOpacity>
+          {onDetailRecommend && (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              activeOpacity={0.8}
+              onPress={handlePressAccurate}
+              testID='accurate-recommend-button'>
+              <Ionicons
+                name='camera-outline'
+                size={18}
+                color={palette.accent}
+                style={styles.cameraIconMargin}
+              />
+              <Text style={styles.secondaryButtonText}>
+                {UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

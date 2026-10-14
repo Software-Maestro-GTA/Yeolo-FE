@@ -2,9 +2,12 @@
  * @file PhotoConsentScreen.tsx
  * @description Photo consent screen with privacy safeguards and start analysis action.
  */
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  requestPhotoAccess,
+  type PhotoAccess,
+} from '../services/photoPermissionService';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -12,7 +15,7 @@ import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useSavePhotoConsentMutation } from '../hooks/queries/useAuthMutations';
 
 interface PhotoConsentScreenProps {
-  onNext: () => void; // "동의하고 시작하기" 클릭 시 취향 분석 중 화면(TasteAnalysisScreen)으로 이동
+  onNext: (access: PhotoAccess) => void;
 }
 
 export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
@@ -22,28 +25,53 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
   const { trackButtonClick } = useGA4ButtonClick();
   const saveConsentMutation = useSavePhotoConsentMutation();
 
-  const handlePressConsent = () => {
+  const [isRequesting, setIsRequesting] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const handlePressConsent = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setIsRequesting(true);
     trackButtonClick(
       'btn_photo_consent_start',
       'Photo Analysis Consent & Start',
     );
-    saveConsentMutation.mutate(
-      {
+    try {
+      await saveConsentMutation.mutateAsync({
         agreed: true,
         consentVersion: 'v1.0',
-      },
-      {
-        onSuccess: () => {
-          onNext();
-        },
-        onError: () => {
-          Alert.alert(
-            '오류',
-            '사진 데이터 분석 동의 저장 중 오류가 발생했습니다.',
-          );
-        },
-      },
-    );
+      });
+    } catch {
+      if (!mounted.current) return;
+      Alert.alert(
+        UI_STRINGS.ONBOARDING.ERROR_TITLE,
+        UI_STRINGS.PHOTO_CONSENT.SAVE_ERROR,
+      );
+      pending.current = false;
+      setIsRequesting(false);
+      return;
+    }
+    if (!mounted.current) return;
+    try {
+      const access = await requestPhotoAccess();
+      if (mounted.current) onNext(access);
+    } catch {
+      if (mounted.current)
+        Alert.alert(
+          UI_STRINGS.ONBOARDING.ERROR_TITLE,
+          UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR,
+        );
+    } finally {
+      pending.current = false;
+      if (mounted.current) setIsRequesting(false);
+    }
   };
 
   return (
@@ -111,8 +139,10 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
           <TouchableOpacity
             style={styles.primaryButton}
             activeOpacity={0.8}
-            disabled={saveConsentMutation.isPending}
-            onPress={handlePressConsent}
+            disabled={isRequesting}
+            onPress={() => {
+              void handlePressConsent();
+            }}
             testID='consent-start-button'>
             <Text style={styles.primaryButtonText}>
               {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
@@ -226,7 +256,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
+    shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,

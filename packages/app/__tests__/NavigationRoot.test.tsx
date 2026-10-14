@@ -17,7 +17,10 @@ jest.mock('../src/screens', () => {
   const { Text, Button } = require('react-native');
   return {
     LoginScreen: ({ onLoginSuccess }: any) => (
-      <Button title='Mock Login' onPress={() => onLoginSuccess?.(false)} />
+      <>
+        <Button title='Mock Login' onPress={() => onLoginSuccess?.(false)} />
+        <Button title='New Login' onPress={() => onLoginSuccess?.(true)} />
+      </>
     ),
     HomeScreen: ({ onNavigateToExplore, onOpenBooking }: any) => (
       <React.Fragment>
@@ -34,17 +37,37 @@ jest.mock('../src/screens', () => {
         onPress={() => onSelectCourse('course-123')}
       />
     ),
-    IntroScreen: ({ onNext }: any) => (
-      <Button title='Go to Intro Next' onPress={onNext} />
+    MBTIConsentScreen: ({ onNext, onPhoto }: any) => (
+      <>
+        <Button title='Choose MBTI' onPress={onNext} />
+        <Button title='Choose Photos' onPress={onPhoto} />
+      </>
+    ),
+    PhotoAuthExplainScreen: ({ onNext }: any) => (
+      <Button title='Full Permission Ready' onPress={onNext} />
+    ),
+    MBTIResultScreen: ({ mbti, onGenerateCourse, onPhoto, onBack }: any) => (
+      <>
+        <Text>{mbti} Result</Text>
+        <Button title='Result Course' onPress={onGenerateCourse} />
+        <Button title='Result Photos' onPress={onPhoto} />
+        <Button title='Result Back' onPress={onBack} />
+      </>
     ),
     MbtiInputScreen: ({ onNext }: any) => (
-      <Button title='Go to MBTI Next' onPress={onNext} />
+      <Button title='Go to MBTI Next' onPress={() => onNext('INFJ')} />
     ),
     PhotoConsentScreen: ({ onNext }: any) => (
-      <Button title='Go to Photo Next' onPress={onNext} />
+      <>
+        <Button title='Go to Photo Next' onPress={() => onNext('all')} />
+        <Button title='Limited Photos' onPress={() => onNext('limited')} />
+        <Button title='Deny Photos' onPress={() => onNext('denied')} />
+      </>
     ),
-    TasteAnalysisScreen: ({ onFinish, onFail }: any) => (
+    TasteAnalysisScreen: ({ onFinish, onFail, mode, onLimitedFinish }: any) => (
       <React.Fragment>
+        <Text>{mode === 'limited' ? 'Limited Analysis' : 'Real Analysis'}</Text>
+        <Button title='Finish Limited' onPress={onLimitedFinish} />
         <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
         <Button title='Fail Taste' onPress={() => onFail?.()} />
       </React.Fragment>
@@ -168,7 +191,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Select Place Stop')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 IntroScreen(온보딩)으로 진입해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 PhotoConsentScreen(온보딩)으로 진입해야 한다', async () => {
     const mockAuthOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -185,7 +208,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     );
 
     await waitFor(() => {
-      expect(getByText('Go to Intro Next')).toBeTruthy();
+      expect(getByText('Go to Photo Next')).toBeTruthy();
     });
   });
 
@@ -311,7 +334,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Mock Login')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 사용자가 코스 생성을 시도하면 IntroScreen(온보딩)으로 유도해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 사용자가 코스 생성을 시도하면 PhotoConsentScreen(온보딩)으로 유도해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -325,11 +348,11 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       </AuthContext.Provider>,
     );
 
-    // Initial state is IntroScreen because hasCompletedOnboarding is false
-    expect(getByText('Go to Intro Next')).toBeTruthy();
+    // Initial state is PhotoConsentScreen because hasCompletedOnboarding is false
+    expect(getByText('Go to Photo Next')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 상태에서 하단 탭 코스 생성을 탭하면 IntroScreen으로 이동해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 상태에서 하단 탭 코스 생성을 탭하면 PhotoConsentScreen으로 이동해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -352,11 +375,11 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       fireEvent.press(tabCreate);
     });
 
-    // CourseCreateScreen 대신 IntroScreen(Go to Intro Next)이 렌더링되어야 함
-    expect(getByText('Go to Intro Next')).toBeTruthy();
+    // CourseCreateScreen 대신 PhotoConsentScreen(Go to Photo Next)이 렌더링되어야 함
+    expect(getByText('Go to Photo Next')).toBeTruthy();
   });
 
-  it('온보딩 중 TasteAnalysisScreen에서 onFail 발생 시 MBTI 화면(MbtiInputScreen)으로 이동해야 한다', async () => {
+  it('온보딩 중 TasteAnalysisScreen에서 onFail 발생 시 MBTI 동의 화면으로 이동해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -376,7 +399,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       fireEvent.press(getByText('Fail Taste'));
     });
 
-    expect(getByText('Go to MBTI Next')).toBeTruthy();
+    expect(getByText('Choose MBTI')).toBeTruthy();
   });
 
   it('온보딩 완료 후 TasteAnalysisScreen에서 onFail 발생 시 ProfileScreen으로 이동해야 한다', async () => {
@@ -539,4 +562,88 @@ describe('예약 화면의 앱 공통 내비게이션', () => {
     expect(ui.getByText('ProfileScreen')).toBeTruthy();
     expect(ui.queryByTestId('booking-screen-ticket')).toBeNull();
   });
+});
+
+describe('UI v3 onboarding routes', () => {
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    const [completed, setCompleted] = React.useState(false);
+    return (
+      <AuthContext.Provider
+        value={
+          {
+            isAuthenticated: true,
+            isLoading: false,
+            hasCompletedOnboarding: completed,
+            setHasCompletedOnboarding: async (value: boolean) =>
+              setCompleted(value),
+          } as any
+        }>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+  it('first login opens photo consent', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot initialStep={NAV_STEPS.LOGIN} />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('New Login'));
+    expect(screen.getByText('Go to Photo Next')).toBeTruthy();
+  });
+  it('full permission reaches the taste profile and course creation', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Go to Photo Next'));
+    expect(screen.getByText('Real Analysis')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Finish Taste'));
+    await fireEvent.press(screen.getByText('Go Home from Taste'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+  });
+  it('limited mode leads to explanation and switches back to real analysis', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Limited Photos'));
+    expect(screen.getByText('Limited Analysis')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Finish Limited'));
+    await fireEvent.press(screen.getByText('Full Permission Ready'));
+    expect(screen.getByText('Real Analysis')).toBeTruthy();
+  });
+  it('denial flows through MBTI consent, input and result before course creation', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Deny Photos'));
+    await fireEvent.press(screen.getByText('Choose MBTI'));
+    await fireEvent.press(screen.getByText('Go to MBTI Next'));
+    expect(screen.getByText('INFJ Result')).toBeTruthy();
+    expect(screen.queryByText('CourseCreateScreen')).toBeNull();
+    await fireEvent.press(screen.getByText('Result Course'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+  });
+  it.each(['consent', 'result'])(
+    '%s photo CTA opens the permission explanation',
+    async (source) => {
+      const screen = await render(
+        <Wrapper>
+          <NavigationRoot />
+        </Wrapper>,
+      );
+      await fireEvent.press(screen.getByText('Deny Photos'));
+      if (source === 'result') {
+        await fireEvent.press(screen.getByText('Choose MBTI'));
+        await fireEvent.press(screen.getByText('Go to MBTI Next'));
+        await fireEvent.press(screen.getByText('Result Photos'));
+      } else await fireEvent.press(screen.getByText('Choose Photos'));
+      expect(screen.getByText('Full Permission Ready')).toBeTruthy();
+    },
+  );
 });

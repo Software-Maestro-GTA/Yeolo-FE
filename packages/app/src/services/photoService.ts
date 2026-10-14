@@ -3,7 +3,7 @@
  * @description Bounded device-library metadata collection with representative location/time sampling.
  */
 import {
-  requestPermissionsAsync,
+  getPermissionsAsync,
   Query,
   AssetField,
   MediaType,
@@ -34,8 +34,10 @@ export async function fetchPhotosWithExifData(
       'Photo payload limit must be an integer of at least 5.',
     );
   const payloadLimit = Math.min(limit, APP_CONFIG.ANALYSIS_PHOTO_LIMIT);
-  const permission = await requestPermissionsAsync(false, ['photo']);
-  if (permission.status !== 'granted')
+  const permission = await getPermissionsAsync(false, ['photo']);
+  if (permission.accessPrivileges === 'limited')
+    throw new Error(UI_STRINGS.PHOTO_AUTH.REQUIRED);
+  if (permission.status !== 'granted' || permission.accessPrivileges === 'none')
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR);
   const now = Date.now();
   const periods = photoSamplingPeriods(now);
@@ -127,17 +129,14 @@ export async function fetchPhotosWithExifData(
     days,
     failed,
   });
-  const limited = permission.accessPrivileges === 'limited';
   if (selected.length < policy.MIN_REPRESENTATIVES || days < policy.MIN_DAYS) {
     const strings = UI_STRINGS.TASTE_ANALYSIS;
     throw new Error(
-      limited
-        ? strings.LIMITED_PHOTOS_ERROR
-        : queried === 0
-          ? strings.NO_PHOTOS_ERROR
-          : images.length === 0
-            ? strings.NO_EXIF_ERROR
-            : strings.INSUFFICIENT_PHOTOS_ERROR,
+      queried === 0
+        ? strings.NO_PHOTOS_ERROR
+        : images.length === 0
+          ? strings.NO_EXIF_ERROR
+          : strings.INSUFFICIENT_PHOTOS_ERROR,
     );
   }
   return selected;

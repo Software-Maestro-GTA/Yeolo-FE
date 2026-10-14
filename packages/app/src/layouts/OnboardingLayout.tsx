@@ -1,6 +1,6 @@
 /**
  * @file OnboardingLayout.tsx
- * @description Dedicated layout wrapper for onboarding screens (Intro, MBTI, Photo Consent, Taste Analysis) providing consistent padding, visual breathing room, and unified background styling across onboarding flows.
+ * @description Dedicated layout wrapper for onboarding screens (MBTI consent/input/result, Photo Consent/Permissions, Taste Analysis) providing consistent padding, visual breathing room, and unified background styling across onboarding flows.
  */
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
