@@ -1,0 +1,19 @@
+flowchart TD
+  Login["LoginScreen · 로그인"] --> Consent["PhotoConsentScreen · 사진 분석 동의"]
+  Consent -->|동의하고 시작하기 · 현재 화면에서 요청| Permission{"사진 접근 권한"}
+  Permission -->|전체 허용| Analysis["TasteAnalysisScreen · 실제 분석"]
+  Permission -->|일부 허용| Limited["TasteAnalysisScreen · 5초 표시만"]
+  Permission -->|허용 안 함| MbtiConsent["MBTIConsentScreen"]
+  Limited -->|사진 수집·API 호출 없음| Explain["PhotoAuthExplainScreen · 전체 접근 설정 안내"]
+  Explain -->|설정 열기| Settings["기기 설정"]
+  Settings -->|앱 복귀 · 권한 재확인| Explain
+  Explain -->|내 여행 취향 알아보기 · 전체 권한일 때만| Analysis
+  Explain -->|전체 권한 없음 · 안내 후 유지| Explain
+  Analysis -->|분석 성공| Taste["TasteProfileScreen · 사진 기반 결과"]
+  Analysis -.->|온보딩 분석 실패 확인| MbtiConsent
+  MbtiConsent -->|MBTI기반으로 알아보기| Input["MBTIInputScreen · 4개 지표 선택"]
+  MbtiConsent -->|사진 허용하고 빠르게 알아보기| Explain
+  Input -->|MBTI 저장 성공| Result["MBTIResultScreen · 유형별 고정 결과"]
+  Result -->|사진 허용하고 찰떡 여행지 추천받기| Explain
+  Result -->|여행코스추천받기| Course["CourseCreateScreen · 이번 변경 범위의 종착점"]
+  Taste -->|여행 코스 추천받기| Course
