@@ -2,11 +2,11 @@
  * @file BackgroundImageLayout.tsx
  * @description Global shell layout component providing single top safe area inset for general screens, and optional full-bleed status bar space when noTopEdges is active.
  */
+import { CachedImageBackground } from '../components/common/CachedImage';
 import React from 'react';
 import {
   StyleSheet,
   View,
-  ImageBackground,
   StyleProp,
   ViewStyle,
   ImageStyle,
@@ -63,15 +63,22 @@ export const BackgroundImageLayout: React.FC<BackgroundImageLayoutProps> = ({
     : ['top', 'left', 'right'];
 
   return (
-    <View style={[styles.container, style]}>
+    <View
+      style={[
+        styles.container,
+        context.backgroundColor
+          ? { backgroundColor: context.backgroundColor }
+          : undefined,
+        style,
+      ]}>
       {/* 1. Top n% Background Image & Optional LinearGradient Overlay layer */}
       {activeHeroImageUrl ? (
         <View
           style={[styles.topHeroWrapper, { height: activeHeroImageHeight }]}>
-          <ImageBackground
+          <CachedImageBackground
             source={{ uri: activeHeroImageUrl }}
             style={[StyleSheet.absoluteFill, activeHeroImageStyle]}
-            resizeMode='cover'
+            contentFit='cover'
           />
           {activeGradientColors ? (
             <LinearGradient

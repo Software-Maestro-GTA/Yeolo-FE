@@ -3,6 +3,29 @@
  * @description Global native-module mocks for isolated @yeolo/app Jest tests.
  */
 
+// Native decoding and cache hits are verified in the simulator, not by Jest.
+jest.mock('expo-image', () => {
+  const mockReact = require('react');
+  const {
+    Image: mockImage,
+    View: mockView,
+    StyleSheet,
+  } = require('react-native');
+  return {
+    Image: (props) => mockReact.createElement(mockImage, props),
+    ImageBackground: ({ style, imageStyle, children, ...props }) =>
+      mockReact.createElement(
+        mockView,
+        { style },
+        mockReact.createElement(mockImage, {
+          ...props,
+          style: [StyleSheet.absoluteFill, imageStyle],
+        }),
+        children,
+      ),
+  };
+});
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = {};
   return {
@@ -125,6 +148,7 @@ jest.mock('expo-media-library', () => {
       .fn()
       .mockResolvedValue({ status: 'granted', accessPrivileges: 'all' }),
     getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
     MediaType: { IMAGE: 'photo' },
     AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },
     Query: MockQuery,

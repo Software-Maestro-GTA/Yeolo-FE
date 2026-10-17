@@ -3,6 +3,9 @@
  * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
 import React, { useEffect } from 'react';
+import { useFonts } from 'expo-font';
+import { appFonts } from './theme/fonts';
+import { TypographyProvider } from './components/common/Typography';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -61,6 +64,7 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts(appFonts);
   useEffect(() => {
     analyticsService.registerTracker(appAnalyticsTracker);
     analyticsService.registerTracker(airbridgeAnalyticsTracker);
@@ -71,18 +75,22 @@ export default function App() {
     };
   }, []);
 
+  if (!fontsLoaded && !fontError) return null;
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <BackgroundProvider>
-            <BackgroundImageLayout>
-              <NavigationRoot />
-              <StatusBar style='auto' />
-            </BackgroundImageLayout>
-          </BackgroundProvider>
-        </AuthProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <TypographyProvider loaded={fontsLoaded}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <BackgroundProvider>
+              <BackgroundImageLayout>
+                <NavigationRoot />
+                <StatusBar style='dark' />
+              </BackgroundImageLayout>
+            </BackgroundProvider>
+          </AuthProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </TypographyProvider>
   );
 }

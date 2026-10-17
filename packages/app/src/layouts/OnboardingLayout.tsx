@@ -1,6 +1,6 @@
 /**
  * @file OnboardingLayout.tsx
- * @description Dedicated layout wrapper for onboarding screens (MBTI consent/input/result, Photo Consent/Permissions, Taste Analysis) providing consistent padding, visual breathing room, and unified background styling across onboarding flows.
+ * @description Full-size onboarding shell; each UI v3 screen owns its content spacing and bottom safe area.
  */
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
@@ -35,9 +35,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 60,
   },
 });
 

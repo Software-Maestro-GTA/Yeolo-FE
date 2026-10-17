@@ -7,16 +7,16 @@
  * Yeolo Core Figma Design Tokens
  */
 export const palette = {
-  // Figma Design Tokens
-  primary: '#2D7DD2', // Ocean Blue - CTA 버튼, 주요 액션, 브랜드 강조
-  accent: '#00C9A7', // Teal Green - 그래디언트, 보조 강조, 아이콘 하이라이트
-  lightTeal: '#E0F7F1', // Tint - 카드 배경, 선택 상태, 태그 배경
-  softMint: '#F5FAF8', // Background - 페이지 배경, 구분선 영역
-  deepNavy: '#0D2137', // Text - 제목, 본문 텍스트, 핵심 정보
-  subText: '#59616B', // SubTitle & Secondary Text - 부제목 및 서브 설명문 텍스트
-  mutedText: '#8C949E', // Muted SubText - 보조 캡션 및 메타 정보 텍스트
-  darkBlue: '#1E5FA6', // Darker Blue - 항공권 CTA 그래디언트 종단색
-  darkTeal: '#0D7361', // Darker Teal - 호텔 CTA 그래디언트 종단색
+  // UI v3 COLOR, ICON (1231:452), confirmed 2026-10-16
+  primary: '#54A9F5', // Main Blue - CTA 버튼, 주요 액션, 브랜드 강조
+  accent: '#2589DC', // Sub Blue - 그래디언트, 보조 강조, 아이콘 하이라이트
+  lightTeal: '#DDEEFF', // Blue Tint - 카드 배경, 선택 상태, 태그 배경
+  softMint: '#FFFFFF', // White - 페이지 배경, 구분선 영역
+  deepNavy: '#101722', // Text - 제목, 본문 텍스트, 핵심 정보
+  subText: '#526174', // SubTitle & Secondary Text - 부제목 및 서브 설명문 텍스트
+  mutedText: '#98A5B5', // Muted SubText - 보조 캡션 및 메타 정보 텍스트
+  darkBlue: '#2589DC', // Darker Blue - 항공권 CTA 그래디언트 종단색
+  darkTeal: '#2589DC', // Darker Teal - 호텔 CTA 그래디언트 종단색
   purple: '#9966CC', // Purple - 투어/티켓 강조색
   googleBlue: '#4285F4', // Google Brand Blue
 
@@ -24,16 +24,25 @@ export const palette = {
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
-  gray100: '#F1F5F9',
-  gray200: '#E2E8F0',
-  gray400: '#94A3B8',
-  gray500: '#64748B',
-  gray600: '#59616B',
+  gray100: '#EFF2F6',
+  gray200: '#E8EDF3',
+  gray300: '#D0D8E2',
+  gray950: '#101722',
+  subBlue: '#2589DC',
+  primaryTint: '#DDEEFF',
+  privacyRed: '#E24D40',
+  previewClose: '#3F3F3F',
+  mediaPlaceholder: '#D9D9D9',
+  legacyText: '#373737',
+  legacyCaption: '#797979',
+  gray400: '#98A5B5',
+  gray500: '#6C7C90',
+  gray600: '#526174',
   warning: '#F59E0B',
   red50: '#FEF2F2',
   red100: '#FEE2E2',
   red200: '#FCA5A5',
-  red500: '#EF4444',
+  red500: '#E24D40',
   red700: '#B91C1C',
   red800: '#991B1B',
 } as const;
@@ -61,7 +70,7 @@ export const theme = {
     deepNavy: palette.deepNavy,
     subText: palette.subText,
     mutedText: palette.mutedText,
-    primaryDark: '#1D4ED8',
+    primaryDark: palette.darkBlue,
     primaryContainer: palette.lightTeal,
     secondary: palette.accent,
     aiAccent: palette.accent,
@@ -72,7 +81,7 @@ export const theme = {
       secondary: palette.subText,
       subtle: palette.mutedText,
       muted: palette.mutedText,
-      placeholder: '#9CA3AF',
+      placeholder: palette.gray400,
       inverse: palette.white,
       danger: palette.red500,
     },
@@ -82,7 +91,7 @@ export const theme = {
       card: palette.white,
       input: palette.white,
       tint: palette.lightTeal,
-      secondary: '#F1F5F9',
+      secondary: '#EFF2F6',
       glass: 'rgba(255, 255, 255, 0.85)',
       overlay: hexToRgba(palette.deepNavy, 0.45),
       error: '#FEF2F2',
@@ -92,11 +101,11 @@ export const theme = {
       default: palette.gray200,
       active: palette.primary,
       light: palette.lightTeal,
-      error: '#EF4444',
+      error: '#E24D40',
     },
 
     status: {
-      error: '#EF4444',
+      error: '#E24D40',
       errorBg: '#FEF2F2',
       warning: '#F59E0B',
       success: '#10B981',

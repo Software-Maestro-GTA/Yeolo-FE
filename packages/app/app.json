@@ -3,11 +3,12 @@
     "name": "여로",
     "slug": "yeolo",
     "scheme": "yeolo",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/branding/ios-blue-wordmark.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "icon": "./assets/branding/ios-blue-wordmark.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.yeolo-travel.app",
       "usesAppleSignIn": true,
@@ -23,16 +24,16 @@
     },
     "android": {
       "package": "com.yeolo.app",
+      "icon": "./assets/branding/android-blue-wordmark.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/branding/android-adaptive-foreground.png",
+        "backgroundImage": "./assets/branding/android-adaptive-background.png",
+        "backgroundColor": "#54A9F5"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/branding/android-blue-wordmark.png"
     },
     "plugins": [
       "@react-native-firebase/app",
@@ -64,7 +65,8 @@
               "https://sdk-download.airbridge.io/maven"
             ],
             "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn com.google.firebase.messaging.**"
           }
         }
       ]

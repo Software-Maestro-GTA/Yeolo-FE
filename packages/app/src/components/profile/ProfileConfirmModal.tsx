@@ -5,7 +5,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   Modal,
@@ -13,6 +12,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { Text } from '../common/Typography';
 import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
 

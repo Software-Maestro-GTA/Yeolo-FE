@@ -6,7 +6,7 @@
 import { Platform } from 'react-native';
 
 export const APP_CONFIG = {
-  LIMITED_ANALYSIS_DELAY_MS: 5000,
+  DEFAULT_COURSE_BUDGET: 3000000,
   REEL: {
     WIDTH: 720,
     HEIGHT: 1280,
@@ -25,6 +25,7 @@ export const APP_CONFIG = {
   INVITE_BASE_URL: 'https://www.yeolo.app/invite',
   PRIVACY_POLICY_URL: 'https://www.yeolo.app/privacy',
   TERMS_OF_SERVICE_URL: 'https://www.yeolo.app/terms',
+  INSTAGRAM_URL: 'https://www.instagram.com/yeolo_my_trip/',
   MYREALTRIP_HOME_URL: 'https://www.myrealtrip.com/',
   MYREALTRIP_TICKET_COUPONS: [
     { code: 'PACKMKTP1000', minimumPrice: 50000, discount: 1000 },
