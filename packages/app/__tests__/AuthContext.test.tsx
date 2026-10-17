@@ -3,7 +3,7 @@
  * @description Unit tests for AuthContext state management and auto-login restore.
  */
 import React from 'react';
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 
 import { AuthProvider, AuthContext } from '../src/context/AuthContext';
 import { server } from './mocks/server';
@@ -137,7 +137,7 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from './test-utils';
 
 afterAll(() => {
@@ -145,8 +145,7 @@ afterAll(() => {
 });
 
 describe('AuthContext', () => {
-  const createWrapper = () => {
-    const queryClient = createTestQueryClient();
+  const createWrapper = (queryClient = createTestQueryClient()) => {
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>{children}</AuthProvider>
@@ -367,4 +366,86 @@ describe('AuthContext', () => {
     expect(result.current.user).toBeNull();
     expect(await AsyncStorage.getItem('accessToken')).toBeNull();
   });
+
+  it.each(['logout', 'reset', 'unauthorized'] as const)(
+    '%s clears private queries and discards late results while preserving public destinations',
+    async (action) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+      });
+      const { result, unmount } = await renderHook(
+        () => React.useContext(AuthContext)!,
+        { wrapper: createWrapper(client) },
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(async () => {
+        await result.current.loginWithGoogle('mock-code');
+      });
+      client.setQueryData(['tasteProfile', 'me'], { intro: 'Previous user' });
+      client.setQueryData(['destination-countries', 'api'], ['Korea']);
+      client.setQueryData(['shareLinkDetail', 'public-link'], { id: 'shared' });
+      let completePreviousRequest!: (value: string[]) => void;
+      const pending = client
+        .fetchQuery({
+          queryKey: ['courses'],
+          queryFn: () =>
+            new Promise<string[]>((resolve) => {
+              completePreviousRequest = resolve;
+            }),
+        })
+        .catch(() => undefined);
+
+      await act(async () => {
+        if (action === 'logout') await result.current.logout();
+        else if (action === 'reset') await result.current.resetAuthState?.();
+        else {
+          const { notifyUnauthorized } = require('../src/services/authService');
+          await notifyUnauthorized();
+        }
+      });
+
+      expect(client.getQueryData(['tasteProfile', 'me'])).toBeUndefined();
+      expect(client.getQueryData(['courses'])).toBeUndefined();
+      expect(client.getQueryData(['destination-countries', 'api'])).toEqual([
+        'Korea',
+      ]);
+      expect(client.getQueryData(['shareLinkDetail', 'public-link'])).toEqual({
+        id: 'shared',
+      });
+      client.setQueryData(['courses'], ['Next user course']);
+      completePreviousRequest(['Previous user course']);
+      await pending;
+      expect(client.getQueryData(['courses'])).toEqual(['Next user course']);
+      await unmount();
+      client.clear();
+    },
+  );
+
+  it.each(['google', 'apple'] as const)(
+    '%s login clears previous private caches before the new account is used',
+    async (provider) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { gcTime: Infinity } },
+      });
+      const { result, unmount } = await renderHook(
+        () => React.useContext(AuthContext)!,
+        { wrapper: createWrapper(client) },
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      client.setQueryData(['tasteProfile', 'me'], { intro: 'Previous user' });
+      client.setQueryData(['courseDetail', 'old-course'], { id: 'old-course' });
+      await act(async () => {
+        if (provider === 'google')
+          await result.current.loginWithGoogle('mock-code');
+        else await result.current.loginWithApple({ code: 'mock-code' });
+      });
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(client.getQueryData(['tasteProfile', 'me'])).toBeUndefined();
+      expect(
+        client.getQueryData(['courseDetail', 'old-course']),
+      ).toBeUndefined();
+      await unmount();
+      client.clear();
+    },
+  );
 });

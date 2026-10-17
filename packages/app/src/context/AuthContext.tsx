@@ -1,6 +1,6 @@
 /**
  * @file AuthContext.tsx
- * @description Context provider for managing user authentication state, Google/Apple Sign-In, and automatic session restore.
+ * @description Authentication, session restoration and private query cleanup across account boundaries.
  */
 import React, {
   createContext,
@@ -11,6 +11,7 @@ import React, {
   useMemo,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   type User,
   analyticsService,
@@ -71,6 +72,14 @@ const SESSION_STORAGE_KEYS = [
   'hasCompletedOnboarding',
 ];
 
+// These endpoints return the same public data regardless of the signed-in user.
+const PUBLIC_QUERY_KEYS = new Set([
+  'destination-countries',
+  'destination-cities',
+  'destination-search',
+  'shareLinkDetail',
+]);
+
 export const AuthContext = createContext<AuthContextType | undefined>(
   undefined,
 );
@@ -78,6 +87,14 @@ export const AuthContext = createContext<AuthContextType | undefined>(
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const queryClient = useQueryClient();
+  const clearPrivateQueries = useCallback(() => {
+    // Removing a query also cancels its retryer, so an old in-flight result
+    // cannot repopulate the cache after another account signs in.
+    queryClient.removeQueries({
+      predicate: (query) => !PUBLIC_QUERY_KEYS.has(String(query.queryKey[0])),
+    });
+  }, [queryClient]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -110,6 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   useEffect(() => {
+    clearPrivateQueries();
     setTokenGetter(async () => {
       const { accessToken, refreshToken } = await AsyncStorage.getMany([
         'accessToken',
@@ -130,6 +148,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     const unsubscribe = onUnauthorized(() => {
+      clearPrivateQueries();
       logger.info(
         '[AuthContext] Received 401 Unauthorized event. Resetting auth state...',
       );
@@ -233,7 +252,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [clearPrivateQueries]);
 
   const loginWithGoogle = useCallback(
     async (
@@ -245,8 +264,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       recentCourseId?: string | null;
     }> => {
       logger.info('[AuthContext] Executing loginWithGoogle...');
+      clearPrivateQueries();
       try {
         const result = await googleLogin(code);
+        clearPrivateQueries();
         setUser(result.user);
         setRecentCourseId(result.recentCourseId || null);
         setHasCompletedOnboardingState(!result.doOnboarding);
@@ -261,6 +282,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         });
         return result;
       } catch (error) {
+        clearPrivateQueries();
         logger.error('[AuthContext] Login flow API error:', error);
         await signOutGoogle();
         await clearLocalSession();
@@ -271,7 +293,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         throw error;
       }
     },
-    [googleLogin],
+    [googleLogin, clearPrivateQueries],
   );
 
   const loginWithApple = useCallback(
@@ -285,8 +307,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       recentCourseId?: string | null;
     }> => {
       logger.info('[AuthContext] Executing loginWithApple...');
+      clearPrivateQueries();
       try {
         const result = await appleLogin(payload);
+        clearPrivateQueries();
         setUser(result.user);
         setRecentCourseId(result.recentCourseId || null);
         setHasCompletedOnboardingState(!result.doOnboarding);
@@ -301,6 +325,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         });
         return result;
       } catch (error) {
+        clearPrivateQueries();
         logger.error('[AuthContext] Apple login flow API error:', error);
         await clearLocalSession();
         setIsAuthenticated(false);
@@ -310,11 +335,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         throw error;
       }
     },
-    [appleLogin],
+    [appleLogin, clearPrivateQueries],
   );
 
   const logout = useCallback(async () => {
     logger.info('[AuthContext] Executing logout...');
+    clearPrivateQueries();
     try {
       await logoutUser();
       logger.info('[AuthContext] Logout API call completed');
@@ -326,23 +352,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       await signOutGoogle();
       await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
+      clearPrivateQueries();
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
       setHasCompletedOnboardingState(null);
       logger.info('[AuthContext] Local session cleanup finished');
     }
-  }, [logoutUser]);
+  }, [logoutUser, clearPrivateQueries]);
 
   const resetAuthState = useCallback(async () => {
     logger.info('[AuthContext] Resetting local auth state without API call...');
+    clearPrivateQueries();
     await signOutGoogle();
     await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
+    clearPrivateQueries();
     setIsAuthenticated(false);
     setUser(null);
     setRecentCourseId(null);
     setHasCompletedOnboardingState(null);
-  }, []);
+  }, [clearPrivateQueries]);
 
   const updateUser = useCallback((updatedFields: Partial<User>) => {
     setUser((prevUser) =>

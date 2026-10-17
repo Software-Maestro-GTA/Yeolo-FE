@@ -1,25 +1,24 @@
 /**
  * @file LoginScreen.tsx
- * @description Google & Apple login UI screen updated to match Figma UI design context with inline gradient title.
+ * @description Platform-aware OAuth login with native provider labels, standalone logos and UI v3 safe-area actions.
  */
+import { Text } from '../components/common/Typography';
 import React, { useContext, useEffect, useState } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   Platform,
-  ActivityIndicator,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@yeolo/common';
-import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
 import { UI_STRINGS } from '../constants';
-import { palette, theme } from '../theme/colors';
-import { AuthContext } from '../context';
+import { palette } from '../theme/colors';
+import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
+import { AuthContext, useBackground } from '../context';
 import {
   signInWithGoogle,
   signInWithApple,
@@ -37,6 +36,12 @@ export interface LoginScreenProps {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   useGA4ScreenTracking('LoginScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+
+  useEffect(() => {
+    setBackground({ backgroundColor: palette.primary });
+    return resetBackground;
+  }, [setBackground, resetBackground]);
 
   const authContext = useContext(AuthContext);
   const loginWithGoogle = authContext?.loginWithGoogle;
@@ -120,203 +125,177 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   return (
     <View style={styles.screenBackground}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <LinearGradient
-          colors={theme.colors.gradient.loginBackground}
-          locations={[0, 0.5, 1]}
-          style={styles.gradientContent}>
-          <View style={styles.innerContainer}>
-            {/* Title Section */}
-            <View style={styles.titleSection}>
-              <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
-
-              {/* Gradient Main Title */}
-              <MaskedView
-                maskElement={
-                  <Text
-                    style={[
-                      styles.mainTitle,
-                      { backgroundColor: 'transparent' },
-                    ]}>
-                    {UI_STRINGS.AUTH.MAIN_TITLE}
-                  </Text>
-                }>
-                <LinearGradient
-                  colors={theme.colors.gradient.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}>
-                  <Text style={[styles.mainTitle, { opacity: 0 }]}>
-                    {UI_STRINGS.AUTH.MAIN_TITLE}
-                  </Text>
-                </LinearGradient>
-              </MaskedView>
+      <ScrollView contentContainerStyle={styles.content} bounces={false}>
+        <View style={[styles.hero, !isAppleAvailable && styles.androidHero]}>
+          <View style={styles.titleSection}>
+            <Text style={styles.mainTitle}>
+              {ONBOARDING_UI_STRINGS.LOGIN_TITLE}
+            </Text>
+            <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
+          </View>
+          <View
+            style={styles.heroIllustration}
+            testID='login-hero-illustration'
+            accessible={false}
+          />
+        </View>
+        <SafeAreaView style={styles.bottomCardContainer} edges={['bottom']}>
+          <TouchableOpacity
+            accessibilityRole='button'
+            accessibilityLabel={ONBOARDING_UI_STRINGS.GOOGLE_LOGIN}
+            accessibilityState={{ disabled: isLoggingIn, busy: isLoggingIn }}
+            style={[
+              styles.providerButton,
+              styles.googleLoginButton,
+              isLoggingIn && styles.disabledButton,
+            ]}
+            onPress={handleGoogleLogin}
+            disabled={isLoggingIn}
+            activeOpacity={0.8}
+            testID='google-login-button'>
+            <View style={styles.providerLogo} accessible={false}>
+              <Image
+                source={require('../../assets/figma/share/google.png')}
+                style={styles.googleLogo}
+                resizeMode='contain'
+                accessible={false}
+              />
             </View>
-
-            {/* Google Login Action Button */}
+            <Text
+              style={[styles.providerLabel, styles.googleLabel]}
+              numberOfLines={1}
+              adjustsFontSizeToFit>
+              {ONBOARDING_UI_STRINGS.GOOGLE_LOGIN}
+            </Text>
+          </TouchableOpacity>
+          {isAppleAvailable && (
             <TouchableOpacity
+              accessibilityRole='button'
+              accessibilityLabel={ONBOARDING_UI_STRINGS.APPLE_LOGIN}
+              accessibilityState={{ disabled: isLoggingIn, busy: isLoggingIn }}
               style={[
-                styles.googleLoginButton,
+                styles.providerButton,
+                styles.appleLoginButton,
                 isLoggingIn && styles.disabledButton,
               ]}
+              onPress={handleAppleLogin}
+              disabled={isLoggingIn}
               activeOpacity={0.8}
-              onPress={handleGoogleLogin}
-              disabled={isLoggingIn}>
-              <View style={styles.buttonContent}>
-                <GoogleLogoIcon size={20} style={styles.logoIcon} />
-                <Text style={styles.googleButtonText}>
-                  {UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}
-                </Text>
+              testID='apple-login-button'>
+              <View style={styles.providerLogo} accessible={false}>
+                <Ionicons
+                  name='logo-apple'
+                  size={24}
+                  color={palette.white}
+                  accessible={false}
+                />
               </View>
-            </TouchableOpacity>
-
-            {/* Apple Login Action Button */}
-            {isAppleAvailable && (
-              <TouchableOpacity
-                style={[
-                  styles.appleLoginButton,
-                  isLoggingIn && styles.disabledButton,
-                ]}
-                activeOpacity={0.8}
-                onPress={handleAppleLogin}
-                disabled={isLoggingIn}
-                testID='apple-login-button'>
-                <View style={styles.buttonContent}>
-                  <Ionicons
-                    name='logo-apple'
-                    size={20}
-                    color={palette.white}
-                    style={styles.logoIcon}
-                  />
-                  <Text style={styles.appleButtonText}>
-                    {UI_STRINGS.AUTH.APPLE_BUTTON_TEXT}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            {/* Customer Support Footer Link */}
-            <View style={styles.footerContainer}>
-              <Text style={styles.footerText}>
-                {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_TEXT}
-                <Text
-                  style={styles.supportLink}
-                  onPress={handleSupportLinkPress}
-                  testID='customer-support-mailto-link'>
-                  {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
-                </Text>
+              <Text
+                style={[styles.providerLabel, styles.appleLabel]}
+                numberOfLines={1}
+                adjustsFontSizeToFit>
+                {ONBOARDING_UI_STRINGS.APPLE_LOGIN}
               </Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </SafeAreaView>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.footerText}>
+            {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_TEXT}
+            <Text
+              style={styles.supportLink}
+              onPress={handleSupportLinkPress}
+              testID='customer-support-mailto-link'>
+              {UI_STRINGS.COMMON.CUSTOMER_SUPPORT_LINK}
+            </Text>
+          </Text>
+        </SafeAreaView>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screenBackground: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  gradientContent: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  innerContainer: {
-    width: '100%',
-    gap: 12,
-  },
-  titleSection: {
-    marginBottom: 20,
-    alignItems: 'flex-start',
+  screenBackground: { flex: 1, backgroundColor: palette.primary },
+  content: { flexGrow: 1 },
+  hero: { flexGrow: 1, minHeight: 526, paddingTop: 50, overflow: 'hidden' },
+  androidHero: { minHeight: 566 },
+  titleSection: { paddingHorizontal: 24, gap: 19 },
+  mainTitle: {
+    fontSize: 32,
+    lineHeight: 42,
+    fontWeight: '700',
+    letterSpacing: -1,
+    color: palette.white,
   },
   subTitle: {
-    fontSize: 24,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '500',
-    color: palette.deepNavy,
-    lineHeight: 32,
-    letterSpacing: -0.6,
-    marginBottom: 4,
+    letterSpacing: -1,
+    color: palette.white,
   },
-  mainTitle: {
-    fontSize: 40,
-    fontWeight: '700',
-    color: palette.primary,
-    lineHeight: 50,
-    letterSpacing: -0.8,
+  heroIllustration: {
+    width: 267,
+    height: 267,
+    alignSelf: 'flex-end',
+    marginRight: -21,
+    marginTop: 48,
+    marginBottom: 10,
+  },
+  bottomCardContainer: {
+    backgroundColor: palette.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 48,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 16,
+    alignItems: 'center',
+  },
+  providerButton: {
+    width: '100%',
+    maxWidth: 350,
+    height: 62,
+    borderRadius: 120,
+    paddingHorizontal: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   googleLoginButton: {
-    width: '100%',
-    height: 56,
+    borderWidth: 1,
+    borderColor: palette.gray300,
     backgroundColor: palette.white,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: palette.lightTeal,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  appleLoginButton: {
-    width: '100%',
-    height: 56,
-    backgroundColor: palette.black,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: palette.black,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  buttonContent: {
-    flexDirection: 'row',
+  appleLoginButton: { backgroundColor: palette.black },
+  providerLogo: {
+    position: 'absolute',
+    left: 24,
+    top: 19,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoIcon: {
-    marginRight: 10,
+  googleLogo: { width: 24, height: 24 },
+  providerLabel: {
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: '500',
+    textAlign: 'center',
   },
-  googleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.deepNavy,
-    letterSpacing: 0.3,
-  },
-  appleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.white,
-    letterSpacing: 0.3,
-  },
-  footerContainer: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
+  googleLabel: { color: palette.black },
+  appleLabel: { color: palette.white },
   footerText: {
-    fontSize: 14,
+    marginTop: 6,
+    fontSize: 12,
     color: palette.subText,
-    lineHeight: 20,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   supportLink: {
     color: palette.deepNavy,
     textDecorationLine: 'underline',
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
+  disabledButton: { opacity: 0.6 },
 });

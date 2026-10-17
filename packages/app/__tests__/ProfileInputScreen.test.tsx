@@ -7,8 +7,28 @@ import { Alert } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import * as commonApi from '@yeolo/common';
 import { renderWithQueryClient as render } from './test-utils';
-import { ProfileInputScreen } from '../src/screens/ProfileInputScreen';
+import {
+  ProfileInputScreen,
+  validateNickname,
+} from '../src/screens/ProfileInputScreen';
 import { UI_STRINGS } from '../src/constants';
+import { AuthContext } from '../src/context/AuthContext';
+
+const savedProfile = {
+  status: 200,
+  message: '사용자 프로필 수정 성공',
+  data: {
+    user: {
+      userId: 'user-123',
+      provider: 'google',
+      email: 'test@example.com',
+      displayName: '여로탐험가',
+      profileImageUrl: null,
+      status: 'active',
+      lastLoginAt: '2026-08-01T00:00:00Z',
+    },
+  },
+};
 
 describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
   beforeEach(() => {
@@ -16,17 +36,32 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
-  it('Figma 스펙의 주요 요소들(프로필 설정 타이틀, 아바타 피커, 닉네임/이메일 입력란, 액션 버튼)이 정상 렌더링되어야 한다', async () => {
-    const { findByTestId, findByText } = await render(<ProfileInputScreen />);
+  it.each([11, 12])('최신 UI v3의 %i자 닉네임은 유효하다', (length) => {
+    expect(validateNickname('가'.repeat(length))).toBeNull();
+  });
+
+  it.each([1, 13])(
+    '%i자 닉네임은 2–12자 범위를 벗어나 저장할 수 없다',
+    (length) => {
+      expect(validateNickname('가'.repeat(length))).toBe(
+        UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_LENGTH,
+      );
+    },
+  );
+
+  it('최신 Figma의 프로필 헤더, 사진 변경, 읽기 전용 이메일, 닉네임과 저장 액션을 표시한다', async () => {
+    const { findByTestId, findByText, queryByTestId } = await render(
+      <ProfileInputScreen />,
+    );
 
     expect(await findByTestId('profile-input-screen')).toBeTruthy();
-    expect(await findByText('프로필 설정')).toBeTruthy();
+    expect(await findByText('프로필')).toBeTruthy();
     expect(await findByTestId('btn-avatar-picker')).toBeTruthy();
-    expect(await findByText('닉네임 *')).toBeTruthy();
+    expect(await findByText('닉네임')).toBeTruthy();
     expect(await findByTestId('input-profile-nickname')).toBeTruthy();
-    expect(await findByText('이메일 *')).toBeTruthy();
+    expect(await findByTestId('nickname-counter')).toBeTruthy();
     expect(await findByTestId('btn-save-profile-input')).toBeTruthy();
-    expect(await findByTestId('btn-skip-profile-input')).toBeTruthy();
+    expect(queryByTestId('btn-skip-profile-input')).toBeNull();
   });
 
   it('닉네임이 공백일 경우 경고 알림이 발생하고 API가 호출되지 않아야 한다', async () => {
@@ -92,7 +127,8 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
     );
 
     const input = await findByTestId('input-profile-nickname');
-    fireEvent.changeText(input, '여로탐험가');
+    fireEvent.changeText(input, '여로탐험가의새여행취향길');
+    expect(await findByTestId('nickname-counter')).toHaveTextContent('12 / 12');
 
     const btnSave = await findByTestId('btn-save-profile-input');
     await act(async () => {
@@ -104,7 +140,7 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
         expect.any(String),
         undefined,
         expect.objectContaining({
-          displayName: '여로탐험가',
+          displayName: '여로탐험가의새여행취향길',
         }),
       );
       const callArgs = spyUpdateApi.mock.calls[0];
@@ -134,6 +170,100 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
     });
   });
 
+  it('저장 성공으로 이미 복귀한 뒤 알림을 확인해도 다시 뒤로 이동하지 않는다', async () => {
+    jest
+      .spyOn(commonApi, 'updateUserProfileApi')
+      .mockResolvedValue(savedProfile);
+    const onSaveSuccess = jest.fn();
+    const onGoBack = jest.fn();
+    const ui = await render(
+      <ProfileInputScreen onSaveSuccess={onSaveSuccess} onGoBack={onGoBack} />,
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('input-profile-nickname'),
+      '여로탐험가',
+    );
+    await fireEvent.press(ui.getByTestId('btn-save-profile-input'));
+    await waitFor(() => expect(onSaveSuccess).toHaveBeenCalledTimes(1));
+    const buttons = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2];
+    await act(async () => buttons?.[0]?.onPress?.());
+    expect(onGoBack).not.toHaveBeenCalled();
+    expect(onSaveSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('저장 완료 콜백이 없으면 성공 알림을 확인할 때 한 번 복귀한다', async () => {
+    jest
+      .spyOn(commonApi, 'updateUserProfileApi')
+      .mockResolvedValue(savedProfile);
+    const onGoBack = jest.fn();
+    const ui = await render(<ProfileInputScreen onGoBack={onGoBack} />);
+    await fireEvent.changeText(
+      ui.getByTestId('input-profile-nickname'),
+      '여로탐험가',
+    );
+    await fireEvent.press(ui.getByTestId('btn-save-profile-input'));
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    expect(onGoBack).not.toHaveBeenCalled();
+    const buttons = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2];
+    await act(async () => buttons?.[0]?.onPress?.());
+    expect(onGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('저장 중 화면을 떠나면 늦은 성공은 사용자 정보만 갱신하고 화면 이동이나 알림을 만들지 않는다', async () => {
+    let resolveSave: (value: typeof savedProfile) => void = () => {};
+    const save = jest.spyOn(commonApi, 'updateUserProfileApi').mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    const onSaveSuccess = jest.fn();
+    const updateUser = jest.fn();
+    const ui = await render(
+      <AuthContext.Provider value={{ updateUser } as any}>
+        <ProfileInputScreen onSaveSuccess={onSaveSuccess} />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('input-profile-nickname'),
+      '여로탐험가',
+    );
+    const savePress = fireEvent.press(ui.getByTestId('btn-save-profile-input'));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    await ui.unmount();
+    await act(async () => {
+      resolveSave(savedProfile);
+      await savePress;
+    });
+    expect(updateUser).toHaveBeenCalledWith({
+      displayName: '여로탐험가',
+      profileImageUrl: null,
+    });
+    expect(onSaveSuccess).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it('저장 중 화면을 떠나면 늦은 실패 알림도 표시하지 않는다', async () => {
+    let rejectSave: (reason: Error) => void = () => {};
+    const save = jest.spyOn(commonApi, 'updateUserProfileApi').mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSave = reject;
+      }),
+    );
+    const ui = await render(<ProfileInputScreen />);
+    await fireEvent.changeText(
+      ui.getByTestId('input-profile-nickname'),
+      '여로탐험가',
+    );
+    const savePress = fireEvent.press(ui.getByTestId('btn-save-profile-input'));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    await ui.unmount();
+    await act(async () => {
+      rejectSave(new commonApi.ApiError(400, '저장 실패'));
+      await savePress;
+    });
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
   it('아바타 피커 클릭 시 프로필 사진 변경 바텀 시트 모달이 떠야 한다', async () => {
     const { findByTestId } = await render(<ProfileInputScreen />);
 
@@ -145,18 +275,14 @@ describe('ProfileInputScreen (TSK-61 / #64: 프로필 설정 화면)', () => {
     expect(await findByTestId('btn-reset-default')).toBeTruthy();
   });
 
-  it('나중에 하기 버튼 및 뒤로가기 버튼 클릭 시 onGoBack 콜백이 호출되어야 한다', async () => {
+  it('뒤로가기 버튼으로 편집을 저장하지 않고 이전 화면으로 돌아간다', async () => {
     const mockOnGoBack = jest.fn();
     const { findByTestId } = await render(
       <ProfileInputScreen onGoBack={mockOnGoBack} />,
     );
 
-    const btnSkip = await findByTestId('btn-skip-profile-input');
-    fireEvent.press(btnSkip);
-    expect(mockOnGoBack).toHaveBeenCalledTimes(1);
-
     const btnBack = await findByTestId('btn-back');
     fireEvent.press(btnBack);
-    expect(mockOnGoBack).toHaveBeenCalledTimes(2);
+    expect(mockOnGoBack).toHaveBeenCalledTimes(1);
   });
 });

@@ -42,6 +42,8 @@ export const initializeGoogleSignin = (
  * Execute native Google login and extract the authorization code.
  * Cleans up any residual session prior to login to guarantee a fresh authorization code.
  * @returns Promise<string> representing the Google server auth code.
+ * @throws An error with code SIGN_IN_CANCELLED when the user dismisses native login,
+ * or the original authentication error when sign-in fails.
  */
 export const signInWithGoogle = async (): Promise<string> => {
   await GoogleSignin.hasPlayServices();
@@ -57,6 +59,11 @@ export const signInWithGoogle = async (): Promise<string> => {
 
   try {
     const response = await GoogleSignin.signIn();
+    if (response.type === 'cancelled') {
+      throw Object.assign(new Error('Google sign-in cancelled'), {
+        code: 'SIGN_IN_CANCELLED',
+      });
+    }
     const code = response.data?.serverAuthCode;
 
     if (!code) {

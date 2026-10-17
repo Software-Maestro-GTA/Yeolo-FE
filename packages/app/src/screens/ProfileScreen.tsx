@@ -1,26 +1,22 @@
 /**
  * @file ProfileScreen.tsx
- * @description User profile screen component for managing account preferences, logout (API-AUTH-11), withdrawal (API-USER-2), and viewing AI travel taste profile (API-PREF-4).
+ * @description UI v3 profile, support and official social links with existing account logout and withdrawal actions.
  * @domain DOM-3
  */
+import { Text } from '../components/common/Typography';
 import React, { useContext, useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
-  Image,
   Alert,
   Linking,
-  StatusBar,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { logger } from '@yeolo/common';
 import { AuthContext, useBackground } from '../context';
-import { palette, theme, hexToRgba } from '../theme/colors';
+import { palette, theme } from '../theme/colors';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { clearLocalSession, openCustomerSupportMail } from '../services';
 import { TermsModal, ProfileConfirmModal } from '../components/profile';
@@ -28,10 +24,13 @@ import {
   useWithdrawMutation,
   useLogoutMutation,
 } from '../hooks/queries/useAuthMutations';
-import { useTasteProfileQuery } from '../hooks/queries/useTasteProfileQuery';
+import { HOME_PROFILE_UI as S } from '../constants/homeProfileUiStrings';
+import { FigmaAsset } from '../components/common/FigmaAsset';
+import { CachedImage } from '../components/common/CachedImage';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 
 export interface ProfileScreenProps {
+  onBack?: () => void;
   hasTasteProfile?: boolean;
   onNavigateToTasteProfile?: () => void;
   onReanalyzeTaste?: () => void;
@@ -40,16 +39,20 @@ export interface ProfileScreenProps {
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
-  hasTasteProfile: hasTasteProfileProp,
-  onNavigateToTasteProfile,
-  onReanalyzeTaste,
+  onBack,
   onEditProfile,
   onNavigateToLogin,
 }) => {
   useGA4ScreenTracking('ProfileScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  useEffect(() => {
+    setBackground({ backgroundColor: palette.gray100 });
+    return resetBackground;
+  }, [setBackground, resetBackground]);
 
   const auth = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
   const user = auth?.user;
   const isMounted = useRef(true);
 
@@ -86,12 +89,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   const withdrawMutation = useWithdrawMutation();
   const logoutMutation = useLogoutMutation();
-
-  const { data: tasteProfile, isError: isTasteError } = useTasteProfileQuery();
-  const hasTasteProfile =
-    hasTasteProfileProp !== undefined
-      ? hasTasteProfileProp
-      : !!tasteProfile && !isTasteError;
 
   const clearSessionAndRedirect = async () => {
     await clearLocalSession();
@@ -212,193 +209,115 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     }
   };
 
+  const openInstagram = async () => {
+    try {
+      await Linking.openURL(APP_CONFIG.INSTAGRAM_URL);
+    } catch {
+      Alert.alert(S.instagram, S.instagramError);
+    }
+  };
+  const contentInset = StyleSheet.create({
+    scroll: { paddingBottom: Math.max(insets.bottom, 24) },
+  });
+  const row = (label: string, testID: string, onPress: () => void) => (
+    <TouchableOpacity
+      key={testID}
+      accessibilityRole='button'
+      style={styles.settingRow}
+      testID={testID}
+      onPress={onPress}>
+      <Text style={styles.settingLabelText}>{label}</Text>
+      <FigmaAsset
+        source={require('../../assets/figma/profile/chevron.svg')}
+        width={18}
+        height={18}
+        style={styles.forward}
+      />
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container} testID='profile-screen'>
-      {/* Top Header Row (Left-aligned Title) */}
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>{UI_STRINGS.PROFILE.MAIN_TITLE}</Text>
+        <TouchableOpacity
+          accessibilityRole='button'
+          accessibilityLabel={S.back}
+          testID='profile-back'
+          onPress={onBack}
+          style={styles.back}>
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/back.svg')}
+            width={24}
+            height={24}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{S.profile}</Text>
       </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {/* Profile Info Card */}
-        <View style={styles.profileCard} testID='profile-card'>
-          <View style={styles.avatarAndMeta}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View
-                style={[styles.avatarImage, styles.defaultAvatarPlaceholder]}>
-                <Ionicons name='person' size={32} color={palette.gray400} />
-              </View>
-            )}
-            <View style={styles.metaTextStack}>
-              {!!displayName && (
-                <Text style={styles.userNameText} numberOfLines={1}>
-                  {displayName}
-                </Text>
-              )}
-              {!!email && (
-                <Text style={styles.userEmailText} numberOfLines={1}>
-                  {email}
-                </Text>
-              )}
+        contentContainerStyle={[styles.scrollContent, contentInset.scroll]}>
+        <TouchableOpacity
+          accessibilityRole='button'
+          accessibilityLabel={S.editProfile}
+          style={styles.profileCard}
+          testID='btn-edit-profile'
+          onPress={onEditProfile}>
+          {avatarUrl ? (
+            <CachedImage
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <View style={styles.defaultAvatarPlaceholder}>
+              <FigmaAsset
+                source={require('../../assets/figma/profile/avatar.svg')}
+                width={56}
+                height={56}
+                style={styles.avatarBackground}
+              />
+              <FigmaAsset
+                source={require('../../assets/figma/profile/person.svg')}
+                width={19.4689}
+                height={22}
+              />
             </View>
-            <TouchableOpacity
-              testID='btn-edit-profile'
-              style={styles.editBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                trackButtonClick('btn_profile_edit', 'Edit Profile Click');
-                onEditProfile?.();
-              }}>
-              <Text style={styles.editBtnText}>
-                {UI_STRINGS.PROFILE.EDIT_BUTTON}
-              </Text>
-            </TouchableOpacity>
+          )}
+          <View style={styles.metaTextStack}>
+            <Text style={styles.userNameText} numberOfLines={1}>
+              {displayName || S.guest}
+            </Text>
+            <Text style={styles.userEmailText} numberOfLines={1}>
+              {email}
+            </Text>
           </View>
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/back.svg')}
+            width={24}
+            height={24}
+            style={styles.forward}
+          />
+        </TouchableOpacity>
+        <View style={styles.settingsCard} testID='settings-section'>
+          <Text style={styles.settingsHeaderTitle}>{S.settings}</Text>
+          {row(UI_STRINGS.PROFILE.TERMS_LABEL, 'btn-terms', () =>
+            handleOpenTerms('terms'),
+          )}
+          {row(UI_STRINGS.PROFILE.PRIVACY_LABEL, 'btn-privacy', () =>
+            handleOpenTerms('privacy'),
+          )}
+          {row(UI_STRINGS.PROFILE.SUPPORT_LABEL, 'btn-support', () =>
+            handleOpenTerms('support'),
+          )}
         </View>
-
-        {/* AI Travel Taste Card */}
-        <LinearGradient
-          colors={[palette.primary, palette.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.aiTasteCard}
-          testID='ai-taste-card'>
-          <View style={styles.tasteTitleStack}>
-            <View style={styles.tasteBadgeRow}>
-              <Ionicons name='sparkles' size={16} color={palette.white} />
-              <Text style={styles.tasteBadgeTitle}>
-                {UI_STRINGS.PROFILE.AI_TASTE_TITLE}
-              </Text>
-            </View>
-            <Text style={styles.tasteSubDesc}>
-              {UI_STRINGS.PROFILE.AI_TASTE_DESC}
-            </Text>
-          </View>
-
-          <View style={styles.tasteActionsRow}>
-            {/* 1. 나의 취향 보기 (취향 정보가 존재할 경우에만 노출) */}
-            {hasTasteProfile && (
-              <TouchableOpacity
-                testID='btn-view-taste'
-                style={styles.btnTastePrimary}
-                activeOpacity={0.85}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_profile_view_taste',
-                    'View Taste Profile Click',
-                  );
-                  onNavigateToTasteProfile?.();
-                }}>
-                <Text style={styles.btnTastePrimaryText}>
-                  {UI_STRINGS.PROFILE.VIEW_TASTE_BUTTON}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* 2. 취향 재분석 */}
-            <TouchableOpacity
-              testID='btn-reanalyze-taste'
-              style={
-                hasTasteProfile
-                  ? styles.btnTasteSecondary
-                  : styles.btnTastePrimaryFull
-              }
-              activeOpacity={0.85}
-              onPress={() => {
-                trackButtonClick(
-                  'btn_profile_reanalyze_taste',
-                  'Reanalyze Taste Click',
-                );
-                onReanalyzeTaste?.();
-              }}>
-              <Text
-                style={
-                  hasTasteProfile
-                    ? styles.btnTasteSecondaryText
-                    : styles.btnTastePrimaryFullText
-                }>
-                {UI_STRINGS.PROFILE.REANALYZE_BUTTON}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-
-        {/* Settings Section */}
-        <View style={styles.settingsSection} testID='settings-section'>
-          <Text style={styles.settingsHeaderTitle}>
-            {UI_STRINGS.PROFILE.SETTINGS_HEADER}
-          </Text>
-
-          <View style={styles.settingsListCard}>
-            {/* 이용약관 */}
-            <TouchableOpacity
-              style={styles.settingRow}
-              activeOpacity={0.7}
-              testID='btn-terms'
-              onPress={() => handleOpenTerms('terms')}>
-              <Text style={styles.settingLabelText}>
-                {UI_STRINGS.PROFILE.TERMS_LABEL}
-              </Text>
-              <Ionicons
-                name='chevron-forward'
-                size={16}
-                color={palette.mutedText}
-              />
-            </TouchableOpacity>
-
-            {/* 개인정보 처리방침 */}
-            <TouchableOpacity
-              style={styles.settingRow}
-              activeOpacity={0.7}
-              testID='btn-privacy'
-              onPress={() => handleOpenTerms('privacy')}>
-              <Text style={styles.settingLabelText}>
-                {UI_STRINGS.PROFILE.PRIVACY_LABEL}
-              </Text>
-              <Ionicons
-                name='chevron-forward'
-                size={16}
-                color={palette.mutedText}
-              />
-            </TouchableOpacity>
-
-            {/* 고객 지원 */}
-            <TouchableOpacity
-              style={[styles.settingRow, { borderBottomWidth: 0 }]}
-              activeOpacity={0.7}
-              testID='btn-support'
-              onPress={() => handleOpenTerms('support')}>
-              <Text style={styles.settingLabelText}>
-                {UI_STRINGS.PROFILE.SUPPORT_LABEL}
-              </Text>
-              <Ionicons
-                name='chevron-forward'
-                size={16}
-                color={palette.mutedText}
-              />
-            </TouchableOpacity>
-          </View>
+        <View style={styles.settingsCard} testID='usage-section'>
+          <Text style={styles.settingsHeaderTitle}>{S.usage}</Text>
+          {row(S.inquiry, 'btn-inquiry', () => handleOpenTerms('support'))}
+          {row(S.instagram, 'btn-instagram', openInstagram)}
         </View>
-
-        {/* Account Links */}
-        <View style={styles.accountLinksRow}>
-          <TouchableOpacity onPress={handleLogout} testID='btn-logout'>
-            <Text style={styles.accountLinkText}>
-              {UI_STRINGS.PROFILE.LOGOUT_LINK}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.dividerLine} />
-
-          <TouchableOpacity onPress={handleWithdraw} testID='btn-withdraw'>
-            <Text style={styles.accountLinkText}>
-              {UI_STRINGS.PROFILE.WITHDRAW_LINK}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.settingsCard} testID='app-info-section'>
+          <Text style={styles.settingsHeaderTitle}>{S.appInfo}</Text>
+          {row(UI_STRINGS.PROFILE.LOGOUT, 'btn-logout', handleLogout)}
+          {row(S.withdraw, 'btn-withdraw', handleWithdraw)}
         </View>
       </ScrollView>
 
@@ -427,205 +346,89 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
+  container: { flex: 1, backgroundColor: palette.gray100 },
   headerContainer: {
+    height: 60,
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  back: {
+    position: 'absolute',
+    left: 12,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: palette.deepNavy,
-    letterSpacing: -0.4,
+    fontSize: 20,
+    lineHeight: 37,
+    letterSpacing: -1,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 76,
-    gap: 20,
-  },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 13, gap: 16 },
   profileCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 20,
-    padding: 18,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  avatarAndMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingHorizontal: 8,
+    marginBottom: 14,
+    minHeight: 56,
   },
-  avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: palette.lightTeal,
-  },
+  avatarImage: { width: 56, height: 56, borderRadius: 28 },
   defaultAvatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: palette.transparent,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.gray100,
-    borderWidth: 1,
-    borderColor: palette.gray200,
   },
-  metaTextStack: {
-    flex: 1,
-    gap: 4,
-  },
+  avatarBackground: { position: 'absolute', top: 0, left: 0 },
+  metaTextStack: { flex: 1, gap: 8 },
   userNameText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.deepNavy,
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: -1,
+    color: theme.colors.text.primary,
   },
   userEmailText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: palette.subText,
-  },
-  editBtn: {
-    backgroundColor: palette.lightTeal,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  editBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: palette.accent,
-  },
-  aiTasteCard: {
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  tasteTitleStack: {
-    gap: 6,
-  },
-  tasteBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  tasteBadgeTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: palette.white,
+    letterSpacing: -1,
+    color: palette.gray500,
+    fontWeight: '500',
   },
-  tasteSubDesc: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: hexToRgba(palette.white, 0.9),
-    lineHeight: 18,
-  },
-  tasteActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  btnTastePrimary: {
-    flex: 1,
-    backgroundColor: palette.white,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnTastePrimaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.primary,
-  },
-  btnTasteSecondary: {
-    flex: 1,
-    backgroundColor: hexToRgba(palette.white, 0.13),
-    borderWidth: 1,
-    borderColor: palette.white,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnTasteSecondaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  btnTastePrimaryFull: {
-    flex: 1,
-    backgroundColor: palette.white,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnTastePrimaryFullText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.primary,
-  },
-  settingsSection: {
-    gap: 6,
+  forward: { transform: [{ rotate: '180deg' }] },
+  settingsCard: {
+    borderRadius: 20,
+    backgroundColor: theme.colors.bg.card,
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   settingsHeaderTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: palette.mutedText,
-  },
-  settingsListCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 20,
-    overflow: 'hidden',
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -1,
+    color: theme.colors.text.primary,
+    marginBottom: 6,
   },
   settingRow: {
+    minHeight: 43,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.gray200,
+    gap: 8,
   },
   settingLabelText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
-    color: palette.deepNavy,
-  },
-  accountLinksRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    paddingVertical: 12,
-  },
-  accountLinkText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: palette.mutedText,
-    textDecorationLine: 'underline',
-  },
-  dividerLine: {
-    width: 1,
-    height: 10,
-    backgroundColor: palette.mutedText,
+    letterSpacing: -1,
+    color: theme.colors.text.primary,
   },
 });
+
+export default ProfileScreen;

@@ -24,15 +24,17 @@ describe('ProfileScreen (FUN-11: 프로필 화면 개편 및 마이페이지 연
     );
 
     expect(await findByTestId('profile-screen')).toBeTruthy();
-    expect(await findByTestId('profile-card')).toBeTruthy();
+    expect(await findByTestId('btn-edit-profile')).toBeTruthy();
 
     // Check that default hardcoded user values ('김선규', 'ksk85628781@gmail.com') are removed
     expect(queryByText('김선규')).toBeNull();
     expect(queryByText('ksk85628781@gmail.com')).toBeNull();
 
-    expect(await findByText('수정')).toBeTruthy();
-    expect(await findByTestId('ai-taste-card')).toBeTruthy();
-    expect(await findByText('AI 여행 취향 분석')).toBeTruthy();
+    expect(await findByText('설정')).toBeTruthy();
+    expect(await findByText('이용')).toBeTruthy();
+    expect(await findByText('앱 정보')).toBeTruthy();
+    expect(await findByText('1:1 문의하기')).toBeTruthy();
+    expect(await findByText('여로 인스타그램 바로가기')).toBeTruthy();
 
     expect(await findByTestId('settings-section')).toBeTruthy();
     expect(await findByText('이용약관')).toBeTruthy();
@@ -106,5 +108,9 @@ describe('ProfileScreen (FUN-11: 프로필 화면 개편 및 마이페이지 연
       fireEvent.press(btnPrivacy);
     });
     expect(spyOpenURL).toHaveBeenCalledWith('https://www.yeolo.app/privacy');
+    await fireEvent.press(await findByTestId('btn-instagram'));
+    expect(spyOpenURL).toHaveBeenCalledWith(
+      'https://www.instagram.com/yeolo_my_trip/',
+    );
   });
 });

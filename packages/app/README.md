@@ -17,7 +17,7 @@ packages/app/
 │   ├── screens/      # 화면 컴포넌트 (Home, Login 등)
 │   ├── services/     # Native SDK 및 세션 유틸리티
 │   └── App.tsx       # 모바일 앱 메인 컴포넌트
-├── assets/           # 아이콘 및 스플래시 이미지 에셋
+├── assets/           # 브랜드 로고·화면 이미지·폰트
 ├── app.config.js     # Expo 동적 설정 파일
 ├── app.json          # Expo 앱 전역 설정 및 메타데이터
 ├── eas.json          # EAS 빌드 프로필 설정
@@ -39,6 +39,12 @@ yarn android
 # iOS 개발 모드 실행 (macOS 전용)
 yarn ios
 ```
+
+### iOS Apple 로그인 검증
+
+Apple 로그인은 위 `yarn ios` 명령처럼 기본 서명 설정을 유지한 빌드로 확인합니다. 직접 `xcodebuild`를 사용할 때도 `CODE_SIGNING_ALLOWED=NO`를 지정하지 않습니다. 소스의 `app.entitlements`에 Apple 로그인 권한이 있어도 서명을 끈 시뮬레이터 빌드에는 필요한 권한이 포함되지 않아 `ERR_REQUEST_UNKNOWN` / `AKAuthenticationError -7026`으로 실패할 수 있습니다.
+
+버튼을 눌러 시스템 Apple 로그인 창이 열리는지 확인한 다음, 계정 소유자가 인증을 진행하여 앱 로그인 완료까지 검증합니다. 네이티브 SDK를 모킹한 Jest 테스트만으로 서명·기기 계정·실제 인증 성공을 확인할 수는 없습니다.
 
 ## MyRealTrip 제휴 예약
 

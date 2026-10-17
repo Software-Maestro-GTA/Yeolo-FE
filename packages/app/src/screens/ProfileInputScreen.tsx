@@ -2,23 +2,23 @@
  * @file ProfileInputScreen.tsx
  * @description Screen component for entering and updating user profile details (nickname, avatar) matching Figma UI specifications and API-USER-1.
  */
-import React, { useState, useEffect, useContext } from 'react';
+import { Text, TextInput } from '../components/common/Typography';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
-  TextInput,
-  Image,
   Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FigmaAsset } from '../components/common/FigmaAsset';
+import { CachedImage } from '../components/common/CachedImage';
 import * as ImagePicker from 'expo-image-picker';
-import { AuthContext } from '../context';
-import { palette, hexToRgba } from '../theme/colors';
+import { AuthContext, useBackground } from '../context';
+import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useUpdateUserProfileMutation } from '../hooks/queries';
@@ -34,7 +34,7 @@ export const validateNickname = (nickname: string): string | null => {
   if (!trimmed) {
     return UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_EMPTY;
   }
-  if (trimmed.length < 2 || trimmed.length > 10) {
+  if (trimmed.length < 2 || trimmed.length > 12) {
     return UI_STRINGS.PROFILE_INPUT.NICKNAME_ERROR_LENGTH;
   }
   const validRegex = /^[a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣ\s]+$/;
@@ -50,6 +50,22 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 }) => {
   useGA4ScreenTracking('ProfileInputScreen');
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  const insets = useSafeAreaInsets();
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    setBackground({ backgroundColor: palette.gray100 });
+    return resetBackground;
+  }, [setBackground, resetBackground]);
+  const contentInset = StyleSheet.create({
+    content: { paddingBottom: insets.bottom + 46 },
+  });
 
   const auth = useContext(AuthContext);
   const user = auth?.user;
@@ -85,6 +101,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
   };
 
   const handleSave = async () => {
+    if (updateProfileMutation.isPending) return;
     const validationError = validateNickname(displayName);
     if (validationError) {
       setNicknameError(validationError);
@@ -110,6 +127,8 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
         });
       }
 
+      if (!mounted.current) return;
+
       if (onSaveSuccess) {
         onSaveSuccess();
       }
@@ -121,25 +140,19 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
           {
             text: UI_STRINGS.COMMON.CONFIRM,
             onPress: () => {
-              if (onGoBack) {
-                onGoBack();
+              if (!onSaveSuccess && mounted.current) {
+                onGoBack?.();
               }
             },
           },
         ],
       );
     } catch (err: any) {
+      if (!mounted.current) return;
       Alert.alert(
         UI_STRINGS.PROFILE_INPUT.ERROR_TITLE,
         err?.message || UI_STRINGS.PROFILE_INPUT.UPDATE_FAILED_MESSAGE,
       );
-    }
-  };
-
-  const handleSkip = () => {
-    trackButtonClick('btn_skip_profile_input', 'Skip Profile Input');
-    if (onGoBack) {
-      onGoBack();
     }
   };
 
@@ -148,7 +161,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
       if (!ImagePicker || !ImagePicker.launchImageLibraryAsync) {
         Alert.alert(
           UI_STRINGS.PROFILE_INPUT.ALERT_TITLE,
-          '사진 보관함을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.',
+          UI_STRINGS.PROFILE_INPUT.GALLERY_UNAVAILABLE,
         );
         return;
       }
@@ -166,7 +179,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
     } catch (error: any) {
       Alert.alert(
         UI_STRINGS.PROFILE_INPUT.ERROR_TITLE,
-        error?.message || '이미지를 불러오는 중 오류가 발생했습니다.',
+        error?.message || UI_STRINGS.PROFILE_INPUT.GALLERY_ERROR,
       );
     }
   };
@@ -181,103 +194,121 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID='profile-input-screen'>
-      <View style={styles.auraGlow} />
-
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentInset.content]}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode='interactive'
         keyboardShouldPersistTaps='handled'>
-        {/* Header Section */}
         <View style={styles.headerSection}>
           <TouchableOpacity
             testID='btn-back'
             style={styles.backBtn}
             onPress={onGoBack}
-            activeOpacity={0.7}>
-            <Ionicons name='chevron-back' size={24} color={palette.deepNavy} />
+            accessibilityRole='button'
+            accessibilityLabel={UI_STRINGS.COMMON.BACK}>
+            <FigmaAsset
+              source={require('../../assets/images/figma-course/back.svg')}
+              width={24}
+              height={24}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {UI_STRINGS.PROFILE_INPUT.HEADER_TITLE}
           </Text>
-          <View style={{ width: 24 }} />
         </View>
-
-        {/* Form Wrapper */}
         <View style={styles.formWrapper}>
-          {/* Avatar Picker Section */}
-          <View style={styles.avatarPickerSection}>
-            <TouchableOpacity
-              testID='btn-avatar-picker'
-              style={styles.avatarContainer}
-              activeOpacity={0.85}
-              onPress={handleChangeAvatar}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-              ) : (
-                <View
-                  style={[styles.avatarImage, styles.defaultAvatarPlaceholder]}>
-                  <Ionicons name='person' size={44} color={palette.gray400} />
-                </View>
-              )}
-              <View style={styles.cameraBadge}>
-                <Ionicons name='camera' size={14} color={palette.white} />
+          <TouchableOpacity
+            testID='btn-avatar-picker'
+            style={styles.avatarContainer}
+            accessibilityRole='button'
+            accessibilityLabel={UI_STRINGS.PROFILE_INPUT.AVATAR_ALERT_TITLE}
+            activeOpacity={0.85}
+            onPress={handleChangeAvatar}>
+            {avatarUrl ? (
+              <CachedImage
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.defaultAvatarPlaceholder}>
+                <FigmaAsset
+                  source={require('../../assets/figma/profile/avatar-large.svg')}
+                  width={120}
+                  height={120}
+                  style={styles.avatarBackground}
+                />
+                <FigmaAsset
+                  source={require('../../assets/figma/profile/person.svg')}
+                  width={19.4689}
+                  height={22}
+                />
               </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Form Fields */}
-          <View style={styles.formFields}>
-            {/* Nickname Field */}
-            <View style={styles.fieldBlock}>
+            )}
+            <View style={styles.cameraBadge}>
+              <FigmaAsset
+                source={require('../../assets/figma/profile/camera-background.svg')}
+                width={32}
+                height={32}
+                style={styles.avatarBackground}
+              />
+              <FigmaAsset
+                source={require('../../assets/figma/profile/camera.svg')}
+                width={14.5}
+                height={11.5}
+              />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.email} numberOfLines={1}>
+            {email}
+          </Text>
+          <View style={styles.fieldBlock}>
+            <View
+              style={[
+                styles.inputWrapper,
+                nicknameError && styles.inputErrorBorder,
+              ]}>
               <Text style={styles.fieldLabel}>
                 {UI_STRINGS.PROFILE_INPUT.NICKNAME_LABEL}
               </Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  nicknameError ? styles.inputErrorBorder : null,
-                ]}>
-                <TextInput
-                  testID='input-profile-nickname'
-                  style={styles.textInput}
-                  value={displayName}
-                  onChangeText={handleNicknameChange}
-                  placeholder={UI_STRINGS.PROFILE_INPUT.NICKNAME_PLACEHOLDER}
-                  placeholderTextColor={palette.gray400}
-                  maxLength={10}
-                />
-              </View>
-              {nicknameError ? (
+              <TextInput
+                testID='input-profile-nickname'
+                accessibilityLabel={UI_STRINGS.PROFILE_INPUT.NICKNAME_LABEL}
+                style={styles.textInput}
+                value={displayName}
+                onChangeText={handleNicknameChange}
+                placeholder={UI_STRINGS.PROFILE_INPUT.NICKNAME_PLACEHOLDER}
+                placeholderTextColor={palette.gray400}
+                maxLength={12}
+                editable={!updateProfileMutation.isPending}
+                returnKeyType='done'
+                onSubmitEditing={handleSave}
+              />
+            </View>
+            <View style={styles.fieldStatus}>
+              {nicknameError && (
                 <Text testID='nickname-error-text' style={styles.errorText}>
                   {nicknameError}
                 </Text>
-              ) : null}
-            </View>
-
-            {/* Email Field */}
-            <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>
-                {UI_STRINGS.PROFILE_INPUT.EMAIL_LABEL}
+              )}
+              <Text style={styles.counter} testID='nickname-counter'>
+                <Text style={styles.counterValue}>{displayName.length}</Text>
+                {UI_STRINGS.PROFILE_INPUT.NICKNAME_COUNTER_SUFFIX}
               </Text>
-              <View style={[styles.inputWrapper, styles.inputDisabled]}>
-                <Text style={styles.readOnlyText} numberOfLines={1}>
-                  {email}
-                </Text>
-                <Ionicons
-                  name='lock-closed'
-                  size={16}
-                  color={palette.gray400}
-                />
-              </View>
             </View>
           </View>
         </View>
-
-        {/* Action Container */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
             testID='btn-save-profile-input'
-            style={styles.primaryButton}
+            accessibilityRole='button'
+            accessibilityState={{
+              disabled: updateProfileMutation.isPending,
+              busy: updateProfileMutation.isPending,
+            }}
+            style={[
+              styles.primaryButton,
+              updateProfileMutation.isPending && styles.disabledButton,
+            ]}
             activeOpacity={0.85}
             onPress={handleSave}
             disabled={updateProfileMutation.isPending}>
@@ -285,20 +316,8 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
               {UI_STRINGS.PROFILE_INPUT.SAVE_BUTTON}
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            testID='btn-skip-profile-input'
-            style={styles.secondaryButton}
-            activeOpacity={0.7}
-            onPress={handleSkip}>
-            <Text style={styles.secondaryButtonText}>
-              {UI_STRINGS.PROFILE_INPUT.SKIP_BUTTON}
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Avatar Action Bottom Sheet */}
       <AvatarActionBottomSheet
         visible={showAvatarSheet}
         onClose={() => setShowAvatarSheet(false)}
@@ -310,176 +329,111 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  auraGlow: {
-    position: 'absolute',
-    top: -80,
-    alignSelf: 'center',
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    backgroundColor: hexToRgba(palette.lightTeal, 0.65),
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 40,
-    flexGrow: 1,
-    justifyContent: 'space-between',
-  },
-  headerSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: palette.gray100 },
+  scrollContent: { paddingHorizontal: 20, flexGrow: 1 },
+  headerSection: { height: 60, alignItems: 'center', justifyContent: 'center' },
   backBtn: {
-    padding: 4,
+    position: 'absolute',
+    left: -8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  formWrapper: {
-    gap: 32,
-    alignItems: 'center',
-    width: '100%',
-  },
-  avatarPickerSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 8,
-  },
-  avatarContainer: {
-    position: 'relative',
-    width: 96,
-    height: 96,
-  },
-  avatarImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: palette.lightTeal,
-    borderWidth: 2,
-    borderColor: palette.white,
-  },
-  defaultAvatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.gray100,
-    borderColor: palette.gray200,
-  },
-  cameraBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: palette.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: palette.white,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  formFields: {
-    width: '100%',
-    gap: 20,
-  },
-  fieldBlock: {
-    gap: 8,
-    width: '100%',
-  },
-  fieldLabel: {
-    fontSize: 14,
+    fontSize: 20,
+    lineHeight: 37,
+    letterSpacing: -1,
     fontWeight: '600',
     color: palette.deepNavy,
   },
+  formWrapper: { marginTop: 131, alignItems: 'center', width: '100%' },
+  avatarContainer: { width: 120, height: 120, position: 'relative' },
+  avatarImage: { width: 120, height: 120, borderRadius: 60 },
+  defaultAvatarPlaceholder: {
+    width: 120,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarBackground: { position: 'absolute', left: 0, top: 0 },
+  cameraBadge: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    bottom: -4,
+    right: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  email: {
+    marginTop: 32,
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: -1,
+    fontWeight: '500',
+    color: palette.gray400,
+  },
+  fieldBlock: { marginTop: 11, width: '100%', gap: 8 },
   inputWrapper: {
     backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: palette.gray200,
+    borderColor: palette.white,
     borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    justifyContent: 'center',
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  inputErrorBorder: {
-    borderColor: palette.red500,
-  },
-  errorText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: palette.red500,
-    marginTop: 2,
-  },
-  inputDisabled: {
-    backgroundColor: palette.gray100,
+    paddingHorizontal: 24,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 28,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: -1,
+    color: palette.gray400,
   },
   textInput: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: palette.deepNavy,
-  },
-  readOnlyText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: palette.subText,
     flex: 1,
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: -1,
+    color: palette.deepNavy,
+    paddingVertical: 14,
   },
-  actionContainer: {
-    width: '100%',
-    gap: 12,
-    marginTop: 40,
-    alignItems: 'center',
+  inputErrorBorder: { borderColor: palette.red500 },
+  fieldStatus: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    gap: 8,
   },
+  counter: {
+    marginLeft: 'auto',
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: -1,
+    fontWeight: '500',
+    color: palette.gray400,
+  },
+  counterValue: { color: palette.deepNavy },
+  errorText: { flex: 1, fontSize: 12, lineHeight: 20, color: palette.red500 },
+  actionContainer: { marginTop: 'auto', paddingTop: 40 },
   primaryButton: {
-    width: '100%',
-    height: 54,
+    minHeight: 62,
     backgroundColor: palette.primary,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  disabledButton: { opacity: 0.45 },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 20,
+    lineHeight: 37,
+    letterSpacing: -0.6,
+    fontWeight: '500',
     color: palette.white,
-  },
-  secondaryButton: {
-    width: '100%',
-    height: 54,
-    backgroundColor: palette.transparent,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: palette.subText,
   },
 });
