@@ -35,9 +35,10 @@ export async function fetchPhotosWithExifData(
     );
   const payloadLimit = Math.min(limit, APP_CONFIG.ANALYSIS_PHOTO_LIMIT);
   const permission = await getPermissionsAsync(false, ['photo']);
-  if (permission.accessPrivileges === 'limited')
-    throw new Error(UI_STRINGS.PHOTO_AUTH.REQUIRED);
-  if (permission.status !== 'granted' || permission.accessPrivileges === 'none')
+  if (
+    permission.accessPrivileges !== 'limited' &&
+    (permission.status !== 'granted' || permission.accessPrivileges === 'none')
+  )
     throw new Error(UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR);
   const now = Date.now();
   const periods = photoSamplingPeriods(now);

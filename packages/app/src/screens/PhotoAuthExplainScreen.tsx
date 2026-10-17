@@ -1,7 +1,8 @@
 /**
  * @file PhotoAuthExplainScreen.tsx
- * @description Full-access setup instructions with foreground refresh and an explicit permission-checked analysis action.
+ * @description Platform-specific photo access guidance using cropped settings images and full-access verification before analysis.
  */
+import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   AppState,
@@ -9,22 +10,40 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
+  Image,
+  Pressable,
 } from 'react-native';
-import { getPhotoAccess } from '../services/photoPermissionService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
+import {
+  getPhotoAccess,
+  type PhotoAccess,
+} from '../services/photoPermissionService';
 import { OnboardingButton } from '../components/onboarding/OnboardingButton';
+import { OnboardingSvg } from '../components/taste/OnboardingIllustrations';
 import { UI_STRINGS } from '../constants';
 import { theme } from '../theme/colors';
 import { useGA4ScreenTracking } from '../hooks';
 
-/** Rechecks access on resume and on each CTA press; only full access can continue. */
-export function PhotoAuthExplainScreen({ onNext }: { onNext: () => void }) {
+/** Rechecks access on resume; analysis starts only after an explicit CTA press. */
+export function PhotoAuthExplainScreen({
+  onNext,
+  onBack,
+}: {
+  onNext: (access: Exclude<PhotoAccess, 'denied'>) => void;
+  onBack?: () => void;
+}) {
   useGA4ScreenTracking('PhotoAuthExplainScreen');
+  const insets = useSafeAreaInsets();
+  const insetStyles = StyleSheet.create({
+    content: { paddingBottom: insets.bottom + 20 },
+  });
   const [message, setMessage] = useState<string>(
     UI_STRINGS.PHOTO_AUTH.REQUIRED,
   );
   const [checking, setChecking] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const busy = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -33,12 +52,13 @@ export function PhotoAuthExplainScreen({ onNext }: { onNext: () => void }) {
     const refresh = async () => {
       try {
         const access = await getPhotoAccess();
-        if (active)
+        if (active) {
           setMessage(
             access === 'all'
               ? UI_STRINGS.PHOTO_AUTH.READY
               : UI_STRINGS.PHOTO_AUTH.REQUIRED,
           );
+        }
       } catch {
         if (active) setMessage(UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR);
       }
@@ -57,10 +77,11 @@ export function PhotoAuthExplainScreen({ onNext }: { onNext: () => void }) {
     if (busy.current) return;
     busy.current = true;
     setChecking(true);
+    setAttempted(true);
     try {
       const access = await getPhotoAccess();
       if (!mounted.current) return;
-      if (access === 'all') onNext();
+      if (access === 'all') onNext(access);
       else setMessage(UI_STRINGS.PHOTO_AUTH.REQUIRED);
     } catch {
       if (mounted.current)
@@ -81,60 +102,171 @@ export function PhotoAuthExplainScreen({ onNext }: { onNext: () => void }) {
     Platform.OS === 'ios'
       ? UI_STRINGS.PHOTO_AUTH.IOS_STEPS
       : UI_STRINGS.PHOTO_AUTH.ANDROID_STEPS;
+  const stepImages =
+    Platform.OS === 'android'
+      ? [
+          require('../../assets/ui-v3-onboarding/android-settings-app.png'),
+          require('../../assets/ui-v3-onboarding/android-settings-permissions.png'),
+          require('../../assets/ui-v3-onboarding/android-settings-photos.png'),
+        ]
+      : [
+          require('../../assets/ui-v3-onboarding/settings-search.png'),
+          require('../../assets/ui-v3-onboarding/settings-photos.png'),
+          require('../../assets/ui-v3-onboarding/settings-access.png'),
+        ];
+  const androidImageStyles = [
+    styles.androidAppImage,
+    styles.androidPermissionsImage,
+    styles.androidPhotosImage,
+  ];
+  const cropStyles = [styles.searchCrop, styles.photosCrop, styles.accessCrop];
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{UI_STRINGS.PHOTO_AUTH.TITLE}</Text>
-      <Text style={styles.description}>
-        {UI_STRINGS.PHOTO_AUTH.DESCRIPTION}
-      </Text>
-      <View style={styles.steps}>
-        {steps.map((step, index) => (
-          <View key={step} style={styles.step}>
-            <Text style={styles.stepText}>
-              {index + 1}. {step}
+    <View style={styles.screen}>
+      {onBack && (
+        <Pressable
+          onPress={onBack}
+          style={styles.backButton}
+          accessibilityRole='button'
+          accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
+          <OnboardingSvg
+            source={require('../../assets/ui-v3-onboarding/back.svg')}
+          />
+        </Pressable>
+      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          insetStyles.content,
+          onBack && styles.contentWithBack,
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.heading}>
+          <Text style={styles.title}>
+            {ONBOARDING_UI_STRINGS.PHOTO_HELP_TITLE}
+          </Text>
+          <Text style={styles.description}>
+            {ONBOARDING_UI_STRINGS.PHOTO_HELP_DESCRIPTION}
+          </Text>
+        </View>
+        <View style={styles.steps}>
+          {steps.map((step, index) => (
+            <Pressable
+              key={step}
+              style={styles.step}
+              onPress={openSettings}
+              accessibilityRole='button'
+              accessibilityLabel={`${step}. ${UI_STRINGS.PHOTO_AUTH.OPEN_SETTINGS}`}>
+              <Text style={styles.stepText}>{step}</Text>
+              {Platform.OS === 'android' ? (
+                <View
+                  style={[
+                    styles.imageCrop,
+                    styles.androidImageCrop,
+                    androidImageStyles[index],
+                  ]}>
+                  <Image
+                    testID={`photo-permission-step-image-${index}`}
+                    source={stepImages[index]}
+                    style={styles.androidStepImage}
+                    resizeMode='contain'
+                    accessible={false}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.imageCrop, cropStyles[index]]}>
+                  <Image
+                    testID={`photo-permission-step-image-${index}`}
+                    source={stepImages[index]}
+                    style={styles.stepImage}
+                    resizeMode='contain'
+                    accessible={false}
+                  />
+                </View>
+              )}
+            </Pressable>
+          ))}
+        </View>
+        {message !== UI_STRINGS.PHOTO_AUTH.READY &&
+          (attempted || message !== UI_STRINGS.PHOTO_AUTH.REQUIRED) && (
+            <Text accessibilityLiveRegion='polite' style={styles.status}>
+              {message}
             </Text>
-          </View>
-        ))}
-      </View>
-      <Text accessibilityLiveRegion='polite' style={styles.description}>
-        {message}
-      </Text>
-      <OnboardingButton
-        label={UI_STRINGS.PHOTO_AUTH.OPEN_SETTINGS}
-        onPress={openSettings}
-        secondary
-      />
-      <OnboardingButton
-        label={UI_STRINGS.PHOTO_AUTH.START}
-        onPress={continueWithPhotos}
-        disabled={checking}
-      />
-    </ScrollView>
+          )}
+        <View style={styles.actions}>
+          <OnboardingButton
+            label={UI_STRINGS.PHOTO_AUTH.START}
+            onPress={() => void continueWithPhotos()}
+            disabled={checking}
+            accessibilityHint={message}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingVertical: 16, gap: 16 },
+  screen: { flex: 1, backgroundColor: theme.colors.bg.screen },
+  backButton: {
+    width: 44,
+    height: 44,
+    marginLeft: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flexGrow: 1,
+    paddingTop: 35,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  contentWithBack: { paddingTop: 4 },
+  heading: { paddingHorizontal: 12, gap: 8, marginBottom: 6 },
   title: {
     fontSize: 24,
     fontWeight: '600',
     lineHeight: 37,
+    letterSpacing: -1,
     color: theme.colors.text.primary,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: theme.colors.text.secondary,
+    fontSize: 16,
+    lineHeight: 23,
+    letterSpacing: -1,
+    color: theme.colors.text.muted,
   },
-  steps: { flex: 1, gap: 12, justifyContent: 'center' },
+  steps: { gap: 12 },
   step: {
-    minHeight: 94,
     borderRadius: 16,
-    padding: 20,
-    backgroundColor: theme.colors.bg.card,
+    paddingHorizontal: 19,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: theme.colors.bg.secondary,
+    gap: 16,
   },
   stepText: {
-    fontSize: 18,
+    marginLeft: 1,
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: -1,
     fontWeight: '600',
     color: theme.colors.text.primary,
   },
+  androidImageCrop: { borderRadius: 12 },
+  androidStepImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  androidAppImage: { aspectRatio: 880 / 650 },
+  androidPermissionsImage: { aspectRatio: 880 / 510 },
+  androidPhotosImage: { aspectRatio: 880 / 750 },
+  imageCrop: { width: '100%', overflow: 'hidden' },
+  searchCrop: { aspectRatio: 1170 / 213 },
+  photosCrop: { aspectRatio: 1170 / 308 },
+  accessCrop: { aspectRatio: 1170 / 427 },
+  stepImage: { width: '100%', height: '100%' },
+  status: { fontSize: 14, lineHeight: 22, color: theme.colors.text.secondary },
+  actions: { marginTop: 8, gap: 2 },
 });

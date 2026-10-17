@@ -1,536 +1,383 @@
 /**
  * @file TasteAnalysisScreen.tsx
- * @description Taste analysis progress screen with dynamic insights container and step indicators.
+ * @description Real photo analysis with permission-aware retries, back navigation, and an MBTI recovery path.
  */
-import React, { useEffect, useRef } from 'react';
+import { Text } from '../components/common/Typography';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
-  ActivityIndicator,
-  Animated,
   TouchableOpacity,
   Linking,
+  ScrollView,
+  Platform,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { addListener, presentPermissionsPicker } from 'expo-media-library';
 import { palette } from '../theme/colors';
-import { UI_STRINGS, APP_CONFIG } from '../constants';
+import { UI_STRINGS } from '../constants';
+import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
+import { OnboardingSvg } from '../components/taste/OnboardingIllustrations';
+import { OnboardingButton } from '../components/onboarding/OnboardingButton';
+import { getPhotoAccess } from '../services/photoPermissionService';
 import { useGA4ScreenTracking, useTasteAnalysisPipeline } from '../hooks';
 
 interface TasteAnalysisScreenProps {
   onFinish: (tasteProfileId: string) => void;
   onFail?: () => void;
+  onClose?: () => void;
   mode?: 'full' | 'limited';
   onLimitedFinish?: () => void;
+  onFailureBack?: () => void;
+  onChooseMbti?: () => void;
+  onFailureStateChange?: (failed: boolean) => void;
 }
 
-/** Displays either the real pipeline or a timer-only limited-access transition. */
-export const TasteAnalysisScreen: React.FC<TasteAnalysisScreenProps> = (
-  props,
-) =>
-  props.mode === 'limited' ? (
-    <LimitedTasteAnalysis onFinish={props.onLimitedFinish} />
-  ) : (
-    <FullTasteAnalysis {...props} />
-  );
-
-function LimitedTasteAnalysis({ onFinish }: { onFinish?: () => void }) {
-  useGA4ScreenTracking('TasteAnalysisScreen');
-  const finishRef = useRef(onFinish);
-  finishRef.current = onFinish;
-  useEffect(() => {
-    const timer = setTimeout(
-      () => finishRef.current?.(),
-      APP_CONFIG.LIMITED_ANALYSIS_DELAY_MS,
-    );
-    return () => clearTimeout(timer);
-  }, []);
+function AnalysisHeading({ onClose }: { onClose?: () => void }) {
   return (
-    <View style={styles.limitedContainer}>
-      <Text style={styles.mainTitle}>
-        {UI_STRINGS.TASTE_ANALYSIS.LIMITED_TITLE}
-      </Text>
-      <ActivityIndicator size='large' color={palette.primary} />
-      <Text style={styles.subTitle}>
-        {UI_STRINGS.TASTE_ANALYSIS.LIMITED_NOTICE}
-      </Text>
+    <View style={styles.heading}>
+      <View style={styles.titleRow}>
+        <Text style={styles.mainTitle}>
+          {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
+        </Text>
+        {onClose && (
+          <TouchableOpacity
+            onPress={onClose}
+            accessibilityRole='button'
+            accessibilityLabel={ONBOARDING_UI_STRINGS.CLOSE}
+            style={styles.close}
+            testID='analysis-close-button'>
+            <OnboardingSvg
+              source={require('../../assets/ui-v3-onboarding/analysis-close.svg')}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
-const FullTasteAnalysis: React.FC<TasteAnalysisScreenProps> = ({
+/** Runs the same real metadata analysis for full and selected-photo access. */
+export function TasteAnalysisScreen({
   onFinish,
   onFail,
-}) => {
+  onClose,
+  onLimitedFinish,
+  onFailureBack,
+  onChooseMbti,
+  onFailureStateChange,
+  mode,
+}: TasteAnalysisScreenProps) {
   useGA4ScreenTracking('TasteAnalysisScreen');
+  const insets = useSafeAreaInsets();
+  const insetStyles = StyleSheet.create({
+    content: { paddingBottom: insets.bottom + 40 },
+  });
   const {
     runPipeline,
     error: errorMessage,
     progress,
+    needsMorePhotos,
   } = useTasteAnalysisPipeline();
-
   const finishRef = useRef(onFinish);
   finishRef.current = onFinish;
-
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
+  const [settingsError, setSettingsError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [selecting, setSelecting] = useState(false);
+  const [hasFullAccess, setHasFullAccess] = useState(mode !== 'limited');
+  const selectingRef = useRef(false);
+  const awaitingSelectionChange = useRef(false);
+  const mounted = useRef(true);
   useEffect(() => {
-    // Pulse animation for live badge
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 0.4,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    pulseAnimation.start();
-
+    onFailureStateChange?.(!!errorMessage);
+    return () => onFailureStateChange?.(false);
+  }, [errorMessage, onFailureStateChange]);
+  useEffect(() => {
+    mounted.current = true;
     return () => {
-      pulseAnimation.stop();
+      mounted.current = false;
     };
-  }, [pulseAnim]);
-
+  }, []);
   useEffect(() => {
-    let isSubscribed = true;
-    let completionTimeout: ReturnType<typeof setTimeout>;
-
-    const executePipeline = async () => {
-      const profileId = await runPipeline();
-
-      if (!isSubscribed) return;
-
-      if (profileId) {
-        // 3단계 완료 후 1초(1000ms) 텀을 두고 다음 화면으로 전환
-        completionTimeout = setTimeout(() => {
-          if (isSubscribed) {
-            finishRef.current(profileId);
-          }
-        }, 1000);
+    if (Platform.OS !== 'ios') return;
+    // iOS resolves the picker call on presentation; wait for the selected scope to change.
+    const subscription = addListener((event) => {
+      if (
+        !awaitingSelectionChange.current ||
+        event.hasIncrementalChanges !== false
+      )
+        return;
+      awaitingSelectionChange.current = false;
+      setSettingsError('');
+      setAttempt((value) => value + 1);
+    });
+    return () => subscription.remove();
+  }, []);
+  const retryAnalysis = () => {
+    setSettingsError('');
+    setAttempt((value) => value + 1);
+  };
+  const selectAgain = async () => {
+    if (selectingRef.current) return;
+    selectingRef.current = true;
+    setSelecting(true);
+    setSettingsError('');
+    try {
+      const access = await getPhotoAccess();
+      if (!mounted.current) return;
+      setHasFullAccess(access === 'all');
+      if (access === 'limited') {
+        awaitingSelectionChange.current = Platform.OS === 'ios';
+        await presentPermissionsPicker(['photo']);
+        if (Platform.OS === 'ios') return;
       }
-    };
-
-    executePipeline();
-
+      if (mounted.current) retryAnalysis();
+    } catch {
+      awaitingSelectionChange.current = false;
+      if (mounted.current)
+        setSettingsError(ONBOARDING_UI_STRINGS.SELECT_PHOTOS_ERROR);
+    } finally {
+      selectingRef.current = false;
+      if (mounted.current) setSelecting(false);
+    }
+  };
+  useEffect(() => {
+    let subscribed = true;
+    let completionTimeout: ReturnType<typeof setTimeout> | undefined;
+    void runPipeline().then((profileId) => {
+      if (subscribed && profileId)
+        completionTimeout = setTimeout(() => {
+          if (subscribed) finishRef.current(profileId);
+        }, 1000);
+    });
     return () => {
-      isSubscribed = false;
+      subscribed = false;
       if (completionTimeout) clearTimeout(completionTimeout);
     };
-  }, [runPipeline]);
-
-  const handleConfirmError = () => {
-    onFail?.();
-  };
-
-  const handleOpenSettings = () => {
-    Linking.openSettings().catch(() => {});
-  };
-
+  }, [runPipeline, attempt]);
+  const showSelectionFailure =
+    needsMorePhotos || (mode === 'limited' && !!errorMessage);
   const needsPhotoSettings =
     errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR ||
     errorMessage === UI_STRINGS.PHOTO_AUTH.REQUIRED ||
     errorMessage === UI_STRINGS.TASTE_ANALYSIS.LIMITED_PHOTOS_ERROR;
-
-  const renderStepIcon = (status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED') => {
-    if (status === 'COMPLETED') {
-      return (
-        <View style={styles.checkedCircleIcon}>
-          <Feather name='check' size={14} color={palette.white} />
-        </View>
-      );
+  const openSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      setSettingsError(UI_STRINGS.PHOTO_AUTH.SETTINGS_ERROR);
     }
-    if (status === 'IN_PROGRESS') {
-      return (
-        <View style={styles.loadingCircleIcon}>
-          <ActivityIndicator size='small' color={palette.primary} />
-        </View>
-      );
-    }
-    return (
-      <View style={styles.pendingCircleIcon}>
-        <View style={styles.pendingDotInner} />
-      </View>
-    );
   };
-
-  const getStepLabel = (
-    baseText: string,
-    status: 'IDLE' | 'IN_PROGRESS' | 'COMPLETED',
-  ) => {
-    if (status === 'COMPLETED') {
-      return `${baseText} 완료`;
-    }
-    if (status === 'IN_PROGRESS') {
-      return `${baseText} 중`;
-    }
-    return baseText;
-  };
-
   return (
-    <View style={styles.screenContainer}>
-      <View style={styles.contentContainer}>
-        {/* Header Title Section */}
-        <View style={styles.headerSection} testID='top-content'>
-          <Text style={styles.mainTitle}>
-            {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
-          </Text>
-          <Text style={styles.subTitle}>
-            {UI_STRINGS.TASTE_ANALYSIS.SUB_TITLE}
-          </Text>
-        </View>
-
-        {/* Main Body Section */}
-        <View style={styles.mainBodyContainer} testID='main-content'>
-          {/* Checklist Step Container */}
-          <View style={styles.checklistContainer} testID='checklist-container'>
-            <Text style={styles.checklistTitle}>
-              {UI_STRINGS.TASTE_ANALYSIS.STEP_TITLE}
-            </Text>
-
-            <View style={styles.stepsList}>
-              {/* Step 1: 메타데이터 추출 / 사진 데이터 수집 */}
-              <View style={styles.stepRow} testID='step-1'>
-                {renderStepIcon(progress.step1Status)}
-                <Text
-                  style={[
-                    styles.stepText,
-                    progress.step1Status !== 'IDLE' && styles.activeStepText,
-                  ]}>
-                  {getStepLabel(
-                    UI_STRINGS.TASTE_ANALYSIS.STEP_1,
-                    progress.step1Status,
-                  )}
-                </Text>
-              </View>
-
-              {/* Step 2: 장소 정보 수집 */}
-              <View style={styles.stepRow} testID='step-2'>
-                {renderStepIcon(progress.step2Status)}
-                <Text
-                  style={[
-                    styles.stepText,
-                    progress.step2Status !== 'IDLE' && styles.activeStepText,
-                  ]}>
-                  {getStepLabel(
-                    UI_STRINGS.TASTE_ANALYSIS.STEP_2,
-                    progress.step2Status,
-                  )}
-                </Text>
-              </View>
-
-              {/* Step 3: 사용자 취향 분석 */}
-              <View style={styles.stepRow} testID='step-3'>
-                {renderStepIcon(progress.step3Status)}
-                <Text
-                  style={[
-                    styles.stepText,
-                    progress.step3Status !== 'IDLE'
-                      ? styles.activeStepText
-                      : styles.pendingStepText,
-                  ]}>
-                  {getStepLabel(
-                    UI_STRINGS.TASTE_ANALYSIS.STEP_3,
-                    progress.step3Status,
-                  )}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Insights Live Container */}
-          <View style={styles.insightsContainer} testID='insights-container'>
-            <View style={styles.insightsHeader}>
-              <Text style={styles.insightsTitle}>
-                {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_TITLE}
+    <View style={styles.screen}>
+      {showSelectionFailure && onFailureBack && (
+        <TouchableOpacity
+          onPress={onFailureBack}
+          accessibilityRole='button'
+          accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}
+          style={styles.failureBack}>
+          <OnboardingSvg
+            source={require('../../assets/ui-v3-onboarding/back.svg')}
+          />
+        </TouchableOpacity>
+      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          showSelectionFailure ? styles.failureContent : styles.fullContent,
+          showSelectionFailure && onFailureBack && styles.contentWithBack,
+          insetStyles.content,
+        ]}>
+        {showSelectionFailure ? (
+          <>
+            <View style={styles.failureHeading}>
+              <Text style={styles.failureTitle}>
+                {UI_STRINGS.TASTE_ANALYSIS.FAIL_TITLE}
               </Text>
-              <View style={styles.liveBadge}>
-                <Animated.View
-                  style={[styles.liveDot, { opacity: pulseAnim }]}
-                />
-                <Text style={styles.liveBadgeText}>
-                  {UI_STRINGS.TASTE_ANALYSIS.INSIGHTS_BADGE}
-                </Text>
-              </View>
+              <Text style={styles.subTitle} accessibilityLiveRegion='polite'>
+                {UI_STRINGS.TASTE_ANALYSIS.FAIL_SUBTITLE}
+              </Text>
             </View>
-
-            <View style={styles.insightsCard}>
-              <Text style={styles.insightsNoticeText}>
+            <View style={styles.failureActions}>
+              {!!settingsError && (
+                <Text style={styles.message} accessibilityLiveRegion='polite'>
+                  {settingsError}
+                </Text>
+              )}
+              {!hasFullAccess && (
+                <OnboardingButton
+                  label={UI_STRINGS.TASTE_ANALYSIS.ALLOW_ALL_BUTTON}
+                  onPress={() =>
+                    onLimitedFinish ? onLimitedFinish() : void openSettings()
+                  }
+                  disabled={selecting}
+                  testID='allow-all-photos-button'
+                />
+              )}
+              <OnboardingButton
+                label={
+                  mode === 'limited'
+                    ? UI_STRINGS.TASTE_ANALYSIS.RETRY_SELECT_BUTTON
+                    : ONBOARDING_UI_STRINGS.RETRY
+                }
+                onPress={() => {
+                  void selectAgain();
+                }}
+                disabled={selecting}
+                secondary={!hasFullAccess}
+                testID='select-photos-again-button'
+              />
+              {onChooseMbti && (
+                <OnboardingButton
+                  label={UI_STRINGS.TASTE_ANALYSIS.MBTI_BUTTON}
+                  onPress={onChooseMbti}
+                  secondary
+                />
+              )}
+              {onClose && (
+                <OnboardingButton
+                  label={ONBOARDING_UI_STRINGS.CLOSE}
+                  onPress={onClose}
+                  secondary
+                />
+              )}
+            </View>
+          </>
+        ) : (
+          <>
+            <AnalysisHeading
+              onClose={onClose || (errorMessage ? onFailureBack : undefined)}
+            />
+            {errorMessage ? (
+              <View style={styles.error} testID='error-container'>
+                <Text style={styles.errorTitle}>
+                  {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
+                </Text>
+                <Text style={styles.errorText} accessibilityLiveRegion='polite'>
+                  {errorMessage}
+                </Text>
+                {!!settingsError && (
+                  <Text style={styles.errorText}>{settingsError}</Text>
+                )}
+                {needsPhotoSettings && (
+                  <OnboardingButton
+                    label={UI_STRINGS.TASTE_ANALYSIS.OPEN_SETTINGS_BUTTON}
+                    onPress={() => {
+                      void openSettings();
+                    }}
+                    testID='error-settings-button'
+                  />
+                )}
+                <OnboardingButton
+                  label={ONBOARDING_UI_STRINGS.RETRY}
+                  onPress={retryAnalysis}
+                  testID='retry-analysis-button'
+                />
+                <OnboardingButton
+                  label={UI_STRINGS.COMMON.CONFIRM}
+                  onPress={() => onFail?.()}
+                  secondary={needsPhotoSettings}
+                  testID='error-confirm-button'
+                />
+              </View>
+            ) : (
+              <Text
+                style={styles.subTitle}
+                accessibilityLiveRegion='polite'
+                testID='analysis-progress-message'>
                 {progress.currentMessage ||
                   UI_STRINGS.TASTE_ANALYSIS.DEFAULT_INSIGHT_MESSAGE}
               </Text>
-            </View>
-          </View>
-
-          {errorMessage && (
-            <View style={styles.errorCard} testID='error-container'>
-              <View style={styles.errorHeader}>
-                <Feather name='alert-circle' size={20} color={palette.red500} />
-                <Text style={styles.errorCardTitle}>
-                  {UI_STRINGS.TASTE_ANALYSIS.ERROR_CARD_TITLE}
-                </Text>
-              </View>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-              <View style={styles.errorActionsRow}>
-                {needsPhotoSettings && (
-                  <TouchableOpacity
-                    style={styles.settingsButton}
-                    activeOpacity={0.8}
-                    onPress={handleOpenSettings}
-                    testID='error-settings-button'>
-                    <Text style={styles.settingsButtonText}>
-                      {UI_STRINGS.TASTE_ANALYSIS.OPEN_SETTINGS_BUTTON}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[
-                    styles.confirmButton,
-                    needsPhotoSettings && styles.secondaryConfirmButton,
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={handleConfirmError}
-                  testID='error-confirm-button'>
-                  <Text
-                    style={[
-                      styles.confirmButtonText,
-                      needsPhotoSettings && styles.secondaryConfirmButtonText,
-                    ]}>
-                    {UI_STRINGS.COMMON.CONFIRM}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-      </View>
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  limitedContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  screen: { flex: 1, backgroundColor: palette.white },
+  content: {
+    flexGrow: 1,
+    paddingTop: 35,
+    paddingHorizontal: 20,
+  },
+  fullContent: { paddingTop: 46 },
+  heading: { gap: 2 },
+  titleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 32,
-  },
-  screenContainer: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  contentContainer: {
-    flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  headerSection: {
-    gap: 8,
-    width: '100%',
   },
   mainTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '600',
     color: palette.deepNavy,
-    lineHeight: 34,
-    letterSpacing: -0.6,
+    lineHeight: 37,
+    letterSpacing: -1,
+    textAlign: 'center',
+  },
+  close: {
+    position: 'absolute',
+    right: 0,
+    top: -40,
+    width: 44,
+    height: 44,
+    marginRight: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subTitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: palette.subText,
-    lineHeight: 21,
-  },
-  mainBodyContainer: {
-    flex: 1,
-    gap: 24,
-    paddingTop: 20,
-  },
-  checklistContainer: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 24,
-    padding: 20,
-    gap: 14,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  checklistTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    letterSpacing: -0.16,
-  },
-  stepsList: {
-    gap: 14,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkedCircleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: palette.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  loadingCircleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  pendingCircleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: palette.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  pendingDotInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.mutedText,
-  },
-  stepText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  activeStepText: {
-    color: palette.deepNavy,
-  },
-  pendingStepText: {
+    lineHeight: 23,
+    letterSpacing: -1,
     color: palette.mutedText,
+    textAlign: 'center',
   },
-  insightsContainer: {
-    gap: 12,
+  message: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    color: palette.subText,
   },
-  insightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  insightsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    letterSpacing: -0.16,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: palette.primary,
-  },
-  liveBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.primary,
-  },
-  insightsCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 16,
-    padding: 16,
+  failureContent: { justifyContent: 'space-between' },
+  contentWithBack: { paddingTop: 4 },
+  failureHeading: { gap: 8 },
+  failureBack: {
+    width: 44,
+    height: 44,
+    marginLeft: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  insightsNoticeText: {
-    fontSize: 14,
+  failureTitle: {
+    fontSize: 24,
+    lineHeight: 37,
+    letterSpacing: -1,
     fontWeight: '600',
-    color: palette.subText,
+    color: palette.deepNavy,
+    textAlign: 'center',
   },
-  errorCard: {
-    backgroundColor: palette.red50,
-    borderWidth: 1,
-    borderColor: palette.red200,
-    borderRadius: 20,
-    padding: 20,
+  failureActions: { gap: 12, marginTop: 60 },
+  error: {
     gap: 12,
-    alignItems: 'center',
-    shadowColor: palette.red500,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginTop: 40,
+    padding: 16,
+    backgroundColor: palette.red50,
+    borderRadius: 16,
   },
-  errorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  errorCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: palette.red800,
+    textAlign: 'center',
   },
   errorText: {
     fontSize: 14,
+    lineHeight: 22,
     color: palette.red700,
     textAlign: 'center',
-    lineHeight: 20,
-  },
-  confirmButton: {
-    backgroundColor: palette.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  confirmButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  errorActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 6,
-    width: '100%',
-  },
-  settingsButton: {
-    backgroundColor: palette.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  settingsButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  secondaryConfirmButton: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-  },
-  secondaryConfirmButtonText: {
-    color: palette.deepNavy,
   },
 });

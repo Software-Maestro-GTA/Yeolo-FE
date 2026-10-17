@@ -17,7 +17,7 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
     jest.clearAllMocks();
   });
 
-  it('Figma 스펙 타이틀, 8개 MBTI 옵션 카드 및 2개 버튼이 정상 렌더링되어야 한다', async () => {
+  it('Figma UI v3 타이틀, 8개 MBTI 옵션 카드 및 버튼이 정상 렌더링되어야 한다', async () => {
     const { getByText, getByTestId } = await render(
       <MbtiInputScreen
         onNext={mockOnNext}
@@ -25,9 +25,8 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
       />,
     );
 
-    expect(getByText(UI_STRINGS.MBTI.MAIN_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.MBTI.NEXT_BUTTON)).toBeTruthy();
-    expect(getByText(UI_STRINGS.MBTI.ACCURATE_RECOMMEND_BUTTON)).toBeTruthy();
+    expect(getByText(/MBTI를 알려주시면\s*취향을 찾아볼게요/)).toBeTruthy();
+    expect(getByText('여행 취향 알아보기')).toBeTruthy();
 
     expect(getByTestId('mbti-option-E')).toBeTruthy();
     expect(getByTestId('mbti-option-I')).toBeTruthy();
@@ -38,8 +37,7 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
     expect(getByTestId('mbti-option-J')).toBeTruthy();
     expect(getByTestId('mbti-option-P')).toBeTruthy();
 
-    expect(getByTestId('next-button')).toBeTruthy();
-    expect(getByTestId('accurate-recommend-button')).toBeTruthy();
+    expect(getByTestId('next-button')).toBeDisabled();
   });
 
   it('MBTI 4개 항목을 모두 선택하지 않고 다음으로 버튼 클릭 시 onNext가 호출되지 않아야 한다', async () => {
@@ -63,7 +61,7 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
     expect(mockOnNext).not.toHaveBeenCalled();
   });
 
-  it('MBTI 4개 항목(E/I, S/N, T/F, J/P) 선택 후 API 저장 성공 시 onNext가 호출되어야 한다 (API-PREF-1)', async () => {
+  it('MBTI 4개 선택 시 고정 CTA가 활성화되고 선택한 값의 API 저장 후에만 이동한다 (API-PREF-1)', async () => {
     const spyUpdatePref = jest
       .spyOn(yeoloCommon, 'updatePreferencesApi')
       .mockResolvedValueOnce({
@@ -72,7 +70,7 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
         data: null,
       });
 
-    const { getByTestId } = await render(
+    const { getByTestId, getByText } = await render(
       <MbtiInputScreen
         onNext={mockOnNext}
         onDetailRecommend={mockOnDetailRecommend}
@@ -91,6 +89,13 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
     await act(async () => {
       fireEvent.press(getByTestId('mbti-option-P'));
     });
+
+    expect(getByText('여행 취향 알아보기')).toBeTruthy();
+    expect(getByTestId('next-button')).toBeEnabled();
+    for (const letter of ['E', 'N', 'F', 'P']) {
+      expect(getByTestId(`mbti-option-${letter}`)).toBeChecked();
+    }
+
     await act(async () => {
       fireEvent.press(getByTestId('next-button'));
     });
@@ -143,19 +148,15 @@ describe('MbtiInputScreen UI & Navigation & API', () => {
     expect(mockOnNext).not.toHaveBeenCalled();
   });
 
-  it('더 정확한 추천 받기 버튼 클릭 시 onDetailRecommend가 호출되어야 한다', async () => {
-    const { getByTestId } = await render(
-      <MbtiInputScreen
-        onNext={mockOnNext}
-        onDetailRecommend={mockOnDetailRecommend}
-      />,
+  it('뒤로가기는 저장 요청 없이 이전 화면으로 돌아가야 한다', async () => {
+    const onBack = jest.fn();
+    const { getByRole } = await render(
+      <MbtiInputScreen onNext={mockOnNext} onBack={onBack} />,
     );
-
-    await act(async () => {
-      fireEvent.press(getByTestId('accurate-recommend-button'));
-    });
-
-    expect(mockOnDetailRecommend).toHaveBeenCalledTimes(1);
+    await fireEvent.press(
+      getByRole('button', { name: UI_STRINGS.ONBOARDING.BACK }),
+    );
+    expect(onBack).toHaveBeenCalledTimes(1);
     expect(mockOnNext).not.toHaveBeenCalled();
   });
 });

@@ -258,14 +258,16 @@ describe('representative photo collection', () => {
     await expect(fetchPhotosWithExifData()).rejects.toThrow(/여러 날짜/);
   });
 
-  it('does not read any photos under limited permission', async () => {
+  it('collects representative metadata from the OS-visible selected photos under limited permission', async () => {
     (getPermissionsAsync as jest.Mock).mockResolvedValue({
       status: 'granted',
       accessPrivileges: 'limited',
     });
-    await expect(fetchPhotosWithExifData()).rejects.toThrow(/전체 사진 접근/);
-    expect(mockQueries).toHaveLength(0);
-    expect(mockAssets[0].getLocation).not.toHaveBeenCalled();
+    const result = await fetchPhotosWithExifData();
+    expect(result).toHaveLength(6);
+    expect(result.map((photo) => photo.sourceImageId).sort()).toEqual(
+      mockAssets.map((photo) => photo.id).sort(),
+    );
   });
 
   it('bounds dense-library reads to 250 candidates per period', async () => {

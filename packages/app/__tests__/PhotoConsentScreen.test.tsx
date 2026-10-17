@@ -18,19 +18,23 @@ describe('PhotoConsentScreen UI & Navigation', () => {
     jest.clearAllMocks();
   });
 
-  it('Figma 스펙 타이틀, 보증 카드 2개 및 동의 버튼이 정상 렌더링되어야 한다', async () => {
-    const { getByText, getByTestId } = await render(
+  it('최신 Figma UI v3 타이틀, 안심 안내 목록 및 동의 버튼을 표시하고 이전 삽화는 표시하지 않는다', async () => {
+    const { getByText, getByTestId, queryByTestId } = await render(
       <PhotoConsentScreen onNext={mockOnNext} />,
     );
 
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.START_BUTTON)).toBeTruthy();
+    expect(
+      getByText(/사진으로 쉽고 빠르게\s*여행 취향을 파악해드릴게요/),
+    ).toBeTruthy();
+    expect(getByText(/안심하세요!/)).toBeTruthy();
+    expect(getByText(/저희는 사진을 볼 수 없어요/)).toBeTruthy();
+    expect(getByText(/사진은 서버에 저장되지 않아요/)).toBeTruthy();
+    expect(getByText(/취향파악이 끝나면 데이터는 소멸돼요/)).toBeTruthy();
+    expect(getByText('내 여행 취향 알아보기')).toBeTruthy();
 
-    expect(getByTestId('hero-illustration')).toBeTruthy();
-    expect(getByTestId('info-card-1')).toBeTruthy();
-    expect(getByTestId('info-card-2')).toBeTruthy();
+    expect(queryByTestId('hero-illustration')).toBeNull();
+    expect(getByTestId('assurance-card')).toBeTruthy();
+    expect(queryByTestId('coupon-tooltip-badge')).toBeNull();
     expect(getByTestId('consent-start-button')).toBeTruthy();
   });
 
