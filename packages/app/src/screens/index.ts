@@ -14,7 +14,6 @@ export * from './MBTIResultScreen';
 export * from './LoginScreen';
 export * from './MbtiInputScreen';
 export * from './PhotoConsentScreen';
-export * from './PlaceDetailScreen';
 export * from './ProfileScreen';
 export * from './ProfileInputScreen';
 export * from './TasteAnalysisScreen';
