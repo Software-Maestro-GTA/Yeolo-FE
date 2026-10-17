@@ -1,753 +1,581 @@
 /**
  * @file CourseCreateScreen.tsx
- * @description Screen component for entering travel conditions and preferences.
+ * @description 취향 유무에 맞는 안내와 여행 조건 입력, 안전 영역 위 생성 버튼을 제공합니다.
  */
-import React from 'react';
+import { Text } from '../components/common/Typography';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
+  ActivityIndicator,
   Keyboard,
-  ScrollView,
-  LayoutAnimation,
+  KeyboardAvoidingView,
   Platform,
-  UIManager,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-import { Ionicons } from '@expo/vector-icons';
-import type { CourseCreateRequest } from '@yeolo/common';
-import { InlineCalendarView } from '../components/common';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { CourseCreateRequest, TasteProfile } from '@yeolo/common';
 import {
   useCourseCreateForm,
   useCourseCreateMutation,
   useGA4ScreenTracking,
   useGA4ButtonClick,
 } from '../hooks';
+import { useTasteProfileQuery } from '../hooks/queries/useTasteProfileQuery';
+import { DestinationPickerSheet } from '../components/course/DestinationPickerSheet';
+import { TravelDateSheet } from '../components/course/TravelDateSheet';
+import { NumericBudgetSlider } from '../components/course/NumericBudgetSlider';
+import { FigmaAsset } from '../components/common/FigmaAsset';
 import type { NavTab } from '../components/navigation';
-import { palette } from '../theme/colors';
+import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
+import { MBTI_PROFILES, type MbtiType } from '../constants/mbtiProfiles';
+import {
+  COURSE_UI,
+  COURSE_POPULAR_DESTINATIONS,
+  COURSE_RECOMMENDED_DESTINATION_COUNT,
+} from '../constants/courseUiStrings';
 
 export interface CourseCreateScreenProps {
   onSubmit?: (data: CourseCreateRequest) => void;
   onNavigate?: (tab: NavTab) => void;
+  onBack?: () => void;
+  mbti?: MbtiType | null;
+  recommendedDestination?: Pick<
+    TasteProfile['recommendCity'],
+    'countryName' | 'cityName'
+  >;
+  onPhoto?: () => void;
 }
 
-const POPULAR_DESTINATIONS = [
-  { flag: '🇯🇵', country: '일본', city: '도쿄' },
-  { flag: '🇹🇭', country: '태국', city: '방콕' },
-  { flag: '🇫🇷', country: '프랑스', city: '파리' },
-  { flag: '🇻🇳', country: '베트남', city: '다낭' },
-  { flag: '🇪🇸', country: '스페인', city: '바르셀로나' },
-  { flag: '🇮🇹', country: '이탈리아', city: '로마' },
-];
-
+/** Collects an API-compatible destination, date range and numeric budget before submission. */
 export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
   onSubmit,
+  onBack,
+  mbti,
+  recommendedDestination,
+  onPhoto,
 }) => {
   useGA4ScreenTracking('CourseCreateScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const createCourseMutation = useCourseCreateMutation();
-
-  const {
-    destinationCountry,
-    setDestinationCountry,
-    destinationCity,
-    setDestinationCity,
-    countrySuggestions,
-    citySuggestions,
-    showCountryDropdown,
-    setShowCountryDropdown,
-    showCityDropdown,
-    setShowCityDropdown,
-    handleSelectCountry,
-    handleSelectCity,
-    handleSelectPopularDestination,
-    startDate,
-    endDate,
-    budgetType,
-    setBudgetType,
-    isCalendarOpen,
-    setIsCalendarOpen,
-    activeDateTarget,
-    currentYearMonth,
-    scrollViewRef,
-    openCalendarForTarget,
-    handlePrevMonth,
-    handleNextMonth,
-    handleSelectDay,
-    isFormValid,
-    handleSubmit,
-  } = useCourseCreateForm((data) => {
+  const [destinationOpen, setDestinationOpen] = useState(false);
+  const [popularDestinations] = useState(() => {
+    const countries = [
+      ...new Set(COURSE_POPULAR_DESTINATIONS.map(({ country }) => country)),
+    ];
+    for (let index = countries.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [countries[index], countries[randomIndex]] = [
+        countries[randomIndex],
+        countries[index],
+      ];
+    }
+    return countries
+      .slice(0, COURSE_RECOMMENDED_DESTINATION_COUNT)
+      .map((country) => {
+        const destinations = COURSE_POPULAR_DESTINATIONS.filter(
+          (destination) => destination.country === country,
+        );
+        return destinations[Math.floor(Math.random() * destinations.length)];
+      });
+  });
+  const country = recommendedDestination?.countryName.trim();
+  const city = recommendedDestination?.cityName.trim();
+  const recommendedDestinations =
+    country && city
+      ? [
+          { country, city },
+          ...popularDestinations.filter(
+            (destination) => destination.country !== country,
+          ),
+        ].slice(0, COURSE_RECOMMENDED_DESTINATION_COUNT)
+      : popularDestinations;
+  const [dateOpen, setDateOpen] = useState(false);
+  const [tasteOpen, setTasteOpen] = useState(false);
+  const taste = useTasteProfileQuery({
+    options: { enabled: !mbti },
+  });
+  const mbtiProfile = mbti ? MBTI_PROFILES[mbti] : undefined;
+  const tasteSummary = mbtiProfile?.summary ?? taste.data?.intro;
+  const tasteTags = (
+    mbtiProfile ? mbtiProfile.tags.split(' ') : (taste.data?.hashtags ?? [])
+  ).filter((tag) => tag.trim());
+  const hasTaste = Boolean(
+    mbtiProfile ||
+    (taste.error?.status !== 404 &&
+      (tasteSummary?.trim() || tasteTags.length > 0)),
+  );
+  const tasteLoading = !hasTaste && (taste.isPending || taste.isFetching);
+  const tasteMissing =
+    !hasTaste &&
+    !tasteLoading &&
+    (taste.error?.status === 404 || taste.isSuccess);
+  const showTasteCard = hasTaste || !tasteMissing || Boolean(onPhoto);
+  const form = useCourseCreateForm((data) => {
     trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
       country: data.destinationCountry,
       city: data.destinationCity,
-      budgetType: data.budgetType,
+      budget: data.budget,
     });
     createCourseMutation.mutate(data);
     onSubmit?.(data);
   });
-
-  const handleDismissOverlay = () => {
-    if (isCalendarOpen) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setIsCalendarOpen(false);
-    }
-    if (showCountryDropdown) setShowCountryDropdown(false);
-    if (showCityDropdown) setShowCityDropdown(false);
-    Keyboard.dismiss();
-  };
-
-  const onSelectPopular = (country: string, city: string) => {
-    trackButtonClick(
-      'btn_select_popular_destination',
-      `Select ${city}, ${country}`,
-    );
-    handleSelectPopularDestination(country, city);
-  };
-
+  const destinationLabel = form.destinationCity
+    ? `${form.destinationCountry}  |  ${form.destinationCity}`
+    : COURSE_UI.DESTINATION_PLACEHOLDER;
+  const dateLabel =
+    form.startDate && form.endDate
+      ? `${form.startDate.slice(2).replace(/-/g, '.')} - ${form.endDate.slice(2).replace(/-/g, '.')}`
+      : COURSE_UI.DATE_PLACEHOLDER;
+  const disabled = !form.isFormValid || createCourseMutation.isPending;
   return (
-    <TouchableWithoutFeedback
-      onPress={handleDismissOverlay}
-      testID='dismiss-overlay-area'>
-      <View style={styles.screenContainer} testID='screen-container'>
-        <ScrollView
-          ref={scrollViewRef}
-          contentContainerStyle={styles.scrollContentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps='handled'>
-          <View style={styles.mainBody} testID='main-content'>
-            <View style={styles.headerContent} testID='top-content'>
+    <SafeAreaView
+      style={styles.screenContainer}
+      edges={['bottom', 'left', 'right']}
+      testID='screen-container'>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps='handled'
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.header}>
+              <Pressable
+                style={styles.backButton}
+                accessibilityRole='button'
+                accessibilityLabel={COURSE_UI.BACK}
+                onPress={onBack}
+                testID='course-create-back'>
+                <FigmaAsset
+                  source={require('../../assets/images/figma-course/back.svg')}
+                  width={24}
+                  height={24}
+                />
+              </Pressable>
               <Text style={styles.headerTitle}>
                 {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
               </Text>
-              <Text style={styles.headerSubTitle}>
-                {UI_STRINGS.COURSE_CREATE.SUB_TITLE}
-              </Text>
+              <View style={styles.headerSpacer} />
             </View>
-
-            <View
-              style={[
-                styles.cardContainer,
-                (showCountryDropdown || showCityDropdown) &&
-                  styles.cardContainerActiveDropdown,
-              ]}
-              testID='destination-card'>
-              <View style={styles.cardHeaderRow}>
-                <Ionicons
-                  name='airplane-outline'
-                  size={20}
-                  color={palette.primary}
-                />
-                <Text style={styles.cardTitleText}>
-                  {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
-                </Text>
-              </View>
-
-              {/* Input Row (Country & City 2-Column) */}
-              <View style={styles.twoColumnRow}>
-                <View style={styles.fieldColumn}>
-                  <Text style={styles.fieldLabelText}>
-                    {UI_STRINGS.COURSE_CREATE.COUNTRY_LABEL}
-                  </Text>
-                  <View style={styles.inputBox}>
-                    <TextInput
-                      testID='input-country'
-                      style={styles.inputText}
-                      placeholder={UI_STRINGS.COURSE_CREATE.COUNTRY_PLACEHOLDER}
-                      value={destinationCountry}
-                      onChangeText={setDestinationCountry}
-                      onFocus={() => setShowCountryDropdown(true)}
-                      placeholderTextColor='#8C949E'
-                    />
-                  </View>
-                  {showCountryDropdown && countrySuggestions.length > 0 && (
-                    <View
-                      style={styles.dropdownContainer}
-                      testID='country-dropdown'>
-                      <ScrollView
-                        nestedScrollEnabled
-                        style={styles.dropdownList}>
-                        {countrySuggestions.map((item) => (
-                          <TouchableOpacity
-                            key={item.countryId}
-                            style={styles.dropdownItem}
-                            onPress={() => handleSelectCountry(item)}
-                            activeOpacity={0.7}>
-                            <Text style={styles.dropdownItemText}>
-                              {item.countryNameKo}
+            <View style={styles.mainBody} testID='main-content'>
+              {showTasteCard && (
+                <View style={styles.tasteCard} testID='my-taste-banner'>
+                  {hasTaste ? (
+                    <>
+                      <Pressable
+                        accessibilityRole='button'
+                        accessibilityState={{ expanded: tasteOpen }}
+                        testID='toggle-taste-summary'
+                        style={styles.tasteHeader}
+                        onPress={() => setTasteOpen((open) => !open)}>
+                        <Text style={styles.tasteTitle}>
+                          {COURSE_UI.TASTE_REVIEW}
+                        </Text>
+                        <FigmaAsset
+                          source={require('../../assets/images/figma-course/back.svg')}
+                          width={24}
+                          height={24}
+                          style={
+                            tasteOpen ? styles.chevronUp : styles.chevronDown
+                          }
+                        />
+                      </Pressable>
+                      {tasteOpen && (
+                        <View style={styles.tasteBody}>
+                          {Boolean(tasteSummary?.trim()) && (
+                            <Text style={styles.tasteDescription}>
+                              {tasteSummary}
                             </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                          )}
+                          {tasteTags.length > 0 && (
+                            <View style={styles.tags}>
+                              {tasteTags.map((tag) => (
+                                <Text key={tag} style={styles.tasteTag}>
+                                  #{tag.replace(/^#/, '')}
+                                </Text>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </>
+                  ) : tasteMissing ? (
+                    <Pressable
+                      accessibilityRole='button'
+                      testID='course-create-photo'
+                      style={styles.tasteHeader}
+                      onPress={onPhoto}>
+                      <Text style={styles.tasteTitle}>
+                        {COURSE_UI.TASTE_ANALYZE}
+                      </Text>
+                      <FigmaAsset
+                        source={require('../../assets/images/figma-course/back.svg')}
+                        width={24}
+                        height={24}
+                        style={styles.chevronForward}
+                      />
+                    </Pressable>
+                  ) : (
+                    <View
+                      style={styles.tasteFeedback}
+                      testID={
+                        tasteLoading ? 'course-taste-loading' : undefined
+                      }>
+                      <Text style={styles.tasteFeedbackText}>
+                        {tasteLoading
+                          ? COURSE_UI.TASTE_LOADING
+                          : COURSE_UI.TASTE_ERROR}
+                      </Text>
+                      {tasteLoading ? (
+                        <ActivityIndicator color={palette.primary} />
+                      ) : (
+                        <Pressable
+                          accessibilityRole='button'
+                          testID='retry-course-taste'
+                          style={styles.tasteRetry}
+                          onPress={() => taste.refetch()}>
+                          <Text style={styles.tasteRetryText}>
+                            {COURSE_UI.RETRY}
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   )}
                 </View>
-
-                <View style={styles.fieldColumn}>
-                  <Text style={styles.fieldLabelText}>
-                    {UI_STRINGS.COURSE_CREATE.CITY_LABEL}
-                  </Text>
-                  <View style={styles.inputBox}>
-                    <TextInput
-                      testID='input-city'
-                      style={styles.inputText}
-                      placeholder={UI_STRINGS.COURSE_CREATE.CITY_PLACEHOLDER}
-                      value={destinationCity}
-                      onChangeText={setDestinationCity}
-                      onFocus={() => setShowCityDropdown(true)}
-                      placeholderTextColor='#8C949E'
-                    />
-                  </View>
-                  {showCityDropdown && citySuggestions.length > 0 && (
-                    <View
-                      style={styles.dropdownContainer}
-                      testID='city-dropdown'>
-                      <ScrollView
-                        nestedScrollEnabled
-                        style={styles.dropdownList}>
-                        {citySuggestions.map((item) => (
-                          <TouchableOpacity
-                            key={item.cityId}
-                            style={styles.dropdownItem}
-                            onPress={() => handleSelectCity(item)}
-                            activeOpacity={0.7}>
-                            <Text style={styles.dropdownItemText}>
-                              {item.cityNameKo}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* Popular Destinations Tag Section */}
-              <View style={styles.tagSection}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.tagChipsRow}>
-                  {POPULAR_DESTINATIONS.map((dest) => (
-                    <TouchableOpacity
-                      key={dest.city}
-                      testID={`popular-tag-${dest.city}`}
-                      style={styles.tagChip}
-                      onPress={() => onSelectPopular(dest.country, dest.city)}
-                      activeOpacity={0.7}>
-                      <Text style={styles.tagFlagText}>{dest.flag}</Text>
-                      <Text style={styles.tagChipText}>{dest.city}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            <View style={styles.cardContainer} testID='date-card'>
-              <View style={styles.cardHeaderRow}>
-                <Ionicons
-                  name='calendar-outline'
-                  size={20}
-                  color={palette.primary}
-                />
-                <Text style={styles.cardTitleText}>
-                  {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
-                </Text>
-              </View>
-
-              <View style={styles.twoColumnRow}>
-                <TouchableOpacity
-                  style={styles.dateBox}
-                  onPress={() => {
-                    LayoutAnimation.configureNext(
-                      LayoutAnimation.Presets.easeInEaseOut,
-                    );
-                    if (isCalendarOpen && activeDateTarget === 'start') {
-                      setIsCalendarOpen(false);
-                    } else {
-                      openCalendarForTarget('start');
-                    }
-                  }}
-                  activeOpacity={0.8}>
-                  <Text style={styles.fieldLabelText}>
-                    {UI_STRINGS.COURSE_CREATE.START_DATE_LABEL}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dateValueText,
-                      !startDate && styles.datePlaceholderText,
-                    ]}>
-                    {startDate ||
-                      UI_STRINGS.COURSE_CREATE.START_DATE_PLACEHOLDER}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.dateBox}
-                  onPress={() => {
-                    LayoutAnimation.configureNext(
-                      LayoutAnimation.Presets.easeInEaseOut,
-                    );
-                    if (isCalendarOpen && activeDateTarget === 'end') {
-                      setIsCalendarOpen(false);
-                    } else {
-                      openCalendarForTarget('end');
-                    }
-                  }}
-                  activeOpacity={0.8}>
-                  <Text style={styles.fieldLabelText}>
-                    {UI_STRINGS.COURSE_CREATE.END_DATE_LABEL}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dateValueText,
-                      !endDate && styles.datePlaceholderText,
-                    ]}>
-                    {endDate || UI_STRINGS.COURSE_CREATE.END_DATE_PLACEHOLDER}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Expandable Inline Calendar */}
-              {isCalendarOpen && (
-                <InlineCalendarView
-                  currentYearMonth={currentYearMonth}
-                  startDate={startDate}
-                  endDate={endDate}
-                  onPrevMonth={handlePrevMonth}
-                  onNextMonth={handleNextMonth}
-                  onSelectDay={handleSelectDay}
-                />
               )}
-            </View>
-
-            {/* Card 3: Budget Card */}
-            <View style={styles.cardContainer} testID='budget-card'>
-              <View style={styles.cardHeaderRow}>
-                <Ionicons
-                  name='card-outline'
-                  size={20}
-                  color={palette.primary}
-                />
-                <Text style={styles.cardTitleText}>
-                  {UI_STRINGS.COURSE_CREATE.STYLE_TITLE}
-                </Text>
+              <View
+                style={[
+                  styles.conditionsCard,
+                  mbti && styles.mbtiConditionsCard,
+                ]}>
+                <View testID='destination-card'>
+                  <View style={styles.labelRow}>
+                    <FigmaAsset
+                      source={require('../../assets/images/figma-course/plane.svg')}
+                      width={16}
+                      height={16}
+                    />
+                    <Text style={styles.cardTitle}>
+                      {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
+                    </Text>
+                    <FigmaAsset
+                      source={require('../../assets/images/figma-course/required.svg')}
+                      width={12}
+                      height={12}
+                    />
+                  </View>
+                  <Pressable
+                    testID='open-destination-sheet'
+                    accessibilityRole='button'
+                    style={styles.field}
+                    onPress={() => setDestinationOpen(true)}>
+                    <Text
+                      style={[
+                        styles.fieldText,
+                        !form.destinationCity && styles.placeholder,
+                      ]}>
+                      {destinationLabel}
+                    </Text>
+                  </Pressable>
+                  <View testID='recommended-destinations'>
+                    <Text style={styles.recommendedLabel}>
+                      {COURSE_UI.RECOMMENDED}
+                    </Text>
+                    <View style={styles.tags}>
+                      {recommendedDestinations.map(({ country, city }) => {
+                        const selected =
+                          form.destinationCountry === country &&
+                          form.destinationCity === city;
+                        return (
+                          <Pressable
+                            key={`${country}-${city}`}
+                            accessibilityRole='button'
+                            accessibilityLabel={`${country}, ${city}`}
+                            accessibilityState={{ selected }}
+                            testID={`recommended-destination-${country}-${city}`}
+                            style={[
+                              styles.destinationTag,
+                              selected && styles.selectedTag,
+                            ]}
+                            onPress={() => {
+                              trackButtonClick(
+                                'btn_select_popular_destination',
+                                `Select ${city}, ${country}`,
+                              );
+                              form.handleSelectPopularDestination(
+                                country,
+                                city,
+                              );
+                            }}>
+                            <Text style={styles.tagText}>{country}</Text>
+                            <View style={styles.tagDivider}>
+                              <FigmaAsset
+                                source={require('../../assets/images/figma-course/recommendation-divider.svg')}
+                                width={10}
+                                height={1}
+                                style={styles.tagDividerRotation}
+                              />
+                            </View>
+                            <Text style={styles.tagText}>{city}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+                <View
+                  testID='date-card'
+                  style={[styles.dateSection, mbti && styles.mbtiDateSection]}>
+                  <View style={styles.labelRow}>
+                    <FigmaAsset
+                      source={require('../../assets/images/figma-course/calendar.svg')}
+                      width={14.5}
+                      height={14.5}
+                    />
+                    <Text style={styles.cardTitle}>
+                      {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
+                    </Text>
+                    <FigmaAsset
+                      source={require('../../assets/images/figma-course/required.svg')}
+                      width={12}
+                      height={12}
+                    />
+                  </View>
+                  <Pressable
+                    testID='open-date-sheet'
+                    accessibilityRole='button'
+                    style={styles.field}
+                    onPress={() => setDateOpen(true)}>
+                    <Text
+                      style={[
+                        styles.fieldText,
+                        !form.startDate && styles.placeholder,
+                      ]}>
+                      {dateLabel}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
-
-              <View style={styles.threeColumnGrid}>
-                {/* Option 1: 가성비 */}
-                <TouchableOpacity
-                  testID='budget-cost_effective'
-                  style={[
-                    styles.styleCardItem,
-                    budgetType === 'cost_effective' && styles.styleCardActive,
-                  ]}
-                  onPress={() => {
-                    trackButtonClick(
-                      'btn_select_budget_type',
-                      'Select Budget cost_effective',
-                    );
-                    setBudgetType('cost_effective');
-                  }}
-                  activeOpacity={0.8}>
-                  <View
-                    style={[
-                      styles.styleIconBox,
-                      budgetType === 'cost_effective' &&
-                        styles.styleIconBoxActive,
-                    ]}>
-                    <Ionicons
-                      name='wallet-outline'
-                      size={18}
-                      color={
-                        budgetType === 'cost_effective'
-                          ? palette.accent
-                          : palette.subText
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.styleCardLabel,
-                      budgetType === 'cost_effective' &&
-                        styles.styleCardLabelActive,
-                    ]}>
-                    {UI_STRINGS.COURSE_CREATE.STYLE_BUDGET}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Option 2: 적정 수준 */}
-                <TouchableOpacity
-                  testID='budget-moderate'
-                  style={[
-                    styles.styleCardItem,
-                    budgetType === 'moderate' && styles.styleCardActive,
-                  ]}
-                  onPress={() => {
-                    trackButtonClick(
-                      'btn_select_budget_type',
-                      'Select Budget moderate',
-                    );
-                    setBudgetType('moderate');
-                  }}
-                  activeOpacity={0.8}>
-                  <View
-                    style={[
-                      styles.styleIconBox,
-                      budgetType === 'moderate' && styles.styleIconBoxActive,
-                    ]}>
-                    <Ionicons
-                      name='briefcase-outline'
-                      size={18}
-                      color={
-                        budgetType === 'moderate'
-                          ? palette.accent
-                          : palette.subText
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.styleCardLabel,
-                      budgetType === 'moderate' && styles.styleCardLabelActive,
-                    ]}>
-                    {UI_STRINGS.COURSE_CREATE.STYLE_MODERATE}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Option 3: 럭셔리 */}
-                <TouchableOpacity
-                  testID='budget-luxury'
-                  style={[
-                    styles.styleCardItem,
-                    budgetType === 'luxury' && styles.styleCardActive,
-                  ]}
-                  onPress={() => {
-                    trackButtonClick(
-                      'btn_select_budget_type',
-                      'Select Budget luxury',
-                    );
-                    setBudgetType('luxury');
-                  }}
-                  activeOpacity={0.8}>
-                  <View
-                    style={[
-                      styles.styleIconBox,
-                      budgetType === 'luxury' && styles.styleIconBoxActive,
-                    ]}>
-                    <Ionicons
-                      name='diamond-outline'
-                      size={18}
-                      color={
-                        budgetType === 'luxury'
-                          ? palette.accent
-                          : palette.subText
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.styleCardLabel,
-                      budgetType === 'luxury' && styles.styleCardLabelActive,
-                    ]}>
-                    {UI_STRINGS.COURSE_CREATE.STYLE_LUXURY}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.bottomContainer} testID='bottom-container'>
-            <TouchableOpacity
-              testID='submit-course-btn'
-              style={[
-                styles.ctaButton,
-                !isFormValid && styles.ctaButtonDisabled,
-              ]}
-              disabled={!isFormValid}
-              onPress={handleSubmit}
-              activeOpacity={0.8}>
-              <Ionicons
-                name='sparkles'
-                size={20}
-                color='#FFFFFF'
-                style={styles.ctaIconLeft}
+              <NumericBudgetSlider
+                value={form.budget}
+                onChange={form.setBudget}
               />
-              <Text style={styles.ctaButtonText}>
-                {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+        <View
+          style={[
+            styles.footer,
+            Platform.OS === 'android' && styles.androidFooter,
+          ]}>
+          <Pressable
+            testID='submit-course-btn'
+            accessibilityRole='button'
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            style={[styles.submitButton, disabled && styles.submitDisabled]}
+            onPress={form.handleSubmit}>
+            <Text
+              style={[
+                styles.submitText,
+                disabled && styles.submitTextDisabled,
+              ]}>
+              {UI_STRINGS.COURSE_CREATE.SUBMIT_BUTTON}
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+      <DestinationPickerSheet
+        visible={destinationOpen}
+        onClose={() => setDestinationOpen(false)}
+        initialCountry={form.destinationCountry}
+        onSelect={form.handleSelectPopularDestination}
+      />
+      <TravelDateSheet
+        visible={dateOpen}
+        onClose={() => setDateOpen(false)}
+        startDate={form.startDate}
+        endDate={form.endDate}
+        onConfirm={(start, end) => {
+          form.handleStartDateChange(start);
+          form.handleEndDateChange(end);
+        }}
+      />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    backgroundColor: palette.softMint, // #F5FAF8
-  },
-  scrollContentContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 24,
-    gap: 18,
-  },
-  headerContent: {
-    width: '100%',
-    gap: 4,
-    paddingBottom: 2,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: palette.deepNavy, // #0D2137
-    lineHeight: 34,
-    letterSpacing: -0.6,
-    includeFontPadding: false,
-  },
-  headerSubTitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: palette.subText, // #59616B
-    lineHeight: 20,
-    includeFontPadding: false,
-  },
-  mainBody: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    gap: 18,
-  },
-  cardContainer: {
-    backgroundColor: palette.white, // #FFFFFF
-    borderWidth: 1,
-    borderColor: palette.gray200, // #E0E5EB
-    borderRadius: 18,
-    padding: 18,
-    gap: 16,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-    zIndex: 1,
-  },
-  cardContainerActiveDropdown: {
-    zIndex: 1000,
-  },
-  cardHeaderRow: {
+  flex: { flex: 1 },
+  screenContainer: { flex: 1, backgroundColor: palette.white },
+  content: { flexGrow: 1, paddingBottom: 16 },
+  header: {
+    height: 61,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  cardTitleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    includeFontPadding: false,
-  },
-  twoColumnRow: {
-    flexDirection: 'row',
-    gap: 12,
-    zIndex: 100,
-  },
-
-  fieldColumn: {
-    flex: 1,
-    gap: 6,
-    position: 'relative',
-    zIndex: 10,
-  },
-  dropdownContainer: {
-    position: 'absolute',
-    top: 66,
-    left: 0,
-    right: 0,
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 10,
-    maxHeight: 160,
-    zIndex: 1000,
-    elevation: 5,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  dropdownList: {
-    maxHeight: 150,
-  },
-  dropdownItem: {
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EBEDF2',
   },
-  dropdownItemText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: palette.deepNavy,
-    includeFontPadding: false,
-  },
-
-  fieldLabelText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#8C949E',
-    includeFontPadding: false,
-  },
-  inputBox: {
-    backgroundColor: palette.softMint,
-    borderWidth: 1,
-    borderColor: 'rgba(217, 222, 229, 0.6)',
-    borderRadius: 10,
+  backButton: {
+    width: 44,
     height: 44,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  inputText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    padding: 0,
-    includeFontPadding: false,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#EBEDF2',
-    width: '100%',
-  },
-  tagSection: {
-    gap: 10,
-  },
-  tagChipsRow: {
-    gap: 8,
-  },
-  tagChip: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E0F7F1',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    gap: 6,
   },
-  tagFlagText: {
-    fontSize: 14,
-    includeFontPadding: false,
-  },
-  tagChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0D7361',
-    includeFontPadding: false,
-  },
-  dateBox: {
+  headerSpacer: { width: 44 },
+  headerTitle: {
     flex: 1,
-    backgroundColor: palette.softMint,
-    borderWidth: 1,
-    borderColor: 'rgba(217, 222, 229, 0.6)',
-    borderRadius: 10,
-    padding: 12,
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: -0.6,
+    color: palette.deepNavy,
+    textAlign: 'center',
+  },
+  mainBody: { flexGrow: 1, paddingHorizontal: 20, gap: 16 },
+  tasteCard: { backgroundColor: palette.gray100, borderRadius: 24 },
+  tasteHeader: {
+    minHeight: 54,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tasteTitle: { fontSize: 16, fontWeight: '600', color: palette.deepNavy },
+  tasteBody: { paddingHorizontal: 20, paddingBottom: 18, gap: 10 },
+  tasteDescription: { fontSize: 14, lineHeight: 20, color: palette.subText },
+  tasteFeedback: {
+    minHeight: 54,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tasteFeedbackText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: palette.subText,
+  },
+  tasteRetry: { minHeight: 44, justifyContent: 'center' },
+  tasteRetryText: { fontSize: 14, fontWeight: '600', color: palette.primary },
+  tasteTag: {
+    fontSize: 12,
+    color: palette.primary,
+    backgroundColor: palette.primaryTint,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  chevronDown: { transform: [{ rotate: '-90deg' }] },
+  chevronUp: { transform: [{ rotate: '90deg' }] },
+  chevronForward: { transform: [{ rotate: '180deg' }] },
+  conditionsCard: {
+    backgroundColor: palette.gray100,
+    borderRadius: 24,
+    paddingHorizontal: 26,
+    paddingTop: 26,
+    paddingBottom: 26,
+  },
+  mbtiConditionsCard: { paddingTop: 26, paddingBottom: 41 },
+  labelRow: {
+    minHeight: 37,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
-  dateValueText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    includeFontPadding: false,
-  },
-  datePlaceholderText: {
-    color: '#8C949E',
-    fontWeight: '500',
-  },
-  threeColumnGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  styleCardItem: {
-    flex: 1,
-    backgroundColor: palette.white,
-    borderWidth: 1.5,
-    borderColor: palette.gray200,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  styleCardActive: {
-    backgroundColor: '#E0F7F1',
-    borderColor: palette.accent, // #00C9A7
-  },
-  styleIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: palette.softMint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  styleIconBoxActive: {
-    backgroundColor: palette.white,
-  },
-  styleCardLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: palette.subText,
-    lineHeight: 16,
-    includeFontPadding: false,
-  },
-  styleCardLabelActive: {
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-
-  bottomContainer: {
-    width: '100%',
-  },
-  ctaButton: {
-    backgroundColor: palette.primary, // #2D7DD2
-    height: 56,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  ctaButtonDisabled: {
-    opacity: 0.5,
-  },
-  ctaButtonText: {
+  cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-    includeFontPadding: false,
+    fontWeight: '600',
+    letterSpacing: -1,
+    color: palette.deepNavy,
   },
-  ctaIconLeft: {
-    marginRight: 8,
+  field: {
+    minHeight: 56,
+    backgroundColor: palette.white,
+    borderRadius: 11,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  fieldText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.deepNavy,
+    letterSpacing: -0.48,
+  },
+  placeholder: {
+    color: palette.mutedText,
+    fontWeight: '500',
+    fontSize: 14,
+    letterSpacing: -0.28,
+  },
+  recommendedLabel: {
+    fontSize: 12,
+    color: palette.mutedText,
+    marginTop: 16,
+    marginBottom: 7,
+  },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  destinationTag: {
+    borderRadius: 152,
+    backgroundColor: palette.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: palette.transparent,
+  },
+  selectedTag: {
+    backgroundColor: hexToRgba(palette.primary, 0.2),
+    borderColor: palette.primary,
+  },
+  tagText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: palette.deepNavy,
+  },
+  tagDivider: {
+    width: 1,
+    height: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagDividerRotation: { transform: [{ rotate: '90deg' }] },
+  dateSection: { marginTop: 16 },
+  mbtiDateSection: { marginTop: 28 },
+  footer: {
+    flexShrink: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: palette.white,
+  },
+  androidFooter: { paddingBottom: 24 },
+  submitButton: {
+    minHeight: 62,
+    borderRadius: 16,
+    backgroundColor: palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    shadowColor: palette.black,
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitDisabled: { backgroundColor: palette.gray300 },
+  submitTextDisabled: { color: palette.gray600 },
+  submitText: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.white,
+    textAlign: 'center',
   },
 });

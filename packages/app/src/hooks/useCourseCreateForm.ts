@@ -1,23 +1,32 @@
 /**
  * @file useCourseCreateForm.ts
- * @description Custom hook for managing travel course creation form inputs, location autocomplete (API-LOC-1, API-LOC-2), and inline calendar state.
+ * @description Custom hook for managing travel course creation form inputs, location search/selection (API-LOC-1~3), numeric budget and validated travel dates (API-COURSE-1).
  */
-import { useState, useRef, useEffect } from 'react';
-import { ScrollView } from 'react-native';
-import type {
-  BudgetType,
-  CourseCreateRequest,
-  CountryAutocompleteItem,
-  CityAutocompleteItem,
-} from '@yeolo/common';
+import { useState, useEffect, useCallback } from 'react';
+import type { CourseCreateRequest, CountryItem, CityItem } from '@yeolo/common';
 import {
   DATE_REGEX,
   formatYYYYMMDD,
   calculateTotalDays,
-  fetchCountryAutocomplete,
-  fetchCityAutocomplete,
+  fetchCountriesApi,
+  fetchCitiesApi,
+  searchLocationsApi,
 } from '@yeolo/common';
 import { APP_CONFIG } from '../constants';
+
+export interface CountrySuggestionItem {
+  countryId?: string;
+  countryName: string;
+  countryNameKo: string;
+}
+
+export interface CitySuggestionItem {
+  cityId?: string;
+  cityName: string;
+  cityNameKo: string;
+  countryName?: string;
+  countryNameKo?: string;
+}
 
 const POPULAR_DESTINATIONS = [
   { flag: '🇯🇵', country: '일본', city: '도쿄' },
@@ -27,6 +36,7 @@ const POPULAR_DESTINATIONS = [
   { flag: '🇪🇸', country: '스페인', city: '바르셀로나' },
   { flag: '🇮🇹', country: '이탈리아', city: '로마' },
   { flag: '🇰🇷', country: '대한민국', city: '제주' },
+  { flag: '🇵🇹', country: '포르투갈', city: '리스본' },
 ];
 
 export function useCourseCreateForm(
@@ -42,32 +52,60 @@ export function useCourseCreateForm(
   >(null);
 
   const [countrySuggestions, setCountrySuggestions] = useState<
-    CountryAutocompleteItem[]
+    CountrySuggestionItem[]
   >([]);
-  const [citySuggestions, setCitySuggestions] = useState<
-    CityAutocompleteItem[]
-  >([]);
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestionItem[]>(
+    [],
+  );
+
+  const [availableCountries, setAvailableCountries] = useState<CountryItem[]>(
+    [],
+  );
+  const [availableCities, setAvailableCities] = useState<CityItem[]>([]);
 
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [budgetType, setBudgetType] = useState<BudgetType | null>(null);
-
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [activeDateTarget, setActiveDateTarget] = useState<'start' | 'end'>(
-    'start',
+  const [budget, setBudgetState] = useState<number>(
+    APP_CONFIG.DEFAULT_COURSE_BUDGET,
   );
-
-  const todayDate = new Date();
-  const [currentYearMonth, setCurrentYearMonth] = useState({
-    year: todayDate.getFullYear(),
-    month: todayDate.getMonth() + 1,
-  });
-
-  const scrollViewRef = useRef<ScrollView>(null);
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL;
+
+  const setBudget = useCallback((val: number) => {
+    const clamped = Math.min(Math.max(Math.round(val), 500000), 10000000);
+    setBudgetState(clamped);
+  }, []);
+
+  const loadCountries = useCallback(async () => {
+    try {
+      const res = await fetchCountriesApi(apiUrl);
+      if (res?.data?.countries) {
+        setAvailableCountries(res.data.countries);
+      }
+    } catch {
+      // Ignore errors in background country list fetch
+    }
+  }, [apiUrl]);
+
+  const loadCitiesForCountry = useCallback(
+    async (countryName: string) => {
+      if (!countryName.trim()) {
+        setAvailableCities([]);
+        return;
+      }
+      try {
+        const res = await fetchCitiesApi(apiUrl, countryName.trim());
+        if (res?.data?.cities) {
+          setAvailableCities(res.data.cities);
+        }
+      } catch {
+        setAvailableCities([]);
+      }
+    },
+    [apiUrl],
+  );
 
   const setDestinationCountry = (text: string) => {
     setDestinationCountryState(text);
@@ -93,7 +131,7 @@ export function useCourseCreateForm(
     setShowCountryDropdown(false);
   };
 
-  // API-LOC-1: 국가 자동완성 API 연동
+  // API-LOC-3: 국가 검색어 입력 시 통합 지역 검색 API 연동
   useEffect(() => {
     if (!destinationCountry.trim()) {
       setCountrySuggestions([]);
@@ -102,19 +140,16 @@ export function useCourseCreateForm(
     if (validatedCountry === destinationCountry.trim()) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetchCountryAutocomplete(
-        apiUrl,
-        destinationCountry.trim(),
-        undefined,
-        controller.signal,
-      )
+      searchLocationsApi(apiUrl, destinationCountry.trim(), controller.signal)
         .then((res) => {
           if (!controller.signal.aborted) {
-            if (res?.data?.countries) {
-              setCountrySuggestions(res.data.countries);
-            } else {
-              setCountrySuggestions([]);
-            }
+            const results = res?.data?.results || [];
+            setCountrySuggestions(
+              results.map((r) => ({
+                countryName: r.countryName,
+                countryNameKo: r.countryName,
+              })),
+            );
           }
         })
         .catch(() => {
@@ -129,7 +164,7 @@ export function useCourseCreateForm(
     };
   }, [destinationCountry, validatedCountry, apiUrl]);
 
-  // API-LOC-2: 도시 자동완성 API 연동
+  // API-LOC-3: 도시 검색어 입력 시 통합 지역 검색 API 연동
   useEffect(() => {
     if (!destinationCity.trim()) {
       setCitySuggestions([]);
@@ -139,20 +174,25 @@ export function useCourseCreateForm(
     const controller = new AbortController();
     const countryFilter = destinationCountry.trim() || undefined;
     const timer = setTimeout(() => {
-      fetchCityAutocomplete(
-        apiUrl,
-        destinationCity.trim(),
-        countryFilter,
-        undefined,
-        controller.signal,
-      )
+      searchLocationsApi(apiUrl, destinationCity.trim(), controller.signal)
         .then((res) => {
           if (!controller.signal.aborted) {
-            if (res?.data?.cities) {
-              setCitySuggestions(res.data.cities);
-            } else {
-              setCitySuggestions([]);
-            }
+            const results = res?.data?.results || [];
+            const flattened: CitySuggestionItem[] = [];
+            results.forEach((group) => {
+              if (countryFilter && group.countryName !== countryFilter) {
+                return;
+              }
+              (group.cities || []).forEach((c) => {
+                flattened.push({
+                  cityName: c.cityName,
+                  cityNameKo: c.cityName,
+                  countryName: group.countryName,
+                  countryNameKo: group.countryName,
+                });
+              });
+            });
+            setCitySuggestions(flattened);
           }
         })
         .catch(() => {
@@ -167,16 +207,7 @@ export function useCourseCreateForm(
     };
   }, [destinationCity, destinationCountry, validatedCity, apiUrl]);
 
-  useEffect(() => {
-    if (isCalendarOpen) {
-      const scrollTimer = setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-      return () => clearTimeout(scrollTimer);
-    }
-  }, [isCalendarOpen]);
-
-  const handleSelectCountry = (country: CountryAutocompleteItem) => {
+  const handleSelectCountry = (country: CountrySuggestionItem) => {
     setDestinationCountryState(country.countryNameKo);
     setValidatedCountry(country.countryNameKo);
     setDestinationCityState('');
@@ -184,9 +215,10 @@ export function useCourseCreateForm(
     setValidatedCityCountry(null);
     setCountrySuggestions([]);
     setShowCountryDropdown(false);
+    void loadCitiesForCountry(country.countryNameKo);
   };
 
-  const handleSelectCity = (city: CityAutocompleteItem) => {
+  const handleSelectCity = (city: CitySuggestionItem) => {
     setDestinationCityState(city.cityNameKo);
     setValidatedCity(city.cityNameKo);
     if (city.countryNameKo) {
@@ -218,72 +250,6 @@ export function useCourseCreateForm(
     setEndDate(formatYYYYMMDD(text));
   };
 
-  const openCalendarForTarget = (target: 'start' | 'end') => {
-    setActiveDateTarget(target);
-    const targetDateStr = target === 'start' ? startDate : endDate;
-
-    if (DATE_REGEX.test(targetDateStr.trim())) {
-      const [y, m] = targetDateStr.trim().split('-').map(Number);
-      setCurrentYearMonth({ year: y, month: m });
-    } else {
-      const now = new Date();
-      setCurrentYearMonth({
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-      });
-    }
-
-    setIsCalendarOpen(true);
-  };
-
-  const handlePrevMonth = () => {
-    if (currentYearMonth.month === 1) {
-      setCurrentYearMonth({ year: currentYearMonth.year - 1, month: 12 });
-    } else {
-      setCurrentYearMonth({
-        year: currentYearMonth.year,
-        month: currentYearMonth.month - 1,
-      });
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (currentYearMonth.month === 12) {
-      setCurrentYearMonth({ year: currentYearMonth.year + 1, month: 1 });
-    } else {
-      setCurrentYearMonth({
-        year: currentYearMonth.year,
-        month: currentYearMonth.month + 1,
-      });
-    }
-  };
-
-  const handleSelectDay = (day: number) => {
-    const mm = String(currentYearMonth.month).padStart(2, '0');
-    const dd = String(day).padStart(2, '0');
-    const dateStr = `${currentYearMonth.year}-${mm}-${dd}`;
-
-    const now = new Date();
-    const todayY = now.getFullYear();
-    const todayM = String(now.getMonth() + 1).padStart(2, '0');
-    const todayD = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${todayY}-${todayM}-${todayD}`;
-
-    if (dateStr < todayStr) return;
-
-    if (!startDate || (startDate && endDate) || dateStr < startDate) {
-      setStartDate(dateStr);
-      setEndDate('');
-      setActiveDateTarget('end');
-    } else {
-      const days = calculateTotalDays(startDate, dateStr);
-      if (days !== null && days >= 30) {
-        return;
-      }
-      setEndDate(dateStr);
-    }
-  };
-
   const isCountryValid =
     destinationCountry.trim().length > 0 &&
     (validatedCountry === destinationCountry.trim() ||
@@ -292,6 +258,9 @@ export function useCourseCreateForm(
       ) ||
       countrySuggestions.some(
         (c) => c.countryNameKo === destinationCountry.trim(),
+      ) ||
+      availableCountries.some(
+        (c) => c.countryName === destinationCountry.trim(),
       ));
 
   const isKnownMismatchedCity =
@@ -333,17 +302,17 @@ export function useCourseCreateForm(
     calculatedDays !== null &&
     calculatedDays > 0 &&
     calculatedDays < 30 &&
-    budgetType !== null;
+    budget >= 500000;
 
   const handleSubmit = () => {
-    if (!isFormValid || !budgetType || !calculatedDays) return;
+    if (!isFormValid || !calculatedDays) return;
 
     const requestData: CourseCreateRequest = {
       destinationCountry: destinationCountry.trim(),
       destinationCity: destinationCity.trim(),
       startDate: startDate.trim(),
       totalDays: calculatedDays,
-      budgetType,
+      budget,
     };
 
     onSubmit?.(requestData);
@@ -356,6 +325,10 @@ export function useCourseCreateForm(
     setDestinationCity,
     countrySuggestions,
     citySuggestions,
+    availableCountries,
+    availableCities,
+    loadCountries,
+    loadCitiesForCountry,
     showCountryDropdown,
     setShowCountryDropdown,
     showCityDropdown,
@@ -365,19 +338,10 @@ export function useCourseCreateForm(
     handleSelectPopularDestination,
     startDate,
     endDate,
-    budgetType,
-    setBudgetType,
-    isCalendarOpen,
-    setIsCalendarOpen,
-    activeDateTarget,
-    currentYearMonth,
-    scrollViewRef,
+    budget,
+    setBudget,
     handleStartDateChange,
     handleEndDateChange,
-    openCalendarForTarget,
-    handlePrevMonth,
-    handleNextMonth,
-    handleSelectDay,
     isStartDateValid,
     isEndDateValid,
     isFormValid,

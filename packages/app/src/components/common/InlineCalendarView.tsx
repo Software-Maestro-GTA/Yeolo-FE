@@ -1,9 +1,10 @@
 /**
  * @file InlineCalendarView.tsx
- * @description Accordion inline calendar view component with UI v2 styling and UI_STRINGS constants.
+ * @description UI v3 연속 월 달력과 기존 월 탐색 UI에서 재사용하는 날짜 범위 캘린더.
  */
+import { Text } from './Typography';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { calculateTotalDays } from '@yeolo/common';
 import { palette } from '../../theme/colors';
@@ -16,7 +17,75 @@ export interface InlineCalendarViewProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDay: (day: number) => void;
+  hideMonthNavigation?: boolean;
+  maxDays?: number;
 }
+
+/** Memoized by visual state so an unchanged date does not rebuild its native views. */
+const CalendarDayCell = React.memo(function CalendarDayCell({
+  dayNum,
+  dateStr,
+  isDisabled,
+  isStart,
+  isEnd,
+  isInRange,
+  showStartTrack,
+  showEndTrack,
+  onSelectDay,
+}: {
+  dayNum: number;
+  dateStr: string;
+  isDisabled: boolean;
+  isStart: boolean;
+  isEnd: boolean;
+  isInRange: boolean;
+  showStartTrack: boolean;
+  showEndTrack: boolean;
+  onSelectDay: (day: number) => void;
+}) {
+  return (
+    <TouchableOpacity
+      testID={`calendar-day-${dateStr}`}
+      accessibilityRole='button'
+      accessibilityLabel={dateStr}
+      accessibilityState={{
+        disabled: isDisabled,
+        selected: isStart || isEnd,
+      }}
+      style={styles.dayCellContainer}
+      activeOpacity={isDisabled ? 1 : 0.7}
+      disabled={isDisabled}
+      onPress={() => !isDisabled && onSelectDay(dayNum)}>
+      {/* Connected Ribbon Background Track */}
+      {showStartTrack && (
+        <View style={[styles.rangeTrack, styles.rangeTrackStart]} />
+      )}
+      {showEndTrack && (
+        <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />
+      )}
+      {isInRange && (
+        <View style={[styles.rangeTrack, styles.rangeTrackMiddle]} />
+      )}
+
+      {/* Day Content Bubble */}
+      <View
+        style={[
+          styles.dayBubble,
+          (isStart || isEnd) && styles.dayBubbleSelected,
+        ]}>
+        <Text
+          style={[
+            styles.dayCellText,
+            isDisabled && styles.dayTextDisabled,
+            isInRange && styles.dayCellTextInRange,
+            (isStart || isEnd) && styles.dayCellTextSelected,
+          ]}>
+          {dayNum}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   currentYearMonth,
@@ -25,6 +94,8 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   onPrevMonth,
   onNextMonth,
   onSelectDay,
+  hideMonthNavigation = false,
+  maxDays = 29,
 }) => {
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month - 1, 1).getDay();
@@ -51,11 +122,13 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
     return rows;
   };
 
-  const calendarDays = getDaysInMonth(
-    currentYearMonth.year,
-    currentYearMonth.month,
+  const weekRows = React.useMemo(
+    () =>
+      getWeekRows(
+        getDaysInMonth(currentYearMonth.year, currentYearMonth.month),
+      ),
+    [currentYearMonth.year, currentYearMonth.month],
   );
-  const weekRows = getWeekRows(calendarDays);
 
   const today = new Date();
   const todayY = today.getFullYear();
@@ -71,24 +144,34 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   return (
     <View style={styles.inlineCalendarCard} testID='inline-calendar'>
       <View style={styles.calendarHeader}>
-        <TouchableOpacity
-          onPress={onPrevMonth}
-          disabled={isPrevMonthDisabled}
-          style={[styles.monthNavBtn, isPrevMonthDisabled && { opacity: 0.3 }]}
-          activeOpacity={0.7}>
-          <Ionicons name='chevron-back' size={18} color={palette.deepNavy} />
-        </TouchableOpacity>
+        {!hideMonthNavigation && (
+          <TouchableOpacity
+            onPress={onPrevMonth}
+            disabled={isPrevMonthDisabled}
+            style={[
+              styles.monthNavBtn,
+              isPrevMonthDisabled && styles.disabledNav,
+            ]}
+            activeOpacity={0.7}>
+            <Ionicons name='chevron-back' size={18} color={palette.deepNavy} />
+          </TouchableOpacity>
+        )}
         <Text style={styles.calendarMonthText}>
-          {currentYearMonth.year}
-          {UI_STRINGS.COMPONENTS.CALENDAR_YEAR_SUFFIX} {currentYearMonth.month}
-          {UI_STRINGS.COMPONENTS.CALENDAR_MONTH_SUFFIX}
+          {currentYearMonth.year}.
+          {String(currentYearMonth.month).padStart(2, '0')}
         </Text>
-        <TouchableOpacity
-          onPress={onNextMonth}
-          style={styles.monthNavBtn}
-          activeOpacity={0.7}>
-          <Ionicons name='chevron-forward' size={18} color={palette.deepNavy} />
-        </TouchableOpacity>
+        {!hideMonthNavigation && (
+          <TouchableOpacity
+            onPress={onNextMonth}
+            style={styles.monthNavBtn}
+            activeOpacity={0.7}>
+            <Ionicons
+              name='chevron-forward'
+              size={18}
+              color={palette.deepNavy}
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Day of Week Header (7 Columns) */}
@@ -98,8 +181,8 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
             key={dayName}
             style={[
               styles.weekHeaderText,
-              idx === 0 && { color: '#EF4444' },
-              idx === 6 && { color: palette.primary },
+              idx === 0 && styles.sunday,
+              idx === 6 && styles.saturday,
             ]}>
             {dayName}
           </Text>
@@ -128,7 +211,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
               let isDisabledByMaxDays = false;
               if (startDate && !endDate && dateStr >= startDate) {
                 const days = calculateTotalDays(startDate, dateStr);
-                if (days !== null && days >= 30) {
+                if (days !== null && days > maxDays) {
                   isDisabledByMaxDays = true;
                 }
               }
@@ -145,42 +228,18 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
               const showEndTrack = hasBoth && !isSameDate && isEnd;
 
               return (
-                <TouchableOpacity
-                  key={`day-${dayNum}`}
-                  style={styles.dayCellContainer}
-                  activeOpacity={isDisabled ? 1 : 0.7}
-                  disabled={isDisabled}
-                  onPress={() => !isDisabled && onSelectDay(dayNum)}>
-                  {/* Connected Ribbon Background Track */}
-                  {showStartTrack && (
-                    <View style={[styles.rangeTrack, styles.rangeTrackStart]} />
-                  )}
-                  {showEndTrack && (
-                    <View style={[styles.rangeTrack, styles.rangeTrackEnd]} />
-                  )}
-                  {isInRange && (
-                    <View
-                      style={[styles.rangeTrack, styles.rangeTrackMiddle]}
-                    />
-                  )}
-
-                  {/* Day Content Bubble */}
-                  <View
-                    style={[
-                      styles.dayBubble,
-                      (isStart || isEnd) && styles.dayBubbleSelected,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.dayCellText,
-                        isDisabled && styles.dayTextDisabled,
-                        isInRange && styles.dayCellTextInRange,
-                        (isStart || isEnd) && styles.dayCellTextSelected,
-                      ]}>
-                      {dayNum}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                <CalendarDayCell
+                  key={dayNum}
+                  dayNum={dayNum}
+                  dateStr={dateStr}
+                  isDisabled={isDisabled}
+                  isStart={isStart}
+                  isEnd={isEnd}
+                  isInRange={isInRange}
+                  showStartTrack={showStartTrack}
+                  showEndTrack={showEndTrack}
+                  onSelectDay={onSelectDay}
+                />
               );
             })}
           </View>
@@ -192,17 +251,14 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
 
 const styles = StyleSheet.create({
   inlineCalendarCard: {
-    backgroundColor: palette.softMint, // #F5FAF8
-    borderWidth: 1,
-    borderColor: '#E0E8E5',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
+    backgroundColor: palette.white,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
   calendarHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 14,
   },
   monthNavBtn: {
@@ -216,24 +272,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   calendarMonthText: {
-    fontSize: 15,
+    fontSize: 24,
     fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
+    color: palette.deepNavy,
+    flex: 1,
+    textAlign: 'center',
   },
   weekHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EBEDF2',
-    paddingBottom: 8,
+    paddingBottom: 0,
   },
   weekHeaderText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
-    color: palette.subText,
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.deepNavy,
   },
   calendarBody: {
     gap: 4,
@@ -244,16 +300,16 @@ const styles = StyleSheet.create({
   },
   dayCellContainer: {
     flex: 1,
-    height: 38,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   rangeTrack: {
     position: 'absolute',
-    height: 32,
-    backgroundColor: 'rgba(0, 201, 167, 0.15)', // #00C9A7 15% opacity
-    top: 3,
+    height: 44,
+    backgroundColor: palette.gray100,
+    top: 2,
   },
   rangeTrackStart: {
     left: '50%',
@@ -272,30 +328,33 @@ const styles = StyleSheet.create({
     right: 0,
   },
   dayBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
   },
   dayBubbleSelected: {
-    backgroundColor: palette.primary, // #2D7DD2
+    backgroundColor: palette.gray600,
   },
   dayCellText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '500',
     color: palette.deepNavy,
   },
   dayCellTextInRange: {
-    color: palette.accent, // #00C9A7
-    fontWeight: '800',
+    color: palette.deepNavy,
+    fontWeight: '500',
   },
   dayTextDisabled: {
     color: palette.gray200,
   },
   dayCellTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    color: palette.white,
+    fontWeight: '500',
   },
+  disabledNav: { opacity: 0.3 },
+  sunday: { color: palette.deepNavy },
+  saturday: { color: palette.deepNavy },
 });
