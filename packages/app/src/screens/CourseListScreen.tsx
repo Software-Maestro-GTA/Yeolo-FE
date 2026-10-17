@@ -1,45 +1,56 @@
 /**
  * @file CourseListScreen.tsx
- * @description Screen component for viewing previously generated course list (API-COURSE-3), searching, long-press deletion modal, and deleting saved itineraries (API-COURSE-4).
+ * @description UI v3 최근 코스 목록과 편집·삭제 확인을 실제 코스 API 및 최근 코스 상태에 연결합니다.
  */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useContext } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
-  TouchableOpacity,
+  Pressable,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import {
-  CourseSearchBar,
-  CourseDeleteModal,
-  CourseCard,
-} from '../components/course';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { logger, type CourseSummary } from '@yeolo/common';
+import { CourseDeleteModal } from '../components/course/CourseDeleteModal';
+import { CourseCard } from '../components/course/CourseCard';
+import { FigmaAsset } from '../components/common/FigmaAsset';
+import { Text } from '../components/common/Typography';
 import { useCourseListQuery, useCourseDeleteMutation } from '../hooks/queries';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
-import type { CourseSummary } from '@yeolo/common';
+import { COURSE_UI } from '../constants/courseUiStrings';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import { AuthContext } from '../context/AuthContext';
 
 export interface CourseListScreenProps {
+  onBack?: () => void;
   onSelectCourse?: (courseId: string) => void;
   onCreateCourse?: () => void;
+  onDeleted?: (courseId: string) => void;
 }
 
+/** Deletes only after confirmation and clears a matching recent-course reference only on API success. */
 export function CourseListScreen({
+  onBack,
   onSelectCourse,
   onCreateCourse,
+  onDeleted,
 }: CourseListScreenProps) {
   useGA4ScreenTracking('CourseListScreen');
+  const insets = useSafeAreaInsets();
+  const safeAreaStyles = StyleSheet.create({
+    list: { paddingBottom: insets.bottom + 16 },
+  });
   const { trackButtonClick } = useGA4ButtonClick();
-
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const auth = useContext(AuthContext);
+  const [editing, setEditing] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<CourseSummary | null>(
     null,
   );
-
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const {
     data: courses = [],
     isLoading,
@@ -47,210 +58,169 @@ export function CourseListScreen({
     refetch,
   } = useCourseListQuery();
   const deleteCourseMutation = useCourseDeleteMutation();
-  const errorMessage = error?.message || null;
-
-  const handleSelectCourse = useCallback(
-    (courseId: string) => {
-      trackButtonClick('btn_select_course', 'Select Course Card', {
-        course_id: courseId,
-      });
-      if (onSelectCourse) {
-        onSelectCourse(courseId);
-      }
-    },
-    [onSelectCourse, trackButtonClick],
+  const visibleCourses = useMemo(
+    () => courses.filter((course) => !deletedIds.includes(course.courseId)),
+    [courses, deletedIds],
   );
 
-  const filteredCourses = useMemo(() => {
-    if (!searchQuery.trim()) return courses;
-    const query = searchQuery.toLowerCase().trim();
-    return courses.filter(
-      (course) =>
-        course.title.toLowerCase().includes(query) ||
-        course.destinationCountry.toLowerCase().includes(query) ||
-        course.destinationCity.toLowerCase().includes(query),
-    );
-  }, [courses, searchQuery]);
-
-  const handleDeletePress = useCallback(
+  const openDelete = useCallback(
     (course: CourseSummary) => {
       trackButtonClick('btn_open_delete_modal', 'Open Delete Confirm Modal', {
         course_id: course.courseId,
       });
+      setEditing(true);
+      setDeleteError(null);
       setCourseToDelete(course);
     },
     [trackButtonClick],
   );
 
-  const handleConfirmDelete = useCallback(() => {
-    if (courseToDelete) {
-      trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', {
-        course_id: courseToDelete.courseId,
-      });
-      deleteCourseMutation.mutate(courseToDelete.courseId);
-      setCourseToDelete(null);
-    }
-  }, [courseToDelete, deleteCourseMutation, trackButtonClick]);
+  const handleConfirmDelete = () => {
+    if (!courseToDelete || deleteCourseMutation.isPending) return;
+    const courseId = courseToDelete.courseId;
+    trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', {
+      course_id: courseId,
+    });
+    setDeleteError(null);
+    deleteCourseMutation.mutate(courseId, {
+      onSuccess: async () => {
+        setDeletedIds((ids) => [...ids, courseId]);
+        setCourseToDelete(null);
+        if (auth?.recentCourseId === courseId) auth.setRecentCourseId?.(null);
+        try {
+          if ((await AsyncStorage.getItem('recentCourseId')) === courseId) {
+            await AsyncStorage.removeItem('recentCourseId');
+          }
+        } catch (storageError) {
+          logger.warn(
+            'Deleted course could not be removed from local recent history',
+            storageError,
+          );
+        }
+        onDeleted?.(courseId);
+      },
+      onError: (failure) =>
+        setDeleteError(failure.message || COURSE_UI.DELETE_ERROR),
+    });
+  };
 
-  const renderHeader = useCallback(
-    () => (
-      <View style={styles.headerSection}>
-        {/* Compact CTA */}
-        {onCreateCourse && (
-          <View style={styles.compactCtaCard} testID='compact-cta'>
-            <View style={styles.compactCtaLeft}>
-              <Ionicons name='sparkles' size={18} color={palette.primary} />
-              <Text style={styles.compactCtaTitle}>
-                {UI_STRINGS.COURSE_LIST.COMPACT_CTA_TITLE}
-              </Text>
-            </View>
-            <TouchableOpacity
-              testID='compact-cta-button'
-              style={styles.compactCtaBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                trackButtonClick(
-                  'btn_course_list_create_cta',
-                  'Create Course Compact CTA',
-                );
-                onCreateCourse();
-              }}>
-              <Text style={styles.compactCtaBtnText}>
-                {UI_STRINGS.COURSE_LIST.CREATE_NEW_BUTTON}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    ),
-    [onCreateCourse, trackButtonClick],
-  );
-
-  const renderEmpty = useCallback(() => {
-    if (isLoading) {
+  const renderEmpty = () => {
+    if (isLoading)
       return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size='large' color={palette.primary} />
-          <Text style={styles.loadingText}>
-            {UI_STRINGS.COURSE_LIST.LOADING_TEXT}
-          </Text>
+        <View style={styles.empty}>
+          <ActivityIndicator color={palette.primary} />
+          <Text style={styles.body}>{UI_STRINGS.COURSE_LIST.LOADING_TEXT}</Text>
         </View>
       );
-    }
-
-    if (errorMessage) {
+    if (error)
       return (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-          <TouchableOpacity
+        <View style={styles.empty}>
+          <Text style={styles.error}>{error.message}</Text>
+          <Pressable
             testID='retry-button'
-            style={styles.retryButton}
-            onPress={() => {
-              trackButtonClick(
-                'btn_course_list_retry',
-                'Retry Fetch Course List',
-              );
-              refetch();
-            }}>
-            <Text style={styles.retryButtonText}>
+            accessibilityRole='button'
+            style={styles.createButton}
+            onPress={() => refetch()}>
+            <Text style={styles.createText}>
               {UI_STRINGS.COURSE_LIST.RETRY_BUTTON}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       );
-    }
-
-    // Empty state
-    if (courses.length === 0) {
-      return (
-        <View style={styles.emptyStateContainer} testID='empty-state'>
-          <View style={styles.illustrationCircle}>
-            <Text style={styles.emptyEmoji}>🗺️</Text>
-          </View>
-          <Text style={styles.emptyTitle}>
-            {UI_STRINGS.COURSE_LIST.EMPTY_TITLE}
-          </Text>
-          <Text style={styles.emptySubTitle}>
-            {UI_STRINGS.COURSE_LIST.EMPTY_SUBTITLE}
-          </Text>
-          {onCreateCourse && (
-            <TouchableOpacity
-              testID='empty-create-button'
-              style={styles.emptyCtaButton}
-              activeOpacity={0.85}
-              onPress={() => {
-                trackButtonClick(
-                  'btn_course_list_empty_create',
-                  'First Create Course Button',
-                );
-                onCreateCourse();
-              }}>
-              <Text style={styles.emptyCtaButtonText}>
-                {UI_STRINGS.COURSE_LIST.CREATE_NEW_BUTTON}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      );
-    }
-
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyEmoji}>🔍</Text>
+      <View style={styles.empty} testID='empty-state'>
         <Text style={styles.emptyTitle}>
-          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_TITLE}
+          {UI_STRINGS.COURSE_LIST.EMPTY_TITLE}
         </Text>
-        <Text style={styles.emptySubTitle}>
-          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_PREFIX}
-          {searchQuery}
-          {UI_STRINGS.COURSE_LIST.SEARCH_EMPTY_SUBTITLE_SUFFIX}
-        </Text>
+        <Text style={styles.body}>{UI_STRINGS.COURSE_LIST.EMPTY_SUBTITLE}</Text>
+        {onCreateCourse && (
+          <Pressable
+            testID='empty-create-button'
+            accessibilityRole='button'
+            style={styles.createButton}
+            onPress={onCreateCourse}>
+            <Text style={styles.createText}>
+              {UI_STRINGS.COURSE_LIST.CREATE_NEW_BUTTON}
+            </Text>
+          </Pressable>
+        )}
       </View>
     );
-  }, [
-    isLoading,
-    errorMessage,
-    courses.length,
-    onCreateCourse,
-    searchQuery,
-    refetch,
-    trackButtonClick,
-  ]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: CourseSummary }) => (
-      <CourseCard
-        item={item}
-        onPress={handleSelectCourse}
-        onLongPress={handleDeletePress}
-      />
-    ),
-    [handleSelectCourse, handleDeletePress],
-  );
+  };
 
   return (
     <View style={styles.container} testID='course-list-screen'>
-      {/* Top Search Bar Component */}
-      <View style={styles.topHeader}>
-        <CourseSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+      <View style={styles.header}>
+        <Pressable
+          testID='course-list-back'
+          accessibilityRole='button'
+          accessibilityLabel={COURSE_UI.BACK}
+          onPress={onBack}
+          style={styles.backButton}>
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/back.svg')}
+            width={24}
+            height={24}
+          />
+        </Pressable>
+        <Text style={styles.title}>{COURSE_UI.LIST_TITLE}</Text>
+        <View style={styles.backButton} />
       </View>
-
-      {/* Main Virtualized List */}
+      {visibleCourses.length > 0 && (
+        <View style={styles.toolbar}>
+          <Pressable
+            testID='toggle-course-edit'
+            accessibilityRole='button'
+            accessibilityState={{ selected: editing }}
+            style={styles.editButton}
+            onPress={() => setEditing((value) => !value)}>
+            <Text style={styles.editText}>
+              {editing ? COURSE_UI.DONE : COURSE_UI.EDIT}
+            </Text>
+          </Pressable>
+        </View>
+      )}
       <FlatList
-        data={filteredCourses}
+        data={visibleCourses}
         keyExtractor={(item) => item.courseId}
-        renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.list, safeAreaStyles.list]}
+        scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={renderEmpty}
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            {editing && (
+              <Pressable
+                testID={`delete-course-${item.courseId}`}
+                accessibilityRole='button'
+                accessibilityLabel={`${item.title} ${COURSE_UI.DELETE}`}
+                style={styles.deleteButton}
+                onPress={() => openDelete(item)}>
+                <FigmaAsset
+                  source={require('../../assets/images/figma-course/delete.svg')}
+                  width={13.5}
+                  height={14.5}
+                />
+              </Pressable>
+            )}
+            <View style={editing ? styles.shiftedCard : styles.cardWrapper}>
+              <CourseCard
+                item={item}
+                onPress={editing ? undefined : onSelectCourse}
+                onLongPress={openDelete}
+              />
+            </View>
+          </View>
+        )}
       />
-
-      {/* Course Delete Confirm Bottom Sheet Modal */}
       <CourseDeleteModal
-        visible={!!courseToDelete}
-        courseTitle={courseToDelete?.title}
-        onClose={() => setCourseToDelete(null)}
+        visible={Boolean(courseToDelete)}
+        course={courseToDelete}
+        pending={deleteCourseMutation.isPending}
+        errorMessage={deleteError}
+        onClose={() => {
+          if (!deleteCourseMutation.isPending) setCourseToDelete(null);
+        }}
         onConfirmDelete={handleConfirmDelete}
       />
     </View>
@@ -258,123 +228,89 @@ export function CourseListScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.softMint, // #F5FAF8
-  },
-  topHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: palette.softMint,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 76,
-  },
-  headerSection: {
-    marginBottom: 16,
-  },
-  compactCtaCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 12,
-    padding: 12,
+  container: { flex: 1, backgroundColor: palette.white, overflow: 'hidden' },
+  header: {
+    height: 61,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  compactCtaLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  compactCtaTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  compactCtaBtn: {
-    backgroundColor: palette.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  compactCtaBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  centerContainer: {
-    flex: 1,
-    paddingVertical: 32,
+  backButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: palette.subText,
-  },
-  errorText: {
-    fontSize: 15,
-    color: palette.red500,
-    marginBottom: 16,
+  title: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '600',
+    color: palette.deepNavy,
+    letterSpacing: -1,
     textAlign: 'center',
   },
-  retryButton: {
-    backgroundColor: palette.primary,
+  toolbar: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingTop: 2,
+    paddingBottom: 20,
+    alignItems: 'flex-end',
   },
-  retryButtonText: {
-    color: palette.white,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  emptyStateContainer: {
-    flex: 1,
-    paddingVertical: 32,
+  editButton: {
+    height: 36,
+    minWidth: 56,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.gray300,
+    backgroundColor: palette.gray100,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  editText: { fontSize: 16, fontWeight: '500', color: palette.deepNavy },
+  list: { flexGrow: 1, paddingHorizontal: 20 },
+  row: {
+    position: 'relative',
+    marginBottom: 16,
+    minHeight: 107,
+    justifyContent: 'center',
+  },
+  cardWrapper: { width: '100%' },
+  shiftedCard: { width: '100%', transform: [{ translateX: 60 }] },
+  deleteButton: {
+    position: 'absolute',
+    left: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: palette.red500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
     gap: 16,
   },
-  illustrationCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: palette.lightTeal,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyEmoji: {
-    fontSize: 32,
-  },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     color: palette.deepNavy,
     textAlign: 'center',
   },
-  emptySubTitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: palette.subText,
+  body: {
+    fontSize: 16,
+    color: palette.gray600,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
-  emptyCtaButton: {
+  error: { fontSize: 16, color: palette.red500, textAlign: 'center' },
+  createButton: {
     backgroundColor: palette.primary,
+    borderRadius: 16,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 16,
   },
-  emptyCtaButtonText: {
-    color: palette.white,
-    fontWeight: '600',
-    fontSize: 15,
-  },
+  createText: { fontSize: 18, fontWeight: '500', color: palette.white },
 });

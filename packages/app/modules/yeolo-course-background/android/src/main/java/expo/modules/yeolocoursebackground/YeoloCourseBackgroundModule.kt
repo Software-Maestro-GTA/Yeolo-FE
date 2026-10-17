@@ -23,15 +23,7 @@ class YeoloCourseBackgroundModule : Module() {
         CourseBackgroundService.begin(context, id, title, message, channel, { error ->
           if (error == null) {
             currentJobId = id
-            // Notification permission is optional for foreground execution. Ask once, without delaying or canceling the request.
-            val preferences = context.getSharedPreferences("yeolo-course-background", android.content.Context.MODE_PRIVATE)
-            if (android.os.Build.VERSION.SDK_INT >= 33 && !preferences.getBoolean("notificationAsked", false)) {
-              appContext.permissions?.let { permissions ->
-                preferences.edit().putBoolean("notificationAsked", true).apply()
-                try { permissions.askForPermissions({}, android.Manifest.permission.POST_NOTIFICATIONS) }
-                catch (_: Throwable) { /* The service remains eligible if notification permission is denied. */ }
-              }
-            }
+            // Foreground execution does not require notification permission; keep the service without prompting.
             promise.resolve("foreground-service")
           }
           else { currentJobId = null; promise.reject("ERR_COURSE_BACKGROUND_START", "Could not start background course generation.", error) }

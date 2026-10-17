@@ -1,15 +1,27 @@
 /**
  * @file CourseMiniMapView.tsx
- * @description Native map view component displaying course itinerary stops with pins and route polylines.
+ * @description Displays numbered place markers without connecting lines, clips a stable native map viewport while preserving camera position during scrolling.
  */
+import { Text } from '../common/Typography';
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  View,
+  StyleSheet,
+  type LayoutChangeEvent,
+} from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import type { MapCoordinate, MapRegion } from '@yeolo/common';
 import { isValidCoordinate } from '@yeolo/common';
-import { palette, hexToRgba } from '../../theme/colors';
+import { palette } from '../../theme/colors';
 import { APP_CONFIG } from '../../constants/config';
+import { COURSE_UI } from '../../constants/courseUiStrings';
+
+export const COURSE_MAP_EXPANDED_HEIGHT = 168;
+export const COURSE_MAP_COMPACT_HEIGHT = 128;
 
 /** Freezes static marker content only after its first layout has been captured. */
 const CourseMapMarker = React.memo(function CourseMapMarker({
@@ -47,7 +59,6 @@ const CourseMapMarker = React.memo(function CourseMapMarker({
             <Text style={styles.markerNumberText}>{index + 1}</Text>
           </View>
         </View>
-        <View style={styles.markerTail} />
       </View>
     </Marker>
   );
@@ -59,6 +70,9 @@ export interface CourseMiniMapViewProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
   interactive?: boolean;
+  compact?: boolean;
+  /** Read-only scroll-driven height; overrides the standalone compact animation. */
+  viewportHeight?: Animated.Value | Animated.AnimatedInterpolation<number>;
 }
 
 interface MiniMapState {
@@ -70,10 +84,69 @@ export class CourseMiniMapView extends React.PureComponent<
   MiniMapState
 > {
   private mapRef = React.createRef<MapView>();
+  private isMapReady = false;
+  private mapSize?: { width: number; height: number };
+  private mapHeight: Animated.Value;
+  private animatedSize: { height: Animated.Value };
+  private lastFitSignature?: string;
+  private mounted = false;
+  private reduceMotion = false;
+  private motionSubscription?: ReturnType<
+    typeof AccessibilityInfo.addEventListener
+  >;
 
   constructor(props: CourseMiniMapViewProps) {
     super(props);
     this.state = { hasError: false };
+    this.mapHeight = new Animated.Value(this.targetHeight);
+    this.animatedSize = { height: this.mapHeight };
+  }
+
+  private get targetHeight() {
+    return this.props.compact
+      ? COURSE_MAP_COMPACT_HEIGHT
+      : COURSE_MAP_EXPANDED_HEIGHT;
+  }
+
+  componentDidMount() {
+    this.mounted = true;
+    this.motionSubscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      this.updateReduceMotion,
+    );
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then(this.updateReduceMotion)
+      .catch(() => {});
+  }
+
+  componentWillUnmount() {
+    this.mounted = false;
+    this.mapHeight.stopAnimation();
+    this.motionSubscription?.remove();
+  }
+
+  private updateReduceMotion = (enabled: boolean) => {
+    if (!this.mounted) return;
+    this.reduceMotion = enabled;
+    if (enabled) {
+      this.mapHeight.stopAnimation();
+      this.mapHeight.setValue(this.targetHeight);
+    }
+  };
+
+  private resizeMap() {
+    this.mapHeight.stopAnimation();
+    if (this.reduceMotion) {
+      this.mapHeight.setValue(this.targetHeight);
+      return;
+    }
+    Animated.timing(this.mapHeight, {
+      toValue: this.targetHeight,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+      isInteraction: false,
+    }).start();
   }
 
   static getDerivedStateFromError(): MiniMapState {
@@ -88,45 +161,105 @@ export class CourseMiniMapView extends React.PureComponent<
   }
 
   componentDidUpdate(prevProps: CourseMiniMapViewProps) {
+    if (!this.props.viewportHeight && this.props.compact !== prevProps.compact)
+      this.resizeMap();
+    const previous = (prevProps.stopCoordinates || []).filter(
+      isValidCoordinate,
+    );
+    const next = (this.props.stopCoordinates || []).filter(isValidCoordinate);
+    const coordinatesChanged =
+      previous.length !== next.length ||
+      next.some(
+        (stop, index) =>
+          stop.latitude !== previous[index]?.latitude ||
+          stop.longitude !== previous[index]?.longitude,
+      );
+    if (coordinatesChanged) {
+      this.fitStops(true);
+    }
+  }
+
+  private handleMapReady = () => {
+    this.isMapReady = true;
+    this.fitStops(false);
+  };
+
+  private handleMapLayout = ({
+    nativeEvent: { layout },
+  }: LayoutChangeEvent) => {
+    const { width, height } = layout;
     if (
-      this.mapRef.current &&
-      this.props.mapRegion &&
-      this.props.mapRegion !== prevProps.mapRegion
-    ) {
-      const { latitude, longitude, latitudeDelta, longitudeDelta } =
-        this.props.mapRegion;
-      if (isValidCoordinate({ latitude, longitude })) {
-        try {
-          if (typeof this.mapRef.current.animateToRegion === 'function') {
-            this.mapRef.current.animateToRegion(
-              {
-                latitude,
-                longitude,
-                latitudeDelta: latitudeDelta || 0.05,
-                longitudeDelta: longitudeDelta || 0.05,
-              },
-              500,
-            );
-          }
-        } catch (_) {
-          // ignore animation error
-        }
-      }
+      width <= 0 ||
+      height <= 0 ||
+      (this.mapSize?.width === width && this.mapSize?.height === height)
+    )
+      return;
+    const resized = Boolean(this.mapSize);
+    this.mapSize = { width, height };
+    this.fitStops(resized);
+  };
+
+  /** Wait for native readiness and layout; fitting screen pixels avoids an overly wide fixed degree span. */
+  private fitStops(animated: boolean) {
+    const map = this.mapRef.current;
+    if (!map || !this.isMapReady || !this.mapSize) return;
+    const coordinates = (this.props.stopCoordinates || [])
+      .filter(isValidCoordinate)
+      .map(({ latitude, longitude }) => ({ latitude, longitude }));
+    const first = coordinates[0];
+    if (!first) return;
+    const signature = JSON.stringify([this.mapSize, coordinates]);
+    if (signature === this.lastFitSignature) return;
+    this.lastFitSignature = signature;
+    const animateCamera = animated && !this.reduceMotion;
+
+    // A zero-area bounds can overzoom. Keep coincident places at their actual location with street context.
+    const hasDistinctLocations = coordinates.some(
+      (coordinate) =>
+        coordinate.latitude !== first.latitude ||
+        coordinate.longitude !== first.longitude,
+    );
+    if (hasDistinctLocations) {
+      map.fitToCoordinates?.(coordinates, {
+        // The upper strip is clipped in compact mode; keep all pins in the visible area.
+        edgePadding: {
+          top: 32 + COURSE_MAP_EXPANDED_HEIGHT - COURSE_MAP_COMPACT_HEIGHT,
+          right: 24,
+          bottom: 24,
+          left: 24,
+        },
+        animated: animateCamera,
+      });
+    } else {
+      const latitudeDelta = 0.002;
+      map.animateToRegion?.(
+        {
+          ...first,
+          latitudeDelta,
+          longitudeDelta:
+            latitudeDelta * (this.mapSize.width / this.mapSize.height),
+        },
+        animateCamera ? 350 : 0,
+      );
     }
   }
 
   render() {
+    // Re-read the interpolation when the parent measures the intro or changes layout.
+    const viewportStyle = this.props.viewportHeight
+      ? { height: this.props.viewportHeight }
+      : this.animatedSize;
     if (this.state.hasError) {
       return (
         <View style={styles.miniMapSection}>
-          <View style={styles.miniMapCard} testID='mini-map-card'>
+          <Animated.View
+            style={[styles.miniMapCard, viewportStyle]}
+            testID='mini-map-card'>
             <View style={styles.fallbackContainer}>
               <Ionicons name='map-outline' size={24} color={palette.subText} />
-              <Text style={styles.fallbackText}>
-                지도를 불러올 수 없습니다.
-              </Text>
+              <Text style={styles.fallbackText}>{COURSE_UI.MAP_ERROR}</Text>
             </View>
-          </View>
+          </Animated.View>
         </View>
       );
     }
@@ -160,14 +293,17 @@ export class CourseMiniMapView extends React.PureComponent<
         onTouchStart={interactive ? onInteractionStart : undefined}
         onTouchEnd={interactive ? onInteractionEnd : undefined}
         onTouchCancel={interactive ? onInteractionEnd : undefined}>
-        <View style={styles.miniMapCard} testID='mini-map-card'>
+        <Animated.View
+          style={[styles.miniMapCard, viewportStyle]}
+          testID='mini-map-card'>
           <MapView
             ref={this.mapRef}
             provider={PROVIDER_GOOGLE}
             testID='in-app-map-view'
             style={styles.mapView}
             initialRegion={safeRegion}
-            region={safeRegion}
+            onMapReady={this.handleMapReady}
+            onLayout={this.handleMapLayout}
             scrollEnabled={interactive}
             zoomEnabled={interactive}
             rotateEnabled={interactive}
@@ -183,18 +319,8 @@ export class CourseMiniMapView extends React.PureComponent<
                 index={idx}
               />
             ))}
-            {validCoordinates.length > 1 && (
-              <Polyline
-                coordinates={validCoordinates.map((s) => ({
-                  latitude: s.latitude,
-                  longitude: s.longitude,
-                }))}
-                strokeColor={palette.primary}
-                strokeWidth={3}
-              />
-            )}
           </MapView>
-        </View>
+        </Animated.View>
       </View>
     );
   }
@@ -203,23 +329,24 @@ export class CourseMiniMapView extends React.PureComponent<
 const styles = StyleSheet.create({
   miniMapSection: {
     width: '100%',
-    marginVertical: 4,
+    marginVertical: 0,
   },
   miniMapCard: {
-    height: 192,
     borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: hexToRgba(palette.gray200, 0.5),
+
     backgroundColor: palette.softMint,
     shadowColor: palette.deepNavy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
-    elevation: 2,
   },
   mapView: {
-    flex: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: COURSE_MAP_EXPANDED_HEIGHT,
   },
   customMarkerPin: {
     alignItems: 'center',
@@ -231,10 +358,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   markerHead: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: palette.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: palette.darkBlue,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -242,28 +369,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: palette.white,
+    backgroundColor: palette.darkBlue,
     justifyContent: 'center',
     alignItems: 'center',
   },
   markerNumberText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: palette.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    color: palette.white,
     textAlign: 'center',
     includeFontPadding: false,
-  },
-  markerTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 6,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: palette.primary,
-    alignSelf: 'center',
-    marginTop: -1,
   },
   fallbackContainer: {
     flex: 1,

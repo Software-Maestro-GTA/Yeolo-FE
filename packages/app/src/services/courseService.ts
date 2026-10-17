@@ -1,9 +1,8 @@
 /**
  * @file courseService.ts
- * @description Course detail location coordinate transformation service using server provided coordinates.
+ * @description Course map data preparation preserving verified server coordinates, including coincident venues.
  */
 import {
-  getAdjustedCoordinates,
   calculateRegion,
   isValidCoordinate,
   logger,
@@ -28,10 +27,10 @@ export function getDestinationImageUrl(country: string, city: string): string {
 /**
  * Process itinerary day stops using server-provided coordinates to produce map data.
  */
-export async function processCourseStopsMapData(
+export function processCourseStopsMapData(
   stops: ItineraryStop[] = [],
   city: string = '',
-): Promise<ProcessedCourseMapData> {
+): ProcessedCourseMapData {
   if (!stops || stops.length === 0) {
     const defaultRegion = calculateRegion([]);
     return {
@@ -54,7 +53,7 @@ export async function processCourseStopsMapData(
       sequence: stop.sequence ?? index + 1,
     }));
 
-  const coordinates = getAdjustedCoordinates(rawStops);
+  const coordinates = rawStops;
   const region = calculateRegion(coordinates);
 
   logger.info(

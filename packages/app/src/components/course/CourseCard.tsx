@@ -1,158 +1,161 @@
 /**
  * @file CourseCard.tsx
- * @description Course card component displaying photo area, title, itinerary summary, and tags for CourseListScreen matching UI v2 design system.
+ * @description UI v3의 가로형 최근 코스 카드에 실제 목적지·날짜·사진과 방문지 또는 태그를 표시합니다.
  */
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ImageBackground,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import type { CourseSummary } from '@yeolo/common';
 import { getDestinationImageUrl } from '../../services';
-import { palette, hexToRgba } from '../../theme/colors';
+import { palette } from '../../theme/colors';
+import { formatCourseDateRange } from '../../utils/courseDateRange';
+import { FigmaAsset } from '../common/FigmaAsset';
+import { CachedImage } from '../common/CachedImage';
+import { Text } from '../common/Typography';
 
 export interface CourseCardProps {
   item: CourseSummary;
   onPress?: (courseId: string) => void;
   onLongPress?: (course: CourseSummary) => void;
+  placeNames?: readonly string[];
+  testID?: string;
+  selected?: boolean;
 }
 
+/** Summary-only cards use their real tags; callers with a detail response may provide real place names. */
 export const CourseCard: React.FC<CourseCardProps> = ({
   item,
   onPress,
   onLongPress,
+  placeNames,
+  testID,
+  selected,
 }) => {
   const imageUrl =
     item.coverImageUrl ||
     getDestinationImageUrl(item.destinationCountry, item.destinationCity);
-  const summaryText = item.recommendationReason || '';
-  const displayTags = item.tags ? item.tags.slice(0, 3) : [];
-
+  const places = placeNames?.filter(Boolean).slice(0, 2) ?? [];
+  const chips = places.length
+    ? places
+    : (item.tags ?? []).slice(0, 2).map((tag) => `#${tag.replace(/^#/, '')}`);
   return (
     <TouchableOpacity
-      style={styles.heroRouteCard}
+      style={[
+        styles.card,
+        selected !== undefined && styles.selectable,
+        selected && styles.selected,
+      ]}
       activeOpacity={0.9}
+      accessibilityRole={selected === undefined ? 'button' : 'radio'}
+      accessibilityState={
+        selected === undefined ? undefined : { checked: selected }
+      }
+      accessibilityLabel={item.title}
       onPress={() => onPress?.(item.courseId)}
       onLongPress={() => onLongPress?.(item)}
-      testID={`course-card-${item.courseId}`}>
-      {/* Photo Area Header */}
-      <ImageBackground
-        source={{ uri: imageUrl }}
-        style={styles.photoArea}
-        resizeMode='cover'>
-        <View style={styles.photoDimOverlay} />
-
-        {/* Card Title & Meta Overlay */}
-        <View style={styles.photoContentOverlay}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.title}
+      testID={testID ?? `course-card-${item.courseId}`}>
+      <View style={styles.details}>
+        <View style={styles.destination}>
+          <Text style={styles.destinationText} numberOfLines={1}>
+            {item.destinationCountry}
           </Text>
-          <Text style={styles.cardMeta} numberOfLines={1}>
-            {item.destinationCountry} {item.destinationCity}
-            {item.startDate ? ` • ${item.startDate}` : ''}
-            {item.totalDays ? ` • ${item.totalDays}일` : ''}
+          <View style={styles.divider} />
+          <Text style={styles.destinationText} numberOfLines={1}>
+            {item.destinationCity}
           </Text>
         </View>
-      </ImageBackground>
-
-      {/* Hero Card Body */}
-      <View style={styles.heroBody}>
-        {summaryText ? (
-          <View style={styles.locationRow}>
-            <Ionicons
-              name='location-outline'
-              size={14}
-              color={palette.subText}
-            />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {summaryText}
-            </Text>
-          </View>
-        ) : null}
-
-        {displayTags.length > 0 && (
-          <View style={styles.tagsRow}>
-            {displayTags.map((tag, idx) => (
-              <View key={`${item.courseId}-tag-${idx}`} style={styles.tagChip}>
-                <Text style={styles.tagText}>#{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        <Text style={styles.date} numberOfLines={1}>
+          {formatCourseDateRange(item)}
+        </Text>
+        <View style={styles.chips}>
+          {chips.map((chip, index) => (
+            <View key={`${index}-${chip}`} style={styles.chip}>
+              {places.length > 0 && (
+                <FigmaAsset
+                  source={require('../../../assets/images/figma-course/place-pin.svg')}
+                  width={14}
+                  height={14}
+                />
+              )}
+              <Text style={styles.chipText} numberOfLines={1}>
+                {chip}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
+      <CachedImage
+        source={{ uri: imageUrl }}
+        style={styles.thumbnail}
+        contentFit='cover'
+      />
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  heroRouteCard: {
+  selectable: { borderWidth: 2, borderColor: 'transparent' },
+  selected: { borderColor: palette.primary },
+  card: {
+    width: '100%',
+    minHeight: 107,
     backgroundColor: palette.white,
     borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  photoArea: {
-    height: 160,
-    justifyContent: 'flex-end',
-    padding: 12,
-  },
-  photoDimOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: hexToRgba(palette.deepNavy, 0.35),
-  },
-  photoContentOverlay: {
-    gap: 2,
-    zIndex: 2,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  cardMeta: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: hexToRgba(palette.white, 0.9),
-  },
-  heroBody: {
-    height: 85,
-    padding: 16,
-    justifyContent: 'space-between',
-  },
-  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    paddingVertical: 12,
+    paddingLeft: 16,
+    paddingRight: 12,
+    gap: 12,
+    shadowColor: palette.black,
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  locationText: {
-    flex: 1,
-    fontSize: 13,
+  details: { flex: 1, minWidth: 0, alignSelf: 'stretch', paddingTop: 4 },
+  destination: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  destinationText: {
+    fontSize: 16,
     fontWeight: '500',
-    color: palette.subText,
+    color: palette.deepNavy,
+    letterSpacing: -1,
+    flexShrink: 1,
   },
-  tagsRow: {
+  divider: { width: 2, height: 16, backgroundColor: palette.gray200 },
+  date: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.gray600,
+    marginTop: 4,
+    letterSpacing: -0.4,
+  },
+  chips: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginTop: 12,
+    overflow: 'hidden',
   },
-  tagChip: {
-    backgroundColor: palette.lightTeal,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 99,
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 1,
+    backgroundColor: palette.gray100,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.primary,
+  chipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: palette.gray600,
+    flexShrink: 1,
+  },
+  thumbnail: {
+    width: 120,
+    height: 83,
+    borderRadius: 12,
+    backgroundColor: palette.gray100,
   },
 });

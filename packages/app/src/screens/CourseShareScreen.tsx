@@ -1,21 +1,28 @@
 /**
  * @file CourseShareScreen.tsx
- * @description Screen component for viewing shared travel itineraries, supporting authenticated course saving and guest login prompt bottom sheet (API-SHARE-2, API-SHARE-3).
+ * @description UI v3의 색상·타이포·카드와 모달 규칙으로 공유 코스 미리보기 및 저장 시 로그인을 제공합니다.
  */
 import React, { useContext, useEffect, useState } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
-  Image,
   Alert,
   ScrollView,
   Platform,
+  Modal,
+  Animated,
+  Pressable,
 } from 'react-native';
+import { Text } from '../components/common/Typography';
+import { OnboardingButton } from '../components/onboarding/OnboardingButton';
+import { CachedImage } from '../components/common/CachedImage';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { GoogleLogoIcon } from '../components/GoogleLogoIcon';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FigmaAsset } from '../components/common/FigmaAsset';
+import { useSheetEntrance } from '../hooks/useSheetEntrance';
+import { useBackground } from '../context/BackgroundContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context';
 import { palette, hexToRgba } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
@@ -25,7 +32,6 @@ import {
   useAcceptShareLinkMutation,
 } from '../hooks/queries';
 import {
-  getDestinationImageUrl,
   signInWithGoogle,
   signInWithApple,
   signOutGoogle,
@@ -49,10 +55,31 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   onNavigateToLogin,
 }) => {
   useGA4ScreenTracking('CourseShareScreen');
+  const insets = useSafeAreaInsets();
+  const safeAreaStyles = StyleSheet.create({
+    header: { paddingTop: insets.top },
+    content: { paddingBottom: insets.bottom + 16 },
+    loginActions: { paddingBottom: Math.max(insets.bottom, 20) + 12 },
+  });
   const { trackButtonClick } = useGA4ButtonClick();
+  const { setBackground, resetBackground } = useBackground();
+  useEffect(() => {
+    setBackground({
+      noTopEdges: true,
+      backgroundColor: palette.white,
+    });
+    return resetBackground;
+  }, [setBackground, resetBackground]);
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
 
   const auth = useContext(AuthContext);
   const isAuthenticated = auth?.isAuthenticated;
+  useEffect(() => {
+    if (isAuthenticated) setShowLogin(false);
+  }, [isAuthenticated]);
+
+  const loginEntrance = useSheetEntrance(showLogin && !isAuthenticated);
 
   const [isLocalLoggingIn, setIsLocalLoggingIn] = useState<boolean>(false);
   const isLoggingIn = auth?.isLoading || isLocalLoggingIn;
@@ -114,21 +141,18 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   const activeStartDate = course?.startDate || '';
   const activeDuration = course?.totalDays ? `${course.totalDays}일` : '';
 
-  const coverImage = getDestinationImageUrl(
-    course?.destinationCountry || '',
-    course?.destinationCity || '',
-  );
+  const coverImage = course?.coverImageUrl?.trim() || '';
 
   const handleSaveCourse = () => {
     trackButtonClick('btn_save_shared_course', 'Save Shared Course Click');
+    if (!isAuthenticated) {
+      setShowLogin(true);
+      return;
+    }
 
     if (shareToken) {
       acceptShareLinkMutation.mutate(shareToken, {
         onSuccess: (res) => {
-          Alert.alert(
-            UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
-            UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
-          );
           onSaveSuccess?.(res.courseId || courseId);
         },
         onError: (err: any) => {
@@ -156,10 +180,6 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
       if (onSaveSuccess) {
         onSaveSuccess(courseId);
       }
-      Alert.alert(
-        UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_TITLE,
-        UI_STRINGS.COURSE_SHARE.SAVE_SUCCESS_MESSAGE,
-      );
     }
   };
 
@@ -216,38 +236,50 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
 
   if (isLoadingShare) {
     return (
-      <SafeAreaView style={[styles.container, styles.centerContainer]}>
+      <View style={[styles.container, styles.centerContainer]}>
         <Text style={styles.loadingText}>
           {UI_STRINGS.COURSE_SHARE.LOADING_TEXT}
         </Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      testID='course-share-screen'
-      edges={['top', 'bottom']}>
-      {/* Background Glow */}
-      <View style={styles.bgGlow} />
-
+    <View style={styles.container} testID='course-share-screen'>
+      <View style={safeAreaStyles.header} testID='share-safe-header'>
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={UI_STRINGS.COMMON.BACK}
+            style={styles.backButton}
+            onPress={handleDecline}>
+            <FigmaAsset
+              source={require('../../assets/images/figma-course/back.svg')}
+              width={24}
+              height={24}
+            />
+          </Pressable>
+          <Text style={styles.headerTitle}>
+            {UI_STRINGS.COURSE_SHARE.HEADER_TITLE}
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      </View>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, safeAreaStyles.content]}
         showsVerticalScrollIndicator={false}>
-        {/* Centered Main Content */}
-        <View style={styles.centeredContent}>
-          {/* Header Title */}
-          <View style={styles.headerBox}>
-            <Text style={styles.headerTitle}>
-              {UI_STRINGS.COURSE_SHARE.HEADER_TITLE}
+        <View style={styles.preview}>
+          <View style={styles.intro}>
+            <Text style={styles.introTitle}>
+              {UI_STRINGS.COURSE_SHARE.PREVIEW_TITLE}
+            </Text>
+            <Text style={styles.introDescription}>
+              {UI_STRINGS.COURSE_SHARE.PREVIEW_DESCRIPTION}
             </Text>
           </View>
-
-          {/* Inviter Card */}
           <View style={styles.inviterCard} testID='inviter-card'>
             {activeInviterAvatar ? (
-              <Image
+              <CachedImage
                 source={{ uri: activeInviterAvatar }}
                 style={styles.inviterAvatar}
               />
@@ -255,408 +287,378 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
               <View
                 style={[styles.inviterAvatar, styles.defaultAvatarPlaceholder]}
                 testID='default-avatar-placeholder'>
-                <Ionicons name='person' size={32} color={palette.gray400} />
+                <Ionicons name='person' size={20} color={palette.mutedText} />
               </View>
             )}
-            <Text style={styles.inviterText} numberOfLines={1}>
+            <Text style={styles.inviterText} numberOfLines={2}>
               {activeInviterName
                 ? `${activeInviterName}${UI_STRINGS.COURSE_SHARE.INVITER_SHARED_SUFFIX}`
                 : UI_STRINGS.COURSE_SHARE.DEFAULT_INVITER_SHARED}
             </Text>
           </View>
-
-          {/* Course Preview Card */}
           <View style={styles.courseCard} testID='course-card'>
-            <Image source={{ uri: coverImage }} style={styles.coverImage} />
-            <View style={styles.cardBody}>
-              {activeCourseTitle ? (
-                <Text style={styles.courseTitleText} numberOfLines={1}>
-                  {activeCourseTitle}
-                </Text>
-              ) : null}
-              {activeDestination ? (
-                <Text style={styles.metaLocationText}>{activeDestination}</Text>
-              ) : null}
-              {(activeStartDate || activeDuration) && (
-                <>
-                  <View style={styles.cardDivider} />
-                  <View style={styles.dateRow}>
-                    <Ionicons
-                      name='calendar-outline'
-                      size={14}
-                      color={palette.subText}
-                    />
-                    <Text style={styles.dateText}>
-                      {[activeStartDate, activeDuration]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </View>
-                </>
+            <View style={styles.coverImage} testID='share-cover'>
+              {!!coverImage && failedCover !== coverImage && (
+                <CachedImage
+                  testID='share-cover-image'
+                  source={{ uri: coverImage }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit='cover'
+                  onError={() => setFailedCover(coverImage)}
+                />
               )}
+              <LinearGradient
+                colors={[
+                  hexToRgba(palette.black, 0),
+                  hexToRgba(palette.black, 0.64),
+                ]}
+                locations={[0.2, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+              {activeDuration ? (
+                <View style={styles.durationPill}>
+                  <Text style={styles.durationText}>{activeDuration}</Text>
+                </View>
+              ) : null}
+              <Text style={styles.courseTitleText} numberOfLines={3}>
+                {activeCourseTitle}
+              </Text>
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.metaLocationText}>{activeDestination}</Text>
+              <Text style={styles.dateText}>
+                {[activeStartDate, activeDuration].filter(Boolean).join(' · ')}
+              </Text>
             </View>
           </View>
         </View>
-
-        {/* Bottom Actions */}
         <View style={styles.bottomActions}>
+          {!isAuthenticated && (
+            <Text style={styles.saveHint}>
+              {UI_STRINGS.COURSE_SHARE.GUEST_SAVE_HINT}
+            </Text>
+          )}
           <TouchableOpacity
             testID='btn-save-course'
-            style={styles.primaryButton}
+            accessibilityRole='button'
+            disabled={acceptShareLinkMutation.isPending || !shareData}
+            accessibilityState={{
+              disabled: acceptShareLinkMutation.isPending || !shareData,
+              busy: acceptShareLinkMutation.isPending,
+            }}
+            style={[
+              styles.primaryButton,
+              (acceptShareLinkMutation.isPending || !shareData) &&
+                styles.disabledButton,
+            ]}
             activeOpacity={0.85}
             onPress={handleSaveCourse}>
             <Text style={styles.primaryButtonText}>
               {UI_STRINGS.COURSE_SHARE.SAVE_BUTTON}
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
+          <OnboardingButton
             testID='btn-decline-course'
-            style={styles.secondaryButton}
-            activeOpacity={0.7}
-            onPress={handleDecline}>
-            <Text style={styles.secondaryButtonText}>
-              {UI_STRINGS.COURSE_SHARE.DECLINE_BUTTON}
-            </Text>
-          </TouchableOpacity>
+            label={UI_STRINGS.COURSE_SHARE.DECLINE_BUTTON}
+            secondary
+            onPress={handleDecline}
+          />
         </View>
       </ScrollView>
-
-      {/* Guest Login Required Bottom Sheet & Dim Overlay */}
-      {!isAuthenticated && (
-        <>
-          <View style={styles.dimOverlay} testID='dim-overlay' />
-          <View style={styles.bottomSheet} testID='login-bottom-sheet'>
-            <View style={styles.handleBar} />
-
-            <View style={styles.bannerCard}>
-              <View style={styles.iconCircle}>
-                <Ionicons
-                  name='lock-closed'
-                  size={20}
-                  color={palette.primary}
-                />
+      <Modal
+        visible={showLogin && !isAuthenticated}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setShowLogin(false)}>
+        <View style={styles.loginOverlay}>
+          <Pressable
+            testID='dim-overlay'
+            accessible={false}
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowLogin(false)}
+          />
+          <Animated.View
+            style={[styles.loginSheet, loginEntrance]}
+            testID='login-bottom-sheet'
+            accessibilityViewIsModal>
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+              <View style={styles.loginHero}>
+                <Text style={styles.bannerTitle}>
+                  {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_TITLE}
+                </Text>
+                <Text style={styles.bannerSubDesc}>
+                  {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_DESC}
+                </Text>
+                <View style={styles.loginIllustration} accessible={false} />
               </View>
-              <Text style={styles.bannerTitle}>
-                {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_TITLE}
-              </Text>
-              <Text style={styles.bannerSubDesc}>
-                {UI_STRINGS.COURSE_SHARE.LOGIN_REQUIRED_DESC}
-              </Text>
-            </View>
-
-            <View style={styles.authActions}>
-              {/* Google Login Button */}
-              <TouchableOpacity
-                testID='btn-google-login'
-                style={[
-                  styles.googleLoginButton,
-                  isLoggingIn && styles.disabledButton,
-                ]}
-                activeOpacity={0.8}
-                disabled={isLoggingIn}
-                onPress={() => handleSocialLogin('google')}>
-                <View style={styles.buttonContent}>
-                  <GoogleLogoIcon size={20} style={styles.logoIcon} />
+              <Pressable
+                testID='close-share-login'
+                accessibilityRole='button'
+                accessibilityLabel={UI_STRINGS.COMMON.CLOSE}
+                style={styles.loginClose}
+                onPress={() => setShowLogin(false)}>
+                <Ionicons name='close' size={24} color={palette.white} />
+              </Pressable>
+              <View style={[styles.authActions, safeAreaStyles.loginActions]}>
+                <TouchableOpacity
+                  accessibilityRole='button'
+                  testID='btn-google-login'
+                  style={[
+                    styles.googleLoginButton,
+                    isLoggingIn && styles.disabledButton,
+                  ]}
+                  disabled={isLoggingIn}
+                  onPress={() => handleSocialLogin('google')}>
+                  <CachedImage
+                    source={require('../../assets/figma/share/google.png')}
+                    style={styles.logoImage}
+                    contentFit='contain'
+                  />
                   <Text style={styles.googleButtonText}>
                     {UI_STRINGS.AUTH.GOOGLE_BUTTON_TEXT}
                   </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Apple Login Button */}
-              {isAppleAvailable && (
-                <TouchableOpacity
-                  testID='btn-apple-login'
-                  style={[
-                    styles.appleLoginButton,
-                    isLoggingIn && styles.disabledButton,
-                  ]}
-                  activeOpacity={0.8}
-                  disabled={isLoggingIn}
-                  onPress={() => handleSocialLogin('apple')}>
-                  <View style={styles.buttonContent}>
-                    <Ionicons
-                      name='logo-apple'
-                      size={20}
-                      color={palette.white}
-                      style={styles.logoIcon}
+                </TouchableOpacity>
+                {isAppleAvailable && (
+                  <TouchableOpacity
+                    accessibilityRole='button'
+                    testID='btn-apple-login'
+                    style={[
+                      styles.appleLoginButton,
+                      isLoggingIn && styles.disabledButton,
+                    ]}
+                    disabled={isLoggingIn}
+                    onPress={() => handleSocialLogin('apple')}>
+                    <FigmaAsset
+                      source={require('../../assets/figma/share/apple.svg')}
+                      width={20}
+                      height={20}
                     />
                     <Text style={styles.appleButtonText}>
                       {UI_STRINGS.AUTH.APPLE_BUTTON_TEXT}
                     </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </>
-      )}
-    </SafeAreaView>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  centerContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: palette.subText,
-  },
-  bgGlow: {
-    position: 'absolute',
-    top: -80,
-    right: -40,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: hexToRgba(palette.lightTeal, 0.7),
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 44,
-    paddingBottom: 40,
-    flexGrow: 1,
-    justifyContent: 'space-between',
-  },
-  centeredContent: {
-    gap: 24,
-  },
-  headerBox: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  inviterCard: {
+  container: { flex: 1, backgroundColor: palette.white },
+  centerContainer: { justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 14, color: palette.subText },
+  header: {
+    height: 56,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderRadius: 20,
-    padding: 16,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  inviterAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: palette.lightTeal,
-  },
-  defaultAvatarPlaceholder: {
-    justifyContent: 'center',
+  backButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  inviterText: {
-    fontSize: 14,
+  headerSpacer: { width: 44 },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
     fontWeight: '600',
     color: palette.deepNavy,
-    flex: 1,
+    letterSpacing: -0.6,
   },
-  courseCard: {
-    backgroundColor: palette.white,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  coverImage: {
-    width: '100%',
-    height: 150,
-  },
-  cardBody: {
-    padding: 20,
-    gap: 8,
-  },
-  courseTitleText: {
-    fontSize: 18,
-    fontWeight: '700',
+  scrollContent: { paddingHorizontal: 20, paddingTop: 22, flexGrow: 1 },
+  preview: { gap: 16 },
+  intro: { gap: 10, marginBottom: 12 },
+  introTitle: {
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '600',
+    letterSpacing: -1,
     color: palette.deepNavy,
   },
-  metaLocationText: {
-    fontSize: 14,
-    fontWeight: '500',
+  introDescription: {
+    fontSize: 15,
+    lineHeight: 22,
     color: palette.subText,
+    letterSpacing: -0.6,
   },
-  cardDivider: {
-    height: 1,
-    backgroundColor: palette.gray200,
-    marginVertical: 4,
+  inviterCard: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  inviterAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: palette.gray100,
   },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  defaultAvatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  inviterText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: palette.subText,
+    letterSpacing: -0.5,
+  },
+  courseCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: palette.gray100,
+  },
+  coverImage: {
+    height: 200,
+    padding: 20,
+    justifyContent: 'flex-end',
+    backgroundColor: palette.accent,
+  },
+  courseTitleText: {
+    fontSize: 23,
+    lineHeight: 30,
+    fontWeight: '600',
+    color: palette.white,
+    letterSpacing: -0.8,
+  },
+  durationPill: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: palette.primary,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  durationText: {
+    color: palette.white,
+    fontWeight: '600',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  cardBody: { paddingHorizontal: 20, paddingVertical: 16, gap: 6 },
+  metaLocationText: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '500',
+    color: palette.deepNavy,
+    letterSpacing: -0.8,
   },
   dateText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: palette.mutedText,
+    fontSize: 14,
+    lineHeight: 20,
+    color: palette.subText,
+    letterSpacing: -0.4,
   },
-  bottomActions: {
-    width: '100%',
-    gap: 12,
-    marginTop: 32,
-    alignItems: 'center',
+  bottomActions: { paddingTop: 28, marginTop: 'auto', gap: 8 },
+  saveHint: {
+    textAlign: 'center',
+    color: palette.mutedText,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 4,
   },
   primaryButton: {
-    width: '100%',
-    height: 54,
-    backgroundColor: palette.primary,
+    minHeight: 62,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: palette.primary,
+    padding: 12,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '500',
+    letterSpacing: -0.6,
     color: palette.white,
   },
-  secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  loginOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: hexToRgba(palette.black, 0.55),
   },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: palette.mutedText,
-  },
-  dimOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: hexToRgba(palette.deepNavy, 0.55),
-  },
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  loginSheet: {
+    width: '100%',
+    maxHeight: '90%',
     backgroundColor: palette.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  loginHero: {
+    backgroundColor: palette.primary,
     paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 36,
-    gap: 20,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 10,
+    paddingTop: 44,
+    paddingBottom: 40,
+    minHeight: 284,
   },
-  handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: palette.gray400,
-    alignSelf: 'center',
-    marginBottom: 8,
+  loginIllustration: {
+    width: 160,
+    height: 130,
+    alignSelf: 'flex-end',
+    marginTop: 8,
   },
-  bannerCard: {
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: palette.lightTeal,
+  loginClose: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
   },
   bannerTitle: {
-    fontSize: 18,
+    fontSize: 26,
+    lineHeight: 34,
     fontWeight: '700',
-    color: palette.deepNavy,
+    color: palette.white,
+    letterSpacing: -1,
   },
   bannerSubDesc: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: palette.subText,
-    textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 22,
+    color: palette.white,
+    letterSpacing: -0.4,
+    marginTop: 10,
   },
   authActions: {
-    gap: 12,
-    width: '100%',
+    gap: 16,
+    padding: 20,
+    paddingTop: 28,
+    marginTop: -24,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    backgroundColor: palette.white,
   },
   googleLoginButton: {
-    width: '100%',
-    height: 56,
-    backgroundColor: palette.white,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: palette.lightTeal,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  appleLoginButton: {
-    width: '100%',
-    height: 56,
-    backgroundColor: palette.black,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: palette.black,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  buttonContent: {
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 120,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.gray300,
   },
-  logoIcon: {
-    marginRight: 10,
+  appleLoginButton: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 120,
+    backgroundColor: palette.black,
   },
+  logoImage: { width: 20, height: 20 },
   googleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
     color: palette.deepNavy,
-    letterSpacing: 0.3,
   },
-  appleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.white,
-    letterSpacing: 0.3,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
+  appleButtonText: { fontSize: 15, fontWeight: '500', color: palette.white },
+  disabledButton: { opacity: 0.6 },
 });

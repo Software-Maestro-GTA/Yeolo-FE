@@ -1,276 +1,251 @@
 /**
  * @file ItineraryTimelineItem.tsx
- * @description Timeline item card displaying itinerary stop details, AI tips, and transport info.
+ * @description UI v3 일정·교통 정보를 표시하고 Google Place ID로 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
  */
+import { Text } from '../common/Typography';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  Image,
+  Alert,
+  Linking,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { ItineraryStop, TransportType } from '@yeolo/common';
+import {
+  getPlaceCategoryLabel,
+  type ItineraryStop,
+  type ItineraryPlace,
+} from '@yeolo/common';
 import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';
+import { COURSE_UI } from '../../constants/courseUiStrings';
+import { FigmaAsset } from '../common/FigmaAsset';
 
 export interface ItineraryTimelineItemProps {
   stop: ItineraryStop;
+  nextPlace?: ItineraryPlace;
   isLast: boolean;
-  onPressPlace?: (stop: ItineraryStop) => void;
 }
 
+/** Displays one real itinerary stop and its onward journey, without fabricating arrival times or fees. */
 export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
   stop,
+  nextPlace,
   isLast,
-  onPressPlace,
 }) => {
-  const getCategoryIcon = (category?: string) => {
-    if (!category) return 'location-outline';
-    if (
-      category.includes('미술관') ||
-      category.includes('박물관') ||
-      category.includes('전시')
-    )
-      return 'easel-outline';
-    if (category.includes('카페') || category.includes('디저트'))
-      return 'cafe-outline';
-    if (
-      category.includes('해변') ||
-      category.includes('관광') ||
-      category.includes('공원')
-    )
-      return 'camera-outline';
-    if (
-      category.includes('식당') ||
-      category.includes('맛집') ||
-      category.includes('음식')
-    )
-      return 'restaurant-outline';
-    return 'compass-outline';
-  };
-
-  const getTransportIcon = (transport: TransportType) => {
-    switch (transport) {
-      case 'walking':
-        return 'footsteps-outline';
-      case 'transit':
-        return 'bus-outline';
-      case 'driving':
-        return 'car-outline';
-      case 'taxi':
-        return 'car-sport-outline';
-      default:
-        return 'walk-outline';
-    }
-  };
-
-  const getRouteVisualIcon = (transport: TransportType) => {
-    switch (transport) {
-      case 'walking':
-        return 'footsteps';
-      case 'transit':
-        return 'bus';
-      case 'driving':
-        return 'car';
-      case 'taxi':
-        return 'car-sport';
-      default:
-        return 'walk';
-    }
-  };
-
-  const formatTransportLabel = (
-    transport: TransportType,
-    minutes?: number | null,
-  ): string => {
-    const mins = minutes
-      ? `${minutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
-      : '';
-    switch (transport) {
-      case 'walking':
-        return `도보 ${mins}`;
-      case 'transit':
-        return `대중교통 ${mins}`;
-      case 'driving':
-        return `자가용 ${mins}`;
-      case 'taxi':
-        return `택시 ${mins}`;
-      default:
-        return `이동 ${mins}`;
-    }
-  };
-
-  const formatTransitCostBadge = (
-    transportType: TransportType,
-    cost?: number | null,
-  ): string => {
-    if (transportType === 'walking') {
-      return UI_STRINGS.COURSE_DETAIL.FREE_WALKING;
-    }
-    if (cost !== null && cost !== undefined && cost > 0) {
-      return `₩${cost.toLocaleString()}`;
-    }
-    return UI_STRINGS.COURSE_DETAIL.SEPARATE_TRANSIT_COST;
-  };
-
-  const hasReason = Boolean(stop?.reason && stop.reason.trim() !== '');
-  const hasMemo = Boolean(
-    stop?.memo &&
-    stop.memo.trim() !== '' &&
-    stop.memo.trim() !== stop?.reason?.trim(),
-  );
-
-  const transport = stop?.transportToNext;
-  const place = stop?.place;
-
+  const place = stop.place;
+  const displayCategory = getPlaceCategoryLabel(place?.category);
+  const transport = stop.transportToNext;
+  const reason = stop.reason?.trim();
+  const memo = stop.memo?.trim();
+  const distinctMemo = Boolean(memo && memo !== reason);
+  const unknownTransport = transport?.type === 'unknown';
   const hasTransport =
-    Boolean(transport) &&
-    transport?.type !== 'none' &&
-    (transport?.minutes !== null && transport?.minutes !== undefined
-      ? transport.minutes > 0
-      : true);
-
+    !isLast &&
+    transport &&
+    transport.type !== 'none' &&
+    (unknownTransport || transport.minutes == null || transport.minutes > 0);
+  const transportCost =
+    transport?.type === 'walking'
+      ? UI_STRINGS.COURSE_DETAIL.FREE_WALKING
+      : transport?.cost && transport.cost > 0
+        ? `₩${transport.cost.toLocaleString()}`
+        : UI_STRINGS.COURSE_DETAIL.SEPARATE_TRANSIT_COST;
+  const openMap = () => {
+    const placeId = place?.placeId?.trim();
+    const query = place?.placeName?.trim() || placeId;
+    if (!query) {
+      Alert.alert(COURSE_UI.MAP_ERROR);
+      return;
+    }
+    const placeIdParam = placeId
+      ? `&query_place_id=${encodeURIComponent(placeId)}`
+      : '';
+    void Linking.openURL(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}${placeIdParam}`,
+    ).catch(() => Alert.alert(COURSE_UI.MAP_ERROR));
+  };
+  const originId = place?.placeId?.trim();
+  const destinationId = nextPlace?.placeId?.trim();
+  const origin = place?.placeName?.trim() || originId;
+  const destination = nextPlace?.placeName?.trim() || destinationId;
+  const openDirections = () => {
+    if (!origin || !destination) return;
+    const params = [
+      'api=1',
+      `origin=${encodeURIComponent(origin)}`,
+      `destination=${encodeURIComponent(destination)}`,
+    ];
+    if (originId)
+      params.push(`origin_place_id=${encodeURIComponent(originId)}`);
+    if (destinationId)
+      params.push(`destination_place_id=${encodeURIComponent(destinationId)}`);
+    void Linking.openURL(
+      `https://www.google.com/maps/dir/?${params.join('&')}`,
+    ).catch(() => Alert.alert(COURSE_UI.MAP_ERROR));
+  };
   return (
-    <View style={styles.timelineItemWrapper}>
-      <TouchableOpacity
-        style={styles.placeCard}
-        testID='place-card'
-        activeOpacity={0.85}
-        onPress={() => onPressPlace?.(stop)}>
+    <View style={styles.wrapper}>
+      <View style={styles.placeCard} testID='place-card'>
         <View style={styles.titleRow}>
-          <View style={styles.placeTitleGroup}>
-            <Ionicons
-              name={getCategoryIcon(place?.category)}
-              size={18}
-              color={palette.primary}
+          <Pressable
+            style={styles.placeTitle}
+            accessibilityRole='link'
+            accessibilityLabel={`${place?.placeName || COURSE_UI.UNKNOWN_PLACE}, ${COURSE_UI.MAP_OPEN}`}
+            onPress={openMap}>
+            <View style={styles.sequence}>
+              <FigmaAsset
+                source={require('../../../assets/images/figma-course/sequence-circle.svg')}
+                width={16}
+                height={16}
+                style={styles.sequenceCircle}
+              />
+              <Text style={styles.sequenceText}>{stop.sequence}</Text>
+            </View>
+            <Text style={styles.placeName}>
+              {place?.placeName || COURSE_UI.UNKNOWN_PLACE}
+            </Text>
+            <FigmaAsset
+              source={require('../../../assets/images/figma-course/place-expand.svg')}
+              width={14.5}
+              height={14.5}
             />
-            <Text style={styles.placeNameText}>
-              {place?.placeName || '장소명 없음'}
-            </Text>
-          </View>
-          <View style={styles.mintBadge}>
-            <Text style={styles.mintBadgeText}>
-              ₩
-              {stop?.cost !== null && stop?.cost !== undefined
-                ? stop.cost.toLocaleString()
-                : transport?.cost !== null && transport?.cost !== undefined
-                  ? transport.cost.toLocaleString()
-                  : '0'}
-            </Text>
-          </View>
+          </Pressable>
+          <Pressable
+            accessibilityRole='link'
+            accessibilityLabel={COURSE_UI.MAP_OPEN}
+            testID={`map-link-${stop.sequence}`}
+            style={styles.mapButton}
+            onPress={openMap}>
+            <Image
+              source={require('../../../assets/images/figma-course/map-pin.png')}
+              style={styles.mapIcon}
+            />
+          </Pressable>
         </View>
-
-        <View style={styles.timeRow}>
-          <Text style={styles.arrivalTimeText}>
-            {stop.arrivalTime || '10:00 AM'}
+        <View style={styles.metadata}>
+          {Boolean(displayCategory) && (
+            <Text style={styles.metadataText}>{displayCategory}</Text>
+          )}
+          {Boolean(displayCategory) && <View style={styles.divider} />}
+          <Text style={styles.metadataText}>
+            {stop.stayMinutes}
+            {COURSE_UI.MINUTES}
           </Text>
-          <View style={styles.dividerDot} />
-          <Text style={styles.stayMinutesText}>
-            {stop.stayMinutes
-              ? `${stop.stayMinutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`
-              : UI_STRINGS.COURSE_DETAIL.DEFAULT_STAY_TIME}
+          <View style={styles.divider} />
+          <Text style={styles.metadataText}>
+            {stop.cost == null
+              ? UI_STRINGS.COURSE_DETAIL.NO_INFO
+              : `₩${stop.cost.toLocaleString()}`}
           </Text>
         </View>
-
-        <View style={styles.aiTipBox}>
-          {hasReason && (
-            <View style={styles.tipRow}>
-              <Ionicons
-                name='sparkles-outline'
-                size={14}
-                color={palette.accent}
-                style={styles.tipIcon}
+        <View style={styles.tips}>
+          {Boolean(reason) && (
+            <View style={styles.tip}>
+              <Image
+                source={require('../../../assets/images/figma-course/sparkles.png')}
+                style={styles.reasonIcon}
               />
-              <Text style={styles.aiTipText}>{stop.reason?.trim()}</Text>
+              <Text style={styles.tipText}>{reason}</Text>
             </View>
           )}
-
-          {hasReason && hasMemo && <View style={styles.tipDivider} />}
-
-          {hasMemo && (
-            <View style={styles.tipRow}>
-              <Ionicons
-                name='document-text-outline'
-                size={14}
-                color={palette.primary}
+          {distinctMemo && (
+            <View style={styles.tip}>
+              <Image
+                source={require('../../../assets/images/figma-course/tip.png')}
                 style={styles.tipIcon}
               />
-              <Text style={styles.aiTipText}>{stop.memo?.trim()}</Text>
+              <Text style={styles.tipText}>{memo}</Text>
             </View>
           )}
-
-          {!hasReason && !hasMemo && (
-            <View style={styles.tipRow}>
-              <Ionicons
-                name='sparkles-outline'
-                size={14}
-                color={palette.accent}
-                style={styles.tipIcon}
-              />
-              <Text style={styles.aiTipText}>
+          {!reason && !distinctMemo && (
+            <View style={styles.tip}>
+              <Text style={styles.tipText}>
                 {UI_STRINGS.COURSE_DETAIL.NO_INFO}
               </Text>
             </View>
           )}
         </View>
-      </TouchableOpacity>
-
-      {/* Connected Transit Card */}
+      </View>
       {hasTransport && (
-        <View style={styles.transitCardWrapper}>
-          <View style={styles.transitCard} testID='transit-card'>
-            {/* Transit Header */}
-            <View style={styles.transitHeader}>
-              <View style={styles.transitTitleGroup}>
+        <View style={styles.transitCard} testID='transit-card'>
+          {transport.type === 'unknown' ? (
+            <>
+              <View style={styles.metadata}>
                 <Ionicons
-                  name={getTransportIcon(transport?.type || 'walking')}
-                  size={16}
-                  color={palette.deepNavy}
+                  name='help-circle-outline'
+                  size={18}
+                  color={palette.subText}
                 />
-                <Text style={styles.transitTitleText}>
-                  {formatTransportLabel(
-                    transport?.type || 'walking',
-                    transport?.minutes,
-                  )}
+                <Text style={styles.metadataText}>
+                  {COURSE_UI.ROUTE_UNAVAILABLE}
                 </Text>
               </View>
-              {/* 교통비 배지 */}
-              <View style={styles.mintBadge}>
-                <Text style={styles.mintBadgeText}>
-                  {formatTransitCostBadge(
-                    transport?.type || 'walking',
-                    transport?.cost,
-                  )}
+              {Boolean(origin && destination) && (
+                <Pressable
+                  accessibilityRole='link'
+                  accessibilityLabel={COURSE_UI.DIRECTIONS_OPEN}
+                  onPress={openDirections}
+                  style={styles.directionsButton}>
+                  <Text style={styles.directionsText}>
+                    {COURSE_UI.DIRECTIONS_OPEN}
+                  </Text>
+                  <Ionicons
+                    name='open-outline'
+                    size={16}
+                    color={palette.primary}
+                  />
+                </Pressable>
+              )}
+            </>
+          ) : (
+            <>
+              <View style={styles.metadata}>
+                {transport.type === 'walking' ? (
+                  <FigmaAsset
+                    source={require('../../../assets/images/figma-course/walking.svg')}
+                    width={8}
+                    height={14}
+                  />
+                ) : transport.type === 'transit' ? (
+                  <FigmaAsset
+                    source={require('../../../assets/images/figma-course/bus.svg')}
+                    width={16}
+                    height={16}
+                  />
+                ) : (
+                  <Ionicons
+                    name='car-outline'
+                    size={16}
+                    color={palette.subText}
+                  />
+                )}
+                <Text style={styles.metadataText}>
+                  {COURSE_UI.TRANSPORT[transport.type]}{' '}
+                  {transport.minutes == null
+                    ? ''
+                    : `${transport.minutes}${UI_STRINGS.COURSE_DETAIL.MINUTES_SUFFIX}`}
                 </Text>
+                {transport.distance != null && (
+                  <>
+                    <View style={styles.divider} />
+                    <Text style={styles.metadataText}>
+                      {Number((transport.distance / 1000).toFixed(1))}km
+                    </Text>
+                  </>
+                )}
+                {transport.cost != null && (
+                  <Text style={styles.fare}>{transportCost}</Text>
+                )}
               </View>
-            </View>
-
-            {/* Route Visual Line */}
-            <View style={styles.routeVisualRow}>
-              <View style={styles.routeDot} />
-              <View style={styles.routeLine} />
-              <Ionicons
-                name={getRouteVisualIcon(transport?.type || 'walking')}
-                size={12}
-                color={palette.primary}
-              />
-              <View style={styles.routeLine} />
-              <View style={styles.routeDot} />
-            </View>
-
-            {/* 이동 방법 상세 팁 */}
-            <View style={styles.aiTipBox}>
-              <View style={styles.tipRow}>
-                <Ionicons
-                  name='document-text-outline'
-                  size={14}
-                  color={palette.primary}
-                  style={styles.tipIcon}
-                />
-                <Text style={styles.aiTipText}>
-                  {transport?.memo && transport.memo.trim() !== ''
-                    ? transport.memo.trim()
-                    : UI_STRINGS.COURSE_DETAIL.RECOMMENDED_ROUTE_TIP}
-                </Text>
-              </View>
-            </View>
-          </View>
+              <Text style={styles.transitMemo}>
+                {transport.memo?.trim() ||
+                  UI_STRINGS.COURSE_DETAIL.RECOMMENDED_ROUTE_TIP}
+              </Text>
+            </>
+          )}
         </View>
       )}
     </View>
@@ -278,150 +253,102 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
 };
 
 const styles = StyleSheet.create({
-  timelineItemWrapper: {
-    width: '100%',
-    marginBottom: 16,
-    gap: 12,
-  },
+  wrapper: { width: '100%', gap: 16, paddingBottom: 16 },
   placeCard: {
     backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200, // #E0E5EB
     borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
-    elevation: 2,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  placeTitleGroup: {
+  titleRow: { flexDirection: 'row', alignItems: 'center', minHeight: 24 },
+  placeTitle: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  placeNameText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
-    color: palette.deepNavy, // #0D2137
-  },
-  mintBadge: {
-    flexShrink: 0,
-    backgroundColor: palette.lightTeal,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 99,
-  },
-  mintBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.accent,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  arrivalTimeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: palette.primary,
-  },
-  dividerDot: {
-    width: 1,
-    height: 12,
-    backgroundColor: palette.gray200,
-  },
-  stayMinutesText: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: palette.subText,
-  },
-  aiTipBox: {
-    backgroundColor: palette.softMint,
-    padding: 10,
-    borderRadius: 8,
     gap: 6,
+    minHeight: 24,
   },
-  tipRow: {
+  sequence: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sequenceCircle: { position: 'absolute', top: 0, left: 0 },
+  sequenceText: {
+    color: palette.white,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
+    includeFontPadding: false,
+  },
+  placeName: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.6,
+    flexShrink: 1,
+  },
+  mapButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapIcon: { width: 21, height: 21 },
+  metadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 7,
+    marginTop: 8,
+  },
+  metadataText: { fontSize: 14, color: palette.subText, letterSpacing: -0.6 },
+  divider: { width: 1, height: 12, backgroundColor: palette.gray300 },
+  tips: { marginTop: 12, gap: 8 },
+  tip: {
+    minHeight: 52,
+    backgroundColor: palette.gray100,
+    borderRadius: 6,
+    padding: 8,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
+    gap: 5,
   },
-  tipIcon: {
-    marginTop: 1,
-  },
-  aiTipText: {
+  reasonIcon: { width: 17, height: 17, marginTop: 1 },
+  tipIcon: { width: 19, height: 19, opacity: 0.4 },
+  tipText: {
     flex: 1,
-    fontSize: 11,
-    fontWeight: '400',
-    color: palette.subText,
-    lineHeight: 15,
-  },
-  tipLabelText: {
-    fontWeight: '700',
+    fontSize: 14,
     color: palette.deepNavy,
-  },
-  tipDivider: {
-    height: 1,
-    backgroundColor: 'rgba(13, 33, 55, 0.08)',
-    marginVertical: 1,
-  },
-  transitCardWrapper: {
-    width: '100%',
+    lineHeight: 18,
+    letterSpacing: -0.6,
   },
   transitCard: {
     backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
     borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
-    elevation: 2,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    gap: 12,
   },
-  transitHeader: {
+  directionsButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  transitTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: 'flex-start',
+    minHeight: 44,
     gap: 6,
   },
-  transitTitleText: {
-    fontSize: 13,
-    fontWeight: '700',
+  directionsText: { fontSize: 14, fontWeight: '600', color: palette.primary },
+  transitMemo: {
+    fontSize: 14,
     color: palette.deepNavy,
+    lineHeight: 18,
+    letterSpacing: -0.6,
   },
-  routeVisualRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 16,
-  },
-  routeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: palette.primary,
-  },
-  routeLine: {
-    flex: 1,
-    height: 1.5,
-    backgroundColor: palette.gray200,
-  },
+  fare: { fontSize: 12, color: palette.mutedText },
 });

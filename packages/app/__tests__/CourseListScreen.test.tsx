@@ -42,209 +42,183 @@ const mockCourseList: commonApi.CourseSummary[] = [
   },
 ];
 
-describe('CourseListScreen (FUN-7: 이전 생성 코스 목록 조회, 삭제 모달 및 상세 이동)', () => {
-  const mockOnSelectCourse = jest.fn();
-  const mockOnCreateCourse = jest.fn();
-
+describe('CourseListScreen UI v3 목록 및 삭제', () => {
   beforeEach(async () => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
     await AsyncStorage.setItem('accessToken', 'mock-token');
-  });
-
-  it('이전 생성 코스 목록 API 데이터 조회 후 Figma UI 스펙 요소들이 올바르게 렌더링되어야 한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
-
-    const { getByText, getByTestId } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
-    });
-
-    expect(getByTestId('compact-cta')).toBeTruthy();
-    expect(getByText('새로운 맞춤형 일정이 필요할 땐?')).toBeTruthy();
-    expect(getByTestId('search-input')).toBeTruthy();
   });
 
-  it('코스 카드 클릭 시 해당 코스 상세 화면(onSelectCourse)으로 내비게이션 이벤트가 발생해야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
-
-    const { getByTestId, getByText } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
+  it('실제 목적지, 계산한 날짜와 태그를 목록 카드에 표시하고 검색·생성 배너는 제거한다', async () => {
+    const screen = await render(
+      <CourseListScreen onCreateCourse={jest.fn()} />,
     );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-    });
-
-    const card1 = getByTestId('course-card-course-uuid-1');
-    fireEvent.press(card1);
-
-    expect(mockOnSelectCourse).toHaveBeenCalledWith('course-uuid-1');
+    await screen.findByTestId('course-card-course-uuid-1');
+    expect(screen.getByText('최근 생성한 코스')).toBeTruthy();
+    expect(screen.getByText('26.08.01 - 26.08.03')).toBeTruthy();
+    expect(screen.getByText('#힐링')).toBeTruthy();
+    expect(screen.queryByTestId('search-input')).toBeNull();
+    expect(screen.queryByTestId('compact-cta')).toBeNull();
   });
 
-  it('삭제 아이콘 클릭 또는 코스 카드 길게 누르기(longPress) 시 코스 삭제 확인 바텀시트 모달(CourseDeleteModal)이 오픈되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
-
-    const { getByTestId, getByText, queryByTestId } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
+  it('카드 선택과 뒤로 가기를 연결하고 편집중에는 삭제 버튼을 노출한다', async () => {
+    const onSelect = jest.fn(),
+      onBack = jest.fn();
+    const screen = await render(
+      <CourseListScreen onSelectCourse={onSelect} onBack={onBack} />,
     );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-    });
-
-    expect(queryByTestId('course-delete-modal-card')).toBeNull();
-
-    // 1. Long Press event test on card
-    const card1 = getByTestId('course-card-course-uuid-1');
-    fireEvent(card1, 'longPress');
-
-    await waitFor(() => {
-      expect(getByTestId('course-delete-modal-card')).toBeTruthy();
-      expect(getByText('코스를 삭제하시겠습니까?')).toBeTruthy();
-    });
-
-    const cancelBtn = getByTestId('btn-cancel-delete');
-    fireEvent.press(cancelBtn);
-
-    await waitFor(() => {
-      expect(queryByTestId('course-delete-modal-card')).toBeNull();
-    });
+    await fireEvent.press(
+      await screen.findByTestId('course-card-course-uuid-1'),
+    );
+    expect(onSelect).toHaveBeenCalledWith('course-uuid-1');
+    expect(screen.queryByTestId('delete-course-course-uuid-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(screen.getByText('완료')).toBeTruthy();
+    expect(screen.getByTestId('delete-course-course-uuid-1')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(screen.queryByTestId('delete-course-course-uuid-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('course-list-back'));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('코스 삭제 모달에서 삭제하기 클릭 시 API-COURSE-4(deleteCourseApi)를 호출하고 목록을 갱신해야 한다', async () => {
-    const mockDeleteApi = jest
-      .spyOn(commonApi, 'deleteCourseApi' as any)
+  it('삭제 아이콘은 코스 요약 확인 모달을 열고 취소는 API를 호출하지 않는다', async () => {
+    const deletion = jest
+      .spyOn(commonApi, 'deleteCourseApi')
       .mockResolvedValue(undefined);
-    const getCourseListSpy = jest
-      .spyOn(commonApi, 'getCourseListApi')
-      .mockResolvedValueOnce(mockCourseList)
-      .mockResolvedValueOnce([mockCourseList[1]]);
-
-    const { getByTestId, getByText, queryByText } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-    });
-
-    // Long Press card to trigger delete modal
-    const card1 = getByTestId('course-card-course-uuid-1');
-    fireEvent(card1, 'longPress');
-
-    await waitFor(() => {
-      expect(getByTestId('course-delete-modal-card')).toBeTruthy();
-    });
-
-    // Confirm deletion
-    const confirmBtn = getByTestId('btn-confirm-delete');
-    await act(async () => {
-      fireEvent.press(confirmBtn);
-    });
-
-    await waitFor(() => {
-      expect(mockDeleteApi).toHaveBeenCalledWith(
-        expect.any(String),
-        'mock-token',
-        'course-uuid-1',
-      );
-    });
+    const screen = await render(<CourseListScreen />);
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent.press(screen.getByTestId('delete-course-course-uuid-1'));
+    expect(screen.getByText('이 코스를 삭제할까요?')).toBeTruthy();
+    expect(screen.getByTestId('course-delete-summary')).toBeTruthy();
+    expect(deletion).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('btn-cancel-delete'));
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+    expect(screen.getByTestId('course-card-course-uuid-1')).toBeTruthy();
+    expect(deletion).not.toHaveBeenCalled();
   });
 
-  it('검색 바에 검색어 입력 시 해당하는 코스 카드만 필터링되어 노출되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
-
-    const { getByTestId, getByText, queryByText } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
+  it('길게 누르기로도 기존 삭제 확인 동선을 유지한다', async () => {
+    const screen = await render(<CourseListScreen />);
+    await fireEvent(
+      await screen.findByTestId('course-card-course-uuid-1'),
+      'longPress',
     );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
-    });
-
-    const searchInput = getByTestId('search-input');
-    await act(async () => {
-      fireEvent.changeText(searchInput, '도쿄');
-    });
-
-    await waitFor(() => {
-      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
-      expect(queryByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeNull();
-    });
+    expect(screen.getByTestId('course-delete-modal-card')).toBeTruthy();
   });
 
-  it('생성된 코스가 없는 경우 Figma UI 스펙 Empty State 안내 뷰 및 새 코스 생성 CTA 버튼이 노출되어야 한다', async () => {
+  it('확인 후 삭제 성공 시 목록에서 제거하고 recent storage와 선택 ID를 정리한다', async () => {
+    await AsyncStorage.setItem('recentCourseId', 'course-uuid-1');
+    const deletion = jest
+      .spyOn(commonApi, 'deleteCourseApi')
+      .mockResolvedValue(undefined);
+    const onDeleted = jest.fn();
+    const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
+    await fireEvent(
+      await screen.findByTestId('course-card-course-uuid-1'),
+      'longPress',
+    );
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await waitFor(() =>
+      expect(onDeleted).toHaveBeenCalledWith('course-uuid-1'),
+    );
+    expect(deletion).toHaveBeenCalledWith(
+      expect.any(String),
+      'mock-token',
+      'course-uuid-1',
+    );
+    expect(screen.queryByTestId('course-card-course-uuid-1')).toBeNull();
+    expect(screen.getByTestId('course-card-course-uuid-2')).toBeTruthy();
+    await waitFor(async () =>
+      expect(await AsyncStorage.getItem('recentCourseId')).toBeNull(),
+    );
+  });
+
+  it('삭제 실패 시 카드와 저장값을 유지하며 같은 확인 창에서 다시 시도할 수 있다', async () => {
+    await AsyncStorage.setItem('recentCourseId', 'course-uuid-1');
+    const deletion = jest
+      .spyOn(commonApi, 'deleteCourseApi')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(undefined);
+    const onDeleted = jest.fn();
+    const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
+    await fireEvent(
+      await screen.findByTestId('course-card-course-uuid-1'),
+      'longPress',
+    );
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await screen.findByText('offline');
+    expect(screen.getByTestId('course-card-course-uuid-1')).toBeTruthy();
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe('course-uuid-1');
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await waitFor(() =>
+      expect(onDeleted).toHaveBeenCalledWith('course-uuid-1'),
+    );
+    expect(deletion).toHaveBeenCalledTimes(2);
+  });
+
+  it('다른 코스를 삭제해도 최근 코스 저장값은 보존한다', async () => {
+    await AsyncStorage.setItem('recentCourseId', 'course-uuid-2');
+    jest.spyOn(commonApi, 'deleteCourseApi').mockResolvedValue(undefined);
+    const onDeleted = jest.fn();
+    const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
+    await fireEvent(
+      await screen.findByTestId('course-card-course-uuid-1'),
+      'longPress',
+    );
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await waitFor(() => expect(onDeleted).toHaveBeenCalled());
+    expect(await AsyncStorage.getItem('recentCourseId')).toBe('course-uuid-2');
+  });
+
+  it('빈 목록에서는 새 코스 생성으로 이동한다', async () => {
     jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([]);
-
-    const { getByText, getByTestId } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
+    const onCreate = jest.fn();
+    const screen = await render(<CourseListScreen onCreateCourse={onCreate} />);
+    await screen.findByText('아직 저장된 코스가 없어요');
+    await fireEvent.press(screen.getByTestId('empty-create-button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+  it('삭제 요청 중에는 중복 확인과 닫기를 막는다', async () => {
+    let finishDelete!: () => void;
+    const deletion = jest.spyOn(commonApi, 'deleteCourseApi').mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishDelete = resolve;
+      }),
     );
-
-    await waitFor(() => {
-      expect(getByText('아직 저장된 코스가 없어요')).toBeTruthy();
-      expect(getByTestId('empty-create-button')).toBeTruthy();
-    });
-
-    fireEvent.press(getByTestId('empty-create-button'));
-    expect(mockOnCreateCourse).toHaveBeenCalled();
+    const screen = await render(<CourseListScreen />);
+    await fireEvent(
+      await screen.findByTestId('course-card-course-uuid-1'),
+      'longPress',
+    );
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await waitFor(() => expect(deletion).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('btn-confirm-delete').props.accessibilityState
+          .disabled,
+      ).toBe(true),
+    );
+    await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
+    await fireEvent.press(screen.getByTestId('btn-cancel-delete'));
+    expect(deletion).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('course-delete-modal-card')).toBeTruthy();
+    await act(async () => finishDelete());
+    await waitFor(() =>
+      expect(screen.queryByTestId('course-delete-modal-card')).toBeNull(),
+    );
   });
 
-  it('검색 바에 검색어 입력 시 우측에 지우기(X) 버튼이 노출되고, 클릭 시 검색어가 초기화되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(mockCourseList);
-
-    const { getByTestId, getByText, queryByTestId } = await render(
-      <CourseListScreen
-        onSelectCourse={mockOnSelectCourse}
-        onCreateCourse={mockOnCreateCourse}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-    });
-
-    const searchInput = getByTestId('search-input');
-    expect(queryByTestId('clear-search-button')).toBeNull();
-
-    // 1. Enter search query "도쿄"
-    fireEvent.changeText(searchInput, '도쿄');
-
-    // Clear button should be visible after state update
-    await waitFor(() => {
-      expect(getByTestId('clear-search-button')).toBeTruthy();
-    });
-
-    // 2. Press clear button
-    fireEvent.press(getByTestId('clear-search-button'));
-
-    // Search query should be cleared and clear button hidden
-    await waitFor(() => {
-      expect(queryByTestId('clear-search-button')).toBeNull();
-      expect(getByText('2박 3일 서귀포 감성 가득 힐링 코스')).toBeTruthy();
-      expect(getByText('도쿄 3박 4일 미식 & 쇼핑 투어')).toBeTruthy();
-    });
+  it('목록 오류 뒤 재시도로 실제 코스를 다시 표시한다', async () => {
+    jest
+      .spyOn(commonApi, 'getCourseListApi')
+      .mockRejectedValueOnce(new Error('목록 연결 오류'))
+      .mockResolvedValueOnce(mockCourseList);
+    const screen = await render(<CourseListScreen />);
+    await screen.findByText('목록 연결 오류');
+    await fireEvent.press(screen.getByTestId('retry-button'));
+    await screen.findByTestId('course-card-course-uuid-1');
+    expect(screen.queryByTestId('retry-button')).toBeNull();
   });
 });

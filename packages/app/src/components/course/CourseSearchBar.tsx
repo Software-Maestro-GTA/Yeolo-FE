@@ -3,7 +3,8 @@
  * @description Destination search input bar component for course list screen matching UI v2 design system, complying with colors.ts palette and strings.ts UI_STRINGS.
  */
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { TextInput } from '../common/Typography';
 import { Ionicons } from '@expo/vector-icons';
 import { palette } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';

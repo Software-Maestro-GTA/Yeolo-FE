@@ -1,6 +1,6 @@
 /**
  * @file queryErrors.test.tsx
- * @description Verifies API status survives course/place query hooks for global authorization handling.
+ * @description Verifies course-query authorization errors and cancellation of location searches.
  * @jest-environment-options {"customExportConditions":["node","node-addons"]}
  */
 import React from 'react';
@@ -9,7 +9,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse, delay } from 'msw';
 import {
   ApiError,
-  fetchCountryAutocomplete,
+  searchLocationsApi,
   setUnauthorizedHandler,
   setTokenGetter,
 } from '@yeolo/common';
@@ -17,7 +17,6 @@ import { server } from './mocks/server';
 import { createTestQueryClient } from './test-utils';
 import { useCourseListQuery } from '../src/hooks/queries/useCourseListQuery';
 import { useCourseDetailQuery } from '../src/hooks/queries/useCourseDetailQuery';
-import { usePlaceDetailQuery } from '../src/hooks/queries/usePlaceDetailQuery';
 
 describe('query authorization errors', () => {
   beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -28,27 +27,26 @@ describe('query authorization errors', () => {
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 
-  it('cancels an autocomplete HTTP request while the server is still responding', async () => {
+  it('cancels a location search HTTP request while the server is still responding', async () => {
     let markStarted: () => void;
     const started = new Promise<void>((resolve) => {
       markStarted = resolve;
     });
     server.use(
-      http.get('*/api/locations/countries/autocomplete', async () => {
+      http.get('*/api/locations/search', async () => {
         markStarted();
         await delay(100);
         return HttpResponse.json({
           status: 200,
-          message: '국가 자동완성 조회 성공',
-          data: { countries: [] },
+          message: '지역 검색 성공',
+          data: { results: [] },
         });
       }),
     );
     const controller = new AbortController();
-    const request = fetchCountryAutocomplete(
+    const request = searchLocationsApi(
       'https://api.yeolo.app',
       '일',
-      undefined,
       controller.signal,
     );
     const rejection = expect(request).rejects.toMatchObject({
@@ -59,17 +57,57 @@ describe('query authorization errors', () => {
     await rejection;
   });
 
+  it.each([true, () => true])(
+    'does not fetch a missing course ID even with enabled=%s or manual refresh',
+    async (enabled) => {
+      const request = jest.fn(() =>
+        HttpResponse.json({ status: 404, data: null }),
+      );
+      server.use(http.get('*/api/courses/:courseId', request));
+      const client = createTestQueryClient();
+      const wrapper = ({ children }: React.PropsWithChildren) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      );
+      const { result, unmount } = await renderHook(
+        () => useCourseDetailQuery({ courseId: '', options: { enabled } }),
+        { wrapper },
+      );
+      expect(result.current.fetchStatus).toBe('idle');
+      await result.current.refetch();
+      expect(request).not.toHaveBeenCalled();
+      await unmount();
+      client.clear();
+    },
+  );
+
+  it('fetches the real course when an initially missing ID becomes available', async () => {
+    const request = jest.fn(() =>
+      HttpResponse.json({ status: 200, data: { courseId: 'course-1' } }),
+    );
+    server.use(http.get('*/api/courses/course-1', request));
+    const client = createTestQueryClient();
+    const wrapper = ({ children }: React.PropsWithChildren) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result, rerender, unmount } = await renderHook(
+      ({ courseId }: { courseId: string }) =>
+        useCourseDetailQuery({ courseId }),
+      { wrapper, initialProps: { courseId: '' } },
+    );
+    expect(result.current.fetchStatus).toBe('idle');
+    await rerender({ courseId: 'course-1' });
+    await waitFor(() => expect(result.current.data?.courseId).toBe('course-1'));
+    expect(request).toHaveBeenCalledTimes(1);
+    await unmount();
+    client.clear();
+  });
+
   it.each([
     ['course list', '*/api/courses', () => useCourseListQuery()],
     [
       'course detail',
       '*/api/courses/course-1',
       () => useCourseDetailQuery({ courseId: 'course-1' }),
-    ],
-    [
-      'place detail',
-      '*/api/places/place-1',
-      () => usePlaceDetailQuery({ placeId: 'place-1' }),
     ],
   ] as const)('preserves a 403 from %s', async (_, path, useRequest) => {
     server.use(

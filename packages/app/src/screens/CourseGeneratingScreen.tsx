@@ -1,24 +1,27 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Screen displaying SSE streaming course generation progress using design tokens (palette, hexToRgba) and string constants (UI_STRINGS).
+ * @description Displays SSE course progress and delayed completion, stopping visual animations on failure or unmount.
  */
+import { Text } from '../components/common/Typography';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourseStore } from '@yeolo/common';
-import { palette, hexToRgba } from '../theme/colors';
+import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
+import { FigmaAsset } from '../components/common/FigmaAsset';
 import {
   useGA4ScreenTracking,
   useGA4ButtonClick,
@@ -39,6 +42,10 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onNavigateToIntro,
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
+  const insets = useSafeAreaInsets();
+  const safeAreaStyles = StyleSheet.create({
+    content: { paddingBottom: insets.bottom + 36 },
+  });
   const { trackButtonClick } = useGA4ButtonClick();
   const queryClient = useQueryClient();
 
@@ -52,6 +59,20 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
   // Progress Bar Animation Value (0 ~ 100)
   const progressAnim = useRef(new Animated.Value(5)).current;
+  const spinnerAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (error) return;
+    const spinner = Animated.loop(
+      Animated.timing(spinnerAnim, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    spinner.start();
+    return () => spinner.stop();
+  }, [spinnerAnim, error]);
   const [displayPercentage, setDisplayPercentage] = useState<number>(5);
 
   // Sync listener to update percentage text
@@ -81,6 +102,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
   // Handle Continuous Logarithmic Progress Animation
   useEffect(() => {
+    if (error) return;
     if (createdCourseId || progressStep === 'COMPLETE') {
       // Smoothly animate from current percentage up to 100% without jump
       Animated.timing(progressAnim, {
@@ -89,7 +111,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
         easing: Easing.out(Easing.quad),
         useNativeDriver: false,
       }).start();
-      return;
+      return () => progressAnim.stopAnimation();
     }
 
     let targetValue = 65;
@@ -128,8 +150,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
     return () => {
       clearInterval(creepingInterval);
+      progressAnim.stopAnimation();
     };
-  }, [createdCourseId, progressStep, progressAnim]);
+  }, [createdCourseId, progressStep, progressAnim, error]);
 
   // 1-second delay before navigating to Course Detail screen upon completion
   useEffect(() => {
@@ -166,7 +189,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
       <View style={styles.screenContainer}>
         <SafeAreaView
           style={styles.safeArea}
-          edges={['top', 'bottom', 'left', 'right']}>
+          edges={['bottom', 'left', 'right']}>
           <View style={styles.errorContainer}>
             <View style={styles.errorCard}>
               <Ionicons
@@ -216,14 +239,48 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
         <View
           style={styles.completedCircle}
           testID={`${testIdPrefix}-completed`}>
-          <Feather name='check' size={12} color={palette.white} />
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/completed-ring.svg')}
+            width={22}
+            height={22}
+          />
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/completed-check.svg')}
+            width={12}
+            height={12}
+            style={styles.completedCheck}
+          />
         </View>
       );
     }
     if (status === 'loading') {
       return (
         <View style={styles.loadingCircle} testID={`${testIdPrefix}-loading`}>
-          <ActivityIndicator size='small' color={palette.primary} />
+          <FigmaAsset
+            source={require('../../assets/images/figma-course/loading-ring.svg')}
+            width={22}
+            height={22}
+          />
+          <Animated.View
+            style={[
+              styles.spinner,
+              {
+                transform: [
+                  {
+                    rotate: spinnerAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg'],
+                    }),
+                  },
+                ],
+              },
+            ]}>
+            <FigmaAsset
+              source={require('../../assets/images/figma-course/loading-fill.svg')}
+              width={22}
+              height={22}
+            />
+          </Animated.View>
         </View>
       );
     }
@@ -251,25 +308,35 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 
   return (
     <View style={styles.screenContainer}>
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.contentContainer}>
-          {/* Main Body Section */}
+      <View style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.contentContainer,
+            safeAreaStyles.content,
+          ]}
+          scrollIndicatorInsets={{ bottom: insets.bottom }}
+          showsVerticalScrollIndicator={false}>
           <View style={styles.mainBodyContainer} testID='main-content'>
-            {/* Title Group */}
-            <View style={styles.titleGroup} testID='title-group'>
-              <Text style={styles.mainTitle}>
-                {UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}
+            <View
+              style={styles.illustration}
+              testID='course-loading-illustration'
+              accessible={false}
+            />
+            <View
+              style={styles.progressBarContainer}
+              testID='progress-bar-container'
+              accessibilityRole='progressbar'
+              accessibilityValue={{ min: 0, max: 100, now: displayPercentage }}>
+              <Text style={styles.mainTitle} testID='progress-text'>
+                {progressMessage || UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}
               </Text>
-              <Text style={styles.subTitle}>
-                {UI_STRINGS.COURSE_GENERATING.SUB_TITLE}
-              </Text>
+              <View style={styles.progressTrack}>
+                <Animated.View
+                  style={[styles.progressFillWrapper, { width: animatedWidth }]}
+                />
+              </View>
             </View>
-
-            {/* Checklist Card */}
             <View style={styles.checklistCard} testID='checklist-card'>
-              {/* Step 1: 사용자 취향 불러오기 */}
               <View style={styles.stepRow} testID='step-1'>
                 {renderStepIndicator(step1Status, 'step-1')}
                 {renderStepText(
@@ -277,11 +344,6 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
                   UI_STRINGS.COURSE_GENERATING.STEP_1,
                 )}
               </View>
-
-              {/* Divider Line */}
-              <View style={styles.dividerLine} />
-
-              {/* Step 2: 여행 코스 생성 중 */}
               <View style={styles.stepRow} testID='step-2'>
                 {renderStepIndicator(step2Status, 'step-2')}
                 {renderStepText(
@@ -289,209 +351,112 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
                   UI_STRINGS.COURSE_GENERATING.STEP_2,
                 )}
               </View>
-            </View>
-
-            {/* Progress Bar Container */}
-            <View
-              style={styles.progressBarContainer}
-              testID='progress-bar-container'>
-              <View style={styles.progressTrack}>
-                <Animated.View
-                  style={[
-                    styles.progressFillWrapper,
-                    { width: animatedWidth },
-                  ]}>
-                  <LinearGradient
-                    colors={[palette.primary, palette.accent]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.progressFillGradient}
-                  />
-                </Animated.View>
+              <View style={styles.stepRow} testID='step-3'>
+                {renderStepIndicator(step2Status, 'step-3')}
+                {renderStepText(
+                  step2Status,
+                  UI_STRINGS.COURSE_GENERATING.STEP_3,
+                )}
               </View>
-              <View style={styles.progressLabelRow}>
-                <Text style={styles.progressStatusText} testID='progress-text'>
-                  {progressMessage ||
-                    UI_STRINGS.COURSE_GENERATING.PROGRESS_LABEL}
-                </Text>
-                <Text style={styles.progressPercentageText}>
-                  {displayPercentage}%
-                </Text>
-              </View>
-            </View>
-
-            {/* Bottom SubText */}
-            <View style={styles.bottomSubTextGroup}>
-              <Text style={styles.bottomSubText}>
-                {UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_1}
-              </Text>
-              <Text style={styles.bottomSubText}>
-                {UI_STRINGS.COURSE_GENERATING.BOTTOM_DESC_2}
-              </Text>
             </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </ScrollView>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  screenContainer: { flex: 1, backgroundColor: palette.white },
+  safeArea: { flex: 1 },
   contentContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingVertical: 36,
   },
-  mainBodyContainer: {
-    gap: 28,
-    alignItems: 'center',
+  mainBodyContainer: { alignItems: 'center', width: '100%' },
+  illustration: {
     width: '100%',
-  },
-  titleGroup: {
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
+    maxWidth: 390,
+    aspectRatio: 390 / 300,
+    overflow: 'hidden',
   },
   mainTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.legacyCaption,
     textAlign: 'center',
-    lineHeight: 28,
-  },
-  subTitle: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: palette.subText,
-    textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 22,
+    letterSpacing: -0.7,
   },
   checklistCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 24,
-    padding: 20,
-    gap: 16,
-    width: '100%',
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.03,
-    shadowRadius: 12,
-    elevation: 3,
+    marginTop: 46,
+    gap: 22,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
   },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    minHeight: 28,
   },
   completedCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: palette.accent,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: palette.transparent,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  completedCheck: { position: 'absolute', top: 5, left: 5 },
+  spinner: { position: 'absolute', width: 22, height: 22 },
   completedStepText: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '500',
-    color: palette.mutedText,
-    textDecorationLine: 'line-through',
-  },
-  dividerLine: {
-    height: 1,
-    backgroundColor: palette.gray200,
-    width: '100%',
+    color: palette.legacyText,
+    letterSpacing: -0.7,
+    flexShrink: 1,
   },
   loadingCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pendingCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: palette.gray400,
-    backgroundColor: palette.gray100,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 3,
+    borderColor: palette.gray200,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  innerPendingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: palette.gray400,
-  },
+  innerPendingDot: { width: 0, height: 0 },
   activeStepText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: palette.deepNavy,
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.legacyText,
+    letterSpacing: -0.7,
+    flexShrink: 1,
   },
   pendingStepText: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: palette.mutedText,
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.legacyText,
+    letterSpacing: -0.7,
+    flexShrink: 1,
   },
-  progressBarContainer: {
-    width: '100%',
-    paddingHorizontal: 10,
-    gap: 8,
-  },
+  progressBarContainer: { width: '64%', maxWidth: 300, gap: 18 },
   progressTrack: {
     width: '100%',
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: hexToRgba(palette.primary, 0.12),
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: palette.gray200,
     overflow: 'hidden',
   },
-  progressFillWrapper: {
-    height: '100%',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFillGradient: {
-    flex: 1,
-    height: '100%',
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  progressStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.primary,
-  },
-  progressPercentageText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.primary,
-  },
-  bottomSubTextGroup: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  bottomSubText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: palette.subText,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  progressFillWrapper: { height: '100%', backgroundColor: palette.primary },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -1,8 +1,9 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
- * @description Unit and integration tests for CourseGeneratingScreen supporting dynamic checklist states, creeping progress bar, and 1s delayed navigation.
+ * @description Course generation states, delayed navigation, and animation cleanup on failure or unmount.
  */
 import React from 'react';
+import { Animated } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
@@ -22,14 +23,22 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     });
   });
 
-  it('SSE 시작 전(1단계 진행전)에는 1단계와 2단계 모두 대기 상태(pending)로 렌더링되어야 한다', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it('SSE 시작 전(1단계 진행전)에는 UI v3 타이틀과 1단계·2단계 모두 대기 상태(pending)로 렌더링되어야 한다', async () => {
     const mockOnComplete = jest.fn();
 
     const { getByTestId, getByText } = await render(
       <CourseGeneratingScreen onComplete={mockOnComplete} />,
     );
 
-    expect(getByText('당신만을 위한 여행 코스 생성 중')).toBeTruthy();
+    expect(getByText('딱 맞는 코스를 생성하고 있어요')).toBeTruthy();
+    expect(getByText('취향 데이터 스캔 중...')).toBeTruthy();
+    expect(getByText('맞춤형 여행지 탐색 중...')).toBeTruthy();
+    expect(getByText('최적 동선 구성 중...')).toBeTruthy();
     expect(getByTestId('step-1-pending')).toBeTruthy();
     expect(getByTestId('step-2-pending')).toBeTruthy();
   });
@@ -136,6 +145,62 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
 
     expect(mockOnRetry).toHaveBeenCalled();
   });
+
+  it('생성 중 실패하면 보이지 않는 애니메이션과 주기적인 진행률 갱신을 중지한다', async () => {
+    jest.useFakeTimers();
+    const timing = jest.spyOn(Animated, 'timing');
+    const loop = jest.spyOn(Animated, 'loop');
+    await render(<CourseGeneratingScreen />);
+    const spinner = loop.mock.results[0].value;
+    const stopSpinner = jest.spyOn(spinner, 'stop');
+    const progress = timing.mock.calls.find(
+      ([, config]) => !config.useNativeDriver,
+    )![0];
+    const stopProgress = jest.spyOn(progress, 'stopAnimation');
+
+    await act(async () => {
+      useCourseStore.setState({ error: '일시적으로 코스를 생성할 수 없어요.' });
+    });
+
+    expect(stopSpinner).toHaveBeenCalledTimes(1);
+    expect(stopProgress).toHaveBeenCalled();
+    const animationsAtFailure = timing.mock.calls.length;
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(timing).toHaveBeenCalledTimes(animationsAtFailure);
+  });
+
+  it.each([false, true])(
+    '화면을 닫으면 진행률 애니메이션과 완료 이동을 취소한다 (완료=%s)',
+    async (completed) => {
+      jest.useFakeTimers();
+      if (completed)
+        useCourseStore.setState({
+          createdCourseId: 'completed-course',
+          progressStep: 'COMPLETE',
+        });
+      const timing = jest.spyOn(Animated, 'timing');
+      const onComplete = jest.fn();
+      const { unmount } = await render(
+        <CourseGeneratingScreen onComplete={onComplete} />,
+      );
+      const progress = timing.mock.calls.find(
+        ([, config]) => !config.useNativeDriver,
+      )![0];
+      const stopProgress = jest.spyOn(progress, 'stopAnimation');
+
+      await unmount();
+
+      expect(stopProgress).toHaveBeenCalled();
+      const animationsAtUnmount = timing.mock.calls.length;
+      await act(async () => {
+        jest.advanceTimersByTime(3000);
+      });
+      expect(timing).toHaveBeenCalledTimes(animationsAtUnmount);
+      expect(onComplete).not.toHaveBeenCalled();
+    },
+  );
 
   it('코스 생성 중 에러 발생 시 시작 화면으로 이동 버튼(go-intro-btn)이 노출되고 클릭 시 Intro 화면(onNavigateToIntro)으로 이동해야 한다', async () => {
     const mockOnNavigateToIntro = jest.fn();

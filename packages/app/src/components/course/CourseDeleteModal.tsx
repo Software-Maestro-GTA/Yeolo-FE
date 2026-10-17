@@ -1,176 +1,220 @@
 /**
  * @file CourseDeleteModal.tsx
- * @description Bottom sheet modal component for confirming course deletion, featuring separated fade backdrop overlay and independent bottom sheet slide animation.
+ * @description UI v3 중앙 삭제 확인 모달에 실제 코스 요약과 취소·삭제 상태를 표시합니다.
  */
-import React, { useEffect, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  Modal,
-  TouchableWithoutFeedback,
-  Animated,
-  Easing,
-} from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Pressable, Modal } from 'react-native';
+import type { CourseSummary } from '@yeolo/common';
 import { palette, hexToRgba } from '../../theme/colors';
-import { UI_STRINGS } from '../../constants';
+import { COURSE_UI } from '../../constants/courseUiStrings';
+import { formatCourseDateRange } from '../../utils/courseDateRange';
+import { FigmaAsset } from '../common/FigmaAsset';
+import { Text } from '../common/Typography';
 
 export interface CourseDeleteModalProps {
   visible: boolean;
   courseTitle?: string;
+  course?: CourseSummary | null;
+  pending?: boolean;
+  errorMessage?: string | null;
   onClose: () => void;
   onConfirmDelete: () => void;
 }
 
+/** Keeps the destructive action explicit and blocks duplicate submissions while pending. */
 export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
   visible,
   courseTitle,
+  course,
+  pending = false,
+  errorMessage,
   onClose,
   onConfirmDelete,
-}) => {
-  const slideAnim = useRef(new Animated.Value(300)).current;
-
-  useEffect(() => {
-    if (visible) {
-      slideAnim.setValue(300);
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, slideAnim]);
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType='fade'
-      onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.dimOverlay} testID='delete-modal-overlay'>
-          <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                styles.bottomSheetContainer,
-                {
-                  transform: [{ translateY: slideAnim }],
-                },
-              ]}
-              testID='course-delete-modal-card'>
-              {/* Handle Bar */}
-              <View style={styles.handleBar} />
-
-              {/* Title & Warning Text */}
-              <Text style={styles.modalTitle}>
-                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_TITLE}
-              </Text>
-              <Text style={styles.modalSubTitle}>
-                {courseTitle ? `"${courseTitle}" ` : ''}
-                {UI_STRINGS.COURSE_LIST.DELETE_MODAL_DESC}
-              </Text>
-
-              {/* Action Buttons Group */}
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity
-                  testID='btn-confirm-delete'
-                  style={styles.deleteButton}
-                  onPress={onConfirmDelete}
-                  activeOpacity={0.85}>
-                  <Text style={styles.deleteButtonText}>
-                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CONFIRM}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  testID='btn-cancel-delete'
-                  style={styles.cancelButton}
-                  onPress={onClose}
-                  activeOpacity={0.85}>
-                  <Text style={styles.cancelButtonText}>
-                    {UI_STRINGS.COURSE_LIST.DELETE_MODAL_CANCEL}
-                  </Text>
-                </TouchableOpacity>
+}) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType='fade'
+    onRequestClose={pending ? undefined : onClose}>
+    <View style={styles.overlay}>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        testID='delete-modal-overlay'
+        accessibilityLabel={COURSE_UI.CLOSE}
+        disabled={pending}
+        onPress={onClose}
+      />
+      <View
+        style={styles.card}
+        testID='course-delete-modal-card'
+        accessibilityViewIsModal>
+        <Pressable
+          style={styles.close}
+          accessibilityRole='button'
+          accessibilityLabel={COURSE_UI.CLOSE}
+          disabled={pending}
+          onPress={onClose}>
+          <FigmaAsset
+            source={require('../../../assets/images/figma-course/modal-close.svg')}
+            width={24}
+            height={24}
+          />
+        </Pressable>
+        <View style={styles.summary} testID='course-delete-summary'>
+          {course ? (
+            <>
+              <View style={styles.destination}>
+                <Text style={styles.destinationText} numberOfLines={1}>
+                  {course.destinationCountry}
+                </Text>
+                <View style={styles.divider} />
+                <Text style={styles.destinationText} numberOfLines={1}>
+                  {course.destinationCity}
+                </Text>
               </View>
-            </Animated.View>
-          </TouchableWithoutFeedback>
+              <Text style={styles.date}>{formatCourseDateRange(course)}</Text>
+            </>
+          ) : (
+            <Text style={styles.destinationText}>{courseTitle}</Text>
+          )}
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-};
+        <Text style={styles.title}>{COURSE_UI.DELETE_TITLE}</Text>
+        <Text style={styles.description}>{COURSE_UI.DELETE_DESCRIPTION}</Text>
+        {errorMessage ? (
+          <Text style={styles.error} accessibilityRole='alert'>
+            {errorMessage}
+          </Text>
+        ) : null}
+        <View style={styles.buttons}>
+          <Pressable
+            testID='btn-cancel-delete'
+            accessibilityRole='button'
+            disabled={pending}
+            style={styles.cancelButton}
+            onPress={onClose}>
+            <Text style={styles.cancelText}>{COURSE_UI.CANCEL}</Text>
+          </Pressable>
+          <Pressable
+            testID='btn-confirm-delete'
+            accessibilityRole='button'
+            accessibilityState={{ disabled: pending, busy: pending }}
+            disabled={pending}
+            style={[styles.deleteButton, pending && styles.pendingButton]}
+            onPress={onConfirmDelete}>
+            <Text style={styles.deleteText}>{COURSE_UI.DELETE}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
 
 const styles = StyleSheet.create({
-  dimOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: hexToRgba(palette.deepNavy, 0.45),
-    justifyContent: 'flex-end',
-  },
-  bottomSheetContainer: {
-    backgroundColor: palette.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 40,
+    backgroundColor: hexToRgba(palette.black, 0.7),
     alignItems: 'center',
-    gap: 16,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  handleBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: palette.gray200,
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    textAlign: 'center',
-  },
-  modalSubTitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: palette.subText,
-    textAlign: 'center',
-  },
-  buttonGroup: {
+  card: {
     width: '100%',
-    gap: 10,
-    marginTop: 8,
+    maxWidth: 420,
+    transform: [{ translateY: -16 }],
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 20,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+  },
+  close: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summary: {
+    minWidth: 213,
+    maxWidth: '100%',
+    minHeight: 79,
+    borderWidth: 1,
+    borderColor: palette.gray200,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  destination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  destinationText: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.deepNavy,
+    letterSpacing: -1,
+    flexShrink: 1,
+  },
+  divider: { width: 2, height: 16, backgroundColor: palette.gray200 },
+  date: { fontSize: 16, fontWeight: '500', color: palette.gray600 },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.deepNavy,
+    letterSpacing: -1,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.gray400,
+    letterSpacing: -1,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  error: {
+    fontSize: 14,
+    color: palette.red500,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  buttons: { width: '100%', flexDirection: 'row', gap: 12, marginTop: 28 },
+  cancelButton: {
+    flex: 1,
+    minHeight: 62,
+    borderRadius: 16,
+    backgroundColor: palette.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteButton: {
-    width: '100%',
+    flex: 1,
+    minHeight: 62,
+    borderRadius: 16,
     backgroundColor: palette.red500,
-    paddingVertical: 14,
-    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  cancelText: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.gray600,
+    letterSpacing: -0.6,
+  },
+  deleteText: {
+    fontSize: 20,
+    fontWeight: '500',
     color: palette.white,
+    letterSpacing: -0.6,
   },
-  cancelButton: {
-    width: '100%',
-    backgroundColor: palette.gray100,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: palette.deepNavy,
-  },
+  pendingButton: { opacity: 0.6 },
 });

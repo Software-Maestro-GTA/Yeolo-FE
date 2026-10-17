@@ -3,7 +3,7 @@
  * @description Unit and integration tests for CourseShareScreen component (API-SHARE-2, API-SHARE-3, expired link handling).
  */
 import React from 'react';
-import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor, act, within } from '@testing-library/react-native';
 import { Alert, Platform } from 'react-native';
 import { renderWithQueryClient as render } from './test-utils';
 import { CourseShareScreen } from '../src/screens/CourseShareScreen';
@@ -16,6 +16,7 @@ const mockShareDetailResponse = {
     title: '동유럽 감성 야경 투어',
     destinationCountry: '체코',
     destinationCity: '프라하',
+    coverImageUrl: 'https://example.com/courses/prague.jpg',
     startDate: '2026-09-01',
     totalDays: 5,
   },
@@ -67,29 +68,29 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
     expect(queryByTestId('login-bottom-sheet')).toBeNull();
   });
 
-  it('미로그인(게스트) 상태일 때 딤 오버레이 및 로그인 요청 바텀시트가 표시되어야 한다', async () => {
+  it('게스트는 코스를 먼저 보고 저장을 누르면 로그인 시트가 열리며 닫으면 미리보기로 돌아간다', async () => {
     jest
       .spyOn(commonApi, 'getShareLinkApi')
       .mockResolvedValue(mockShareDetailResponse);
-
-    const mockGuestAuthContext = {
-      isAuthenticated: false,
-      isLoading: false,
-      user: null,
-      login: jest.fn(),
-      logout: jest.fn(),
-    };
-
-    const { findByTestId, findByText } = await render(
-      <AuthContext.Provider value={mockGuestAuthContext as any}>
-        <CourseShareScreen shareToken='token-abc-123' />
+    const accept = jest.spyOn(commonApi, 'acceptShareLinkApi');
+    const screen = await render(
+      <AuthContext.Provider
+        value={{ isAuthenticated: false, isLoading: false } as any}>
+        <CourseShareScreen shareToken='guest-share' />
       </AuthContext.Provider>,
     );
-
-    expect(await findByTestId('dim-overlay')).toBeTruthy();
-    expect(await findByTestId('login-bottom-sheet')).toBeTruthy();
-    expect(await findByText('로그인이 필요합니다')).toBeTruthy();
-    expect(await findByTestId('btn-google-login')).toBeTruthy();
+    expect(await screen.findByText('동유럽 감성 야경 투어')).toBeTruthy();
+    expect(screen.queryByTestId('login-bottom-sheet')).toBeNull();
+    fireEvent.press(screen.getByTestId('btn-save-course'));
+    expect(await screen.findByTestId('login-bottom-sheet')).toBeTruthy();
+    expect(screen.getByText('로그인이 필요합니다')).toBeTruthy();
+    expect(screen.getByTestId('btn-google-login')).toBeTruthy();
+    expect(accept).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('close-share-login'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('login-bottom-sheet')).toBeNull(),
+    );
+    expect(screen.getByText('동유럽 감성 야경 투어')).toBeTruthy();
   });
 
   it('Android 환경인 경우 Apple 로그인 버튼이 표시되지 않아야 한다', async () => {
@@ -112,13 +113,15 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
       </AuthContext.Provider>,
     );
 
+    fireEvent.press(await findByTestId('btn-save-course'));
     expect(await findByTestId('btn-google-login')).toBeTruthy();
     expect(queryByTestId('btn-apple-login')).toBeNull();
 
     Platform.OS = originalOS;
   });
 
-  it('코스 저장 버튼 클릭 시 acceptShareLinkApi (API-SHARE-3)가 호출되고 수락된 courseId와 함께 onSaveSuccess가 호출되어야 한다', async () => {
+  it('코스 저장 성공 시 알림 없이 수락된 courseId로 바로 이동한다', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
     jest
       .spyOn(commonApi, 'getShareLinkApi')
       .mockResolvedValue(mockShareDetailResponse);
@@ -154,6 +157,7 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
       'token-abc-123',
     );
     expect(mockSaveSuccess).toHaveBeenCalledWith('accepted-course-999');
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 
   it('acceptShareLinkApi 호출 시 400 에러(본인 코스 또는 이미 수락된 코스)가 발생하면 "이미 저장된 코스입니다" 알림 후 onSaveSuccess가 호출되어야 한다', async () => {
@@ -298,3 +302,69 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
     expect(await findByTestId('default-avatar-placeholder')).toBeTruthy();
   });
 });
+
+it('공유 코스는 서버 커버 URL과 실제 제목·일수를 표시하고 빈 공유자는 기본 문구로 표시한다', async () => {
+  jest.spyOn(commonApi, 'getShareLinkApi').mockResolvedValue({
+    course: {
+      title: '서울특별시 2일 여행',
+      destinationCountry: '대한민국',
+      destinationCity: '서울특별시',
+      coverImageUrl: 'https://example.com/courses/seoul.jpg',
+      startDate: '2026-10-24',
+      totalDays: 2,
+    },
+    inviter: { displayName: null, profileImageUrl: null },
+    expiresAt: null,
+  });
+  const screen = await render(
+    <AuthContext.Provider value={{ isAuthenticated: true } as any}>
+      <CourseShareScreen shareToken='seoul-share' />
+    </AuthContext.Provider>,
+  );
+  const cover = within(await screen.findByTestId('share-cover'));
+  expect(cover.getByText('서울특별시 2일 여행')).toBeTruthy();
+  expect(cover.getByText('2일')).toBeTruthy();
+  expect(await screen.findByTestId('share-cover-image')).toHaveProp('source', {
+    uri: 'https://example.com/courses/seoul.jpg',
+  });
+  expect(screen.getByText('여행 코스를 공유했습니다')).toBeTruthy();
+});
+
+it('다른 도시 사진의 로딩이 실패하면 장소를 오인시키는 서울 사진 대신 중립 배경을 유지한다', async () => {
+  jest
+    .spyOn(commonApi, 'getShareLinkApi')
+    .mockResolvedValue(mockShareDetailResponse);
+  const screen = await render(
+    <AuthContext.Provider value={{ isAuthenticated: true } as any}>
+      <CourseShareScreen shareToken='prague-share' />
+    </AuthContext.Provider>,
+  );
+  const image = await screen.findByTestId('share-cover-image');
+  expect(image.props.source.uri).toBe(
+    mockShareDetailResponse.course.coverImageUrl,
+  );
+  await fireEvent(image, 'error', { error: 'network failure' });
+  expect(screen.queryByTestId('share-cover-image')).toBeNull();
+  expect(
+    within(screen.getByTestId('share-cover')).getByText(
+      '동유럽 감성 야경 투어',
+    ),
+  ).toBeTruthy();
+});
+
+it.each(['', null, undefined])(
+  '커버 URL이 %s이면 대체 사진 없이 코스 정보를 표시한다',
+  async (coverImageUrl) => {
+    jest.spyOn(commonApi, 'getShareLinkApi').mockResolvedValue({
+      ...mockShareDetailResponse,
+      course: { ...mockShareDetailResponse.course, coverImageUrl },
+    } as any);
+    const screen = await render(
+      <AuthContext.Provider value={{ isAuthenticated: true } as any}>
+        <CourseShareScreen shareToken='no-cover-share' />
+      </AuthContext.Provider>,
+    );
+    expect(await screen.findByText('동유럽 감성 야경 투어')).toBeTruthy();
+    expect(screen.queryByTestId('share-cover-image')).toBeNull();
+  },
+);
