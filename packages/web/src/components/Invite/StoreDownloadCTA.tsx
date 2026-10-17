@@ -2,11 +2,13 @@
 
 /**
  * @file StoreDownloadCTA.tsx
- * @description OS별(iOS App Store, Android Google Play) 다운로드 유도 및 Desktop 접속 시 QR 코드 안내 컴포넌트
+ * @description OS별 다운로드 링크와 데스크톱의 스토어 선택을 제공하는 컴포넌트
  */
 
 import React, { useState, useEffect } from 'react';
 import { PlayIcon, AppleIcon } from '@/components/Icons';
+import { StoreButtons } from '@/components/StoreButtons/StoreButtons';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/download';
 
 export interface StoreDownloadCTAProps {
   shareToken: string;
@@ -15,7 +17,6 @@ export interface StoreDownloadCTAProps {
 }
 
 export function StoreDownloadCTA({
-  shareToken,
   userAgent: initialOs,
   className = '',
 }: StoreDownloadCTAProps) {
@@ -36,28 +37,22 @@ export function StoreDownloadCTA({
     }
   }, [initialOs]);
 
-  const appStoreUrl = 'https://apps.apple.com/kr/app/id6796231811';
-  const playStoreUrl =
-    'https://play.google.com/store/apps/details?id=com.yeolo.app&pcampaignid=web_share';
+  const appStoreUrl = APP_STORE_URL;
+  const playStoreUrl = PLAY_STORE_URL;
 
   return (
-    <div
-      className={`w-full max-w-lg bg-[#0d2137] rounded-[24px] p-6 sm:p-8 text-white flex flex-col gap-6 shadow-xl ${className}`}>
-      <div className='flex flex-col gap-1.5 text-center sm:text-left'>
-        <h3 className='text-[18px] sm:text-[20px] font-bold text-white tracking-tight'>
-          아직 여로 앱이 없으신가요?
-        </h3>
-        <p className='text-[14px] text-white/80 leading-relaxed'>
-          앱을 설치하고 초개인화 AI 여행 코스를 자유롭게 확인하고 편집해보세요.
+    <div className={`invite-install ${className}`}>
+      <div className='invite-install-copy'>
+        <h3 className='invite-install-title'>처음 여로를 만나셨나요?</h3>
+        <p className='invite-install-description'>
+          앱을 설치한 뒤 이 초대 링크를 다시 열어주세요.
         </p>
       </div>
 
       {detectedOs === 'ios' && (
         <div className='flex flex-col gap-3'>
-          <a
-            href={appStoreUrl}
-            className='w-full bg-white text-[#0d2137] hover:bg-slate-100 active:scale-[0.98] font-bold text-[15px] py-3.5 px-5 rounded-[14px] inline-flex items-center justify-center gap-2.5 transition-all shadow-md'>
-            <AppleIcon size={22} className='text-[#0d2137]' />
+          <a href={appStoreUrl} className='invite-store-link'>
+            <AppleIcon size={22} aria-hidden='true' />
             <span>App Store에서 다운로드</span>
           </a>
         </div>
@@ -65,35 +60,14 @@ export function StoreDownloadCTA({
 
       {detectedOs === 'android' && (
         <div className='flex flex-col gap-3'>
-          <a
-            href={playStoreUrl}
-            className='w-full bg-white text-[#0d2137] hover:bg-slate-100 active:scale-[0.98] font-bold text-[15px] py-3.5 px-5 rounded-[14px] inline-flex items-center justify-center gap-2.5 transition-all shadow-md'>
-            <PlayIcon size={22} className='text-[#0d2137]' />
+          <a href={playStoreUrl} className='invite-store-link'>
+            <PlayIcon size={22} aria-hidden='true' />
             <span>Google Play에서 다운로드</span>
           </a>
         </div>
       )}
 
-      {detectedOs === 'desktop' && (
-        <div className='flex flex-col sm:flex-row items-center gap-3 pt-2 w-full'>
-          <a
-            href={playStoreUrl}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='flex-1 w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3.5 rounded-[12px] inline-flex items-center justify-center gap-2.5 transition-all shadow-sm'>
-            <PlayIcon size={18} className='text-white' />
-            <span>Google Play</span>
-          </a>
-          <a
-            href={appStoreUrl}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='flex-1 w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3.5 rounded-[12px] inline-flex items-center justify-center gap-2.5 transition-all shadow-sm'>
-            <AppleIcon size={18} className='text-white' />
-            <span>App Store</span>
-          </a>
-        </div>
-      )}
+      {detectedOs === 'desktop' && <StoreButtons />}
     </div>
   );
 }

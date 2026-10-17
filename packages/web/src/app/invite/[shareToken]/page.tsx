@@ -8,12 +8,7 @@ import type { Metadata } from 'next';
 import { getShareLinkApi } from '@yeolo/common';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import {
-  InviteCard,
-  DeepLinkBridge,
-  StoreDownloadCTA,
-  InviteErrorState,
-} from '@/components/Invite';
+import { InviteContent, InviteErrorState } from '@/components/Invite';
 import { DEFAULT_SHARE_IMAGE } from '@/lib/share-image';
 
 interface PageProps {
@@ -166,7 +161,7 @@ export default async function InvitePage({ params }: PageProps) {
     : null;
 
   return (
-    <div className='min-h-screen flex flex-col bg-[#f5faf8] text-[#0d2137]'>
+    <div className='invite-page min-h-screen flex flex-col'>
       {jsonLd && (
         <script
           type='application/ld+json'
@@ -176,23 +171,12 @@ export default async function InvitePage({ params }: PageProps) {
 
       <Header />
 
-      <main className='flex-1 flex flex-col items-center justify-center py-12 sm:py-16 px-6'>
-        <div className='w-full max-w-lg flex flex-col items-center gap-8'>
-          {inviteData ? (
-            <>
-              {/* Course Detail Card */}
-              <InviteCard data={inviteData} />
-
-              {/* Deep Link Open App Bridge */}
-              <DeepLinkBridge shareToken={shareToken} />
-
-              {/* Store Download CTA & QR Code */}
-              <StoreDownloadCTA shareToken={shareToken} />
-            </>
-          ) : (
-            <InviteErrorState status={errorStatus} message={errorMessage} />
-          )}
-        </div>
+      <main id='main-content' tabIndex={-1} className='invite-main'>
+        {inviteData ? (
+          <InviteContent data={inviteData} shareToken={shareToken} />
+        ) : (
+          <InviteErrorState status={errorStatus} message={errorMessage} />
+        )}
       </main>
 
       <Footer />

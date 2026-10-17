@@ -19,20 +19,20 @@ export default function PrivacyPolicyPage() {
       id: 'article-1',
       title: '제1조 (수집하는 개인정보 항목 및 수집방법)',
       content: (
-        <div className='flex flex-col gap-3 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-3 text-[14px] text-muted leading-[1.75]'>
           <p>
             회사는 회원가입, 맞춤형 여행 코스 추천 서비스 제공을 위해 아래와
             같은 개인정보를 수집하고 있습니다.
           </p>
           <div>
-            <p className='font-bold text-[#0d2137]'>1. 수집 항목:</p>
+            <p className='font-bold text-foreground'>1. 수집 항목:</p>
             <ul className='list-disc pl-5 space-y-1'>
               <li>
-                <span className='font-medium text-[#0d2137]'>필수항목:</span>{' '}
+                <span className='font-medium text-foreground'>필수항목:</span>{' '}
                 Google 계정 정보 (이메일 주소, 이름, 프로필 사진, 고유 식별자)
               </li>
               <li>
-                <span className='font-medium text-[#0d2137]'>
+                <span className='font-medium text-foreground'>
                   서비스 이용 과정에서 수집될 수 있는 항목:
                 </span>{' '}
                 여행 취향 설문 응답 데이터, 사진/미디어 메타데이터 (촬영 시간 및
@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
             </ul>
           </div>
           <div>
-            <p className='font-bold text-[#0d2137]'>2. 수집 방법:</p>
+            <p className='font-bold text-foreground'>2. 수집 방법:</p>
             <ul className='list-disc pl-5 space-y-1'>
               <li>Google OAuth 소셜 로그인을 통한 자동 수집</li>
               <li>
@@ -57,23 +57,23 @@ export default function PrivacyPolicyPage() {
       id: 'article-2',
       title: '제2조 (개인정보의 수집 및 이용 목적)',
       content: (
-        <div className='flex flex-col gap-3 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-3 text-[14px] text-muted leading-[1.75]'>
           <p>회사는 수집한 개인정보를 다음의 목적을 위해 활용합니다.</p>
           <ol className='list-decimal pl-5 space-y-1.5'>
             <li>
-              <span className='font-bold text-[#0d2137]'>회원 관리:</span> 소셜
+              <span className='font-bold text-foreground'>회원 관리:</span> 소셜
               로그인 본인 확인, 개인 식별, 불량 회원의 부정 이용 방지, 가입 의사
               확인, 회원 탈퇴 처리
             </li>
             <li>
-              <span className='font-bold text-[#0d2137]'>
+              <span className='font-bold text-foreground'>
                 AI 맞춤형 서비스 제공:
               </span>{' '}
               이용자의 여행 성향 및 위치 메타데이터 분석을 통한 초개인화 여행
               코스 추천 및 일정 보관 기능 제공
             </li>
             <li>
-              <span className='font-bold text-[#0d2137]'>
+              <span className='font-bold text-foreground'>
                 서비스 개선 및 신규 서비스 개발:
               </span>{' '}
               이용 기록 분석을 통한 서비스 기능 개선 및 맞춤형 콘텐츠 제공
@@ -86,7 +86,7 @@ export default function PrivacyPolicyPage() {
       id: 'article-3',
       title: '제3조 (개인정보의 보유 및 이용 기간)',
       content: (
-        <div className='flex flex-col gap-2 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-2 text-[14px] text-muted leading-[1.75]'>
           <p>
             1. 회사는 이용자의 개인정보를 원칙적으로 회원 탈퇴 시까지 보유 및
             이용합니다.
@@ -106,7 +106,7 @@ export default function PrivacyPolicyPage() {
       id: 'article-4',
       title: '제4조 (개인정보의 제3자 제공 및 처리위탁)',
       content: (
-        <div className='flex flex-col gap-2 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-2 text-[14px] text-muted leading-[1.75]'>
           <p>
             1. 회사는 이용자의 동의 없이 개인정보를 외부에 제공하지 않습니다.
           </p>
@@ -121,7 +121,7 @@ export default function PrivacyPolicyPage() {
       id: 'article-5',
       title: '제5조 (이용자 및 법정대리인의 권리와 그 행사방법)',
       content: (
-        <div className='flex flex-col gap-2 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-2 text-[14px] text-muted leading-[1.75]'>
           <p>
             1. 이용자는 언제든지 서비스 내 설정 메뉴를 통해 자신의 개인정보를
             조회하거나 수정할 수 있으며, 회원 탈퇴(가입해제)를 요청할 수
@@ -138,13 +138,13 @@ export default function PrivacyPolicyPage() {
       id: 'article-6',
       title: '제6조 (개인정보 보호책임자 및 문의처)',
       content: (
-        <div className='flex flex-col gap-2 text-[14px] text-[#64748b] leading-[1.75]'>
+        <div className='flex flex-col gap-2 text-[14px] text-muted leading-[1.75]'>
           <p>
             회사는 이용자의 개인정보를 보호하고 개인정보와 관련한 불만을
             처리하기 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.
           </p>
           <div className='bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 mt-2'>
-            <p className='font-bold text-[#0d2137]'>
+            <p className='font-bold text-foreground'>
               개인정보 보호책임자 / 담당자
             </p>
             <p className='mt-1'>소속: 여로(Yeolo) 개발팀</p>
@@ -152,7 +152,7 @@ export default function PrivacyPolicyPage() {
               문의 이메일:{' '}
               <a
                 href='mailto:ksk85628781@gmail.com'
-                className='text-[#2d7dd2] underline font-medium'>
+                className='text-blue-ink underline font-medium'>
                 ksk85628781@gmail.com
               </a>
             </p>
@@ -164,7 +164,7 @@ export default function PrivacyPolicyPage() {
       id: 'appendix',
       title: '부칙',
       content: (
-        <p className='text-[14px] text-[#64748b] leading-[1.75]'>
+        <p className='text-[14px] text-muted leading-[1.75]'>
           본 개인정보 처리방침은 2026년 7월 30일부터 적용됩니다.
         </p>
       ),
@@ -172,33 +172,33 @@ export default function PrivacyPolicyPage() {
   ];
 
   return (
-    <div className='min-h-screen flex flex-col bg-white text-[#0d2137]'>
+    <div className='min-h-screen flex flex-col bg-white text-foreground'>
       <Header />
 
-      <main className='flex-1 flex flex-col'>
+      <main id='main-content' tabIndex={-1} className='flex-1 flex flex-col'>
         {/* Title Banner */}
-        <section className='w-full bg-[#f5faf8] border-b border-slate-100 py-16 px-6 text-center'>
+        <section className='legal-banner'>
           <div className='max-w-4xl mx-auto flex flex-col items-center gap-4'>
-            <div className='inline-flex items-center px-3.5 py-1.5 rounded-[20px] bg-[#e0f7f1]'>
-              <span className='text-[#2d7dd2] text-[13px] font-bold tracking-tight'>
+            <div className='inline-flex items-center px-3.5 py-1.5 rounded-[20px] bg-mint-light'>
+              <span className='text-blue-ink text-[13px] font-bold tracking-tight'>
                 여로 서비스 이용 약관 &amp; 정책
               </span>
             </div>
-            <h1 className='text-[32px] sm:text-[40px] font-extrabold text-[#0d2137] tracking-tight'>
+            <h1 className='text-[32px] sm:text-[40px] font-extrabold text-foreground tracking-tight'>
               개인정보처리방침
             </h1>
-            <p className='text-[14px] font-medium text-[#64748b]'>
+            <p className='text-[14px] font-medium text-muted'>
               시행일: 2026년 7월 30일
             </p>
           </div>
         </section>
 
         {/* Content Box */}
-        <section className='w-full py-16 sm:py-20 px-6'>
+        <section className='legal-content'>
           <div className='max-w-4xl mx-auto flex flex-col gap-10'>
             {/* Intro */}
             <div className='flex flex-col gap-6'>
-              <p className='text-[15px] text-[#64748b] leading-[1.75]'>
+              <p className='text-[15px] text-muted leading-[1.75]'>
                 여로(Yeolo, 이하 &quot;회사&quot; 또는 &quot;서비스&quot;)는
                 이용자의 개인정보를 중요시하며, 「개인정보 보호법」 및
                 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 등 관련
@@ -212,7 +212,7 @@ export default function PrivacyPolicyPage() {
             {/* Articles */}
             {articles.map((item) => (
               <div key={item.id} className='flex flex-col gap-4'>
-                <h2 className='text-[18px] font-bold text-[#0d2137] tracking-tight'>
+                <h2 className='text-[18px] font-bold text-foreground tracking-tight'>
                   {item.title}
                 </h2>
                 {item.content}

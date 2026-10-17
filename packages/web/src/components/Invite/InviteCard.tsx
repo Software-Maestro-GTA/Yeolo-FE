@@ -1,9 +1,7 @@
 /**
  * @file InviteCard.tsx
- * @description 여행 코스 초대 정보(코스 요약 및 초대한 사용자 프로필) 렌더링 카드 컴포넌트
+ * @description 초대한 사람, 여행 코스와 일정, 링크 유효기간을 보여주는 초대 카드
  */
-
-import React from 'react';
 import Image from 'next/image';
 import {
   formatYYYYMMDD,
@@ -16,79 +14,75 @@ export interface InviteCardProps {
   className?: string;
 }
 
+/** 전달받은 초대 정보를 제목과 일정 중심의 여행 카드로 표시합니다. */
 export function InviteCard({ data, className = '' }: InviteCardProps) {
   const { course, inviter, expiresAt } = data;
   const inviterName = inviter.displayName || '여행자';
 
   return (
-    <div
-      className={`w-full max-w-lg bg-white rounded-[24px] border border-slate-100 shadow-[0px_8px_30px_0px_rgba(15,23,42,0.08)] overflow-hidden flex flex-col ${className}`}>
-      {/* Top Inviter Banner */}
-      <div className='bg-[#f5faf8] border-b border-slate-100 p-6 flex items-center gap-4'>
-        <div className='relative w-12 h-12 rounded-full overflow-hidden bg-[#e0f7f1] border-2 border-white shadow-sm shrink-0 flex items-center justify-center'>
-          {inviter.profileImageUrl ? (
-            <Image
-              src={inviter.profileImageUrl}
-              alt={inviterName}
-              fill
-              className='object-cover'
-              sizes='48px'
-            />
-          ) : (
-            <span className='text-[#2d7dd2] font-extrabold text-[18px]'>
-              {inviterName.charAt(0)}
-            </span>
-          )}
-        </div>
-
-        <div className='flex flex-col'>
-          <span className='text-[#2d7dd2] text-[12px] font-bold tracking-tight'>
-            초대 알림
-          </span>
-          <h2 className='text-[#0d2137] font-bold text-[16px] leading-snug'>
-            {inviter.displayName
-              ? `${inviter.displayName}님이 여행 코스에 초대했습니다!`
-              : '여행 코스에 초대받았습니다!'}
-          </h2>
-        </div>
-      </div>
-
-      {/* Course Summary Body */}
-      <div className='p-6 sm:p-8 flex flex-col gap-6'>
-        <div className='flex flex-col gap-2'>
-          <span className='inline-block self-start bg-[#e0f7f1] text-[#2d7dd2] text-[12px] font-bold px-2.5 py-1 rounded-full'>
-            AI 맞춤 여행 코스
-          </span>
-          <h1 className='text-[22px] sm:text-[26px] font-extrabold text-[#0d2137] leading-tight'>
-            {course.title}
-          </h1>
-        </div>
-
-        {/* Details Grid */}
-        <div className='bg-slate-50 rounded-[16px] p-4 flex flex-col gap-3 text-[14px]'>
-          {/* Location */}
-          <div className='flex items-center gap-2.5 text-[#0d2137]'>
-            <MapPinIcon size={18} className='text-[#2d7dd2] shrink-0' />
-            <span className='font-semibold'>
-              {course.destinationCountry} {course.destinationCity}
-            </span>
+    <article
+      className={`invite-card ${className}`}
+      aria-labelledby='invite-course-title'>
+      <div className='invite-card-top'>
+        <div className='invite-sender'>
+          <div className='invite-avatar'>
+            {inviter.profileImageUrl ? (
+              <Image
+                src={inviter.profileImageUrl}
+                alt={inviterName}
+                fill
+                sizes='44px'
+              />
+            ) : (
+              <span aria-hidden='true'>{inviterName.charAt(0)}</span>
+            )}
           </div>
-
-          {/* Date & Duration */}
-          <div className='flex items-center gap-2.5 text-[#45464c]'>
-            <CalendarCheckIcon size={18} className='text-[#00c9a7] shrink-0' />
-            <span>
-              {course.startDate} • {course.totalDays}일
-            </span>
+          <div>
+            <span className='invite-label'>당신에게 도착한 여행 초대</span>
+            <p>
+              {inviter.displayName
+                ? `${inviter.displayName}님이 여행 코스에 초대했습니다!`
+                : '여행 코스에 초대받았습니다!'}
+            </p>
           </div>
         </div>
-
-        {expiresAt && (
-          <p className='text-[12px] text-[#94a3b8] text-center'>
-            * 본 공유 링크는 {formatYYYYMMDD(expiresAt)}까지 유효합니다.
-          </p>
-        )}
       </div>
-    </div>
+      <div className='invite-card-body'>
+        <span className='invite-label'>함께 떠날 여행</span>
+        <h1 id='invite-course-title'>{course.title}</h1>
+        <p className='invite-destination'>
+          <MapPinIcon size={18} aria-hidden='true' />
+          <span>
+            {course.destinationCountry} {course.destinationCity}
+          </span>
+        </p>
+        <dl className='invite-facts'>
+          <div>
+            <dt>
+              <CalendarCheckIcon size={17} aria-hidden='true' />
+              출발일
+            </dt>
+            <dd>{course.startDate}</dd>
+          </div>
+          <div>
+            <dt>여행 기간</dt>
+            <dd>
+              {course.totalDays}일<span>의 새로운 발견</span>
+            </dd>
+          </div>
+        </dl>
+        <div className='invite-card-note'>
+          <span>YOUR NEXT JOURNEY</span>
+          <span aria-hidden='true'>함께라서 더 좋은 여행</span>
+        </div>
+      </div>
+      {expiresAt && (
+        <p className='invite-expiry'>
+          이 초대 링크는{' '}
+          <time dateTime={expiresAt}>{formatYYYYMMDD(expiresAt)}</time>까지
+          유효해요.
+        </p>
+      )}
+    </article>
   );
 }

@@ -4,14 +4,20 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { Header } from '@/components/Header';
 
 describe('Header Component', () => {
   it('renders brand logo and title correctly', () => {
     render(<Header />);
-    expect(screen.getByText('여로')).toBeInTheDocument();
-    expect(screen.getByAltText('Yeolo Logo')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '여로 홈페이지' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(screen.getByAltText('여로 (Yeolo)')).toHaveAttribute(
+      'src',
+      '/branding/yeolo-logo.svg',
+    );
   });
 
   it('renders navigation links', () => {
@@ -21,17 +27,35 @@ describe('Header Component', () => {
       'href',
       '/#how-it-works',
     );
-    expect(screen.getByText('인기 여행지')).toHaveAttribute(
+    expect(screen.getByText('여행의 발견')).toHaveAttribute(
       'href',
       '/#destinations',
     );
   });
 
-  it('renders download app CTA button', () => {
+  it('provides one device-aware download link without opening the menu', () => {
     render(<Header />);
-    const ctaButtons = screen.getAllByText('앱 다운로드');
-    expect(ctaButtons.length).toBeGreaterThan(0);
-    expect(ctaButtons[0].closest('a')).toHaveAttribute('href', '/#download');
+    const header = within(screen.getByRole('banner'));
+    expect(header.getByRole('link', { name: '앱 다운로드' })).toHaveAttribute(
+      'href',
+      '/download',
+    );
+    expect(
+      header.queryByRole('link', { name: /App Store/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      header.queryByRole('link', { name: /Google Play/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('closes the expanded mobile menu on Escape and restores focus', () => {
+    render(<Header />);
+    const toggle = screen.getByRole('button', { name: '메뉴 열기/닫기' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveFocus();
   });
 
   it('toggles mobile menu when hamburger button is clicked', () => {

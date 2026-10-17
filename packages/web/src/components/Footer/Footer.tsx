@@ -27,91 +27,41 @@ export function Footer({ className = '' }: FooterProps) {
   const partnerMailHref = `mailto:ksk85628781@gmail.com?subject=${partnerMailSubject}&body=${partnerMailBody}`;
 
   return (
-    <footer
-      className={`w-full bg-[#0d2137] text-white pt-16 pb-12 ${className}`}>
-      <div className='max-w-7xl mx-auto px-6 sm:px-12 lg:px-20 flex flex-col gap-12'>
-        {/* Top Content Row */}
-        <div className='flex flex-col lg:flex-row justify-between items-start gap-10'>
-          {/* Brand Info */}
-          <div className='flex flex-col items-start gap-4 max-w-md'>
-            <Link href='/' className='flex items-center gap-2.5'>
-              <div className='relative w-6 h-6 rounded-[5px] overflow-hidden shrink-0'>
-                <Image
-                  src='/images/logo-mark.png'
-                  alt='Yeolo Logo'
-                  width={24}
-                  height={24}
-                  className='object-cover w-full h-full'
-                />
-              </div>
-              <span className='font-extrabold text-[18px] text-white tracking-tight'>
-                여로
-              </span>
+    <footer className={`site-footer ${className}`}>
+      <div className='site-container'>
+        <div className='footer-top'>
+          <div className='footer-brand'>
+            <Link href='/' aria-label='여로 홈페이지' className='brand-link'>
+              <Image
+                src='/branding/yeolo-logo.svg'
+                alt='여로 (Yeolo)'
+                width={588}
+                height={188}
+                className='brand-logo'
+              />
             </Link>
-
-            <p className='text-[14px] text-[#64748b] leading-[1.6]'>
-              초개인화 기술로 새로운 형태의 여행을 설계하는 플랫폼, 여로.
+            <p>
+              나도 몰랐던 내 안의 여행 취향 발견.
               <br />
-              당신의 다음 모험을 누구보다 똑똑하게 가이드합니다.
+              당신다운 여행의 시작, 여로.
             </p>
           </div>
-
-          {/* Nav Links Columns */}
-          <div className='flex gap-14 sm:gap-20'>
-            {/* Company Column */}
-            <div className='flex flex-col gap-3'>
-              <h4 className='font-bold text-[14px] text-white tracking-tight'>
-                회사 소개
-              </h4>
-              <ul className='flex flex-col gap-2.5 text-[13px] text-[#64748b]'>
-                <li>
-                  <a
-                    href={partnerMailHref}
-                    className='hover:text-white transition-colors'>
-                    제휴 제안
-                  </a>
-                </li>
-              </ul>
+          <nav className='footer-links' aria-label='고객 지원 및 정책'>
+            <div>
+              <h3>여로와 함께</h3>
+              <a href={partnerMailHref}>제휴 제안</a>
+              <a href={supportMailHref}>고객센터</a>
             </div>
-
-            {/* Terms Column */}
-            <div className='flex flex-col gap-3'>
-              <h4 className='font-bold text-[14px] text-white tracking-tight'>
-                이용 약관
-              </h4>
-              <ul className='flex flex-col gap-2.5 text-[13px] text-[#64748b]'>
-                <li>
-                  <Link
-                    href='/terms'
-                    className='hover:text-white transition-colors'>
-                    서비스 이용약관
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href='/privacy'
-                    className='hover:text-white transition-colors'>
-                    개인정보처리방침
-                  </Link>
-                </li>
-                <li>
-                  <a
-                    href={supportMailHref}
-                    className='hover:text-white transition-colors'>
-                    고객센터
-                  </a>
-                </li>
-              </ul>
+            <div>
+              <h3>이용 안내</h3>
+              <Link href='/terms'>서비스 이용약관</Link>
+              <Link href='/privacy'>개인정보처리방침</Link>
             </div>
-          </div>
+          </nav>
         </div>
-
-        {/* Divider Line */}
-        <div className='w-full h-px bg-white/10' />
-
-        {/* Bottom Copyright */}
-        <div className='flex items-center justify-between text-[12px] text-[#64748b]'>
+        <div className='footer-bottom'>
           <p>© 2026 여로 (Yeolo) Inc. All rights reserved.</p>
+          <span>YOUR TRAVEL, YOUR WAY.</span>
         </div>
       </div>
     </footer>
