@@ -1,26 +1,28 @@
 /**
  * @file BookingScreen.tsx
- * @description Context-aware MRT booking search, user-selected products and affiliate navigation.
+ * @description Entry-aware booking searches with smooth form transitions, readable product cards, and overlay price guidance.
  */
+import { CachedImageBackground } from '../components/common/CachedImage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   FlatList,
-  ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Linking,
+  Modal,
   Platform,
+  Pressable,
   StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Text, TextInput } from '../components/common/Typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useBackground } from '../context';
 import { useGA4ScreenTracking } from '../hooks';
 import {
@@ -35,10 +37,20 @@ import {
 } from '../services/bookingService';
 import { APP_CONFIG } from '../constants/config';
 import { UI_STRINGS } from '../constants/strings';
-import { palette } from '../theme/colors';
+import { palette, hexToRgba } from '../theme/colors';
+import { BOOKING_REEL_UI } from '../constants/bookingReelUiStrings';
+import {
+  BookingPartner,
+  BookingProductShade,
+  BookingReelAsset,
+} from '../components/booking/BookingReelAsset';
+import { DestinationPickerSheet } from '../components/course/DestinationPickerSheet';
+import { TravelDateSheet } from '../components/course/TravelDateSheet';
 import { TicketCouponPack } from '../components/booking/TicketCouponPack';
+import { BookingAirportSheet } from '../components/booking/BookingAirportSheet';
 
 const S = UI_STRINGS.BOOKING;
+const V = BOOKING_REEL_UI.BOOKING;
 type Choice = { id: string; label: string; product?: BookingProduct };
 type AirportTarget = 'departure' | 'arrival';
 type FieldType = 'text' | 'number' | 'date';
@@ -67,13 +79,23 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   useGA4ScreenTracking('BookingScreen');
   const { setBackground, resetBackground } = useBackground();
   const insets = useSafeAreaInsets();
+  const safeAreaStyles = StyleSheet.create({
+    footer: { paddingBottom: insets.bottom + 22 },
+    list: { paddingBottom: insets.bottom + 24 },
+    scrollTop: { bottom: insets.bottom + 20 },
+  });
   const [headerHeight, setHeaderHeight] = useState(64);
+  const [destinationVisible, setDestinationVisible] = useState(false);
+  const [datesVisible, setDatesVisible] = useState(false);
   useEffect(() => {
     // BackgroundImageLayout owns the top inset; do not add a second safe area here.
     setBackground({ noTopEdges: false });
     return resetBackground;
   }, [setBackground, resetBackground]);
   const [keyword, setKeyword] = useState(context.keyword || '');
+  const [destinationCountry, setDestinationCountry] = useState(
+    context.country?.trim() || '',
+  );
   const [departure, setDeparture] = useState('');
   const [depCode, setDepCode] = useState('');
   const [arrCode, setArrCode] = useState('');
@@ -90,7 +112,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   const [selectedHotelUrl, setSelectedHotelUrl] = useState<string>();
   const [productsSearched, setProductsSearched] = useState(false);
   const [productsTotalCount, setProductsTotalCount] = useState(0);
+  const [priceInfoVisible, setPriceInfoVisible] = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
+  const reduceMotion = useRef(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pageError, setPageError] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -123,6 +147,39 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       pageController.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let preferenceChanged = false;
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      (enabled) => {
+        preferenceChanged = true;
+        reduceMotion.current = enabled;
+      },
+    );
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (!disposed && !preferenceChanged) reduceMotion.current = enabled;
+      })
+      .catch(() => {
+        // Keep transitions still when the accessibility preference is unknown.
+      });
+    return () => {
+      disposed = true;
+      subscription.remove();
+    };
+  }, []);
+
+  const transitionForm = (collapsed: boolean) => {
+    if (!reduceMotion.current) {
+      // Animate the form height and surrounding layout in the same native commit.
+      LayoutAnimation.configureNext(
+        LayoutAnimation.create(280, 'easeInEaseOut', 'opacity'),
+      );
+    }
+    setFormCollapsed(collapsed);
+  };
 
   useEffect(() => {
     if (kind !== 'flight') return;
@@ -169,13 +226,19 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       .searchRegions(context.keyword.trim(), domestic, controller.signal)
       .then((regions) => {
         const region = regions[0];
-        if (!region || controller.signal.aborted || regionTouched.current)
+        if (controller.signal.aborted || regionTouched.current) return;
+        if (!region) {
+          autoSearchStarted.current = true;
+          if (context.autoSearch) setMessage(S.HOTEL_REGION_REQUIRED);
           return;
+        }
         setRegionId(region.regionId);
         setKeyword([region.name, region.subName].filter(Boolean).join(' · '));
       })
       .catch(() => {
-        // The location input remains available when the initial lookup fails.
+        if (controller.signal.aborted || regionTouched.current) return;
+        autoSearchStarted.current = true;
+        if (context.autoSearch) setMessage(S.HOTEL_REGION_REQUIRED);
       });
     return () => controller.abort();
   }, [kind, context.keyword]);
@@ -240,6 +303,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   }, [airportSearch]);
 
   const clearResults = () => {
+    // Editing a condition takes ownership away from the one-time entry search.
+    autoSearchStarted.current = true;
     resultsVersion.current += 1;
     pageController.current?.abort();
     pageController.current = null;
@@ -256,13 +321,29 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setLoadingMore(false);
     setPageError(false);
     setMessage('');
+    setPriceInfoVisible(false);
     setFlightFallback(false);
   };
   const close = () => {
     active.current?.abort();
     onBack();
   };
-  const run = async (action: (signal: AbortSignal) => Promise<void>) => {
+  const openDestination = () => {
+    if (active.current) return;
+    autoSearchStarted.current = true;
+    Keyboard.dismiss();
+    setDestinationVisible(true);
+  };
+  const openDates = () => {
+    if (active.current) return;
+    autoSearchStarted.current = true;
+    Keyboard.dismiss();
+    setDatesVisible(true);
+  };
+  const run = async (
+    action: (signal: AbortSignal) => Promise<void>,
+    onFailure?: () => void,
+  ) => {
     if (active.current) return;
     const controller = new AbortController();
     active.current = controller;
@@ -272,6 +353,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       await action(controller.signal);
     } catch (error) {
       if (mounted.current && !controller.signal.aborted) {
+        onFailure?.();
         if (
           kind === 'flight' &&
           error instanceof MyRealTripError &&
@@ -308,78 +390,145 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     }
   };
   const search = () => {
+    if (active.current) return;
+    autoSearchStarted.current = true;
     const count = Number(adults);
     if (kind === 'ticket' && !keyword.trim()) {
       setMessage(S.KEYWORD_REQUIRED);
       return;
     }
-    if (
-      kind !== 'ticket' &&
-      (!isBookingDate(start) ||
-        !isBookingDate(end) ||
-        !/^\d+$/.test(adults) ||
-        !Number.isSafeInteger(count) ||
-        count < 1 ||
-        (kind === 'hotel'
-          ? !regionId || end <= start
-          : !depCode || !arrCode || depCode === arrCode || end < start))
-    ) {
-      setMessage(S.INVALID);
-      return;
+    if (kind !== 'ticket') {
+      if (!isBookingDate(start) || !isBookingDate(end)) {
+        setMessage(S.INVALID_DATE);
+        return;
+      }
+      if (!/^\d+$/.test(adults) || !Number.isSafeInteger(count) || count < 1) {
+        setMessage(S.INVALID_ADULTS);
+        return;
+      }
+      if (kind === 'hotel') {
+        if (!regionId) {
+          setMessage(S.HOTEL_REGION_REQUIRED);
+          return;
+        }
+        if (end <= start) {
+          setMessage(S.HOTEL_DATE_ORDER);
+          return;
+        }
+      } else {
+        if ((!depCode && !departure.trim()) || (!arrCode && !keyword.trim())) {
+          setMessage(S.FLIGHT_AIRPORT_REQUIRED);
+          return;
+        }
+        if (depCode && arrCode && depCode === arrCode) {
+          setMessage(S.FLIGHT_SAME_AIRPORT);
+          return;
+        }
+        if (end < start) {
+          setMessage(S.FLIGHT_DATE_ORDER);
+          return;
+        }
+      }
     }
     clearResults();
     Keyboard.dismiss();
-    void run(async (signal) => {
-      if (kind === 'flight') {
-        const url = await myRealTrip.createFlightLink(
-          {
-            depAirportCd: depCode,
-            arrAirportCd: arrCode,
-            depDate: start,
-            arrDate: end,
-            adult: count,
-          },
-          signal,
-        );
-        await openLink(url, signal);
-      } else {
-        const query: HotelQuery | null =
-          kind === 'hotel'
-            ? {
-                regionId: regionId!,
-                checkIn: start,
-                checkOut: end,
-                adultCount: count,
-              }
-            : null;
-        const pageResult =
-          kind === 'hotel'
-            ? await myRealTrip.searchHotels(query!, signal)
-            : await myRealTrip.searchTicketPage(keyword, 1, signal);
-        const found = pageResult.items.map((p) => ({
-          id: p.productUrl,
-          label: p.itemName,
-          product: p,
-        }));
-        if (!signal.aborted) {
-          if (kind === 'hotel') {
-            hotelQuery.current = query;
-            if (found.length) setSelectedHotelUrl(found[0].id);
-          } else {
-            ticketQuery.current = keyword.trim();
+    if (kind === 'ticket') transitionForm(true);
+    void run(
+      async (signal) => {
+        if (kind === 'flight') {
+          setAirportSearch(null);
+          setAirportChoices([]);
+          const resolveAirport = async (
+            value: string,
+            selectedCode: string,
+            target: AirportTarget,
+          ) => {
+            if (selectedCode) return selectedCode;
+            const query = value.replace(/ \([A-Z]{3}\)$/, '').trim();
+            const [match] = await myRealTrip.searchAirports(query, signal);
+            if (!match || signal.aborted || !mounted.current) return '';
+            const { code, koName, enName } = match.airport;
+            const label = `${koName || enName || code} (${code})`;
+            if (target === 'departure') {
+              setDeparture(label);
+              setDepCode(code);
+            } else {
+              setKeyword(label);
+              setArrCode(code);
+            }
+            return code;
+          };
+          const departureCode = await resolveAirport(
+            departure,
+            depCode,
+            'departure',
+          );
+          const arrivalCode = await resolveAirport(keyword, arrCode, 'arrival');
+          if (signal.aborted || !mounted.current) return;
+          if (!departureCode || !arrivalCode) {
+            setMessage(S.FLIGHT_AIRPORT_REQUIRED);
+            return;
           }
-          hasMoreResults.current = pageResult.hasMore;
-          resultPage.current = pageResult.page;
-          setProductsSearched(true);
-          setProductsTotalCount(pageResult.totalCount);
-          setFormCollapsed(true);
+          if (departureCode === arrivalCode) {
+            setMessage(S.FLIGHT_SAME_AIRPORT);
+            return;
+          }
+          const url = await myRealTrip.createFlightLink(
+            {
+              depAirportCd: departureCode,
+              arrAirportCd: arrivalCode,
+              depDate: start,
+              arrDate: end,
+              adult: count,
+            },
+            signal,
+          );
+          await openLink(url, signal);
+        } else {
+          const query: HotelQuery | null =
+            kind === 'hotel'
+              ? {
+                  regionId: regionId!,
+                  checkIn: start,
+                  checkOut: end,
+                  adultCount: count,
+                }
+              : null;
+          const pageResult =
+            kind === 'hotel'
+              ? await myRealTrip.searchHotels(query!, signal)
+              : await myRealTrip.searchTicketPage(keyword, 1, signal);
+          const found = pageResult.items.map((p) => ({
+            id: p.productUrl,
+            label: p.itemName,
+            product: p,
+          }));
+          if (!signal.aborted && mounted.current) {
+            if (kind === 'hotel') {
+              hotelQuery.current = query;
+              if (found.length) setSelectedHotelUrl(found[0].id);
+            } else {
+              ticketQuery.current = keyword.trim();
+            }
+            hasMoreResults.current = pageResult.hasMore;
+            resultPage.current = pageResult.page;
+            setProductsSearched(true);
+            setProductsTotalCount(pageResult.totalCount);
+            if (kind !== 'ticket') transitionForm(true);
+          }
+          showChoices(found, signal);
         }
-        showChoices(found, signal);
-      }
-    });
+      },
+      kind === 'ticket' ? () => transitionForm(false) : undefined,
+    );
   };
   useEffect(() => {
-    if (kind !== 'ticket' || !context.autoSearch || !context.keyword?.trim())
+    if (
+      kind === 'flight' ||
+      !context.autoSearch ||
+      !context.keyword?.trim() ||
+      (kind === 'hotel' && !regionId)
+    )
       return;
     const timer = setTimeout(() => {
       if (autoSearchStarted.current) return;
@@ -387,7 +536,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       search();
     }, 0);
     return () => clearTimeout(timer);
-  }, [kind, context.autoSearch, context.keyword]);
+  }, [kind, context.autoSearch, context.keyword, regionId, start, end, adults]);
   const loadMoreProducts = (retry = false) => {
     if (
       kind === 'flight' ||
@@ -487,6 +636,20 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setAirportSearch(null);
     setAirportChoices([]);
     setMessage('');
+    Keyboard.dismiss();
+  };
+  const changeAirportQuery = (target: AirportTarget, next: string) => {
+    airportTouched.current[target] = true;
+    clearResults();
+    if (target === 'departure') {
+      setDeparture(next);
+      setDepCode('');
+    } else {
+      setKeyword(next);
+      setArrCode('');
+    }
+    setAirportChoices([]);
+    setAirportSearch({ target, query: next });
   };
   const airportField = (
     target: AirportTarget,
@@ -494,7 +657,6 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     value: string,
   ) => (
     <View style={styles.halfField}>
-      <Text style={styles.label}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         placeholder={label}
@@ -503,25 +665,20 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         value={value}
         editable={!busy}
         autoCapitalize='none'
+        showSoftInputOnFocus={false}
+        onPressIn={() =>
+          setAirportSearch({
+            target,
+            query: value.replace(/ \([A-Z]{3}\)$/, ''),
+          })
+        }
         onFocus={() =>
           setAirportSearch({
             target,
             query: value.replace(/ \([A-Z]{3}\)$/, ''),
           })
         }
-        onChangeText={(next) => {
-          airportTouched.current[target] = true;
-          clearResults();
-          if (target === 'departure') {
-            setDeparture(next);
-            setDepCode('');
-          } else {
-            setKeyword(next);
-            setArrCode('');
-          }
-          setAirportChoices([]);
-          setAirportSearch({ target, query: next });
-        }}
+        onChangeText={(next) => changeAirportQuery(target, next)}
       />
     </View>
   );
@@ -532,7 +689,6 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     type: FieldType = 'text',
   ) => (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
       <TextInput
         placeholder={label}
         placeholderTextColor={palette.mutedText}
@@ -543,6 +699,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         maxLength={type === 'date' ? 10 : 100}
         autoCapitalize='none'
         keyboardType={type === 'text' ? 'default' : 'number-pad'}
+        showSoftInputOnFocus={type !== 'date'}
+        onPressIn={type === 'date' ? openDates : undefined}
         onChangeText={(value) => {
           clearResults();
           change(
@@ -570,15 +728,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         busy && styles.disabled,
       ]}>
       {testID === 'booking-search' ? (
-        <LinearGradient
-          colors={[palette.primary, palette.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.primaryButtonContent}>
-          <Ionicons name='search-outline' size={18} color={palette.white} />
+        <View style={styles.primaryButtonContent}>
           <Text style={styles.buttonText}>{label}</Text>
-          <Ionicons name='arrow-forward' size={18} color={palette.white} />
-        </LinearGradient>
+        </View>
       ) : (
         <Text style={styles.secondaryButtonText}>{label}</Text>
       )}
@@ -591,15 +743,25 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       }
       style={styles.hotelResultsSection}>
       <View style={styles.resultsHeading}>
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={styles.sectionTitle}
+          accessibilityLabel={`${kind === 'hotel' ? S.HOTEL_RESULTS : S.TICKET_RESULTS} ${productsTotalCount}${kind === 'hotel' ? S.HOTEL_COUNT : S.TICKET_COUNT}`}>
           {kind === 'hotel' ? S.HOTEL_RESULTS : S.TICKET_RESULTS}
         </Text>
-        <Text style={styles.resultsCount}>
-          {productsTotalCount}
-          {kind === 'hotel' ? S.HOTEL_COUNT : S.TICKET_COUNT}
-        </Text>
+        <TouchableOpacity
+          accessibilityRole='button'
+          accessibilityLabel={S.PRICE_NOTE}
+          onPress={() => setPriceInfoVisible(true)}
+          style={styles.priceInformationIcon}
+          hitSlop={8}>
+          <BookingReelAsset name='info' />
+          <Text accessible={false} style={styles.priceInformationMark}>
+            !
+          </Text>
+        </TouchableOpacity>
+        <View style={styles.resultsHeadingSpacer} />
+        <BookingPartner compact />
       </View>
-      <Text style={styles.note}>{S.PRICE_NOTE}</Text>
       {!!message && (
         <Text accessibilityRole='alert' style={styles.note}>
           {message}
@@ -608,13 +770,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     </View>
   );
   const ticketCardContent = (item: Choice) => (
-    <LinearGradient
-      colors={
-        item.product?.imageUrl
-          ? ['transparent', 'rgba(4, 25, 42, 0.94)']
-          : [palette.darkTeal, palette.deepNavy]
-      }
-      style={styles.ticketOverlay}>
+    <View style={styles.ticketOverlay}>
+      <BookingProductShade kind='ticket' />
       <Text style={styles.hotelName} numberOfLines={2}>
         {item.label}
       </Text>
@@ -625,7 +782,13 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       )}
       <View style={styles.hotelDetails}>
         {item.product?.reviewScore != null && (
-          <Text style={styles.hotelDetail}>★ {item.product.reviewScore}</Text>
+          <View
+            style={styles.rating}
+            accessible
+            accessibilityLabel={`★ ${item.product.reviewScore}`}>
+            <BookingReelAsset name='star' />
+            <Text style={styles.hotelDetail}>{item.product.reviewScore}</Text>
+          </View>
         )}
         {Number.isInteger(item.product?.reviewCount) && (
           <Text style={styles.hotelDetail}>
@@ -633,22 +796,10 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           </Text>
         )}
       </View>
-      {Array.isArray(item.product?.tags) && item.product.tags.length > 0 && (
-        <View style={styles.ticketTags}>
-          {item.product.tags
-            .filter((tag): tag is string => typeof tag === 'string')
-            .slice(0, 3)
-            .map((tag) => (
-              <Text key={tag} style={styles.ticketTag}>
-                {tag}
-              </Text>
-            ))}
-        </View>
-      )}
       <Text style={styles.hotelPrice}>
         {S.TICKET_START_PRICE} ₩{item.product?.salePrice.toLocaleString()}
       </Text>
-    </LinearGradient>
+    </View>
   );
   return (
     <View style={styles.screen} testID={`booking-screen-${kind}`}>
@@ -661,484 +812,727 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           accessibilityLabel={S.BACK}
           onPress={close}
           style={styles.backButton}>
-          <Ionicons name='chevron-back' size={22} color={palette.deepNavy} />
+          <BookingReelAsset name='back' />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{S.TITLE}</Text>
-        <View style={styles.headerSpacer} />
+        {productsSearched ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            accessibilityRole='button'
+            accessibilityLabel={V.CLOSE}
+            onPress={close}>
+            <BookingReelAsset name='close' />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
       <KeyboardAvoidingView
         style={styles.content}
         keyboardVerticalOffset={insets.top + headerHeight}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <FlatList
-          testID='booking-results-list'
-          ref={listRef}
-          data={choices}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps='handled'
-          keyboardDismissMode='on-drag'
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-          onScroll={(event) => {
-            const offset = event.nativeEvent.contentOffset.y;
-            if (offset > 20) hasScrolledResults.current = true;
-            setShowScrollTop(offset > 260);
-          }}
-          scrollEventThrottle={100}
-          onEndReached={
-            kind !== 'flight' ? () => loadMoreProducts() : undefined
-          }
-          onEndReachedThreshold={0.4}
-          ListHeaderComponent={
-            <View style={styles.listHeader}>
-              <LinearGradient
-                colors={[palette.lightTeal, palette.softMint]}
-                style={styles.hero}>
-                <View style={styles.heroTop}>
-                  <View style={styles.heroIcon}>
-                    <Ionicons
-                      name={
-                        kind === 'flight'
-                          ? 'airplane-outline'
+        <View style={styles.resultsViewport}>
+          <FlatList
+            testID='booking-results-list'
+            ref={listRef}
+            data={choices}
+            numColumns={kind === 'hotel' ? 2 : 1}
+            columnWrapperStyle={
+              kind === 'hotel' ? styles.hotelColumns : undefined
+            }
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps='handled'
+            keyboardDismissMode='on-drag'
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.list, safeAreaStyles.list]}
+            onScroll={(event) => {
+              const offset = event.nativeEvent.contentOffset.y;
+              if (offset > 20) hasScrolledResults.current = true;
+              setShowScrollTop(offset > 260);
+            }}
+            scrollEventThrottle={100}
+            onEndReached={
+              kind !== 'flight' ? () => loadMoreProducts() : undefined
+            }
+            onEndReachedThreshold={0.4}
+            ListHeaderComponent={
+              <View style={styles.listHeader}>
+                {!productsSearched && !formCollapsed && (
+                  <View style={styles.intro}>
+                    <View style={styles.introHeading}>
+                      <Text style={styles.title}>
+                        {kind === 'flight'
+                          ? V.FLIGHT_TITLE
                           : kind === 'hotel'
-                            ? 'bed-outline'
-                            : 'ticket-outline'
-                      }
-                      size={26}
-                      color={palette.primary}
-                    />
-                  </View>
-                  <Text style={styles.partner}>{S.PARTNER}</Text>
-                </View>
-                <Text style={styles.title}>
-                  {kind === 'flight'
-                    ? S.FLIGHT
-                    : kind === 'hotel'
-                      ? S.HOTEL
-                      : S.TICKET}
-                </Text>
-                <Text style={styles.subtitle}>
-                  {kind === 'flight'
-                    ? S.FLIGHT_HINT
-                    : kind === 'hotel'
-                      ? S.HOTEL_HINT
-                      : S.TICKET_HINT}
-                </Text>
-              </LinearGradient>
-              <View testID='booking-form' style={styles.form}>
-                <View style={styles.sectionHeading}>
-                  <Ionicons
-                    name='options-outline'
-                    size={18}
-                    color={palette.accent}
-                  />
-                  <Text style={styles.sectionTitle}>{S.SEARCH_CONDITIONS}</Text>
-                  {kind !== 'flight' && productsSearched && (
-                    <TouchableOpacity
-                      testID={`${kind}-toggle-form`}
-                      accessibilityRole='button'
-                      accessibilityLabel={
-                        formCollapsed ? S.EDIT_SEARCH : S.COLLAPSE_SEARCH
-                      }
-                      onPress={() => setFormCollapsed((value) => !value)}
-                      style={styles.formToggle}>
-                      <Text style={styles.formToggleText}>
-                        {formCollapsed ? S.EDIT_SEARCH : S.COLLAPSE_SEARCH}
+                            ? V.HOTEL_TITLE
+                            : V.TICKET_TITLE}
                       </Text>
-                      <Ionicons
-                        name={formCollapsed ? 'chevron-down' : 'chevron-up'}
-                        size={16}
-                        color={palette.primary}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {kind !== 'flight' && formCollapsed ? (
-                  <Text
-                    testID={`${kind}-search-summary`}
-                    style={styles.summary}>
-                    {kind === 'hotel'
-                      ? `${keyword} · ${start} ~ ${end} · ${adults}${S.ADULTS_SUFFIX}`
-                      : keyword}
-                  </Text>
-                ) : (
-                  <>
+                      {kind === 'ticket' && <BookingPartner />}
+                    </View>
                     {kind === 'flight' && (
-                      <View style={styles.airportSection}>
-                        <View testID='booking-airport-row' style={styles.row}>
-                          {airportField('departure', S.DEPARTURE, departure)}
-                          {airportField('arrival', S.ARRIVAL, keyword)}
-                        </View>
-                        {!!airportSearch && airportChoices.length > 0 && (
+                      <Text style={styles.subtitle}>{V.FLIGHT_NOTE}</Text>
+                    )}
+                  </View>
+                )}
+                <View
+                  testID='booking-form'
+                  style={[
+                    styles.form,
+                    !productsSearched && !formCollapsed && styles.initialForm,
+                    formCollapsed && styles.collapsedForm,
+                  ]}>
+                  {(productsSearched || formCollapsed) && (
+                    <View style={styles.sectionHeading}>
+                      <Text style={styles.sectionTitle}>{V.SUMMARY}</Text>
+                      {kind !== 'flight' && (
+                        <TouchableOpacity
+                          testID={`${kind}-toggle-form`}
+                          accessibilityRole='button'
+                          accessibilityLabel={
+                            formCollapsed ? S.EDIT_SEARCH : S.COLLAPSE_SEARCH
+                          }
+                          disabled={busy}
+                          accessibilityState={{ expanded: !formCollapsed }}
+                          onPress={() => transitionForm(!formCollapsed)}
+                          style={styles.formToggle}>
                           <View
-                            testID='airport-suggestion-viewport'
-                            style={[
-                              styles.airportSuggestions,
-                              airportChoices.length === 1
-                                ? styles.airportSuggestionsOne
-                                : airportChoices.length === 2
-                                  ? styles.airportSuggestionsTwo
-                                  : airportChoices.length === 3
-                                    ? styles.airportSuggestionsThree
-                                    : styles.airportSuggestionsMany,
-                            ]}>
-                            <FlatList
-                              testID='airport-suggestion-list'
-                              data={airportChoices}
-                              keyExtractor={(item) => item.id}
-                              style={styles.airportSuggestionsList}
-                              scrollEnabled
-                              nestedScrollEnabled
-                              keyboardShouldPersistTaps='always'
-                              initialNumToRender={4}
-                              maxToRenderPerBatch={4}
-                              renderItem={({ item }) => (
-                                <TouchableOpacity
-                                  testID={`airport-suggestion-${item.id}`}
-                                  accessibilityRole='button'
-                                  onPress={() => chooseAirport(item)}
-                                  style={styles.airportSuggestion}>
-                                  <Text style={styles.label}>{item.label}</Text>
-                                </TouchableOpacity>
-                              )}
-                            />
+                            style={
+                              formCollapsed ? styles.caretDown : styles.caretUp
+                            }>
+                            <BookingReelAsset name='caret' />
                           </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                  {kind !== 'flight' && formCollapsed ? (
+                    <View
+                      testID={`${kind}-search-summary`}
+                      style={styles.summaryChips}>
+                      {kind === 'ticket' && destinationCountry ? (
+                        <View style={styles.destinationChip}>
+                          <Text style={styles.destinationChipText}>
+                            {destinationCountry}
+                          </Text>
+                          <View
+                            style={styles.destinationDivider}
+                            accessible={false}
+                            pointerEvents='none'>
+                            <View style={styles.destinationDividerRotation}>
+                              <BookingReelAsset name='destinationDivider' />
+                            </View>
+                          </View>
+                          <Text style={styles.destinationChipText}>
+                            {keyword}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.summaryChip}>{keyword}</Text>
+                      )}
+                      {kind === 'hotel' && (
+                        <>
+                          <Text style={styles.summaryChip}>
+                            {start.replace(/-/g, '.').slice(2)} -{' '}
+                            {end.replace(/-/g, '.').slice(2)}
+                          </Text>
+                          <Text style={styles.summaryChip}>
+                            {V.ADULT} {adults}
+                            {V.PERSON}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  ) : (
+                    <>
+                      <View style={styles.fieldHeading}>
+                        <BookingReelAsset
+                          name={kind === 'ticket' ? 'planeTicket' : 'plane'}
+                        />
+                        {kind === 'flight' ? (
+                          <Text style={styles.fieldTitle}>{V.DESTINATION}</Text>
+                        ) : (
+                          <TouchableOpacity
+                            testID='booking-destination-picker'
+                            accessibilityRole='button'
+                            accessibilityLabel={V.CHOOSE_DESTINATION}
+                            disabled={busy}
+                            style={styles.headingButton}
+                            onPress={openDestination}>
+                            <Text style={styles.fieldTitle}>
+                              {V.DESTINATION}
+                            </Text>
+                          </TouchableOpacity>
                         )}
                       </View>
-                    )}
-                    {kind === 'hotel' && (
-                      <>
+                      {kind === 'flight' && (
                         <View style={styles.airportSection}>
-                          <View style={styles.field}>
-                            <Text style={styles.label}>{S.HOTEL_LOCATION}</Text>
-                            <TextInput
-                              accessibilityLabel={S.HOTEL_LOCATION}
-                              placeholder={S.HOTEL_LOCATION}
-                              placeholderTextColor={palette.mutedText}
-                              style={styles.input}
-                              value={keyword}
-                              editable={!busy}
-                              onFocus={() => {
-                                setRegionSearch(keyword.split(' · ')[0]);
-                                requestAnimationFrame(() => {
-                                  listRef.current?.scrollToEnd({
-                                    animated: true,
-                                  });
-                                });
-                              }}
-                              onChangeText={(value) => {
-                                regionTouched.current = true;
-                                setKeyword(value);
-                                setRegionId(undefined);
-                                setRegionChoices([]);
-                                setRegionSearch(value);
-                                clearResults();
-                              }}
-                            />
-                          </View>
-                          {regionSearch !== null &&
-                            regionChoices.length > 0 && (
-                              <View
-                                testID='hotel-region-suggestion-viewport'
-                                style={[
-                                  styles.airportSuggestions,
-                                  regionChoices.length === 1
-                                    ? styles.airportSuggestionsOne
-                                    : regionChoices.length === 2
-                                      ? styles.airportSuggestionsTwo
-                                      : regionChoices.length === 3
-                                        ? styles.airportSuggestionsThree
-                                        : styles.airportSuggestionsMany,
-                                ]}>
-                                <FlatList
-                                  testID='hotel-region-suggestion-list'
-                                  data={regionChoices}
-                                  keyExtractor={(item) => item.id}
-                                  style={styles.airportSuggestionsList}
-                                  scrollEnabled
-                                  nestedScrollEnabled
-                                  keyboardShouldPersistTaps='always'
-                                  initialNumToRender={4}
-                                  maxToRenderPerBatch={4}
-                                  renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                      testID={`hotel-region-choice-${item.id}`}
-                                      accessibilityRole='button'
-                                      onPress={() => chooseRegion(item)}
-                                      style={styles.airportSuggestion}>
-                                      <Text style={styles.label}>
-                                        {item.label}
-                                      </Text>
-                                    </TouchableOpacity>
-                                  )}
-                                />
-                              </View>
-                            )}
-                        </View>
-                        <View style={styles.row}>
-                          {[true, false].map((value) => (
-                            <TouchableOpacity
-                              key={String(value)}
-                              accessibilityRole='radio'
-                              accessibilityState={{
-                                checked: domestic === value,
-                                disabled: busy,
-                              }}
-                              disabled={busy}
-                              style={[
-                                styles.option,
-                                domestic === value && styles.selected,
-                              ]}
-                              onPress={() => {
-                                regionTouched.current = true;
-                                setDomestic(value);
-                                setRegionId(undefined);
-                                setRegionChoices([]);
-                                setRegionSearch(keyword.split(' · ')[0]);
-                                clearResults();
-                              }}>
-                              <Text style={styles.label}>
-                                {value ? S.DOMESTIC : S.INTERNATIONAL}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </>
-                    )}
-                    {kind === 'ticket' &&
-                      field(S.KEYWORD, keyword, (value) => {
-                        setKeyword(value);
-                        setRegionId(undefined);
-                      })}
-                    {kind !== 'ticket' && (
-                      <>
-                        <View
-                          testID={
-                            kind === 'flight'
-                              ? 'booking-date-row'
-                              : 'booking-hotel-date-row'
-                          }
-                          style={styles.row}>
-                          <View style={styles.halfField}>
-                            {field(
-                              kind === 'flight'
-                                ? S.FLIGHT_START_DATE
-                                : S.HOTEL_CHECK_IN,
-                              start,
-                              setStart,
-                              'date',
-                            )}
-                          </View>
-                          <View style={styles.halfField}>
-                            {field(
-                              kind === 'flight'
-                                ? S.FLIGHT_END_DATE
-                                : S.HOTEL_CHECK_OUT,
-                              end,
-                              setEnd,
-                              'date',
-                            )}
+                          <View testID='booking-airport-row' style={styles.row}>
+                            {airportField('departure', S.DEPARTURE, departure)}
+                            {airportField('arrival', S.ARRIVAL, keyword)}
                           </View>
                         </View>
-                        {field(S.ADULTS, adults, setAdults, 'number')}
-                      </>
-                    )}
-                    {button(
-                      kind === 'flight' ? S.FLIGHT : S.SEARCH,
-                      search,
-                      'booking-search',
-                    )}
-                    {busy && (
-                      <View accessibilityLabel={S.LOADING}>
-                        <ActivityIndicator color={palette.primary} />
-                        <Text style={styles.note}>{S.LOADING}</Text>
-                      </View>
-                    )}
-                    {flightFallback &&
-                      button(S.FLIGHT_FALLBACK, () => {
-                        void run(async (signal) => {
-                          await openLink(
-                            await myRealTrip.createLink(
-                              APP_CONFIG.MYREALTRIP_HOME_URL,
-                              signal,
-                            ),
-                            signal,
-                          );
-                        });
-                      })}
-                    {!!message && (
-                      <Text accessibilityRole='alert' style={styles.note}>
-                        {message}
-                      </Text>
-                    )}
-                  </>
-                )}
-              </View>
-              {kind === 'ticket' && <TicketCouponPack />}
-              {productResults}
-            </View>
-          }
-          renderItem={({ item, index }) =>
-            kind === 'hotel' ? (
-              <TouchableOpacity
-                testID={`hotel-result-${index}`}
-                accessibilityRole='button'
-                accessibilityState={{ selected: item.id === selectedHotelUrl }}
-                disabled={busy}
-                onPress={() => choose(item)}
-                style={[
-                  styles.hotelResult,
-                  item.id === selectedHotelUrl && styles.selectedHotelResult,
-                  busy && styles.disabled,
-                ]}>
-                {item.product?.imageUrl ? (
-                  <ImageBackground
-                    source={{ uri: item.product.imageUrl }}
-                    resizeMode='cover'
-                    imageStyle={styles.hotelImage}
-                    style={styles.hotelImageBackground}>
-                    <LinearGradient
-                      colors={['transparent', 'rgba(4, 25, 42, 0.92)']}
-                      style={styles.hotelOverlay}>
-                      {item.id === selectedHotelUrl && (
-                        <Text style={styles.hotelRecommended}>
-                          {S.HOTEL_RECOMMENDED}
-                        </Text>
                       )}
-                      <Text style={styles.hotelName} numberOfLines={2}>
+                      {kind === 'hotel' && (
+                        <>
+                          <View style={styles.airportSection}>
+                            <View style={styles.field}>
+                              <TextInput
+                                accessibilityLabel={S.HOTEL_LOCATION}
+                                placeholder={S.HOTEL_LOCATION}
+                                placeholderTextColor={palette.mutedText}
+                                style={styles.input}
+                                value={keyword}
+                                editable={!busy}
+                                showSoftInputOnFocus={false}
+                                onPressIn={openDestination}
+                                onFocus={openDestination}
+                                onChangeText={(value) => {
+                                  regionTouched.current = true;
+                                  setKeyword(value);
+                                  setRegionId(undefined);
+                                  setRegionChoices([]);
+                                  setRegionSearch(value);
+                                  clearResults();
+                                }}
+                              />
+                            </View>
+                            {regionSearch !== null &&
+                              regionChoices.length > 0 && (
+                                <View
+                                  testID='hotel-region-suggestion-viewport'
+                                  style={[
+                                    styles.airportSuggestions,
+                                    regionChoices.length === 1
+                                      ? styles.airportSuggestionsOne
+                                      : regionChoices.length === 2
+                                        ? styles.airportSuggestionsTwo
+                                        : regionChoices.length === 3
+                                          ? styles.airportSuggestionsThree
+                                          : styles.airportSuggestionsMany,
+                                  ]}>
+                                  <FlatList
+                                    testID='hotel-region-suggestion-list'
+                                    data={regionChoices}
+                                    keyExtractor={(item) => item.id}
+                                    style={styles.airportSuggestionsList}
+                                    scrollEnabled
+                                    nestedScrollEnabled
+                                    keyboardShouldPersistTaps='always'
+                                    initialNumToRender={4}
+                                    maxToRenderPerBatch={4}
+                                    renderItem={({ item }) => (
+                                      <TouchableOpacity
+                                        testID={`hotel-region-choice-${item.id}`}
+                                        accessibilityRole='button'
+                                        onPress={() => chooseRegion(item)}
+                                        style={styles.airportSuggestion}>
+                                        <Text style={styles.label}>
+                                          {item.label}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    )}
+                                  />
+                                </View>
+                              )}
+                          </View>
+                        </>
+                      )}
+                      {kind === 'ticket' &&
+                        field(S.KEYWORD, keyword, (value) => {
+                          if (value.trim() !== keyword.trim()) {
+                            setDestinationCountry('');
+                          }
+                          setKeyword(value);
+                          setRegionId(undefined);
+                        })}
+                      {kind !== 'ticket' && (
+                        <>
+                          <View style={styles.fieldHeading}>
+                            <BookingReelAsset name='calendar' />
+                            <TouchableOpacity
+                              testID='booking-calendar-open'
+                              accessibilityRole='button'
+                              accessibilityLabel={V.CHOOSE_DATES}
+                              disabled={busy}
+                              style={styles.headingButton}
+                              onPress={openDates}>
+                              <Text style={styles.fieldTitle}>{V.DATES}</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <View
+                            testID={
+                              kind === 'flight'
+                                ? 'booking-date-row'
+                                : 'booking-hotel-date-row'
+                            }
+                            style={styles.dateRow}>
+                            <View style={styles.halfField}>
+                              {field(
+                                kind === 'flight'
+                                  ? S.FLIGHT_START_DATE
+                                  : S.HOTEL_CHECK_IN,
+                                start,
+                                setStart,
+                                'date',
+                              )}
+                            </View>
+                            <Text style={styles.dateDash}>-</Text>
+                            <View style={styles.halfField}>
+                              {field(
+                                kind === 'flight'
+                                  ? S.FLIGHT_END_DATE
+                                  : S.HOTEL_CHECK_OUT,
+                                end,
+                                setEnd,
+                                'date',
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.fieldHeading}>
+                            <BookingReelAsset name='person' />
+                            <Text style={styles.fieldTitle}>{V.PEOPLE}</Text>
+                          </View>
+                          <View style={styles.stepper}>
+                            <TouchableOpacity
+                              testID='booking-adults-minus'
+                              accessibilityRole='button'
+                              accessibilityLabel={V.DECREASE}
+                              disabled={busy || Number(adults) <= 1}
+                              onPress={() => {
+                                clearResults();
+                                setAdults(
+                                  String(Math.max(1, Number(adults) - 1)),
+                                );
+                              }}
+                              style={styles.stepperButton}>
+                              <BookingReelAsset name='minus' />
+                            </TouchableOpacity>
+                            <View style={styles.stepperValue}>
+                              <TextInput
+                                accessibilityLabel={S.ADULTS}
+                                value={adults}
+                                keyboardType='number-pad'
+                                editable={!busy}
+                                style={styles.peopleInput}
+                                onChangeText={(value) => {
+                                  clearResults();
+                                  setAdults(value.replace(/\D/g, ''));
+                                }}
+                              />
+                              <Text style={styles.fieldTitle}>{V.PERSON}</Text>
+                            </View>
+                            <TouchableOpacity
+                              testID='booking-adults-plus'
+                              accessibilityRole='button'
+                              accessibilityLabel={V.INCREASE}
+                              disabled={busy}
+                              onPress={() => {
+                                clearResults();
+                                setAdults(String((Number(adults) || 1) + 1));
+                              }}
+                              style={styles.stepperButton}>
+                              <BookingReelAsset name='plus' />
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
+                      {flightFallback &&
+                        button(S.FLIGHT_FALLBACK, () => {
+                          void run(async (signal) => {
+                            await openLink(
+                              await myRealTrip.createLink(
+                                APP_CONFIG.MYREALTRIP_HOME_URL,
+                                signal,
+                              ),
+                              signal,
+                            );
+                          });
+                        })}
+                    </>
+                  )}
+                  {busy && (!formCollapsed || !productsSearched) && (
+                    <View accessibilityLabel={S.LOADING}>
+                      <ActivityIndicator color={palette.primary} />
+                      <Text style={styles.note}>{S.LOADING}</Text>
+                    </View>
+                  )}
+                  {!!message && !productsSearched && (
+                    <Text accessibilityRole='alert' style={styles.note}>
+                      {message}
+                    </Text>
+                  )}
+                </View>
+                {kind !== 'ticket' && !productsSearched && <BookingPartner />}
+                {kind === 'ticket' && !formCollapsed && <TicketCouponPack />}
+                {productResults}
+              </View>
+            }
+            renderItem={({ item, index }) =>
+              kind === 'hotel' ? (
+                <TouchableOpacity
+                  testID={`hotel-result-${index}`}
+                  accessibilityRole='button'
+                  accessibilityState={{
+                    selected: item.id === selectedHotelUrl,
+                  }}
+                  disabled={busy}
+                  onPress={() => choose(item)}
+                  style={[styles.hotelResult, busy && styles.disabled]}>
+                  {item.product?.imageUrl ? (
+                    <CachedImageBackground
+                      source={{ uri: item.product.imageUrl }}
+                      contentFit='cover'
+                      imageStyle={styles.hotelImage}
+                      style={styles.hotelImageBackground}>
+                      <View style={styles.hotelOverlay}>
+                        <BookingProductShade kind='hotel' />
+                        <Text
+                          style={[styles.hotelName, styles.hotelTitle]}
+                          numberOfLines={2}
+                          ellipsizeMode='tail'
+                          lineBreakStrategyIOS='hangul-word'
+                          textBreakStrategy='balanced'
+                          android_hyphenationFrequency='none'>
+                          {item.label}
+                        </Text>
+                        <View style={styles.hotelDetails}>
+                          {Number.isInteger(item.product.starRating) &&
+                            item.product.starRating! > 0 && (
+                              <Text style={styles.hotelDetail}>
+                                {item.product.starRating}
+                                {S.HOTEL_STAR}
+                              </Text>
+                            )}
+                          {!!item.product.reviewScore && (
+                            <View
+                              style={styles.rating}
+                              accessible
+                              accessibilityLabel={`★ ${item.product.reviewScore}`}>
+                              <BookingReelAsset name='star' />
+                              <Text style={styles.hotelDetail}>
+                                {item.product.reviewScore}
+                              </Text>
+                            </View>
+                          )}
+                          {Number.isInteger(item.product.reviewCount) && (
+                            <Text style={styles.hotelDetail}>
+                              {S.HOTEL_REVIEWS}{' '}
+                              {item.product.reviewCount!.toLocaleString()}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={styles.hotelPrice}>
+                          {item.product.salePrice > 0
+                            ? `₩${item.product.salePrice.toLocaleString()} ~`
+                            : S.HOTEL_PRICE_CHECK}
+                        </Text>
+                      </View>
+                    </CachedImageBackground>
+                  ) : (
+                    <View style={styles.hotelOverlay}>
+                      <BookingProductShade kind='hotel' />
+                      <Text
+                        style={[styles.hotelName, styles.hotelTitle]}
+                        numberOfLines={2}
+                        ellipsizeMode='tail'
+                        lineBreakStrategyIOS='hangul-word'
+                        textBreakStrategy='balanced'
+                        android_hyphenationFrequency='none'>
                         {item.label}
                       </Text>
                       <View style={styles.hotelDetails}>
-                        {Number.isInteger(item.product.starRating) &&
-                          item.product.starRating! > 0 && (
+                        {Number.isInteger(item.product?.starRating) &&
+                          item.product!.starRating! > 0 && (
                             <Text style={styles.hotelDetail}>
-                              {item.product.starRating}
+                              {item.product!.starRating}
                               {S.HOTEL_STAR}
                             </Text>
                           )}
-                        {!!item.product.reviewScore && (
-                          <Text style={styles.hotelDetail}>
-                            ★ {item.product.reviewScore}
-                          </Text>
+                        {!!item.product?.reviewScore && (
+                          <View
+                            style={styles.rating}
+                            accessible
+                            accessibilityLabel={`★ ${item.product.reviewScore}`}>
+                            <BookingReelAsset name='star' />
+                            <Text style={styles.hotelDetail}>
+                              {item.product.reviewScore}
+                            </Text>
+                          </View>
                         )}
-                        {Number.isInteger(item.product.reviewCount) && (
+                        {Number.isInteger(item.product?.reviewCount) && (
                           <Text style={styles.hotelDetail}>
                             {S.HOTEL_REVIEWS}{' '}
-                            {item.product.reviewCount!.toLocaleString()}
+                            {item.product!.reviewCount!.toLocaleString()}
                           </Text>
                         )}
                       </View>
                       <Text style={styles.hotelPrice}>
-                        {item.product.salePrice > 0
+                        {item.product && item.product.salePrice > 0
                           ? `₩${item.product.salePrice.toLocaleString()} ~`
                           : S.HOTEL_PRICE_CHECK}
                       </Text>
-                    </LinearGradient>
-                  </ImageBackground>
-                ) : (
-                  <LinearGradient
-                    colors={[palette.darkTeal, palette.deepNavy]}
-                    style={styles.hotelOverlay}>
-                    {item.id === selectedHotelUrl && (
-                      <Text style={styles.hotelRecommended}>
-                        {S.HOTEL_RECOMMENDED}
-                      </Text>
-                    )}
-                    <Text style={styles.hotelName} numberOfLines={2}>
-                      {item.label}
-                    </Text>
-                    <View style={styles.hotelDetails}>
-                      {Number.isInteger(item.product?.starRating) &&
-                        item.product!.starRating! > 0 && (
-                          <Text style={styles.hotelDetail}>
-                            {item.product!.starRating}
-                            {S.HOTEL_STAR}
-                          </Text>
-                        )}
-                      {!!item.product?.reviewScore && (
-                        <Text style={styles.hotelDetail}>
-                          ★ {item.product.reviewScore}
-                        </Text>
-                      )}
-                      {Number.isInteger(item.product?.reviewCount) && (
-                        <Text style={styles.hotelDetail}>
-                          {S.HOTEL_REVIEWS}{' '}
-                          {item.product!.reviewCount!.toLocaleString()}
-                        </Text>
-                      )}
                     </View>
-                    <Text style={styles.hotelPrice}>
-                      {item.product && item.product.salePrice > 0
-                        ? `₩${item.product.salePrice.toLocaleString()} ~`
-                        : S.HOTEL_PRICE_CHECK}
-                    </Text>
-                  </LinearGradient>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                testID={`ticket-result-${index}`}
-                accessibilityRole='button'
-                disabled={busy}
-                onPress={() => choose(item)}
-                style={[styles.ticketResult, busy && styles.disabled]}>
-                {item.product?.imageUrl ? (
-                  <ImageBackground
-                    source={{ uri: item.product.imageUrl }}
-                    resizeMode='cover'
-                    imageStyle={styles.hotelImage}
-                    style={styles.hotelImageBackground}>
-                    {ticketCardContent(item)}
-                  </ImageBackground>
-                ) : (
-                  ticketCardContent(item)
-                )}
-              </TouchableOpacity>
-            )
-          }
-          ListFooterComponent={
-            kind !== 'flight' && productsSearched ? (
-              <View style={styles.resultsFooter}>
-                {loadingMore && (
-                  <ActivityIndicator
-                    testID={`${kind}-loading-more`}
-                    color={palette.primary}
-                  />
-                )}
-                {pageError && (
-                  <TouchableOpacity
-                    testID={`${kind}-retry-page`}
-                    accessibilityRole='button'
-                    onPress={() => {
-                      setPageError(false);
-                      loadMoreProducts(true);
-                    }}>
-                    <Text style={styles.retryText}>{S.LOAD_MORE_ERROR}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : null
-          }
-        />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  testID={`ticket-result-${index}`}
+                  accessibilityRole='button'
+                  disabled={busy}
+                  onPress={() => choose(item)}
+                  style={[styles.ticketResult, busy && styles.disabled]}>
+                  {item.product?.imageUrl ? (
+                    <CachedImageBackground
+                      source={{ uri: item.product.imageUrl }}
+                      contentFit='cover'
+                      imageStyle={styles.hotelImage}
+                      style={styles.hotelImageBackground}>
+                      {ticketCardContent(item)}
+                    </CachedImageBackground>
+                  ) : (
+                    ticketCardContent(item)
+                  )}
+                </TouchableOpacity>
+              )
+            }
+            ListFooterComponent={
+              kind !== 'flight' && productsSearched ? (
+                <View style={styles.resultsFooter}>
+                  {loadingMore && (
+                    <ActivityIndicator
+                      testID={`${kind}-loading-more`}
+                      color={palette.primary}
+                    />
+                  )}
+                  {pageError && (
+                    <TouchableOpacity
+                      testID={`${kind}-retry-page`}
+                      accessibilityRole='button'
+                      onPress={() => {
+                        setPageError(false);
+                        loadMoreProducts(true);
+                      }}>
+                      <Text style={styles.retryText}>{S.LOAD_MORE_ERROR}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null
+            }
+          />
+          {kind !== 'flight' && showScrollTop && (
+            <TouchableOpacity
+              testID='booking-scroll-top'
+              accessibilityRole='button'
+              accessibilityLabel={S.SCROLL_TOP}
+              style={[
+                styles.scrollTop,
+                formCollapsed && safeAreaStyles.scrollTop,
+              ]}
+              onPress={() =>
+                listRef.current?.scrollToOffset({ offset: 0, animated: true })
+              }>
+              <Ionicons name='arrow-up' size={22} color={palette.white} />
+            </TouchableOpacity>
+          )}
+        </View>
+        {!formCollapsed && (
+          <View style={[styles.fixedFooter, safeAreaStyles.footer]}>
+            {button(
+              kind === 'flight'
+                ? V.FLIGHT_SEARCH
+                : kind === 'hotel'
+                  ? V.HOTEL_SEARCH
+                  : V.TICKET_SEARCH,
+              search,
+              'booking-search',
+            )}
+          </View>
+        )}
       </KeyboardAvoidingView>
-      {kind !== 'flight' && showScrollTop && (
-        <TouchableOpacity
-          testID='booking-scroll-top'
-          accessibilityRole='button'
-          accessibilityLabel={S.SCROLL_TOP}
-          style={styles.scrollTop}
-          onPress={() =>
-            listRef.current?.scrollToOffset({ offset: 0, animated: true })
-          }>
-          <Ionicons name='arrow-up' size={22} color={palette.white} />
-        </TouchableOpacity>
+      {airportSearch && (
+        <BookingAirportSheet
+          target={airportSearch.target}
+          query={airportSearch.query}
+          choices={airportChoices}
+          onChange={(query) => changeAirportQuery(airportSearch.target, query)}
+          onSelect={chooseAirport}
+          onClose={() => {
+            setAirportSearch(null);
+            setAirportChoices([]);
+            Keyboard.dismiss();
+          }}
+        />
       )}
+      <DestinationPickerSheet
+        visible={destinationVisible}
+        initialCountry={destinationCountry}
+        onClose={() => setDestinationVisible(false)}
+        onSelect={(country, city) => {
+          setDestinationVisible(false);
+          clearResults();
+          setDestinationCountry(country.trim());
+          setKeyword(city);
+          setDomestic(['대한민국', '한국', 'KR'].includes(country));
+          if (kind === 'hotel') {
+            regionTouched.current = true;
+            setRegionId(undefined);
+            setRegionSearch(city);
+            void run(async (signal) => {
+              const regions = await myRealTrip.searchRegions(
+                city,
+                ['대한민국', '한국', 'KR'].includes(country),
+                signal,
+              );
+              if (!signal.aborted && regions[0]) {
+                setRegionId(regions[0].regionId);
+                setKeyword(
+                  [regions[0].name, regions[0].subName]
+                    .filter(Boolean)
+                    .join(' · '),
+                );
+                setRegionSearch(null);
+              }
+            });
+          }
+        }}
+      />
+      <TravelDateSheet
+        visible={datesVisible}
+        startDate={start}
+        endDate={end}
+        maxDays={365}
+        onClose={() => setDatesVisible(false)}
+        onConfirm={(nextStart, nextEnd) => {
+          clearResults();
+          setStart(nextStart);
+          setEnd(nextEnd);
+          setDatesVisible(false);
+        }}
+      />
+      <Modal
+        testID='booking-price-info-modal'
+        visible={priceInfoVisible}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setPriceInfoVisible(false)}>
+        <View style={styles.priceInfoOverlay}>
+          <Pressable
+            testID='booking-price-info-backdrop'
+            accessible={false}
+            style={StyleSheet.absoluteFill}
+            onPress={() => setPriceInfoVisible(false)}
+          />
+          <View style={styles.priceInfoCard} accessibilityViewIsModal>
+            <Text style={styles.priceInfoTitle} accessibilityRole='header'>
+              {S.PRICE_NOTE_TITLE}
+            </Text>
+            <Text style={styles.priceInfoBody}>{S.PRICE_NOTE}</Text>
+            <TouchableOpacity
+              accessibilityRole='button'
+              accessibilityLabel={V.CLOSE}
+              style={styles.priceInfoClose}
+              onPress={() => setPriceInfoVisible(false)}>
+              <Text style={styles.buttonText}>{V.CLOSE}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: palette.softMint },
+  initialForm: { marginHorizontal: 7 },
+  intro: { gap: 8, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 },
+  introHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fieldHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 12,
+    minHeight: 37,
+  },
+  fieldTitle: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.8,
+  },
+  headingButton: { flex: 1, minHeight: 37, justifyContent: 'center' },
+  priceInfoOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: hexToRgba(palette.deepNavy, 0.4),
+  },
+  priceInfoCard: {
+    width: '100%',
+    maxWidth: 360,
+    padding: 24,
+    borderRadius: 20,
+    backgroundColor: palette.white,
+    gap: 18,
+  },
+  priceInfoTitle: { fontSize: 18, fontWeight: '600', color: palette.deepNavy },
+  priceInfoBody: { fontSize: 15, lineHeight: 23, color: palette.subText },
+  priceInfoClose: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: palette.primary,
+  },
+  resultsViewport: { flex: 1 },
+  fixedFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: palette.white,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 11,
+  },
+  dateDash: { color: palette.subText, fontSize: 14 },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 11,
+    overflow: 'hidden',
+    height: 54,
+  },
+  stepperButton: {
+    width: 60,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: palette.gray300,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  stepperValue: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  peopleInput: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
+    minWidth: 20,
+    padding: 0,
+  },
+  hotelColumns: { justifyContent: 'space-between' },
+  screen: { flex: 1, backgroundColor: palette.white },
   content: { flex: 1 },
   header: {
     minHeight: 64,
@@ -1151,62 +1545,89 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    backgroundColor: palette.white,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.gray200,
+
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '600',
     color: palette.deepNavy,
   },
   headerSpacer: { width: 44 },
   list: { paddingHorizontal: 20, paddingBottom: 24 },
   listHeader: { gap: 16, paddingBottom: 16 },
-  hero: {
-    borderRadius: 22,
-    padding: 20,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: palette.lightTeal,
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: palette.deepNavy,
+    letterSpacing: -1,
   },
-  heroTop: {
+  subtitle: {
+    color: palette.mutedText,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: -1,
+  },
+  form: {
+    gap: 8,
+    padding: 20,
+    paddingBottom: 40,
+    borderRadius: 24,
+    backgroundColor: palette.gray100,
+  },
+  collapsedForm: { paddingVertical: 16, minHeight: 99 },
+  caretDown: { transform: [{ rotate: '-90deg' }] },
+  caretUp: { transform: [{ rotate: '90deg' }] },
+  priceInformationIcon: { width: 20, height: 20 },
+  priceInformationMark: {
+    position: 'absolute',
+    left: 8,
+    top: -3,
+    color: palette.mutedText,
+    fontSize: 16,
+    lineHeight: 27,
+    fontWeight: '600',
+    letterSpacing: -1,
+  },
+  summaryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  destinationChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    maxWidth: '100%',
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     backgroundColor: palette.white,
+    borderRadius: 53,
+  },
+  destinationChipText: {
+    flexShrink: 1,
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '500',
+    lineHeight: 22,
+    letterSpacing: -1,
+  },
+  destinationDivider: {
+    width: 2,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  partner: {
-    color: palette.darkTeal,
-    fontWeight: '600',
-    fontSize: 12,
+  destinationDividerRotation: { transform: [{ rotate: '90deg' }] },
+  summaryChip: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    lineHeight: 22,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     backgroundColor: palette.white,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 99,
+    borderRadius: 53,
     overflow: 'hidden',
-  },
-  title: { fontSize: 24, fontWeight: '800', color: palette.deepNavy },
-  subtitle: { color: palette.subText, fontSize: 13, lineHeight: 21 },
-  form: {
-    gap: 14,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    backgroundColor: palette.white,
+    letterSpacing: -1,
   },
   sectionHeading: {
     flexDirection: 'row',
@@ -1220,9 +1641,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-  formToggleText: { color: palette.primary, fontSize: 12, fontWeight: '700' },
-  summary: { color: palette.deepNavy, fontSize: 13, lineHeight: 21 },
-  sectionTitle: { color: palette.deepNavy, fontSize: 16, fontWeight: '700' },
+  sectionTitle: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -1,
+  },
   field: { gap: 8 },
   halfField: { flex: 1, minWidth: 0, gap: 8 },
   airportSection: { position: 'relative', zIndex: 2 },
@@ -1253,61 +1677,48 @@ const styles = StyleSheet.create({
   },
   hotelResultsSection: {
     gap: 8,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 20,
+    paddingTop: 4,
     backgroundColor: palette.white,
   },
   resultsHeading: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 4,
   },
-  resultsCount: { color: palette.primary, fontSize: 13, fontWeight: '700' },
+  resultsHeadingSpacer: { flex: 1 },
   hotelResult: {
-    height: 190,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    borderRadius: 18,
+    flex: 1,
+    maxWidth: '47.15%',
+    height: 201,
+    marginBottom: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: palette.deepNavy,
   },
-  selectedHotelResult: {
-    borderColor: palette.accent,
-  },
-  hotelImage: { borderRadius: 16 },
+  hotelImage: { borderRadius: 12 },
   hotelImageBackground: { flex: 1 },
-  hotelOverlay: { flex: 1, justifyContent: 'flex-end', padding: 16, gap: 5 },
-  hotelName: { color: palette.white, fontSize: 17, fontWeight: '800' },
-  hotelDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  hotelOverlay: { flex: 1, justifyContent: 'flex-end', padding: 8, gap: 2 },
+  hotelName: {
+    color: palette.white,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
+    letterSpacing: -0.5,
+  },
+  hotelTitle: { lineHeight: 17, letterSpacing: -1 },
+  hotelDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  rating: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   hotelDetail: { color: palette.white, fontSize: 12, fontWeight: '600' },
-  hotelPrice: { color: palette.white, fontSize: 16, fontWeight: '800' },
+  hotelPrice: { color: palette.white, fontSize: 16, fontWeight: '600' },
   ticketResult: {
-    height: 238,
-    marginBottom: 12,
-    borderRadius: 18,
+    height: 179,
+    marginBottom: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: palette.deepNavy,
   },
   ticketOverlay: { flex: 1, justifyContent: 'flex-end', padding: 16, gap: 7 },
   ticketDescription: { color: palette.white, fontSize: 12, lineHeight: 18 },
-  ticketTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  ticketTag: {
-    color: palette.white,
-    borderColor: palette.white,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    fontSize: 11,
-  },
-  hotelRecommended: {
-    color: palette.white,
-    fontSize: 11,
-    fontWeight: '700',
-  },
   resultsFooter: { gap: 16, paddingVertical: 12 },
   retryText: { textAlign: 'center', color: palette.primary, fontWeight: '700' },
   scrollTop: {
@@ -1324,19 +1735,18 @@ const styles = StyleSheet.create({
   },
   label: { color: palette.deepNavy, fontSize: 14, fontWeight: '600' },
   input: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    backgroundColor: palette.softMint,
+    minHeight: 54,
+    backgroundColor: palette.white,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: palette.deepNavy,
     fontSize: 15,
   },
-  button: { borderRadius: 14, overflow: 'hidden' },
+  button: { borderRadius: 16, overflow: 'hidden' },
   primaryButtonContent: {
-    minHeight: 52,
+    backgroundColor: palette.primary,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1345,31 +1755,26 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   secondaryButton: {
-    backgroundColor: palette.lightTeal,
-    borderColor: palette.lightTeal,
+    backgroundColor: palette.gray200,
+    borderColor: palette.gray300,
     borderWidth: 1,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 10,
   },
-  buttonText: { color: palette.white, fontSize: 15, fontWeight: '700' },
+  buttonText: {
+    color: palette.white,
+    fontSize: 20,
+    fontWeight: '500',
+    letterSpacing: -0.6,
+  },
   secondaryButtonText: {
-    color: palette.darkTeal,
+    color: palette.subText,
     fontSize: 13,
     fontWeight: '600',
   },
   row: { flexDirection: 'row', gap: 8 },
-  option: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: palette.softMint,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-  },
-  selected: { backgroundColor: palette.lightTeal, borderColor: palette.accent },
   note: { color: palette.subText, fontSize: 12, lineHeight: 19 },
   disabled: { opacity: 0.5 },
 });

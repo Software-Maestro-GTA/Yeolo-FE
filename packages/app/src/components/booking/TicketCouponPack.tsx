@@ -2,10 +2,12 @@
  * @file TicketCouponPack.tsx
  * @description Expandable MyRealTrip overseas tour coupon codes with one-tap copying.
  */
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from '../common/Typography';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Ionicons } from '@expo/vector-icons';
+import { BookingReelAsset } from './BookingReelAsset';
+import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
 import { APP_CONFIG } from '../../constants/config';
 import { UI_STRINGS } from '../../constants/strings';
 import { palette } from '../../theme/colors';
@@ -13,7 +15,7 @@ import { palette } from '../../theme/colors';
 const S = UI_STRINGS.BOOKING;
 
 export function TicketCouponPack() {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   return (
@@ -27,19 +29,16 @@ export function TicketCouponPack() {
         onPress={() => setExpanded((value) => !value)}
         style={styles.toggle}>
         <View style={styles.heading}>
-          <Ionicons name='gift-outline' size={20} color={palette.purple} />
+          <BookingReelAsset name='gift' />
           <View style={styles.headingText}>
-            <Text style={styles.title}>{S.COUPON_TITLE}</Text>
+            <Text style={styles.title}>
+              {BOOKING_REEL_UI.BOOKING.COUPON_TITLE}
+            </Text>
             <Text style={styles.summary}>
-              {expanded ? S.COUPON_HIDE : S.COUPON_SUMMARY}
+              {BOOKING_REEL_UI.BOOKING.COUPON_NOTE}
             </Text>
           </View>
         </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={palette.purple}
-        />
       </TouchableOpacity>
       {expanded && (
         <View style={styles.coupons}>
@@ -47,10 +46,10 @@ export function TicketCouponPack() {
             <View key={coupon.code} style={styles.coupon}>
               <View style={styles.couponInfo}>
                 <Text style={styles.discount}>
-                  ₩{coupon.discount.toLocaleString()} {S.COUPON_DISCOUNT}
+                  {coupon.discount.toLocaleString()}원
                 </Text>
                 <Text style={styles.condition}>
-                  ₩{coupon.minimumPrice.toLocaleString()} {S.COUPON_CONDITION}
+                  {coupon.minimumPrice.toLocaleString()}원 {S.COUPON_CONDITION}
                 </Text>
                 <Text style={styles.code}>{coupon.code}</Text>
               </View>
@@ -63,9 +62,14 @@ export function TicketCouponPack() {
                   setCopiedCode(coupon.code);
                 }}
                 style={styles.copyButton}>
-                <Text style={styles.copyText}>
-                  {copiedCode === coupon.code ? S.COUPON_COPIED : S.COUPON_COPY}
-                </Text>
+                <View style={StyleSheet.absoluteFill} pointerEvents='none'>
+                  <BookingReelAsset name='copyCircle' />
+                </View>
+                {copiedCode === coupon.code ? (
+                  <Text style={styles.copyText}>{S.COUPON_COPIED}</Text>
+                ) : (
+                  <BookingReelAsset name='copy' />
+                )}
               </TouchableOpacity>
             </View>
           ))}
@@ -78,15 +82,15 @@ export function TicketCouponPack() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: palette.white,
-    borderColor: palette.gray200,
-    borderWidth: 1,
-    borderRadius: 18,
+    marginHorizontal: 7,
+    backgroundColor: palette.gray100,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   toggle: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 19,
+    paddingTop: 24,
+    paddingBottom: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -94,29 +98,45 @@ const styles = StyleSheet.create({
   },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   headingText: { flex: 1, gap: 3 },
-  title: { color: palette.deepNavy, fontSize: 14, fontWeight: '700' },
-  summary: { color: palette.purple, fontSize: 12, fontWeight: '600' },
-  coupons: { gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
+  title: {
+    color: palette.deepNavy,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -1,
+  },
+  summary: {
+    color: palette.gray500,
+    fontSize: 12,
+    lineHeight: 18,
+    letterSpacing: -1,
+  },
+  coupons: { gap: 12, paddingHorizontal: 19, paddingBottom: 24 },
   coupon: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: palette.softMint,
+    padding: 20,
+    minHeight: 94,
+    borderRadius: 16,
+    backgroundColor: palette.white,
   },
   couponInfo: { flex: 1, gap: 3 },
-  discount: { color: palette.deepNavy, fontSize: 15, fontWeight: '800' },
-  condition: { color: palette.subText, fontSize: 12 },
-  code: { color: palette.purple, fontSize: 12, fontWeight: '700' },
+  discount: {
+    color: palette.deepNavy,
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: -1,
+  },
+  condition: { color: palette.mutedText, fontSize: 14, letterSpacing: -1 },
+  code: { color: palette.mutedText, fontSize: 10, fontWeight: '700' },
   copyButton: {
-    minWidth: 60,
-    minHeight: 38,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: palette.lightTeal,
+    borderRadius: 22,
+    backgroundColor: palette.primary,
   },
-  copyText: { color: palette.darkTeal, fontSize: 12, fontWeight: '700' },
+  copyText: { color: palette.white, fontSize: 12, fontWeight: '600' },
   note: { color: palette.mutedText, fontSize: 11, lineHeight: 17 },
 });
