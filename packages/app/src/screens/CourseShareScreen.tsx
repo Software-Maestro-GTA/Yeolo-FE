@@ -2,6 +2,8 @@
  * @file CourseShareScreen.tsx
  * @description UI v3의 색상·타이포·카드와 모달 규칙으로 공유 코스 미리보기 및 저장 시 로그인을 제공합니다.
  */
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import AppleSvg from '../../assets/figma/share/apple.svg';
 import React, { useContext, useEffect, useState } from 'react';
 import {
   StyleSheet,
@@ -253,11 +255,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
             accessibilityLabel={UI_STRINGS.COMMON.BACK}
             style={styles.backButton}
             onPress={handleDecline}>
-            <FigmaAsset
-              source={require('../../assets/images/figma-course/back.svg')}
-              width={24}
-              height={24}
-            />
+            <FigmaAsset source={BackSvg} width={24} height={24} />
           </Pressable>
           <Text style={styles.headerTitle}>
             {UI_STRINGS.COURSE_SHARE.HEADER_TITLE}
@@ -428,11 +426,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
                     ]}
                     disabled={isLoggingIn}
                     onPress={() => handleSocialLogin('apple')}>
-                    <FigmaAsset
-                      source={require('../../assets/figma/share/apple.svg')}
-                      width={20}
-                      height={20}
-                    />
+                    <FigmaAsset source={AppleSvg} width={20} height={20} />
                     <Text style={styles.appleButtonText}>
                       {UI_STRINGS.AUTH.APPLE_BUTTON_TEXT}
                     </Text>

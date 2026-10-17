@@ -2,6 +2,11 @@
  * @file CourseCreateScreen.tsx
  * @description 취향 유무에 맞는 안내와 여행 조건 입력, 안전 영역 위 생성 버튼을 제공합니다.
  */
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import PlaneSvg from '../../assets/images/figma-course/plane.svg';
+import RequiredSvg from '../../assets/images/figma-course/required.svg';
+import RecommendationDividerSvg from '../../assets/images/figma-course/recommendation-divider.svg';
+import CalendarSvg from '../../assets/images/figma-course/calendar.svg';
 import { Text } from '../components/common/Typography';
 import React, { useState } from 'react';
 import {
@@ -152,11 +157,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                 accessibilityLabel={COURSE_UI.BACK}
                 onPress={onBack}
                 testID='course-create-back'>
-                <FigmaAsset
-                  source={require('../../assets/images/figma-course/back.svg')}
-                  width={24}
-                  height={24}
-                />
+                <FigmaAsset source={BackSvg} width={24} height={24} />
               </Pressable>
               <Text style={styles.headerTitle}>
                 {UI_STRINGS.COURSE_CREATE.MAIN_TITLE}
@@ -178,7 +179,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                           {COURSE_UI.TASTE_REVIEW}
                         </Text>
                         <FigmaAsset
-                          source={require('../../assets/images/figma-course/back.svg')}
+                          source={BackSvg}
                           width={24}
                           height={24}
                           style={
@@ -215,7 +216,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                         {COURSE_UI.TASTE_ANALYZE}
                       </Text>
                       <FigmaAsset
-                        source={require('../../assets/images/figma-course/back.svg')}
+                        source={BackSvg}
                         width={24}
                         height={24}
                         style={styles.chevronForward}
@@ -256,19 +257,11 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                 ]}>
                 <View testID='destination-card'>
                   <View style={styles.labelRow}>
-                    <FigmaAsset
-                      source={require('../../assets/images/figma-course/plane.svg')}
-                      width={16}
-                      height={16}
-                    />
+                    <FigmaAsset source={PlaneSvg} width={16} height={16} />
                     <Text style={styles.cardTitle}>
                       {UI_STRINGS.COURSE_CREATE.DESTINATION_TITLE}
                     </Text>
-                    <FigmaAsset
-                      source={require('../../assets/images/figma-course/required.svg')}
-                      width={12}
-                      height={12}
-                    />
+                    <FigmaAsset source={RequiredSvg} width={12} height={12} />
                   </View>
                   <Pressable
                     testID='open-destination-sheet'
@@ -316,7 +309,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                             <Text style={styles.tagText}>{country}</Text>
                             <View style={styles.tagDivider}>
                               <FigmaAsset
-                                source={require('../../assets/images/figma-course/recommendation-divider.svg')}
+                                source={RecommendationDividerSvg}
                                 width={10}
                                 height={1}
                                 style={styles.tagDividerRotation}
@@ -334,18 +327,14 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                   style={[styles.dateSection, mbti && styles.mbtiDateSection]}>
                   <View style={styles.labelRow}>
                     <FigmaAsset
-                      source={require('../../assets/images/figma-course/calendar.svg')}
+                      source={CalendarSvg}
                       width={14.5}
                       height={14.5}
                     />
                     <Text style={styles.cardTitle}>
                       {UI_STRINGS.COURSE_CREATE.DATE_TITLE}
                     </Text>
-                    <FigmaAsset
-                      source={require('../../assets/images/figma-course/required.svg')}
-                      width={12}
-                      height={12}
-                    />
+                    <FigmaAsset source={RequiredSvg} width={12} height={12} />
                   </View>
                   <Pressable
                     testID='open-date-sheet'

@@ -2,6 +2,12 @@
  * @file TasteTicket.tsx
  * @description UI v3 ticket shared by photo and MBTI results, with data-driven spectra and destination imagery.
  */
+import SpectrumTrackSvg from '../../../assets/ui-v3-onboarding/spectrum-track.svg';
+import SpectrumPointSvg from '../../../assets/ui-v3-onboarding/spectrum-point.svg';
+import TicketPhotoSvg from '../../../assets/ui-v3-onboarding/ticket-photo.svg';
+import TicketMbtiSvg from '../../../assets/ui-v3-onboarding/ticket-mbti.svg';
+import TicketPerforationPhotoSvg from '../../../assets/ui-v3-onboarding/ticket-perforation-photo.svg';
+import TicketPerforationMbtiSvg from '../../../assets/ui-v3-onboarding/ticket-perforation-mbti.svg';
 import { Text } from '../common/Typography';
 import React, { useState } from 'react';
 import {
@@ -50,14 +56,10 @@ function Spectrum({ item }: { item: TasteProfile['types'][number] }) {
             setWidth(event.nativeEvent.layout.width)
           }>
           <View style={[styles.trackAsset, geometry.track]}>
-            <OnboardingSvg
-              source={require('../../../assets/ui-v3-onboarding/spectrum-track.svg')}
-            />
+            <OnboardingSvg source={SpectrumTrackSvg} />
           </View>
           <View style={[styles.marker, geometry.marker]}>
-            <OnboardingSvg
-              source={require('../../../assets/ui-v3-onboarding/spectrum-point.svg')}
-            />
+            <OnboardingSvg source={SpectrumPointSvg} />
           </View>
         </View>
         <Text style={[styles.pole, styles.highPole]}>{item.highName}</Text>
@@ -106,11 +108,7 @@ export function TasteTicket({
         accessible={false}>
         <View style={perforation.background}>
           <OnboardingSvg
-            source={
-              photoResult
-                ? require('../../../assets/ui-v3-onboarding/ticket-photo.svg')
-                : require('../../../assets/ui-v3-onboarding/ticket-mbti.svg')
-            }
+            source={photoResult ? TicketPhotoSvg : TicketMbtiSvg}
           />
         </View>
       </View>
@@ -166,8 +164,8 @@ export function TasteTicket({
               <OnboardingSvg
                 source={
                   photoResult
-                    ? require('../../../assets/ui-v3-onboarding/ticket-perforation-photo.svg')
-                    : require('../../../assets/ui-v3-onboarding/ticket-perforation-mbti.svg')
+                    ? TicketPerforationPhotoSvg
+                    : TicketPerforationMbtiSvg
                 }
               />
             </View>

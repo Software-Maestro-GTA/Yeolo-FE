@@ -2,6 +2,7 @@
  * @file TravelDateSheet.tsx
  * @description 여행 날짜를 연속 월 달력에서 선택하고 Figma의 하단 페이드로 확인 영역을 구분하는 UI v3 시트.
  */
+import CloseSvg from '../../../assets/images/figma-course/close.svg';
 import { useSheetEntrance } from '../../hooks/useSheetEntrance';
 import { Text } from '../common/Typography';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -140,11 +141,7 @@ export function TravelDateSheet({
               accessibilityLabel={COURSE_UI.CLOSE}
               style={styles.closeButton}
               onPress={onClose}>
-              <FigmaAsset
-                source={require('../../../assets/images/figma-course/close.svg')}
-                width={24}
-                height={24}
-              />
+              <FigmaAsset source={CloseSvg} width={24} height={24} />
             </Pressable>
           </View>
           <FlatList

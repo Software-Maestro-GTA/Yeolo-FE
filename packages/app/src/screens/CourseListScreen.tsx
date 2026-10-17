@@ -2,6 +2,8 @@
  * @file CourseListScreen.tsx
  * @description UI v3 최근 코스 목록과 편집·삭제 확인을 실제 코스 API 및 최근 코스 상태에 연결합니다.
  */
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import DeleteSvg from '../../assets/images/figma-course/delete.svg';
 import React, { useState, useMemo, useCallback, useContext } from 'react';
 import {
   StyleSheet,
@@ -157,11 +159,7 @@ export function CourseListScreen({
           accessibilityLabel={COURSE_UI.BACK}
           onPress={onBack}
           style={styles.backButton}>
-          <FigmaAsset
-            source={require('../../assets/images/figma-course/back.svg')}
-            width={24}
-            height={24}
-          />
+          <FigmaAsset source={BackSvg} width={24} height={24} />
         </Pressable>
         <Text style={styles.title}>{COURSE_UI.LIST_TITLE}</Text>
         <View style={styles.backButton} />
@@ -196,11 +194,7 @@ export function CourseListScreen({
                 accessibilityLabel={`${item.title} ${COURSE_UI.DELETE}`}
                 style={styles.deleteButton}
                 onPress={() => openDelete(item)}>
-                <FigmaAsset
-                  source={require('../../assets/images/figma-course/delete.svg')}
-                  width={13.5}
-                  height={14.5}
-                />
+                <FigmaAsset source={DeleteSvg} width={13.5} height={14.5} />
               </Pressable>
             )}
             <View style={editing ? styles.shiftedCard : styles.cardWrapper}>

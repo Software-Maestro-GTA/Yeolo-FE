@@ -2,6 +2,7 @@
  * @file CourseCard.tsx
  * @description UI v3의 가로형 최근 코스 카드에 실제 목적지·날짜·사진과 방문지 또는 태그를 표시합니다.
  */
+import PlacePinSvg from '../../../assets/images/figma-course/place-pin.svg';
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import type { CourseSummary } from '@yeolo/common';
@@ -70,11 +71,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           {chips.map((chip, index) => (
             <View key={`${index}-${chip}`} style={styles.chip}>
               {places.length > 0 && (
-                <FigmaAsset
-                  source={require('../../../assets/images/figma-course/place-pin.svg')}
-                  width={14}
-                  height={14}
-                />
+                <FigmaAsset source={PlacePinSvg} width={14} height={14} />
               )}
               <Text style={styles.chipText} numberOfLines={1}>
                 {chip}

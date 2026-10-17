@@ -2,6 +2,11 @@
  * @file CourseDetailScreen.tsx
  * @description Renders course timelines, normalized currency selection, and scrollable booking/share actions within device safe areas.
  */
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import ShareSvg from '../../assets/images/figma-course/share.svg';
+import BookingShadeSvg from '../../assets/images/figma-course/booking-shade.svg';
+import BookingArrowSvg from '../../assets/images/figma-course/booking-arrow.svg';
+import TicketShadeSvg from '../../assets/images/figma-course/ticket-shade.svg';
 import { Text } from '../components/common/Typography';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -428,11 +433,7 @@ export function CourseDetailScreen({
             trackButtonClick('btn_course_detail_back', 'Back Button Click');
             onBack?.();
           }}>
-          <FigmaAsset
-            source={require('../../assets/images/figma-course/back.svg')}
-            width={24}
-            height={24}
-          />
+          <FigmaAsset source={BackSvg} width={24} height={24} />
         </TouchableOpacity>
         <View style={styles.shareActions} testID='course-share-actions'>
           <TouchableOpacity
@@ -469,11 +470,7 @@ export function CourseDetailScreen({
             accessibilityLabel={UI_STRINGS.COURSE_DETAIL.SHARE_COURSE_BUTTON}
             style={styles.actionCircleBtn}
             onPress={handleShareCourse}>
-            <FigmaAsset
-              source={require('../../assets/images/figma-course/share.svg')}
-              width={24}
-              height={24}
-            />
+            <FigmaAsset source={ShareSvg} width={24} height={24} />
           </TouchableOpacity>
         </View>
       </View>
@@ -521,7 +518,7 @@ export function CourseDetailScreen({
                   />
                   <View style={styles.bookingShade}>
                     <FigmaAsset
-                      source={require('../../assets/images/figma-course/booking-shade.svg')}
+                      source={BookingShadeSvg}
                       width={165}
                       height={65}
                       style={bookingShadeStyle.shade}
@@ -534,7 +531,7 @@ export function CourseDetailScreen({
                         {COURSE_UI.FLIGHT_DESC}
                       </Text>
                       <FigmaAsset
-                        source={require('../../assets/images/figma-course/booking-arrow.svg')}
+                        source={BookingArrowSvg}
                         width={14.5}
                         height={8.5}
                       />
@@ -553,7 +550,7 @@ export function CourseDetailScreen({
                   />
                   <View style={styles.bookingShade}>
                     <FigmaAsset
-                      source={require('../../assets/images/figma-course/booking-shade.svg')}
+                      source={BookingShadeSvg}
                       width={165}
                       height={65}
                       style={bookingShadeStyle.shade}
@@ -566,7 +563,7 @@ export function CourseDetailScreen({
                         {course.destinationCity} {COURSE_UI.HOTEL_RECOMMENDED}
                       </Text>
                       <FigmaAsset
-                        source={require('../../assets/images/figma-course/booking-arrow.svg')}
+                        source={BookingArrowSvg}
                         width={14.5}
                         height={8.5}
                       />
@@ -585,7 +582,7 @@ export function CourseDetailScreen({
                   resizeMode='cover'
                 />
                 <FigmaAsset
-                  source={require('../../assets/images/figma-course/ticket-shade.svg')}
+                  source={TicketShadeSvg}
                   width={80}
                   height={248}
                   style={styles.ticketShade}
@@ -593,7 +590,7 @@ export function CourseDetailScreen({
                 <View style={styles.ticketContent}>
                   <Text style={styles.bookingTitle}>{COURSE_UI.TICKET}</Text>
                   <FigmaAsset
-                    source={require('../../assets/images/figma-course/booking-arrow.svg')}
+                    source={BookingArrowSvg}
                     width={14.5}
                     height={8.5}
                   />

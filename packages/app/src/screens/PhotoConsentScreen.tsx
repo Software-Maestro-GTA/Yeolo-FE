@@ -2,6 +2,7 @@
  * @file PhotoConsentScreen.tsx
  * @description Photo consent and native permission request with the current UI v3 assurance list and blue action (1196:175).
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -98,9 +99,7 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
           style={styles.backButton}
           accessibilityRole='button'
           accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-          <OnboardingSvg
-            source={require('../../assets/ui-v3-onboarding/back.svg')}
-          />
+          <OnboardingSvg source={BackSvg} />
         </TouchableOpacity>
       )}
       <ScrollView

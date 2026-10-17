@@ -2,6 +2,8 @@
  * @file DestinationPickerSheet.tsx
  * @description 선택 국가 위치에서 열리며 기기에 저장한 도시 즐겨찾기를 제공하는 여행지 선택 시트.
  */
+import CloseSvg from '../../../assets/images/figma-course/close.svg';
+import SearchSvg from '../../../assets/images/figma-course/search.svg';
 import { useSheetEntrance } from '../../hooks/useSheetEntrance';
 import { Text, TextInput } from '../common/Typography';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -281,19 +283,11 @@ export function DestinationPickerSheet({
                 accessibilityRole='button'
                 accessibilityLabel={COURSE_UI.CLOSE}
                 style={styles.iconButton}>
-                <FigmaAsset
-                  source={require('../../../assets/images/figma-course/close.svg')}
-                  width={24}
-                  height={24}
-                />
+                <FigmaAsset source={CloseSvg} width={24} height={24} />
               </Pressable>
             </View>
             <View style={styles.searchField}>
-              <FigmaAsset
-                source={require('../../../assets/images/figma-course/search.svg')}
-                width={14.891}
-                height={16.9999}
-              />
+              <FigmaAsset source={SearchSvg} width={14.891} height={16.9999} />
               <TextInput
                 testID='destination-search'
                 style={styles.searchInput}

@@ -2,6 +2,8 @@
  * @file NumericBudgetSlider.tsx
  * @description 고정된 화면 좌표로 연속 드래그하고 손을 놓을 때 폼 예산을 확정하는 슬라이더.
  */
+import BudgetSvg from '../../../assets/images/figma-course/budget.svg';
+import ThumbSvg from '../../../assets/images/figma-course/thumb.svg';
 import { Text } from '../common/Typography';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -13,7 +15,7 @@ import {
 import { FigmaAsset } from '../common/FigmaAsset';
 import { UI_STRINGS } from '../../constants';
 import { COURSE_UI } from '../../constants/courseUiStrings';
-import { palette } from '../../theme/colors';
+import { hexToRgba, palette } from '../../theme/colors';
 
 interface NumericBudgetSliderProps {
   value: number;
@@ -110,11 +112,7 @@ export function NumericBudgetSlider({
   return (
     <View style={styles.card} testID='budget-card'>
       <View style={styles.heading}>
-        <FigmaAsset
-          source={require('../../../assets/images/figma-course/budget.svg')}
-          width={14.5}
-          height={14.4984}
-        />
+        <FigmaAsset source={BudgetSvg} width={14.5} height={14.4984} />
         <Text style={styles.title}>
           {UI_STRINGS.COURSE_CREATE.BUDGET_TITLE}
         </Text>
@@ -196,11 +194,8 @@ export function NumericBudgetSlider({
           <Animated.View
             style={[styles.thumb, positionStyles.thumb]}
             pointerEvents='none'>
-            <FigmaAsset
-              source={require('../../../assets/images/figma-course/thumb.svg')}
-              width={32}
-              height={32}
-            />
+            <View style={styles.thumbShadow} />
+            <FigmaAsset source={ThumbSvg} width={32} height={32} />
           </Animated.View>
         </View>
       </View>
@@ -257,4 +252,29 @@ const styles = StyleSheet.create({
   },
   fill: { height: 4, borderRadius: 2, backgroundColor: palette.gray400 },
   thumb: { position: 'absolute', left: 0, top: 3, width: 32, height: 32 },
+  // SVGR drops SVG filters. Match the asset's 24px circle and two Figma
+  // shadows natively; SVG Gaussian stdDeviation maps to half the blur radius.
+  thumbShadow: {
+    position: 'absolute',
+    left: 4,
+    top: 3,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: palette.white,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 4,
+        color: hexToRgba(palette.black, 0.25),
+      },
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 1,
+        color: hexToRgba(palette.black, 0.15),
+      },
+    ],
+  },
 });

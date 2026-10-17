@@ -2,6 +2,8 @@
  * @file TasteAnalysisScreen.tsx
  * @description Real photo analysis with permission-aware retries, back navigation, and an MBTI recovery path.
  */
+import AnalysisCloseSvg from '../../assets/ui-v3-onboarding/analysis-close.svg';
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -47,9 +49,7 @@ function AnalysisHeading({ onClose }: { onClose?: () => void }) {
             accessibilityLabel={ONBOARDING_UI_STRINGS.CLOSE}
             style={styles.close}
             testID='analysis-close-button'>
-            <OnboardingSvg
-              source={require('../../assets/ui-v3-onboarding/analysis-close.svg')}
-            />
+            <OnboardingSvg source={AnalysisCloseSvg} />
           </TouchableOpacity>
         )}
       </View>
@@ -176,9 +176,7 @@ export function TasteAnalysisScreen({
           accessibilityRole='button'
           accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}
           style={styles.failureBack}>
-          <OnboardingSvg
-            source={require('../../assets/ui-v3-onboarding/back.svg')}
-          />
+          <OnboardingSvg source={BackSvg} />
         </TouchableOpacity>
       )}
       <ScrollView

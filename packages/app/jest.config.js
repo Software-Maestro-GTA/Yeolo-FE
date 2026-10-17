@@ -5,6 +5,7 @@
 module.exports = {
   preset: 'jest-expo',
   transform: {
+    '^.+\\.svg$': '<rootDir>/__tests__/mocks/svgTransformer.js',
     ...require('jest-expo/jest-preset').transform,
     '^.+\\.mjs$': 'babel-jest',
   },

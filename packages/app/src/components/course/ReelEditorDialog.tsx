@@ -2,6 +2,7 @@
  * @file ReelEditorDialog.tsx
  * @description Reel guidance and discard confirmation using the booking info and course deletion modal styles.
  */
+import ModalCloseSvg from '../../../assets/images/figma-course/modal-close.svg';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../common/Typography';
 import { FigmaAsset } from '../common/FigmaAsset';
@@ -52,11 +53,7 @@ export function ReelEditorDialog({
                 accessibilityLabel={V.CLOSE}
                 style={styles.close}
                 onPress={onDismiss}>
-                <FigmaAsset
-                  source={require('../../../assets/images/figma-course/modal-close.svg')}
-                  width={24}
-                  height={24}
-                />
+                <FigmaAsset source={ModalCloseSvg} width={24} height={24} />
               </Pressable>
               <View style={styles.summary}>
                 <Text style={styles.destination}>{destination}</Text>

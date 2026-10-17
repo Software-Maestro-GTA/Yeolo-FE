@@ -2,6 +2,7 @@
  * @file MbtiInputScreen.tsx
  * @description Accessible MBTI selection grid and API save action using the blue UI v3 selection states (1196:902, 1196:935).
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React, { useState } from 'react';
 import {
@@ -112,9 +113,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
             style={styles.backButton}
             accessibilityRole='button'
             accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-            <OnboardingSvg
-              source={require('../../assets/ui-v3-onboarding/back.svg')}
-            />
+            <OnboardingSvg source={BackSvg} />
           </TouchableOpacity>
         )}
         <Text style={styles.mainTitle}>{UI_STRINGS.MBTI.MAIN_TITLE}</Text>

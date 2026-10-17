@@ -3,6 +3,10 @@
  * @description UI v3 profile, support and official social links with existing account logout and withdrawal actions.
  * @domain DOM-3
  */
+import ChevronSvg from '../../assets/figma/profile/chevron.svg';
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import AvatarSvg from '../../assets/figma/profile/avatar.svg';
+import PersonSvg from '../../assets/figma/profile/person.svg';
 import { Text } from '../components/common/Typography';
 import React, { useContext, useEffect, useRef } from 'react';
 import {
@@ -228,7 +232,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       onPress={onPress}>
       <Text style={styles.settingLabelText}>{label}</Text>
       <FigmaAsset
-        source={require('../../assets/figma/profile/chevron.svg')}
+        source={ChevronSvg}
         width={18}
         height={18}
         style={styles.forward}
@@ -245,11 +249,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           testID='profile-back'
           onPress={onBack}
           style={styles.back}>
-          <FigmaAsset
-            source={require('../../assets/images/figma-course/back.svg')}
-            width={24}
-            height={24}
-          />
+          <FigmaAsset source={BackSvg} width={24} height={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{S.profile}</Text>
       </View>
@@ -270,16 +270,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           ) : (
             <View style={styles.defaultAvatarPlaceholder}>
               <FigmaAsset
-                source={require('../../assets/figma/profile/avatar.svg')}
+                source={AvatarSvg}
                 width={56}
                 height={56}
                 style={styles.avatarBackground}
               />
-              <FigmaAsset
-                source={require('../../assets/figma/profile/person.svg')}
-                width={19.4689}
-                height={22}
-              />
+              <FigmaAsset source={PersonSvg} width={19.4689} height={22} />
             </View>
           )}
           <View style={styles.metaTextStack}>
@@ -291,7 +287,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </Text>
           </View>
           <FigmaAsset
-            source={require('../../assets/images/figma-course/back.svg')}
+            source={BackSvg}
             width={24}
             height={24}
             style={styles.forward}

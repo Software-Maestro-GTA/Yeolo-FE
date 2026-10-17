@@ -2,6 +2,7 @@
  * @file TasteProfileScreen.tsx
  * @description API-backed blue UI v3 photo taste ticket, recommendation and reanalysis actions (1196:342).
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React from 'react';
 import type { TasteProfile } from '@yeolo/common';
@@ -71,9 +72,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
             onPress={onBack}
             accessibilityRole='button'
             accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-            <OnboardingSvg
-              source={require('../../assets/ui-v3-onboarding/back.svg')}
-            />
+            <OnboardingSvg source={BackSvg} />
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{UI_STRINGS.TASTE_PROFILE.MAIN_TITLE}</Text>

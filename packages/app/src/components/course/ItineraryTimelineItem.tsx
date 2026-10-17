@@ -2,6 +2,10 @@
  * @file ItineraryTimelineItem.tsx
  * @description UI v3 일정·교통 정보를 표시하고 Google Place ID로 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
  */
+import SequenceCircleSvg from '../../../assets/images/figma-course/sequence-circle.svg';
+import PlaceExpandSvg from '../../../assets/images/figma-course/place-expand.svg';
+import WalkingSvg from '../../../assets/images/figma-course/walking.svg';
+import BusSvg from '../../../assets/images/figma-course/bus.svg';
 import { Text } from '../common/Typography';
 import React from 'react';
 import {
@@ -97,7 +101,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             onPress={openMap}>
             <View style={styles.sequence}>
               <FigmaAsset
-                source={require('../../../assets/images/figma-course/sequence-circle.svg')}
+                source={SequenceCircleSvg}
                 width={16}
                 height={16}
                 style={styles.sequenceCircle}
@@ -107,11 +111,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <Text style={styles.placeName}>
               {place?.placeName || COURSE_UI.UNKNOWN_PLACE}
             </Text>
-            <FigmaAsset
-              source={require('../../../assets/images/figma-course/place-expand.svg')}
-              width={14.5}
-              height={14.5}
-            />
+            <FigmaAsset source={PlaceExpandSvg} width={14.5} height={14.5} />
           </Pressable>
           <Pressable
             accessibilityRole='link'
@@ -204,17 +204,9 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <>
               <View style={styles.metadata}>
                 {transport.type === 'walking' ? (
-                  <FigmaAsset
-                    source={require('../../../assets/images/figma-course/walking.svg')}
-                    width={8}
-                    height={14}
-                  />
+                  <FigmaAsset source={WalkingSvg} width={8} height={14} />
                 ) : transport.type === 'transit' ? (
-                  <FigmaAsset
-                    source={require('../../../assets/images/figma-course/bus.svg')}
-                    width={16}
-                    height={16}
-                  />
+                  <FigmaAsset source={BusSvg} width={16} height={16} />
                 ) : (
                   <Ionicons
                     name='car-outline'

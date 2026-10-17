@@ -2,6 +2,9 @@
  * @file HomeScreen.tsx
  * @description Marketing Design 워드마크와 UI v3 취향·최근 코스 카드, 전체 목록·예약 화면 연결을 제공합니다.
  */
+import YeoloLogoSvg from '../../assets/branding/yeolo-logo.svg';
+import ChevronSvg from '../../assets/figma/home/chevron.svg';
+import PersonSvg from '../../assets/figma/profile/person.svg';
 import React, { useContext, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,9 +31,9 @@ import { FigmaAsset } from '../components/common/FigmaAsset';
 import { CachedImage } from '../components/common/CachedImage';
 
 const assets = {
-  logo: require('../../assets/branding/yeolo-logo.svg'),
-  chevron: require('../../assets/figma/home/chevron.svg'),
-  person: require('../../assets/figma/profile/person.svg'),
+  logo: YeoloLogoSvg,
+  chevron: ChevronSvg,
+  person: PersonSvg,
 };
 
 export interface HomeScreenProps {

@@ -2,6 +2,11 @@
  * @file ProfileInputScreen.tsx
  * @description Screen component for entering and updating user profile details (nickname, avatar) matching Figma UI specifications and API-USER-1.
  */
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import AvatarLargeSvg from '../../assets/figma/profile/avatar-large.svg';
+import PersonSvg from '../../assets/figma/profile/person.svg';
+import CameraBackgroundSvg from '../../assets/figma/profile/camera-background.svg';
+import CameraSvg from '../../assets/figma/profile/camera.svg';
 import { Text, TextInput } from '../components/common/Typography';
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
@@ -206,11 +211,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
             onPress={onGoBack}
             accessibilityRole='button'
             accessibilityLabel={UI_STRINGS.COMMON.BACK}>
-            <FigmaAsset
-              source={require('../../assets/images/figma-course/back.svg')}
-              width={24}
-              height={24}
-            />
+            <FigmaAsset source={BackSvg} width={24} height={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
             {UI_STRINGS.PROFILE_INPUT.HEADER_TITLE}
@@ -232,30 +233,22 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
             ) : (
               <View style={styles.defaultAvatarPlaceholder}>
                 <FigmaAsset
-                  source={require('../../assets/figma/profile/avatar-large.svg')}
+                  source={AvatarLargeSvg}
                   width={120}
                   height={120}
                   style={styles.avatarBackground}
                 />
-                <FigmaAsset
-                  source={require('../../assets/figma/profile/person.svg')}
-                  width={19.4689}
-                  height={22}
-                />
+                <FigmaAsset source={PersonSvg} width={19.4689} height={22} />
               </View>
             )}
             <View style={styles.cameraBadge}>
               <FigmaAsset
-                source={require('../../assets/figma/profile/camera-background.svg')}
+                source={CameraBackgroundSvg}
                 width={32}
                 height={32}
                 style={styles.avatarBackground}
               />
-              <FigmaAsset
-                source={require('../../assets/figma/profile/camera.svg')}
-                width={14.5}
-                height={11.5}
-              />
+              <FigmaAsset source={CameraSvg} width={14.5} height={11.5} />
             </View>
           </TouchableOpacity>
           <Text style={styles.email} numberOfLines={1}>

@@ -2,6 +2,7 @@
  * @file CourseDeleteModal.tsx
  * @description UI v3 중앙 삭제 확인 모달에 실제 코스 요약과 취소·삭제 상태를 표시합니다.
  */
+import ModalCloseSvg from '../../../assets/images/figma-course/modal-close.svg';
 import React from 'react';
 import { StyleSheet, View, Pressable, Modal } from 'react-native';
 import type { CourseSummary } from '@yeolo/common';
@@ -54,11 +55,7 @@ export const CourseDeleteModal: React.FC<CourseDeleteModalProps> = ({
           accessibilityLabel={COURSE_UI.CLOSE}
           disabled={pending}
           onPress={onClose}>
-          <FigmaAsset
-            source={require('../../../assets/images/figma-course/modal-close.svg')}
-            width={24}
-            height={24}
-          />
+          <FigmaAsset source={ModalCloseSvg} width={24} height={24} />
         </Pressable>
         <View style={styles.summary} testID='course-delete-summary'>
           {course ? (

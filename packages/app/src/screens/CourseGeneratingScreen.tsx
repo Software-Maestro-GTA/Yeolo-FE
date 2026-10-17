@@ -2,6 +2,10 @@
  * @file CourseGeneratingScreen.tsx
  * @description Displays SSE course progress and delayed completion, stopping visual animations on failure or unmount.
  */
+import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
+import CompletedCheckSvg from '../../assets/images/figma-course/completed-check.svg';
+import LoadingRingSvg from '../../assets/images/figma-course/loading-ring.svg';
+import LoadingFillSvg from '../../assets/images/figma-course/loading-fill.svg';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useState, useRef } from 'react';
 import {
@@ -239,13 +243,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
         <View
           style={styles.completedCircle}
           testID={`${testIdPrefix}-completed`}>
+          <FigmaAsset source={CompletedRingSvg} width={22} height={22} />
           <FigmaAsset
-            source={require('../../assets/images/figma-course/completed-ring.svg')}
-            width={22}
-            height={22}
-          />
-          <FigmaAsset
-            source={require('../../assets/images/figma-course/completed-check.svg')}
+            source={CompletedCheckSvg}
             width={12}
             height={12}
             style={styles.completedCheck}
@@ -256,11 +256,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     if (status === 'loading') {
       return (
         <View style={styles.loadingCircle} testID={`${testIdPrefix}-loading`}>
-          <FigmaAsset
-            source={require('../../assets/images/figma-course/loading-ring.svg')}
-            width={22}
-            height={22}
-          />
+          <FigmaAsset source={LoadingRingSvg} width={22} height={22} />
           <Animated.View
             style={[
               styles.spinner,
@@ -275,11 +271,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
                 ],
               },
             ]}>
-            <FigmaAsset
-              source={require('../../assets/images/figma-course/loading-fill.svg')}
-              width={22}
-              height={22}
-            />
+            <FigmaAsset source={LoadingFillSvg} width={22} height={22} />
           </Animated.View>
         </View>
       );

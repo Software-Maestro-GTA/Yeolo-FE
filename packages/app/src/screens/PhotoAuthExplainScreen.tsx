@@ -2,6 +2,7 @@
  * @file PhotoAuthExplainScreen.tsx
  * @description Platform-specific photo access guidance using cropped settings images and full-access verification before analysis.
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -128,9 +129,7 @@ export function PhotoAuthExplainScreen({
           style={styles.backButton}
           accessibilityRole='button'
           accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-          <OnboardingSvg
-            source={require('../../assets/ui-v3-onboarding/back.svg')}
-          />
+          <OnboardingSvg source={BackSvg} />
         </Pressable>
       )}
       <ScrollView

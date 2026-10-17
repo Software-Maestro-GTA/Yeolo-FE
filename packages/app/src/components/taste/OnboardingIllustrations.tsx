@@ -1,20 +1,21 @@
 /**
  * @file OnboardingIllustrations.tsx
- * @description Locally bundled UI v3 vector renderer and photo privacy illustration.
+ * @description Build-time compiled UI v3 vector renderer and photo privacy illustration.
  */
-import {
-  Image,
-  StyleSheet,
-  View,
-  type ImageSourcePropType,
-} from 'react-native';
-import { SvgUri } from 'react-native-svg';
+import PrivacyBinSvg from '../../../assets/ui-v3-onboarding/privacy-bin.svg';
+import PrivacyBinLineSvg from '../../../assets/ui-v3-onboarding/privacy-bin-line.svg';
+import { StyleSheet, View } from 'react-native';
+import type { ComponentType } from 'react';
+import type { SvgProps } from 'react-native-svg';
 import { palette } from '../../theme/colors';
 
 /** Displays an unmodified local Figma SVG at its intrinsic dimensions. */
-export function OnboardingSvg({ source }: { source: ImageSourcePropType }) {
-  const asset = Image.resolveAssetSource(source);
-  return <SvgUri uri={asset?.uri ?? null} />;
+export function OnboardingSvg({
+  source: Vector,
+}: {
+  source: ComponentType<SvgProps>;
+}) {
+  return <Vector />;
 }
 
 /** Privacy illustration from nodes 1018:42–48; square shapes stay native and SVG artwork is bundled. */
@@ -25,15 +26,11 @@ export function PrivacyIllustration() {
       <View style={[styles.paper, styles.paperTwo]} />
       <View style={[styles.paper, styles.paperThree]} />
       <View style={styles.bin}>
-        <OnboardingSvg
-          source={require('../../../assets/ui-v3-onboarding/privacy-bin.svg')}
-        />
+        <OnboardingSvg source={PrivacyBinSvg} />
       </View>
       {[styles.lineOne, styles.lineTwo, styles.lineThree].map((line, index) => (
         <View key={index} style={[styles.binLine, line]}>
-          <OnboardingSvg
-            source={require('../../../assets/ui-v3-onboarding/privacy-bin-line.svg')}
-          />
+          <OnboardingSvg source={PrivacyBinLineSvg} />
         </View>
       ))}
     </View>

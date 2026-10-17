@@ -2,6 +2,7 @@
  * @file MBTIConsentScreen.tsx
  * @description Offers MBTI onboarding or a return to full photo access guidance after permission denial.
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
@@ -35,9 +36,7 @@ export function MBTIConsentScreen({
           style={styles.backButton}
           accessibilityRole='button'
           accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-          <OnboardingSvg
-            source={require('../../assets/ui-v3-onboarding/back.svg')}
-          />
+          <OnboardingSvg source={BackSvg} />
         </Pressable>
       )}
       <ScrollView

@@ -2,6 +2,7 @@
  * @file MBTIResultScreen.tsx
  * @description 유형별 예시 데이터로 계획 방식·일정 밀도·여행 분위기를 막대에 표시하고 코스·사진 추천을 연결합니다.
  */
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -67,9 +68,7 @@ export function MBTIResultScreen({
           onPress={onBack}
           accessibilityRole='button'
           accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
-          <OnboardingSvg
-            source={require('../../assets/ui-v3-onboarding/back.svg')}
-          />
+          <OnboardingSvg source={BackSvg} />
         </TouchableOpacity>
         <Text style={styles.title}>
           {mbti} {UI_STRINGS.MBTI_RESULT.TITLE}
