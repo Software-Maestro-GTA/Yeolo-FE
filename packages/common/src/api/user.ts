@@ -1,8 +1,12 @@
 /**
  * @file user.ts
- * @description Common user management API services shared across Web and Mobile.
+ * @description Common user management and preference API services shared across Web and Mobile (API-USER-1~4, API-PREF-1~2).
  */
-import { createHttpClient } from './kyClient';
+import {
+  createHttpClient,
+  getAcceptLanguage,
+  setAcceptLanguage,
+} from './kyClient';
 import type { WithdrawRequest, WithdrawResponse } from '../types/auth';
 import type {
   UpdatePreferencesPayload,
@@ -11,12 +15,15 @@ import type {
   SavePhotoConsentResponse,
   UpdateUserProfilePayload,
   UpdateUserProfileResponse,
+  GetUserLanguageResponse,
+  UpdateUserLanguagePayload,
+  UpdateUserLanguageResponse,
 } from '../types/user';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
 
 /**
- * Update user profile details like displayName and profileImageUrl (API-USER-1)
+ * Update user profile details like displayName and profileImage (API-USER-1).
  *
  * @param apiUrl Base backend URL
  * @param token Optional JWT Access token
@@ -52,11 +59,13 @@ export async function updateUserProfileApi(
 
   const normalizedApiUrl = apiUrl.replace(/\/$/, '');
   const targetUrl = `${normalizedApiUrl}/api/users/me/profile`;
+  const acceptLanguage = getAcceptLanguage();
 
   return new Promise<UpdateUserProfileResponse>((resolve, reject) => {
     if (typeof XMLHttpRequest !== 'undefined') {
       const xhr = new XMLHttpRequest();
       xhr.open('PATCH', targetUrl);
+      xhr.setRequestHeader('Accept-Language', acceptLanguage);
 
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -94,7 +103,9 @@ export async function updateUserProfileApi(
 
       xhr.send(formData);
     } else {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'Accept-Language': acceptLanguage,
+      };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -103,15 +114,17 @@ export async function updateUserProfileApi(
         headers,
         body: formData,
       })
-        .then((res) => res.json())
-        .then((result: UpdateUserProfileResponse) => {
-          if (result.status === 200) {
+        .then(async (res) => {
+          const result = (await res
+            .json()
+            .catch(() => null)) as UpdateUserProfileResponse | null;
+          if (res.ok && result?.status === 200) {
             resolve(result);
           } else {
             reject(
               new ApiError(
-                result.status || 500,
-                result.message || '프로필 정보 수정 실패',
+                result?.status || res.status || 500,
+                result?.message || '프로필 정보 수정 실패',
               ),
             );
           }
@@ -126,7 +139,7 @@ export async function updateUserProfileApi(
 }
 
 /**
- * Permanently delete user account and invalidate session (API-USER-2)
+ * Permanently delete user account and invalidate session (API-USER-2).
  */
 export async function withdrawApi(
   apiUrl: string,
@@ -162,7 +175,90 @@ export async function withdrawApi(
 }
 
 /**
- * Register/Update user preferences including MBTI (API-PREF-1)
+ * Fetch current user language setting (API-USER-3).
+ *
+ * @param apiUrl Base backend URL
+ * @param token Optional JWT Access token
+ */
+export async function getUserLanguageApi(
+  apiUrl: string,
+  token?: string,
+): Promise<GetUserLanguageResponse> {
+  logger.info('[UserAPI] getUserLanguageApi request');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const client = createHttpClient(apiUrl);
+  const response = await client.get('api/users/me/language', {
+    headers,
+  });
+
+  const result = await response.json<GetUserLanguageResponse>();
+
+  if (!response.ok || result.status !== 200 || !result.data) {
+    const errorStatus = result?.status || response.status;
+    const errorMessage = result?.message || '언어 정보 조회 실패';
+    logger.error(
+      `[UserAPI] getUserLanguageApi error (${errorStatus}):`,
+      errorMessage,
+    );
+    throw new ApiError(errorStatus, errorMessage);
+  }
+
+  if (result.data.language) {
+    setAcceptLanguage(result.data.language);
+  }
+
+  return result;
+}
+
+/**
+ * Update user language setting (API-USER-4).
+ *
+ * @param apiUrl Base backend URL
+ * @param token Optional JWT Access token
+ * @param payload Language code payload
+ */
+export async function updateUserLanguageApi(
+  apiUrl: string,
+  token?: string,
+  payload?: UpdateUserLanguagePayload,
+): Promise<UpdateUserLanguageResponse> {
+  logger.info('[UserAPI] updateUserLanguageApi request:', payload);
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const client = createHttpClient(apiUrl);
+  const response = await client.post('api/users/me/language', {
+    headers,
+    json: payload,
+  });
+
+  const result = await response.json<UpdateUserLanguageResponse>();
+
+  if (!response.ok || result.status !== 200 || !result.data) {
+    const errorStatus = result?.status || response.status;
+    const errorMessage = result?.message || '지원하지 않는 언어 코드입니다.';
+    logger.error(
+      `[UserAPI] updateUserLanguageApi error (${errorStatus}):`,
+      errorMessage,
+    );
+    throw new ApiError(errorStatus, errorMessage);
+  }
+
+  if (result.data.language) {
+    setAcceptLanguage(result.data.language);
+  }
+
+  return result;
+}
+
+/**
+ * Register/Update user preferences including MBTI (API-PREF-1).
  *
  * @param apiUrl Base backend URL
  * @param token Optional JWT Access token
@@ -201,7 +297,7 @@ export async function updatePreferencesApi(
 }
 
 /**
- * Save user consent for photo data analysis (API-PREF-2)
+ * Save user consent for photo data analysis (API-PREF-2).
  *
  * @param apiUrl Base backend URL
  * @param token Optional JWT Access token

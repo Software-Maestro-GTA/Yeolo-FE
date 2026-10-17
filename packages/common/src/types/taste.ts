@@ -1,14 +1,14 @@
 /**
  * @file taste.ts
- * @description Shared taste preference analysis types and interfaces across Web and Mobile.
+ * @description Shared taste preference analysis and query types matching API-PREF-3 and API-PREF-4.
  */
 
 export interface ImageMetadata {
   sourceImageId: string;
-  capturedAt: string; // ISO-8601
+  capturedAt: string; // ISO-8601 UTC
   latitude: number;
   longitude: number;
-  timezone: string;
+  timezone?: string;
 }
 
 export interface AnalyzeTastePayload {
@@ -25,7 +25,6 @@ export interface TasteCompleteData {
   message: string;
   data: {
     tasteProfileId: string;
-    sourceType: 'behavior';
   };
 }
 
@@ -41,6 +40,34 @@ export interface StreamCallbacks {
   onProgress?: (event: TasteProgressData) => void;
   onComplete?: (event: TasteCompleteData) => void;
   onError?: (error: Error) => void;
+}
+
+export interface TasteProfileTypeItem {
+  typeCode: string;
+  typeName: string;
+  lowName: string;
+  highName: string;
+  score: number;
+}
+
+export interface TasteRecommendCity {
+  countryName: string;
+  cityName: string;
+  imageUrl: string;
+  reason: string;
+}
+
+export interface TasteProfile {
+  intro: string;
+  hashtags: string[];
+  types: TasteProfileTypeItem[];
+  recommendCity: TasteRecommendCity;
+}
+
+export interface TasteProfileApiResponse {
+  status: number;
+  message: string;
+  data: TasteProfile;
 }
 
 export interface TravelPurposePreference {
@@ -104,18 +131,3 @@ export type CompanionType =
   | 'group'
   | 'with_pet'
   | 'social';
-
-export interface TasteProfile {
-  tasteProfileId: string;
-  userId: string;
-  sourceType: 'survey' | 'behavior' | 'mixed';
-  updatedAt: string;
-  travelPurpose: TravelPurposePreference;
-  travelPaceDensity: TravelPaceDensity;
-  preferredLocationType: PreferredLocationType;
-  activityPreference: ActivityPreference;
-  spendingTendency: 'cost_effective' | 'moderate' | 'luxury';
-  companionType: CompanionType;
-  foodPreference: FoodPreference;
-  seasonalEnvironmentPreference: string[];
-}

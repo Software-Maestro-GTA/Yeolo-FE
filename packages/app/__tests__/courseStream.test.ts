@@ -24,7 +24,7 @@ const payload = {
   destinationCity: '도쿄',
   startDate: '2026-10-06',
   totalDays: 2,
-  budgetType: 'moderate' as const,
+  budget: 1600000,
 };
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

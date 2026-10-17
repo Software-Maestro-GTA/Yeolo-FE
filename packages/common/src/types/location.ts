@@ -1,43 +1,49 @@
 /**
  * @file location.ts
- * @description Location autocomplete API request/response types for API-LOC-1 and API-LOC-2.
+ * @description Location API request and response types for API-LOC-1, API-LOC-2, and API-LOC-3.
  */
 
-export interface CountryAutocompleteParams {
-  keyword: string;
-  limit?: number;
+export interface CountryItem {
+  countryName: string;
 }
 
-export interface CityAutocompleteParams {
-  keyword: string;
-  country?: string;
-  limit?: number;
-}
-
-export interface CountryAutocompleteItem {
-  countryId: string;
-  countryNameKo: string;
-}
-
-export interface CityAutocompleteItem {
-  cityId: string;
-  cityNameKo: string;
-  countryId: string;
-  countryNameKo: string;
-}
-
-export interface CountryAutocompleteResponse {
+export interface CountryListResponse {
   status: number;
   message: string;
   data: {
-    countries: CountryAutocompleteItem[];
+    countries: CountryItem[];
   };
 }
 
-export interface CityAutocompleteResponse {
+export interface CityListParams {
+  countryName: string;
+}
+
+export interface CityItem {
+  cityName: string;
+}
+
+export interface CityListResponse {
   status: number;
   message: string;
   data: {
-    cities: CityAutocompleteItem[];
+    cities: CityItem[];
+  };
+}
+
+export interface LocationSearchParams {
+  keyword: string;
+}
+
+export interface LocationSearchResultItem {
+  countryName: string;
+  cities: CityItem[];
+}
+
+export interface LocationSearchResponse {
+  status: number;
+  message: string;
+  data: {
+    results: LocationSearchResultItem[];
   };
 }

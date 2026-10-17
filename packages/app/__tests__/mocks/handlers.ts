@@ -215,63 +215,36 @@ export const handlers = [
         status: 200,
         message: '성향 프로필 조회 성공',
         data: {
-          tasteProfile: {
-            tasteProfileId: '550e8400-e29b-41d4-a716-446655440001',
-            userId: '550e8400-e29b-41d4-a716-446655440000',
-            sourceType: 'mixed',
-            updatedAt: '2026-07-13',
-            travelPurpose: {
-              relaxation: 4,
-              sightseeing: 3,
-              culturalExperience: 3,
-              gourmet: 5,
-              natureExploration: 4,
-              activity: 2,
-              shopping: 2,
-              festivalEvent: 1,
-              wellness: 3,
-              selfDevelopment: 1,
+          intro: '쉬엄쉬엄 다니면서 사진은 야무지게 찍는 타입',
+          hashtags: ['#여유로운여행', '#인생샷', '#따뜻한'],
+          types: [
+            {
+              typeCode: 'PACE',
+              typeName: '여행페이스',
+              lowName: '여유',
+              highName: '빠름',
+              score: -45,
             },
-            travelPaceDensity: 'balanced',
-            preferredLocationType: {
-              bigCity: 3,
-              smallTownAlley: 4,
-              natureHinterland: 4,
-              beachResort: 5,
-              mountainPlateau: 2,
-              historicalCity: 3,
-              themeParkResort: 1,
-              famousSpotPreferred: 3,
-              hiddenSpotPreferred: 5,
+            {
+              typeCode: 'PHOTO',
+              typeName: '사진 취향',
+              lowName: '기록',
+              highName: '감성',
+              score: 65,
             },
-            activityPreference: {
-              viewing: 3,
-              experience: 4,
-              adventure: 2,
-              photographyVideo: 5,
-              gourmetExploration: 5,
-              nightlife: 2,
-              shopping: 2,
-              relaxation: 4,
-              localInteraction: 3,
+            {
+              typeCode: 'WEATHER',
+              typeName: '날씨 취향',
+              lowName: '추운',
+              highName: '더운',
+              score: 35,
             },
-            spendingTendency: 'cost_effective',
-            companionType: 'friends',
-            foodPreference: {
-              localFoodActive: 5,
-              famousRestaurantCentered: 4,
-              streetFood: 4,
-              cafeDessert: 5,
-              fineDining: 2,
-              familiarFoodPreferred: 2,
-              dietaryRestriction: 1,
-              sightseeingOverFood: 2,
-            },
-            seasonalEnvironmentPreference: [
-              'warm_region',
-              'spring_flower_autumn_foliage',
-              'off_season',
-            ],
+          ],
+          recommendCity: {
+            countryName: '포르투갈',
+            cityName: '리스본',
+            imageUrl: 'https://cdn.yeolo.com/cities/lisbon.jpg',
+            reason: '따뜻한 햇살과 골목 풍경이 매력적인 여행지예요',
           },
         },
       },
@@ -284,63 +257,36 @@ export const handlers = [
         status: 200,
         message: '성향 프로필 조회 성공',
         data: {
-          tasteProfile: {
-            tasteProfileId: '550e8400-e29b-41d4-a716-446655440001',
-            userId: '550e8400-e29b-41d4-a716-446655440000',
-            sourceType: 'mixed',
-            updatedAt: '2026-07-13',
-            travelPurpose: {
-              relaxation: 4,
-              sightseeing: 3,
-              culturalExperience: 3,
-              gourmet: 5,
-              natureExploration: 4,
-              activity: 2,
-              shopping: 2,
-              festivalEvent: 1,
-              wellness: 3,
-              selfDevelopment: 1,
+          intro: '쉬엄쉬엄 다니면서 사진은 야무지게 찍는 타입',
+          hashtags: ['#여유로운여행', '#인생샷', '#따뜻한'],
+          types: [
+            {
+              typeCode: 'PACE',
+              typeName: '여행페이스',
+              lowName: '여유',
+              highName: '빠름',
+              score: -45,
             },
-            travelPaceDensity: 'balanced',
-            preferredLocationType: {
-              bigCity: 3,
-              smallTownAlley: 4,
-              natureHinterland: 4,
-              beachResort: 5,
-              mountainPlateau: 2,
-              historicalCity: 3,
-              themeParkResort: 1,
-              famousSpotPreferred: 3,
-              hiddenSpotPreferred: 5,
+            {
+              typeCode: 'PHOTO',
+              typeName: '사진 취향',
+              lowName: '기록',
+              highName: '감성',
+              score: 65,
             },
-            activityPreference: {
-              viewing: 3,
-              experience: 4,
-              adventure: 2,
-              photographyVideo: 5,
-              gourmetExploration: 5,
-              nightlife: 2,
-              shopping: 2,
-              relaxation: 4,
-              localInteraction: 3,
+            {
+              typeCode: 'WEATHER',
+              typeName: '날씨 취향',
+              lowName: '추운',
+              highName: '더운',
+              score: 35,
             },
-            spendingTendency: 'cost_effective',
-            companionType: 'friends',
-            foodPreference: {
-              localFoodActive: 5,
-              famousRestaurantCentered: 4,
-              streetFood: 4,
-              cafeDessert: 5,
-              fineDining: 2,
-              familiarFoodPreferred: 2,
-              dietaryRestriction: 1,
-              sightseeingOverFood: 2,
-            },
-            seasonalEnvironmentPreference: [
-              'warm_region',
-              'spring_flower_autumn_foliage',
-              'off_season',
-            ],
+          ],
+          recommendCity: {
+            countryName: '포르투갈',
+            cityName: '리스본',
+            imageUrl: 'https://cdn.yeolo.com/cities/lisbon.jpg',
+            reason: '따뜻한 햇살과 골목 풍경이 매력적인 여행지예요',
           },
         },
       },
@@ -361,14 +307,14 @@ export const handlers = [
     });
   }),
 
-  // Mock SSE Course Generation API-FB-4
+  // Mock SSE Course Generation API-COURSE-1
   http.post('*/api/courses', async ({ request }) => {
     const body = (await request.json()) as {
       destinationCountry?: string;
       destinationCity?: string;
       startDate?: string;
       totalDays?: number;
-      budgetType?: string;
+      budget?: number;
     };
 
     if (
@@ -376,7 +322,7 @@ export const handlers = [
       !body.destinationCity ||
       !body.startDate ||
       !body.totalDays ||
-      !body.budgetType
+      typeof body.budget !== 'number'
     ) {
       return HttpResponse.json(
         {
@@ -400,7 +346,7 @@ export const handlers = [
     );
   }),
 
-  // Mock Course Detail GET API-FB-7
+  // Mock Course Detail GET API-COURSE-2
   http.get('*/api/courses/:courseId', () => {
     return HttpResponse.json(
       {
@@ -418,6 +364,8 @@ export const handlers = [
             startDate: '2026-08-01',
             totalDays: 2,
             totalCost: 66000,
+            totalCostExRate: 48,
+            exRateIcon: '$',
             tags: ['힐링', '해변', '카페', '자연'],
             recommendationReason:
               '자연 경관과 감성 카페를 선호하는 여행 성향을 반영하여 여유로운 서귀포 동선으로 추천합니다.',
@@ -712,114 +660,133 @@ export const handlers = [
     );
   }),
 
-  // Mock Country Autocomplete GET API-LOC-1
-  http.get('*/api/locations/countries/autocomplete', ({ request }) => {
-    const url = new URL(request.url);
-    const keyword = url.searchParams.get('keyword') || '';
-
-    const allCountries = [
-      { countryId: 'c-1', countryNameKo: '대한민국' },
-      { countryId: 'c-2', countryNameKo: '일본' },
-      { countryId: 'c-3', countryNameKo: '태국' },
-      { countryId: 'c-4', countryNameKo: '프랑스' },
-      { countryId: 'c-5', countryNameKo: '스페인' },
-      { countryId: 'c-6', countryNameKo: '이탈리아' },
-      { countryId: 'c-7', countryNameKo: '베트남' },
-    ];
-
-    const filtered = keyword
-      ? allCountries.filter((c) =>
-          c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
-        )
-      : allCountries;
-
+  // Mock Country List GET API-LOC-1
+  http.get('*/api/locations/countries', () => {
     return HttpResponse.json(
       {
         status: 200,
-        message: '국가 자동완성 조회 성공',
+        message: '국가 목록 조회 성공',
         data: {
-          countries: filtered,
+          countries: [
+            { countryName: '대한민국' },
+            { countryName: '일본' },
+            { countryName: '태국' },
+            { countryName: '프랑스' },
+            { countryName: '스페인' },
+            { countryName: '이탈리아' },
+            { countryName: '베트남' },
+            { countryName: '포르투갈' },
+            { countryName: '스위스' },
+          ],
         },
       },
       { status: 200 },
     );
   }),
 
-  // Mock City Autocomplete GET API-LOC-2
-  http.get('*/api/locations/cities/autocomplete', ({ request }) => {
+  // Mock City List GET API-LOC-2
+  http.get('*/api/locations/cities', ({ request }) => {
     const url = new URL(request.url);
-    const keyword = url.searchParams.get('keyword') || '';
-    const country = url.searchParams.get('country') || '';
-
-    const allCities = [
-      {
-        cityId: 'city-1',
-        cityNameKo: '도쿄',
-        countryId: 'c-2',
-        countryNameKo: '일본',
-      },
-      {
-        cityId: 'city-2',
-        cityNameKo: '오사카',
-        countryId: 'c-2',
-        countryNameKo: '일본',
-      },
-      {
-        cityId: 'city-3',
-        cityNameKo: '방콕',
-        countryId: 'c-3',
-        countryNameKo: '태국',
-      },
-      {
-        cityId: 'city-4',
-        cityNameKo: '파리',
-        countryId: 'c-4',
-        countryNameKo: '프랑스',
-      },
-      {
-        cityId: 'city-5',
-        cityNameKo: '다낭',
-        countryId: 'c-7',
-        countryNameKo: '베트남',
-      },
-      {
-        cityId: 'city-6',
-        cityNameKo: '제주',
-        countryId: 'c-1',
-        countryNameKo: '대한민국',
-      },
-      {
-        cityId: 'city-7',
-        cityNameKo: '서울',
-        countryId: 'c-1',
-        countryNameKo: '대한민국',
-      },
-    ];
-
-    let filtered = allCities;
-
-    if (country) {
-      filtered = filtered.filter(
-        (c) =>
-          c.countryNameKo.toLowerCase() === country.toLowerCase() ||
-          c.countryId.toLowerCase() === country.toLowerCase(),
-      );
-    }
-
-    if (keyword) {
-      filtered = filtered.filter(
-        (c) =>
-          c.cityNameKo.toLowerCase().includes(keyword.toLowerCase()) ||
-          c.countryNameKo.toLowerCase().includes(keyword.toLowerCase()),
-      );
-    }
+    const countryName = url.searchParams.get('countryName') || '';
+    const cityMap: Record<string, { cityName: string }[]> = {
+      대한민국: [
+        { cityName: '제주' },
+        { cityName: '서울' },
+        { cityName: '부산' },
+      ],
+      일본: [
+        { cityName: '도쿄' },
+        { cityName: '오사카' },
+        { cityName: '나고야' },
+      ],
+      태국: [{ cityName: '방콕' }, { cityName: '치앙마이' }],
+      프랑스: [{ cityName: '파리' }, { cityName: '니스' }],
+      베트남: [{ cityName: '다낭' }, { cityName: '하노이' }],
+      포르투갈: [{ cityName: '리스본' }, { cityName: '포르투' }],
+      스위스: [{ cityName: '인터라켄' }, { cityName: '취리히' }],
+    };
 
     return HttpResponse.json(
       {
         status: 200,
-        message: '도시 자동완성 조회 성공',
+        message: '도시 목록 조회 성공',
         data: {
-          cities: filtered,
+          cities: cityMap[countryName] || [],
+        },
+      },
+      { status: 200 },
+    );
+  }),
+
+  // Mock Location Search GET API-LOC-3
+  http.get('*/api/locations/search', ({ request }) => {
+    const url = new URL(request.url);
+    const keyword = (url.searchParams.get('keyword') || '')
+      .trim()
+      .toLowerCase();
+    const allLocations = [
+      {
+        countryName: '대한민국',
+        cities: [
+          { cityName: '제주' },
+          { cityName: '서울' },
+          { cityName: '부산' },
+        ],
+      },
+      {
+        countryName: '일본',
+        cities: [
+          { cityName: '도쿄' },
+          { cityName: '오사카' },
+          { cityName: '나고야' },
+        ],
+      },
+      {
+        countryName: '태국',
+        cities: [{ cityName: '방콕' }, { cityName: '치앙마이' }],
+      },
+      {
+        countryName: '프랑스',
+        cities: [{ cityName: '파리' }, { cityName: '니스' }],
+      },
+      {
+        countryName: '베트남',
+        cities: [{ cityName: '다낭' }, { cityName: '하노이' }],
+      },
+      {
+        countryName: '포르투갈',
+        cities: [{ cityName: '리스본' }, { cityName: '포르투' }],
+      },
+      {
+        countryName: '스위스',
+        cities: [{ cityName: '인터라켄' }, { cityName: '취리히' }],
+      },
+    ];
+
+    const results = keyword
+      ? allLocations
+          .map((item) => {
+            const countryMatch = item.countryName
+              .toLowerCase()
+              .includes(keyword);
+            const matchingCities = item.cities.filter((c) =>
+              c.cityName.toLowerCase().includes(keyword),
+            );
+            if (countryMatch) return item;
+            if (matchingCities.length > 0) {
+              return { countryName: item.countryName, cities: matchingCities };
+            }
+            return null;
+          })
+          .filter(Boolean)
+      : allLocations;
+
+    return HttpResponse.json(
+      {
+        status: 200,
+        message: '지역 검색 성공',
+        data: {
+          results,
         },
       },
       { status: 200 },

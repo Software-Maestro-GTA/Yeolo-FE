@@ -1,6 +1,6 @@
 /**
  * @file kyClient.ts
- * @description HTTP client instance with automatic 401 error interception and silent token refresh (API-AUTH-3).
+ * @description HTTP client instance with Accept-Language header injection, automatic 401 error interception, and silent token refresh (API-AUTH-3).
  */
 import ky, { type KyInstance, type Options } from 'ky';
 import type { RefreshTokenResponse } from '../types/auth';
@@ -20,6 +20,7 @@ export type UnauthorizedHandler = () => void | Promise<void>;
 let globalTokenGetter: TokenGetter | null = null;
 let globalTokenSetter: TokenSetter | null = null;
 let globalUnauthorizedHandler: UnauthorizedHandler | null = null;
+let globalAcceptLanguage = 'ko';
 
 let refreshPromise: Promise<{
   accessToken: string;
@@ -51,6 +52,22 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler): void {
 }
 
 /**
+ * Configure default Accept-Language header value for API requests.
+ * @param language BCP 47 language code (defaults to 'ko').
+ */
+export function setAcceptLanguage(language: string): void {
+  globalAcceptLanguage = language || 'ko';
+}
+
+/**
+ * Retrieve current default Accept-Language header value.
+ * @returns Current BCP 47 language code.
+ */
+export function getAcceptLanguage(): string {
+  return globalAcceptLanguage;
+}
+
+/**
  * Execute POST /api/auth/refresh API request to renew access token using refresh token (API-AUTH-3).
  *
  * @param apiUrl Base backend URL
@@ -65,13 +82,15 @@ export async function refreshTokenApi(
   const targetUrl = `${normalizedApiUrl}/api/auth/refresh`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Authorization: `Bearer ${refreshToken}`,
+    'Content-Type': 'application/json',
+    'Accept-Language': globalAcceptLanguage,
   };
 
   logger.info(`[AuthAPI] refreshTokenApi -> POST ${targetUrl}`, {
     headers: {
       'Content-Type': 'application/json',
+      'Accept-Language': globalAcceptLanguage,
       Authorization: `Bearer ${refreshToken ? `${refreshToken.slice(0, 15)}...` : 'none'}`,
     },
     body: {
@@ -149,7 +168,7 @@ async function executeTokenRefresh(
 }
 
 /**
- * Creates an HTTP client (ky instance) configured with 401 interceptor and Silent Refresh logic.
+ * Creates an HTTP client (ky instance) configured with Accept-Language header, 401 interceptor, and Silent Refresh logic.
  *
  * @param baseUrl Base API URL
  * @param customOptions Additional ky configuration options
@@ -165,6 +184,9 @@ export function createHttpClient(
     hooks: {
       beforeRequest: [
         async ({ request }) => {
+          if (!request.headers.has('Accept-Language') && globalAcceptLanguage) {
+            request.headers.set('Accept-Language', globalAcceptLanguage);
+          }
           if (!request.headers.has('Authorization') && globalTokenGetter) {
             try {
               const tokens = await globalTokenGetter();
@@ -179,6 +201,7 @@ export function createHttpClient(
             }
           }
         },
+        ...(customOptions?.hooks?.beforeRequest ?? []),
       ],
       afterResponse: [
         async ({ request, response }) => {
@@ -212,6 +235,12 @@ export function createHttpClient(
                   'Authorization',
                   `Bearer ${newTokens.accessToken}`,
                 );
+                if (
+                  !newHeaders.has('Accept-Language') &&
+                  globalAcceptLanguage
+                ) {
+                  newHeaders.set('Accept-Language', globalAcceptLanguage);
+                }
                 return ky(request.url, {
                   method: request.method,
                   headers: newHeaders,
@@ -240,6 +269,7 @@ export function createHttpClient(
 
           return response;
         },
+        ...(customOptions?.hooks?.afterResponse ?? []),
       ],
     },
   };
@@ -265,6 +295,17 @@ export function createPublicHttpClient(
   const options: Options = {
     throwHttpErrors: false,
     ...customOptions,
+    hooks: {
+      ...customOptions?.hooks,
+      beforeRequest: [
+        ({ request }) => {
+          if (!request.headers.has('Accept-Language') && globalAcceptLanguage) {
+            request.headers.set('Accept-Language', globalAcceptLanguage);
+          }
+        },
+        ...(customOptions?.hooks?.beforeRequest ?? []),
+      ],
+    },
   };
 
   if (baseUrl) {

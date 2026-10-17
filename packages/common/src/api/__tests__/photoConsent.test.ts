@@ -8,7 +8,7 @@ import { ApiError } from '../errors';
 const API_URL = 'https://api.yeolo.com';
 
 describe('savePhotoConsentApi Unit Tests (API-PREF-2)', () => {
-  let fetchSpy: any;
+  let fetchSpy: jest.SpyInstance;
 
   afterEach(() => {
     if (fetchSpy) {
@@ -18,13 +18,19 @@ describe('savePhotoConsentApi Unit Tests (API-PREF-2)', () => {
 
   it('동의 상태 및 버전이 전송되었을 때 POST /api/users/me/consents/photo 200 OK 성공 응답을 반환해야 한다', async () => {
     fetchSpy = jest
-      .spyOn(global, 'fetch')
+      .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input: any, init: any) => {
         const url = typeof input === 'string' ? input : input.url;
-        expect(url).toContain('api/users/me/consents/photo');
-        expect(init?.method).toBe('POST');
+        const method = typeof input === 'string' ? init?.method : input.method;
+        const headers =
+          input instanceof Request ? input.headers : new Headers(init?.headers);
+        const rawBody =
+          input instanceof Request ? await input.text() : init?.body;
+        const body = JSON.parse(rawBody || '{}');
 
-        const body = JSON.parse(init?.body || '{}');
+        expect(url).toContain('api/users/me/consents/photo');
+        expect(method?.toUpperCase()).toBe('POST');
+        expect(headers.get('Accept-Language')).toBe('ko');
         expect(body.agreed).toBe(true);
         expect(body.consentVersion).toBe('v1.0');
 
@@ -56,7 +62,7 @@ describe('savePhotoConsentApi Unit Tests (API-PREF-2)', () => {
   });
 
   it('잘못된 입력값 전달 시 400 ApiError를 던져야 한다', async () => {
-    fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(async () => {
+    fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       return new Response(
         JSON.stringify({
           status: 400,

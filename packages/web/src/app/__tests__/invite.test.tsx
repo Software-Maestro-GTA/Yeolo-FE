@@ -17,6 +17,7 @@ describe('InviteCard Component', () => {
       title: '제주 에메랄드 힐링 투어',
       destinationCountry: '대한민국',
       destinationCity: '제주도',
+      coverImageUrl: 'https://example.com/courses/jeju.jpg',
       startDate: '2026-09-01',
       totalDays: 3,
     },
