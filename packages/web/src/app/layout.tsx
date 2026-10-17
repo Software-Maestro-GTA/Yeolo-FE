@@ -4,17 +4,24 @@
  */
 
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
+import { DEFAULT_SHARE_IMAGE } from '@/lib/share-image';
 import '@/styles/globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+const pretendard = localFont({
+  src: [
+    { path: '../fonts/Pretendard-Regular.otf', weight: '400', style: 'normal' },
+    { path: '../fonts/Pretendard-Medium.otf', weight: '500', style: 'normal' },
+    {
+      path: '../fonts/Pretendard-SemiBold.otf',
+      weight: '600',
+      style: 'normal',
+    },
+    { path: '../fonts/Pretendard-Bold.otf', weight: '700', style: 'normal' },
+  ],
+  variable: '--font-pretendard',
+  display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -33,8 +40,16 @@ export const metadata: Metadata = {
     '여행 일정',
   ],
   icons: {
-    icon: '/images/logo-mark.png',
-    apple: '/images/logo-mark.png',
+    icon: {
+      url: '/branding/favicon-rounded.png',
+      type: 'image/png',
+      sizes: '512x512',
+    },
+    apple: {
+      url: '/branding/apple-touch-icon.png',
+      type: 'image/png',
+      sizes: '180x180',
+    },
   },
   openGraph: {
     title: '여로 - 초개인화 여행 플랫폼',
@@ -43,14 +58,7 @@ export const metadata: Metadata = {
     siteName: '여로 (Yeolo)',
     locale: 'ko_KR',
     type: 'website',
-    images: [
-      {
-        url: '/images/hero-travel.png',
-        width: 1024,
-        height: 1024,
-        alt: '여로 (Yeolo) AI 맞춤 여행',
-      },
-    ],
+    images: [DEFAULT_SHARE_IMAGE],
   },
   verification: {
     other: {
@@ -68,8 +76,13 @@ export default function RootLayout({
     <html
       lang='ko'
       data-scroll-behavior='smooth'
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}>
-      <body className='min-h-full flex flex-col'>{children}</body>
+      className={`${pretendard.variable} h-full antialiased`}>
+      <body className='min-h-full flex flex-col'>
+        <a className='skip-link' href='#main-content'>
+          본문으로 바로가기
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

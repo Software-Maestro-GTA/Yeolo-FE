@@ -14,6 +14,7 @@ import {
   StoreDownloadCTA,
   InviteErrorState,
 } from '@/components/Invite';
+import { DEFAULT_SHARE_IMAGE } from '@/lib/share-image';
 
 interface PageProps {
   params: Promise<{
@@ -46,7 +47,7 @@ function getDestinationOgImage(
   if (combined.includes('바르셀로나') || combined.includes('barcelona')) {
     return { url: '/images/dest-barcelona.png', width: 1536, height: 672 };
   }
-  return { url: '/images/hero-travel.png', width: 1024, height: 1024 };
+  return DEFAULT_SHARE_IMAGE;
 }
 
 export async function generateMetadata({
@@ -103,21 +104,14 @@ export async function generateMetadata({
           '초개인화 여행 플랫폼 여로(Yeolo)의 여행 코스 초대 링크입니다.',
         siteName: '여로 (Yeolo)',
         locale: 'ko_KR',
-        images: [
-          {
-            url: '/images/hero-travel.png',
-            width: 1024,
-            height: 1024,
-            alt: '여로 AI 맞춤 여행',
-          },
-        ],
+        images: [DEFAULT_SHARE_IMAGE],
       },
       twitter: {
         card: 'summary_large_image',
         title: '여행 코스 초대 | 여로 (Yeolo)',
         description:
           '초개인화 여행 플랫폼 여로(Yeolo)의 여행 코스 초대 링크입니다.',
-        images: ['/images/hero-travel.png'],
+        images: [DEFAULT_SHARE_IMAGE.url],
       },
     };
   }
