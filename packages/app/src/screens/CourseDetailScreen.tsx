@@ -515,7 +515,7 @@ export function CourseDetailScreen({
                   }
                   onPress={() => handleOpenBooking('flight')}>
                   <Image
-                    source={require('../../assets/images/figma-course/flight-booking.png')}
+                    source={require('../../assets/images/figma-course/flight-booking.jpg')}
                     style={styles.bookingImage}
                     resizeMode='cover'
                   />
@@ -547,7 +547,7 @@ export function CourseDetailScreen({
                   style={styles.bookingCard}
                   onPress={() => handleOpenBooking('hotel')}>
                   <Image
-                    source={require('../../assets/images/figma-course/hotel-booking.png')}
+                    source={require('../../assets/images/figma-course/hotel-booking.jpg')}
                     style={styles.bookingImage}
                     resizeMode='cover'
                   />
@@ -580,7 +580,7 @@ export function CourseDetailScreen({
                 style={styles.ticketCard}
                 onPress={() => handleOpenBooking('ticket')}>
                 <Image
-                  source={require('../../assets/images/figma-course/ticket-booking.png')}
+                  source={require('../../assets/images/figma-course/ticket-booking.jpg')}
                   style={styles.bookingImage}
                   resizeMode='cover'
                 />
