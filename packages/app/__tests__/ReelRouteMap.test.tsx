@@ -55,6 +55,29 @@ describe('ReelRouteMap', () => {
     jest.restoreAllMocks();
     jest.useRealTimers();
   });
+  it('편집기의 숨은 지도는 날짜가 바뀌어도 로딩 문구를 표시하지 않는다', async () => {
+    const onReady = jest.fn();
+    const ui = await render(
+      <ReelRouteMap
+        compact
+        day={reelCourse.itinerary.days[0]}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    expect(ui.queryByText(UI_STRINGS.REEL.MAP_LOADING)).toBeNull();
+    await ui.rerender(
+      <ReelRouteMap
+        compact
+        day={reelCourse.itinerary.days[1]}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    expect(ui.queryByText(UI_STRINGS.REEL.MAP_LOADING)).toBeNull();
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    expect(onReady).toHaveBeenCalledWith(snapshot);
+  });
   it('Google 지도가 로드된 후 한 번 캡처하고 SDK 좌표를 전달한다', async () => {
     const { getByTestId, onReady, unmount } = await mount();
     const map = getByTestId('reel-google-map');

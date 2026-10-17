@@ -2,14 +2,14 @@
  * @file ReelRouteMap.tsx
  * @description Captures a loaded Google Maps SDK background and its geographic projection for local reel export.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   findNodeHandle,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Text } from '../common/Typography';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import type { ItineraryDay } from '@yeolo/common';
 import {
@@ -27,10 +27,12 @@ export function ReelRouteMap({
   day,
   onReady,
   disabled,
+  compact = false,
 }: {
   day: ItineraryDay;
   onReady: (map: ReelMapSnapshot | null) => void;
   disabled: boolean;
+  compact?: boolean;
 }) {
   const mapRef = useRef<MapView>(null);
   const callback = useRef(onReady);
@@ -105,27 +107,31 @@ export function ReelRouteMap({
     };
   }, [coordinates, attempt]);
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{UI_STRINGS.REEL.MAP_LABEL}</Text>
+    <View style={[styles.container, compact && styles.compactContainer]}>
+      {!compact && (
+        <Text style={styles.label}>{UI_STRINGS.REEL.MAP_LABEL}</Text>
+      )}
       {region ? (
-        <MapView
-          key={attempt}
-          ref={mapRef}
-          testID='reel-google-map'
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          initialRegion={region}
-          scrollEnabled={false}
-          zoomEnabled={false}
-          rotateEnabled={false}
-          pitchEnabled={false}
-          toolbarEnabled={false}
-          onMapLoaded={() => capture.current?.()}
-        />
+        <View collapsable={false} style={compact && styles.captureMask}>
+          <MapView
+            key={attempt}
+            ref={mapRef}
+            testID='reel-google-map'
+            provider={PROVIDER_GOOGLE}
+            style={[styles.map, compact && styles.captureMap]}
+            initialRegion={region}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+            toolbarEnabled={false}
+            onMapLoaded={() => capture.current?.()}
+          />
+        </View>
       ) : (
         <Text style={styles.hint}>{UI_STRINGS.REEL.MAP_EMPTY}</Text>
       )}
-      {!!region && !ready && !error && (
+      {!compact && !!region && !ready && !error && (
         <Text style={styles.hint}>{UI_STRINGS.REEL.MAP_LOADING}</Text>
       )}
       {!!error && (
@@ -144,6 +150,9 @@ export function ReelRouteMap({
   );
 }
 const styles = StyleSheet.create({
+  compactContainer: { marginBottom: 0 },
+  captureMask: { width: 0, height: 0, overflow: 'hidden' },
+  captureMap: { position: 'absolute', width: 350, height: 350 },
   container: { gap: 8, marginBottom: 20 },
   label: { color: palette.deepNavy, fontSize: 14, fontWeight: '600' },
   map: { width: '100%', aspectRatio: 1 },

@@ -113,12 +113,23 @@ export function buildReelPlan(
   ending: string,
   firstPlaceId?: string,
   map?: ReelMapSnapshot | null,
+  photoOrder?: readonly string[],
 ): ReelPlan {
   const c = APP_CONFIG.REEL;
   const selected = reelPhotoStops(day).flatMap((stop) => {
     const photo = photos.find((p) => p.placeId === stop.place.placeId && p.uri);
     return photo ? [{ stop, photo }] : [];
   });
+  if (photoOrder) {
+    selected.sort((a, b) => {
+      const left = photoOrder.indexOf(a.photo.placeId);
+      const right = photoOrder.indexOf(b.photo.placeId);
+      return (
+        (left < 0 ? photoOrder.length : left) -
+        (right < 0 ? photoOrder.length : right)
+      );
+    });
+  }
   if (!selected.length) throw new Error(UI_STRINGS.REEL.EMPTY_PHOTOS);
   if (selected.length > c.MAX_PHOTOS) throw new Error(UI_STRINGS.REEL.LIMIT);
   const first =

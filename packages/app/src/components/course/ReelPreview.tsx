@@ -7,19 +7,32 @@ import {
   Animated,
   Image,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Text } from '../common/Typography';
 import Svg, { Circle, Polyline, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { ReelPlan } from '../../services/courseReelService';
 import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants/strings';
+import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
 
 /** Renders an approximate storyboard preview; the exported MP4 is available separately. */
-export function ReelPreview({ plan }: { plan: ReelPlan | null }) {
+export function ReelPreview({
+  plan,
+  compact = false,
+  expanded = false,
+  intro = false,
+  onClose,
+}: {
+  plan: ReelPlan | null;
+  compact?: boolean;
+  expanded?: boolean;
+  intro?: boolean;
+  onClose?: () => void;
+}) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const zoom = useRef(new Animated.Value(1)).current;
@@ -51,7 +64,15 @@ export function ReelPreview({ plan }: { plan: ReelPlan | null }) {
   }, [index, playing, scene, plan, zoom]);
   return (
     <View style={styles.container}>
-      <View style={styles.frame} testID='reel-preview'>
+      <View
+        style={[
+          styles.frame,
+          compact && styles.compactFrame,
+          expanded && styles.expandedFrame,
+          intro && styles.introFrame,
+          !scene && styles.emptyFrame,
+        ]}
+        testID='reel-preview'>
         {scene?.kind === 'photo' && (
           <Animated.View
             style={[StyleSheet.absoluteFill, { transform: [{ scale: zoom }] }]}>
@@ -100,7 +121,7 @@ export function ReelPreview({ plan }: { plan: ReelPlan | null }) {
             ))}
           </Svg>
         )}
-        {scene?.kind !== 'route' && (
+        {scene && scene.kind !== 'route' && (
           <LinearGradient
             colors={[palette.transparent, hexToRgba(palette.black, 0.75)]}
             style={styles.gradient}
@@ -110,17 +131,25 @@ export function ReelPreview({ plan }: { plan: ReelPlan | null }) {
           style={[
             styles.caption,
             scene?.kind === 'route' && styles.mapCaption,
+            intro && styles.introCaption,
           ]}>
-          <Text style={styles.sceneTitle} numberOfLines={2}>
+          <Text
+            style={[styles.sceneTitle, !scene && styles.emptyText]}
+            numberOfLines={2}>
             {scene?.title || UI_STRINGS.REEL.PREVIEW}
           </Text>
-          <Text style={styles.sceneCaption} numberOfLines={4}>
-            {scene?.caption || UI_STRINGS.REEL.EMPTY_PHOTOS}
+          <Text
+            style={[styles.sceneCaption, !scene && styles.emptyText]}
+            numberOfLines={4}>
+            {scene?.caption ||
+              (intro
+                ? BOOKING_REEL_UI.REEL.SAMPLE
+                : UI_STRINGS.REEL.EMPTY_PHOTOS)}
           </Text>
         </View>
-        {!!plan && (
+        {!!plan && !compact && (
           <TouchableOpacity
-            style={styles.play}
+            style={[styles.play, !!onClose && styles.playWithClose]}
             accessibilityRole='button'
             accessibilityLabel={
               playing ? UI_STRINGS.REEL.PAUSE : UI_STRINGS.REEL.PLAY
@@ -133,11 +162,23 @@ export function ReelPreview({ plan }: { plan: ReelPlan | null }) {
             />
           </TouchableOpacity>
         )}
+        {!!onClose && (
+          <TouchableOpacity
+            testID='reel-preview-close'
+            accessibilityRole='button'
+            accessibilityLabel={BOOKING_REEL_UI.REEL.CLOSE}
+            style={styles.close}
+            onPress={onClose}>
+            <Ionicons name='close' size={24} color={palette.white} />
+          </TouchableOpacity>
+        )}
       </View>
-      <Text style={styles.meta}>
-        {UI_STRINGS.REEL.FORMAT}
-        {plan ? ` · ${plan.scenes.reduce((n, s) => n + s.seconds, 0)}s` : ''}
-      </Text>
+      {!compact && !intro && (
+        <Text style={styles.meta}>
+          {UI_STRINGS.REEL.FORMAT}
+          {plan ? ` · ${plan.scenes.reduce((n, s) => n + s.seconds, 0)}s` : ''}
+        </Text>
+      )}
     </View>
   );
 }
@@ -149,12 +190,18 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
   },
-  container: { alignItems: 'center', marginVertical: 16, gap: 8 },
+  compactFrame: { width: 210 },
+  expandedFrame: { width: 314 },
+  introFrame: { width: 252 },
+  emptyFrame: { backgroundColor: palette.mediaPlaceholder },
+  emptyText: { color: palette.mutedText, fontSize: 16, lineHeight: 22 },
+  introCaption: { top: 0, bottom: 0, justifyContent: 'center' },
+  container: { alignItems: 'center', marginVertical: 0, gap: 8 },
   frame: {
     width: 216,
     aspectRatio: 9 / 16,
     backgroundColor: palette.deepNavy,
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   gradient: {
@@ -191,6 +238,18 @@ const styles = StyleSheet.create({
     backgroundColor: hexToRgba(palette.black, 0.4),
     padding: 10,
     borderRadius: 24,
+  },
+  playWithClose: { left: 12, right: undefined },
+  close: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: hexToRgba(palette.black, 0.4),
   },
   meta: { fontSize: 12, color: palette.subText },
 });
