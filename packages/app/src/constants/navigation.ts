@@ -20,7 +20,6 @@ export const NAV_STEPS = {
   GENERATING_COURSE: 'GENERATING_COURSE',
   COURSE_DETAIL: 'COURSE_DETAIL',
   COURSE_SHARE: 'COURSE_SHARE',
-  PLACE_DETAIL: 'PLACE_DETAIL',
 } as const;
 
 export type NavStep = (typeof NAV_STEPS)[keyof typeof NAV_STEPS];

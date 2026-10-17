@@ -1,8 +1,9 @@
 /**
  * @file NavigationRoot.test.tsx
- * @description Unit test for NavigationRoot showing BottomNavBar on CourseDetailScreen.
+ * @description Verifies UI v3 screen transitions, onboarding paths and course deep links.
  */
 import React from 'react';
+import { BackHandler, Platform, PanResponder } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import {
   NavigationRoot,
@@ -22,9 +23,16 @@ jest.mock('../src/screens', () => {
         <Button title='New Login' onPress={() => onLoginSuccess?.(true)} />
       </>
     ),
-    HomeScreen: ({ onNavigateToExplore, onOpenBooking }: any) => (
+    HomeScreen: ({
+      onNavigateToExplore,
+      onOpenBooking,
+      onNavigateToCreate,
+      onNavigateToProfile,
+    }: any) => (
       <React.Fragment>
         <Button title='Go to Explore' onPress={onNavigateToExplore} />
+        <Button title='Create Course' onPress={onNavigateToCreate} />
+        <Button title='Open Profile' onPress={onNavigateToProfile} />
         <Button
           title='Open Ticket Booking'
           onPress={() => onOpenBooking?.('ticket', { keyword: '도쿄' })}
@@ -43,8 +51,15 @@ jest.mock('../src/screens', () => {
         <Button title='Choose Photos' onPress={onPhoto} />
       </>
     ),
-    PhotoAuthExplainScreen: ({ onNext }: any) => (
-      <Button title='Full Permission Ready' onPress={onNext} />
+    PhotoAuthExplainScreen: ({ onNext, onBack }: any) => (
+      <>
+        {onBack && <Button title='Permission Back' onPress={onBack} />}
+        <Button title='Full Permission Ready' onPress={() => onNext('all')} />
+        <Button
+          title='Selected Permission Ready'
+          onPress={() => onNext('limited')}
+        />
+      </>
     ),
     MBTIResultScreen: ({ mbti, onGenerateCourse, onPhoto, onBack }: any) => (
       <>
@@ -64,39 +79,73 @@ jest.mock('../src/screens', () => {
         <Button title='Deny Photos' onPress={() => onNext('denied')} />
       </>
     ),
-    TasteAnalysisScreen: ({ onFinish, onFail, mode, onLimitedFinish }: any) => (
-      <React.Fragment>
-        <Text>{mode === 'limited' ? 'Limited Analysis' : 'Real Analysis'}</Text>
-        <Button title='Finish Limited' onPress={onLimitedFinish} />
-        <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
-        <Button title='Fail Taste' onPress={() => onFail?.()} />
-      </React.Fragment>
-    ),
-    TasteProfileScreen: ({ onGenerateCourse }: any) => (
-      <Button title='Go Home from Taste' onPress={onGenerateCourse} />
+    TasteAnalysisScreen: ({
+      onFinish,
+      onFail,
+      mode,
+      onLimitedFinish,
+      onClose,
+      onFailureStateChange,
+    }: any) => {
+      const [failed, setFailed] = React.useState(false);
+      React.useEffect(() => {
+        onFailureStateChange?.(failed);
+        return () => onFailureStateChange?.(false);
+      }, [failed, onFailureStateChange]);
+      return (
+        <React.Fragment>
+          <Text>
+            {failed
+              ? 'Selection Failure'
+              : mode === 'limited'
+                ? 'Limited Analysis'
+                : 'Real Analysis'}
+          </Text>
+          <Button
+            title='Mark Analysis Failed'
+            onPress={() => setFailed(true)}
+          />
+          {onClose && <Button title='Close Analysis' onPress={onClose} />}
+          <Button title='Finish Limited' onPress={onLimitedFinish} />
+          <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
+          <Button title='Fail Taste' onPress={() => onFail?.()} />
+        </React.Fragment>
+      );
+    },
+    TasteProfileScreen: ({ onGenerateCourse, onBack }: any) => (
+      <>
+        <Button title='Taste Back' onPress={onBack} />
+        <Button
+          title='Go Home from Taste'
+          onPress={() =>
+            onGenerateCourse({ countryName: '포르투갈', cityName: '리스본' })
+          }
+        />
+      </>
     ),
     ProfileScreen: () => <Text>ProfileScreen</Text>,
-    CourseCreateScreen: () => <Text>CourseCreateScreen</Text>,
+    CourseCreateScreen: ({ mbti, recommendedDestination, onBack }: any) => (
+      <>
+        <Text>CourseCreateScreen</Text>
+        <Button title='Create Back' onPress={onBack} />
+        {recommendedDestination && (
+          <Text>
+            {recommendedDestination.countryName},{' '}
+            {recommendedDestination.cityName}
+          </Text>
+        )}
+        <Text>{mbti ? `Create with ${mbti}` : 'Create with photos'}</Text>
+      </>
+    ),
     CourseGeneratingScreen: ({ onComplete }: any) => (
       <Button
         title='Complete Course Generation'
         onPress={() => onComplete?.('course-123')}
       />
     ),
-    CourseDetailScreen: ({ courseId, onSelectPlace, onBack }: any) => (
+    CourseDetailScreen: ({ courseId, onBack }: any) => (
       <React.Fragment>
-        <Button
-          title='Select Place Stop'
-          onPress={() =>
-            onSelectPlace?.({
-              sequence: 1,
-              place: {
-                placeId: 'place-123',
-                placeName: '함덕 해수욕장',
-              },
-            })
-          }
-        />
+        <Text>CourseDetailScreen: {courseId}</Text>
         <Button title='Detail Back' onPress={() => onBack?.()} />
       </React.Fragment>
     ),
@@ -113,20 +162,12 @@ jest.mock('../src/screens', () => {
     ProfileInputScreen: () => (
       <Text testID='profile-input-screen'>ProfileInputScreen</Text>
     ),
-    PlaceDetailScreen: ({ stop, placeId, onBack }: any) => (
-      <React.Fragment>
-        <Text testID='place-detail-screen'>
-          PlaceDetailScreen: {stop?.place?.placeName || placeId}
-        </Text>
-        <Button title='Place Back' onPress={() => onBack?.()} />
-      </React.Fragment>
-    ),
   };
 });
 
 import { NAV_STEPS } from '../src/constants';
 
-describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navigation', () => {
+describe('NavigationRoot - course detail and onboarding navigation', () => {
   const mockAuthContext = {
     isAuthenticated: true,
     isLoading: false,
@@ -135,7 +176,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     logout: jest.fn(),
   };
 
-  it('renders BottomNavBar when showing CourseDetailScreen', async () => {
+  it('opens CourseDetailScreen from the home course list', async () => {
     const { queryByText, getByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
@@ -155,12 +196,12 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     }
 
     await waitFor(() => {
-      expect(getByText('Select Place Stop')).toBeTruthy();
+      expect(getByText('CourseDetailScreen: course-123')).toBeTruthy();
     });
   });
 
-  it('navigates from CourseDetailScreen to PlaceDetailScreen when place is pressed', async () => {
-    const { getByText, findByTestId } = await render(
+  it('returns from course detail to its originating course list', async () => {
+    const { getByText, queryByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
       </AuthContext.Provider>,
@@ -178,17 +219,12 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       });
     }
 
+    expect(getByText('CourseDetailScreen: course-123')).toBeTruthy();
     await act(async () => {
-      fireEvent.press(getByText('Select Place Stop'));
+      fireEvent.press(getByText('Detail Back'));
     });
-
-    const placeDetailScreen = await findByTestId('place-detail-screen');
-    expect(placeDetailScreen).toBeTruthy();
-    expect(getByText(/함덕 해수욕장/)).toBeTruthy();
-    await act(async () => {
-      fireEvent.press(getByText('Place Back'));
-    });
-    expect(getByText('Select Place Stop')).toBeTruthy();
+    expect(getByText('Select Course')).toBeTruthy();
+    expect(queryByText('CourseDetailScreen: course-123')).toBeNull();
   });
 
   it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 PhotoConsentScreen(온보딩)으로 진입해야 한다', async () => {
@@ -269,7 +305,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     });
 
     // 2. CourseDetailScreen으로 이동 확인
-    expect(getByText('Select Place Stop')).toBeTruthy();
+    expect(getByText('CourseDetailScreen: course-accepted-1')).toBeTruthy();
 
     // 3. CourseDetailScreen에서 뒤로가기 실행
     await act(async () => {
@@ -352,7 +388,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Go to Photo Next')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 상태에서 하단 탭 코스 생성을 탭하면 PhotoConsentScreen으로 이동해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 상태에서 홈에서 코스 생성을 누르면 PhotoConsentScreen으로 이동해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -370,7 +406,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Go to Explore')).toBeTruthy();
 
     // Tab bar 'CREATE' 탭 클릭
-    const tabCreate = getByTestId('tab-create');
+    const tabCreate = getByText('Create Course');
     await act(async () => {
       fireEvent.press(tabCreate);
     });
@@ -545,7 +581,7 @@ describe('예약 화면의 앱 공통 내비게이션', () => {
     isLoading: false,
     hasCompletedOnboarding: true,
   };
-  it('예약에서도 하단 탭을 유지하고 뒤로 가기와 탭 이동이 동작한다', async () => {
+  it('예약에서 뒤로 돌아가 홈의 프로필 진입을 사용할 수 있다', async () => {
     const ui = await render(
       <AuthContext.Provider value={auth as any}>
         <NavigationRoot initialStep={NAV_STEPS.HOME} />
@@ -553,18 +589,18 @@ describe('예약 화면의 앱 공통 내비게이션', () => {
     );
     await fireEvent.press(ui.getByText('Open Ticket Booking'));
     expect(ui.getByTestId('booking-screen-ticket')).toBeTruthy();
-    expect(ui.getByTestId('bottom-nav-bar')).toBeTruthy();
+    expect(ui.queryByTestId('bottom-nav-bar')).toBeNull();
     expect(ui.getByLabelText('도시 또는 장소 이름').props.value).toBe('도쿄');
     await fireEvent.press(ui.getByLabelText('예약 이전 화면으로'));
     expect(ui.getByText('Open Ticket Booking')).toBeTruthy();
-    await fireEvent.press(ui.getByText('Open Ticket Booking'));
-    await fireEvent.press(ui.getByTestId('tab-profile'));
+    await fireEvent.press(ui.getByText('Open Profile'));
     expect(ui.getByText('ProfileScreen')).toBeTruthy();
     expect(ui.queryByTestId('booking-screen-ticket')).toBeNull();
   });
 });
 
 describe('UI v3 onboarding routes', () => {
+  afterEach(() => jest.restoreAllMocks());
   function Wrapper({ children }: { children: React.ReactNode }) {
     const [completed, setCompleted] = React.useState(false);
     return (
@@ -599,9 +635,16 @@ describe('UI v3 onboarding routes', () => {
     );
     await fireEvent.press(screen.getByText('Go to Photo Next'));
     expect(screen.getByText('Real Analysis')).toBeTruthy();
+    expect(screen.queryByText('Close Analysis')).toBeNull();
     await fireEvent.press(screen.getByText('Finish Taste'));
     await fireEvent.press(screen.getByText('Go Home from Taste'));
     expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.getByText('포르투갈, 리스본')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Create Back'));
+    await fireEvent.press(screen.getByText('Taste Back'));
+    await fireEvent.press(screen.getByText('Create Course'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.queryByText('포르투갈, 리스본')).toBeNull();
   });
   it('limited mode leads to explanation and switches back to real analysis', async () => {
     const screen = await render(
@@ -614,6 +657,80 @@ describe('UI v3 onboarding routes', () => {
     await fireEvent.press(screen.getByText('Finish Limited'));
     await fireEvent.press(screen.getByText('Full Permission Ready'));
     expect(screen.getByText('Real Analysis')).toBeTruthy();
+  });
+  it('permission guidance can explicitly restart analysis with selected-photo access', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Limited Photos'));
+    await fireEvent.press(screen.getByText('Finish Limited'));
+    await fireEvent.press(screen.getByText('Selected Permission Ready'));
+    expect(screen.getByText('Limited Analysis')).toBeTruthy();
+    expect(screen.queryByText('Real Analysis')).toBeNull();
+    await fireEvent.press(screen.getByText('Finish Taste'));
+    expect(screen.getByText('Go Home from Taste')).toBeTruthy();
+  });
+  it.each(['button', 'android', 'ios'])(
+    'permission %s back restores the selection failure without restarting analysis',
+    async (method) => {
+      jest.replaceProperty(
+        Platform,
+        'OS',
+        method === 'ios' ? 'ios' : 'android',
+      );
+      const backListener = jest.spyOn(BackHandler, 'addEventListener');
+      const panCreate = jest.spyOn(PanResponder, 'create');
+      const screen = await render(
+        <Wrapper>
+          <NavigationRoot />
+        </Wrapper>,
+      );
+      await fireEvent.press(screen.getByText(/Limited Photos/i));
+      await fireEvent.press(screen.getByText(/Mark Analysis Failed/i));
+      await fireEvent.press(screen.getByText(/Finish Limited/i));
+      expect(screen.queryByText('Selection Failure')).toBeNull();
+      if (method === 'button')
+        await fireEvent.press(screen.getByText(/Permission Back/i));
+      else if (method === 'android') {
+        const calls = backListener.mock.calls;
+        const handler = calls
+          .filter(([event]) => event === 'hardwareBackPress')
+          .at(-1)![1];
+        await act(async () => {
+          expect(handler({} as never)).toBe(true);
+        });
+      } else {
+        await act(async () => {
+          panCreate.mock.calls.at(-1)![0].onPanResponderRelease!(
+            {} as any,
+            { dx: 80, vx: 0.8 } as any,
+          );
+        });
+      }
+      expect(screen.getByText('Selection Failure')).toBeTruthy();
+      expect(screen.queryByText('Limited Analysis')).toBeNull();
+      expect(screen.queryByText(/Go to Photo Next/i)).toBeNull();
+      await fireEvent.press(screen.getByText(/Finish Limited/i));
+      await fireEvent.press(screen.getByText(/Full Permission Ready/i));
+      expect(screen.getByText('Real Analysis')).toBeTruthy();
+      expect(screen.queryByText('Selection Failure')).toBeNull();
+      jest.restoreAllMocks();
+    },
+  );
+  it('permission back returns to the denied-access screen', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Deny Photos'));
+    await fireEvent.press(screen.getByText('Choose Photos'));
+    await fireEvent.press(screen.getByText('Permission Back'));
+    expect(screen.getByText('Choose Photos')).toBeTruthy();
+    expect(screen.getByText('Choose MBTI')).toBeTruthy();
+    expect(screen.queryByText('Go to Photo Next')).toBeNull();
   });
   it('denial flows through MBTI consent, input and result before course creation', async () => {
     const screen = await render(
@@ -628,6 +745,7 @@ describe('UI v3 onboarding routes', () => {
     expect(screen.queryByText('CourseCreateScreen')).toBeNull();
     await fireEvent.press(screen.getByText('Result Course'));
     expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.getByText('Create with INFJ')).toBeTruthy();
   });
   it.each(['consent', 'result'])(
     '%s photo CTA opens the permission explanation',
@@ -644,6 +762,12 @@ describe('UI v3 onboarding routes', () => {
         await fireEvent.press(screen.getByText('Result Photos'));
       } else await fireEvent.press(screen.getByText('Choose Photos'));
       expect(screen.getByText('Full Permission Ready')).toBeTruthy();
+      if (source === 'result') {
+        await fireEvent.press(screen.getByText('Full Permission Ready'));
+        await fireEvent.press(screen.getByText('Finish Taste'));
+        await fireEvent.press(screen.getByText('Go Home from Taste'));
+        expect(screen.getByText('Create with photos')).toBeTruthy();
+      }
     },
   );
 });

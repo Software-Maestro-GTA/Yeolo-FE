@@ -1,230 +1,247 @@
 /**
  * @file HomeScreen.test.tsx
- * @description Unit and integration tests for HomeScreen matching issue #62 requirements.
+ * @description UI v3 홈의 진입 동선, 최신 코스 최대 세 개와 빈 상태·조회 실패 및 예약 연결을 검증합니다.
  */
 import React from 'react';
-import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HomeScreen } from '../src/screens/HomeScreen';
 import { renderWithQueryClient as render } from './test-utils';
 
-describe('HomeScreen (TSK-59 / #62: 홈 화면 UI/UX 및 맞춤 정보 연동)', () => {
-  const mockOnCreate = jest.fn();
-  const mockOnExplore = jest.fn();
-  const mockOnTasteProfile = jest.fn();
-  const mockOnPhotoConsent = jest.fn();
-  const mockOnSelectCourse = jest.fn();
+const course = {
+  courseId: 'recent-course',
+  title: '도쿄 여행',
+  destinationCountry: '일본',
+  destinationCity: '도쿄',
+  startDate: '2026-10-14',
+  totalDays: 2,
+  tags: [],
+  recommendationReason: '',
+  itinerary: {
+    days: [
+      {
+        day: 1,
+        date: '2026-10-14',
+        stops: [
+          { type: 'place', place: { placeId: 'p1', placeName: '모리 미술관' } },
+        ],
+      },
+    ],
+  },
+} as unknown as commonApi.CourseDetail;
 
+describe('HomeScreen UI v3', () => {
   beforeEach(async () => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
+    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([]);
     await AsyncStorage.setItem('accessToken', 'mock-token');
-  });
-
-  it('기본 UI 요소들(브랜드 로고, 인사말, 퀵 버튼 3종, 여행 예약 타일)이 올바르게 렌더링되어야 한다', async () => {
     jest
       .spyOn(commonApi, 'fetchTasteProfileApi')
       .mockRejectedValue(new commonApi.ApiError(404, 'Not found'));
-
-    const { getByText, getByTestId } = await render(<HomeScreen />);
-
-    expect(getByTestId('home-screen')).toBeTruthy();
-    expect(getByText('오늘은 어디로 떠나볼까요?')).toBeTruthy();
-
-    expect(getByTestId('quick-icons')).toBeTruthy();
-    expect(getByText('코스 생성하기')).toBeTruthy();
-    expect(getByText('코스 둘러보기')).toBeTruthy();
-    expect(getByText('내 여행 취향')).toBeTruthy();
-
-    expect(getByTestId('booking-section')).toBeTruthy();
-    expect(getByText('여행 예약')).toBeTruthy();
-    expect(getByText('마이리얼트립')).toBeTruthy();
-    expect(getByText('항공')).toBeTruthy();
-    expect(getByText('숙소')).toBeTruthy();
-    expect(getByText('투어·티켓')).toBeTruthy();
   });
 
-  it('퀵 액션 바: "코스 생성하기" 클릭 시 onNavigateToCreate 콜백이 실행되어야 한다', async () => {
-    const { getByText } = await render(
-      <HomeScreen onNavigateToCreate={mockOnCreate} />,
+  it('두 기능 카드와 릴스 진입, 빈 최근 코스, 세 예약 버튼을 표시한다', async () => {
+    const screen = await render(<HomeScreen />);
+    expect(screen.getByLabelText('여로')).toBeTruthy();
+    expect(screen.getByText('여행 취향 알아보기')).toBeTruthy();
+    expect(screen.getByText('여행 코스 생성하기')).toBeTruthy();
+    expect(screen.getByText('최근 다녀온 여행지 릴스 제작하기')).toBeTruthy();
+    expect(await screen.findByText('최근 생성한 코스가 없어요')).toBeTruthy();
+    for (const kind of ['flight', 'hotel', 'ticket'])
+      expect(screen.getByTestId(`booking-tile-${kind}`)).toBeTruthy();
+  });
+
+  it('프로필, 코스 생성, 전체 코스와 사진 동의 진입을 연결한다', async () => {
+    const onProfile = jest.fn(),
+      onCreate = jest.fn(),
+      onExplore = jest.fn(),
+      onPhoto = jest.fn();
+    const screen = await render(
+      <HomeScreen
+        onNavigateToProfile={onProfile}
+        onNavigateToCreate={onCreate}
+        onNavigateToExplore={onExplore}
+        onNavigateToPhotoConsent={onPhoto}
+      />,
     );
-
-    fireEvent.press(getByText('코스 생성하기'));
-    expect(mockOnCreate).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByTestId('home-profile'));
+    await fireEvent.press(screen.getByText('여행 코스 생성하기'));
+    await fireEvent.press(screen.getByText('최근 생성한 코스'));
+    await fireEvent.press(screen.getByText('여행 취향 알아보기'));
+    expect(onProfile).toHaveBeenCalledTimes(1);
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onExplore).toHaveBeenCalledTimes(1);
+    expect(onPhoto).toHaveBeenCalledTimes(1);
   });
 
-  it('퀵 액션 바: "코스 둘러보기" 클릭 시 onNavigateToExplore 콜백이 실행되어야 한다', async () => {
-    const { getByText } = await render(
-      <HomeScreen onNavigateToExplore={mockOnExplore} />,
-    );
-
-    fireEvent.press(getByText('코스 둘러보기'));
-    expect(mockOnExplore).toHaveBeenCalledTimes(1);
-  });
-
-  it('API-PREF-4 취향 존재 시 (fetchTasteProfileApi 성공), "내 여행 취향" 클릭 시 onNavigateToTasteProfile이 호출되어야 한다', async () => {
+  it('분석 결과가 있으면 취향 보기로 이동한다', async () => {
     jest.spyOn(commonApi, 'fetchTasteProfileApi').mockResolvedValue({
-      tasteProfileId: 'taste-123',
-      userId: 'user-1',
-      updatedAt: '2026-08-01',
+      intro: '여행 취향',
+      hashtags: [],
+      types: [],
+      recommendCity: [],
     } as any);
-
-    const { getByText } = await render(
+    const onTaste = jest.fn(),
+      onPhoto = jest.fn();
+    const screen = await render(
       <HomeScreen
-        onNavigateToTasteProfile={mockOnTasteProfile}
-        onNavigateToPhotoConsent={mockOnPhotoConsent}
+        onNavigateToTasteProfile={onTaste}
+        onNavigateToPhotoConsent={onPhoto}
       />,
     );
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
-    });
-
-    fireEvent.press(getByText('내 여행 취향'));
-
-    expect(mockOnTasteProfile).toHaveBeenCalledTimes(1);
-    expect(mockOnPhotoConsent).not.toHaveBeenCalled();
-  });
-
-  it('API-PREF-4 취향 없을 시 (404/에러), "내 여행 취향" 클릭 시 onNavigateToPhotoConsent가 호출되어야 한다', async () => {
-    jest
-      .spyOn(commonApi, 'fetchTasteProfileApi')
-      .mockRejectedValue(
-        new commonApi.ApiError(404, '저장된 성향 프로필이 없습니다.'),
-      );
-
-    const { getByText } = await render(
-      <HomeScreen
-        onNavigateToTasteProfile={mockOnTasteProfile}
-        onNavigateToPhotoConsent={mockOnPhotoConsent}
-      />,
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('home-taste-card').props.accessibilityLabel,
+      ).toBe('내 여행 취향 보기'),
     );
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
-    });
-
-    fireEvent.press(getByText('내 여행 취향'));
-
-    expect(mockOnPhotoConsent).toHaveBeenCalledTimes(1);
-    expect(mockOnTasteProfile).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('home-taste-card'));
+    expect(onTaste).toHaveBeenCalledTimes(1);
+    expect(onPhoto).not.toHaveBeenCalled();
   });
 
-  it('selectedCourseId가 null 또는 빈 값일 때 최근 확인한 여행 코스 영역이 표시되지 않아야 한다', async () => {
-    const { queryByTestId } = await render(
-      <HomeScreen selectedCourseId={null} />,
-    );
-
-    expect(queryByTestId('recent-course-section')).toBeNull();
-  });
-
-  it('selectedCourseId가 존재할 때 API-COURSE-2 정보(getCourseDetailApi)를 조회하여 표시하고 카드 클릭 시 onSelectCourse 콜백이 호출되어야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
-      courseId: 'mock-course-id-1',
-      title: '2박 3일 제주 서귀포 감성 힐링 코스',
-      destinationCountry: '대한민국',
-      destinationCity: '제주',
-      startDate: '2026-08-01',
-      totalDays: 2,
-      tags: ['힐링', '해변', '카페'],
-      recommendationReason: '감성 힐링 추천 코스',
-      itinerary: { days: [] },
-    } as any);
-
-    const { getByTestId, findByText, findByTestId } = await render(
-      <HomeScreen
-        selectedCourseId='mock-course-id-1'
-        onSelectCourse={mockOnSelectCourse}
-      />,
-    );
-
-    const recentSection = await findByTestId('recent-course-section');
-    expect(recentSection).toBeTruthy();
-
-    const courseTitle = await findByText('2박 3일 제주 서귀포 감성 힐링 코스');
-    expect(courseTitle).toBeTruthy();
-
-    fireEvent.press(getByTestId('recent-course-card'));
-    expect(mockOnSelectCourse).toHaveBeenCalledWith('mock-course-id-1');
-  });
-
-  it('selectedCourseId가 존재하더라도 API 조회 실패(404 등) 시 최근 코스 영역이 표시되지 않아야 한다', async () => {
-    jest
+  it('상세 조회 없이 목록의 목적지·기간·태그를 표시하고 카드 클릭을 연결한다', async () => {
+    const getDetail = jest
       .spyOn(commonApi, 'getCourseDetailApi')
-      .mockRejectedValue(new commonApi.ApiError(404, 'Course not found'));
-
-    const { queryByTestId } = await render(
-      <HomeScreen
-        selectedCourseId='invalid-course-id'
-        onSelectCourse={mockOnSelectCourse}
-      />,
-    );
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
-    });
-
-    expect(queryByTestId('recent-course-section')).toBeNull();
-    expect(queryByTestId('recent-course-card')).toBeNull();
+      .mockResolvedValue(course);
+    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([
+      {
+        ...course,
+        tags: ['문화', '#미식'],
+        coverImageUrl: '',
+        createdAt: '2026-10-16',
+      },
+    ]);
+    const onSelect = jest.fn();
+    const screen = await render(<HomeScreen onSelectCourse={onSelect} />);
+    expect(await screen.findByText('도쿄')).toBeTruthy();
+    expect(screen.getByText('26.10.14 - 26.10.15')).toBeTruthy();
+    expect(screen.getByText('#문화')).toBeTruthy();
+    expect(screen.getByText('#미식')).toBeTruthy();
+    expect(screen.queryByText('모리 미술관')).toBeNull();
+    expect(getDetail).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('course-card-recent-course'));
+    expect(onSelect).toHaveBeenCalledWith('recent-course');
   });
 
-  it('selectedCourseId가 props로 제공되지 않더라도 AuthContext에 recentCourseId가 있을 경우 최근 코스를 표시하고 클릭 시 이동해야 한다', async () => {
-    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
-      courseId: '550e8400-e29b-41d4-a716-446655440030',
-      title: '로그인 응답 기반 최근 추천 코스',
-      destinationCountry: '대한민국',
-      destinationCity: '제주',
-      coverImageUrl: 'https://example.com/custom-cover-image.jpg',
-      startDate: '2026-08-01',
-      totalDays: 3,
-      tags: ['최신', '추천'],
-      recommendationReason: '최근에 확인한 추천 코스입니다.',
-      itinerary: { days: [] },
-    } as any);
-
-    const { AuthContext } = require('../src/context/AuthContext');
-    const mockAuthValue = {
-      isAuthenticated: true,
-      user: { displayName: '테스터' },
-      isLoading: false,
-      recentCourseId: '550e8400-e29b-41d4-a716-446655440030',
-      loginWithGoogle: jest.fn(),
-      loginWithApple: jest.fn(),
-      logout: jest.fn(),
-    };
-
-    const { getByTestId, findByText, findByTestId } = await render(
-      <AuthContext.Provider value={mockAuthValue}>
-        <HomeScreen onSelectCourse={mockOnSelectCourse} />
-      </AuthContext.Provider>,
+  it('홈에서는 상세를 조회하지 않고 릴스 버튼을 누르면 제작 미리보기를 연다', async () => {
+    const getDetail = jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockResolvedValue(course);
+    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue([
+      { ...course, coverImageUrl: '', createdAt: '2026-10-16' },
+      ...['파리', '부산', '서울'].map((city, index) => ({
+        ...course,
+        courseId: `other-${index}`,
+        destinationCity: city,
+        tags: [`여행${index}`],
+        coverImageUrl: '',
+        createdAt: '2026-10-15',
+      })),
+    ]);
+    const onExplore = jest.fn();
+    const screen = await render(<HomeScreen onNavigateToExplore={onExplore} />);
+    await screen.findByText('도쿄');
+    expect(getDetail).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId(/^course-card-/)).toHaveLength(3);
+    await fireEvent.press(screen.getByTestId('home-reel'));
+    expect(await screen.findByTestId('reel-next')).toBeTruthy();
+    expect(onExplore).not.toHaveBeenCalled();
+    expect(getDetail).toHaveBeenCalledTimes(1);
+    expect(getDetail).toHaveBeenCalledWith(
+      expect.any(String),
+      'mock-token',
+      'recent-course',
     );
+    await fireEvent.press(screen.getByTestId('reel-next'));
+    expect(screen.getByTestId('reel-course-recent-course')).toBeTruthy();
+    expect(screen.getAllByTestId(/^reel-course-/)).toHaveLength(4);
+    expect(screen.getByText('#여행2')).toBeTruthy();
+    expect(getDetail).toHaveBeenCalledTimes(1);
+  });
 
-    const recentSection = await findByTestId('recent-course-section');
-    expect(recentSection).toBeTruthy();
-    const courseTitle = await findByText('로그인 응답 기반 최근 추천 코스');
-    expect(courseTitle).toBeTruthy();
+  it('릴스 상세 조회가 실패하면 홈에서 다시 시도해 미리보기를 연다', async () => {
+    const getDetail = jest
+      .spyOn(commonApi, 'getCourseDetailApi')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(course);
+    jest
+      .spyOn(commonApi, 'getCourseListApi')
+      .mockResolvedValue([
+        { ...course, coverImageUrl: '', createdAt: '2026-10-16' },
+      ]);
+    const screen = await render(<HomeScreen />);
+    await screen.findByText('도쿄');
+    await fireEvent.press(screen.getByTestId('home-reel'));
+    expect(
+      await screen.findByText(
+        '릴스 정보를 불러오지 못했어요. 버튼을 눌러 다시 시도해 주세요.',
+      ),
+    ).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-reel'));
+    expect(await screen.findByTestId('reel-next')).toBeTruthy();
+    expect(getDetail).toHaveBeenCalledTimes(2);
+  });
 
-    const thumbnail = getByTestId('recent-course-thumbnail');
-    expect(thumbnail.props.source.uri).toBe(
-      'https://example.com/custom-cover-image.jpg',
+  it('생성일 최신순으로 최대 세 코스를 표시하고 전체 목록으로 연결한다', async () => {
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(course);
+    jest.spyOn(commonApi, 'getCourseListApi').mockResolvedValue(
+      ['도쿄', '파리', '리스본', '방콕'].map((city, index) => ({
+        ...course,
+        courseId: `course-${index}`,
+        destinationCity: city,
+        coverImageUrl: '',
+        createdAt: ['2026-10-15', '2026-10-17', '2026-10-16', '2026-10-14'][
+          index
+        ],
+      })),
     );
+    const onExplore = jest.fn();
+    const screen = await render(<HomeScreen onNavigateToExplore={onExplore} />);
+    expect(await screen.findByText('파리')).toBeTruthy();
+    expect(
+      screen.getAllByTestId(/^course-card-/).map((card) => card.props.testID),
+    ).toEqual([
+      'course-card-course-1',
+      'course-card-course-2',
+      'course-card-course-0',
+    ]);
+    expect(screen.getByText('도쿄')).toBeTruthy();
+    expect(screen.getByText('리스본')).toBeTruthy();
+    expect(screen.queryByText('방콕')).toBeNull();
+    await fireEvent.press(screen.getByText('코스 전체보기'));
+    expect(onExplore).toHaveBeenCalledTimes(1);
+  });
 
-    fireEvent.press(getByTestId('recent-course-card'));
-    expect(mockOnSelectCourse).toHaveBeenCalledWith(
-      '550e8400-e29b-41d4-a716-446655440030',
-    );
+  it('목록 조회 실패를 빈 상태와 구별하고 다시 시도한다', async () => {
+    const getList = jest
+      .spyOn(commonApi, 'getCourseListApi')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([]);
+    const screen = await render(<HomeScreen />);
+    expect(
+      await screen.findByText('최근 코스를 불러오지 못했어요.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('최근 생성한 코스가 없어요')).toBeNull();
+    await fireEvent.press(screen.getByText('다시 시도'));
+    expect(await screen.findByText('최근 생성한 코스가 없어요')).toBeTruthy();
+    expect(getList).toHaveBeenCalledTimes(2);
   });
 
   it.each(['flight', 'hotel', 'ticket'])(
-    '예약 %s 타일은 마이리얼트립 검색창을 연다',
+    '최근 코스가 있어도 홈의 %s 예약은 빈 입력 조건으로 진입한다',
     async (kind) => {
+      jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(course);
+      jest
+        .spyOn(commonApi, 'getCourseListApi')
+        .mockResolvedValue([
+          { ...course, coverImageUrl: '', createdAt: '2026-10-16' },
+        ]);
       const onOpenBooking = jest.fn();
-      const { getByTestId, queryByTestId } = await render(
-        <HomeScreen onOpenBooking={onOpenBooking} />,
-      );
-      await fireEvent.press(getByTestId(`booking-tile-${kind}`));
-      expect(onOpenBooking).toHaveBeenCalledWith(kind, expect.any(Object));
-      expect(queryByTestId('booking-tile-train')).toBeNull();
+      const screen = await render(<HomeScreen onOpenBooking={onOpenBooking} />);
+      await screen.findByText('도쿄');
+      await fireEvent.press(screen.getByTestId(`booking-tile-${kind}`));
+      expect(onOpenBooking).toHaveBeenCalledWith(kind, {});
     },
   );
 });

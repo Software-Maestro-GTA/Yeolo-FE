@@ -1,34 +1,37 @@
 /**
  * @file HomeScreen.tsx
- * @description Main home screen with hero background, quick feature buttons, recent course card, and booking partner tiles.
+ * @description Marketing Design 워드마크와 UI v3 취향·최근 코스 카드, 전체 목록·예약 화면 연결을 제공합니다.
  */
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
+  ActivityIndicator,
   ScrollView,
-  Image,
-  ImageBackground,
-  Platform,
-  StatusBar,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { getDestinationImageUrl } from '../services';
-import { AuthContext, useBackground } from '../context';
-import { palette, hexToRgba } from '../theme/colors';
-import { UI_STRINGS, APP_IMAGES } from '../constants';
-
+import { AuthContext } from '../context';
+import { Text } from '../components/common/Typography';
+import { theme, palette } from '../theme/colors';
+import { HOME_PROFILE_UI as S } from '../constants/homeProfileUiStrings';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
+import type { OpenBooking } from '../services/bookingService';
 import {
-  courseBookingContext,
-  type OpenBooking,
-} from '../services/bookingService';
-import type { BookingKind } from '@yeolo/common';
-import { useTasteProfileQuery, useCourseDetailQuery } from '../hooks/queries';
+  useTasteProfileQuery,
+  useCourseListQuery,
+  useCourseDetailQuery,
+} from '../hooks/queries';
+import { CourseCard } from '../components/course/CourseCard';
+import { CourseReelComposer } from '../components/course/CourseReelComposer';
+import { FigmaAsset } from '../components/common/FigmaAsset';
+import { CachedImage } from '../components/common/CachedImage';
+
+const assets = {
+  logo: require('../../assets/branding/yeolo-logo.svg'),
+  chevron: require('../../assets/figma/home/chevron.svg'),
+  person: require('../../assets/figma/profile/person.svg'),
+};
 
 export interface HomeScreenProps {
   onNavigateToCreate?: () => void;
@@ -41,7 +44,8 @@ export interface HomeScreenProps {
   onOpenBooking?: OpenBooking;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({
+/** 서버의 최근 코스를 표시하고 모든 주요 흐름의 진입점을 연결합니다. */
+export function HomeScreen({
   onNavigateToCreate,
   onNavigateToExplore,
   onNavigateToProfile,
@@ -50,528 +54,365 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectCourse,
   selectedCourseId,
   onOpenBooking,
-}) => {
+}: HomeScreenProps) {
   useGA4ScreenTracking('HomeScreen');
   const { trackButtonClick } = useGA4ButtonClick();
-  const { setBackground, resetBackground } = useBackground();
-  const insets = useSafeAreaInsets();
-  const topPadding = (insets.top || StatusBar.currentHeight || 24) + 12;
-
-  React.useEffect(() => {
-    setBackground({ noTopEdges: true });
-    return () => {
-      resetBackground();
-    };
-  }, [setBackground, resetBackground]);
-
   const auth = useContext(AuthContext);
-  const user = auth?.user;
-  const displayName = user?.displayName || UI_STRINGS.HOME.GUEST;
-  const effectiveCourseId = selectedCourseId || auth?.recentCourseId || null;
-
-  const { data: tasteProfile } = useTasteProfileQuery();
-  const hasTasteProfile = !!tasteProfile;
-
-  const { data: recentCourse } = useCourseDetailQuery({
-    courseId: effectiveCourseId || '',
-    options: {
-      enabled: !!effectiveCourseId,
-    },
+  const insets = useSafeAreaInsets();
+  const [reelCourseId, setReelCourseId] = useState<string | null>(null);
+  const {
+    data: reelCourse,
+    isFetching: reelLoading,
+    isError: reelError,
+    refetch: retryReel,
+  } = useCourseDetailQuery({
+    courseId: reelCourseId ?? '',
+    options: { enabled: !!reelCourseId },
   });
-
-  const handleOpenBookingPartner = (
-    kind: BookingKind,
-    buttonId: string,
-    buttonLabel: string,
-  ) => {
-    trackButtonClick(buttonId, buttonLabel);
-    onOpenBooking?.(kind, courseBookingContext(recentCourse));
-  };
-
-  const handleTasteQuickAction = () => {
-    trackButtonClick('btn_home_taste', 'Taste Profile Quick Button');
-    if (hasTasteProfile) {
-      if (onNavigateToTasteProfile) {
-        onNavigateToTasteProfile();
-      } else {
-        onNavigateToProfile?.();
-      }
-    } else {
-      if (onNavigateToPhotoConsent) {
-        onNavigateToPhotoConsent();
-      } else {
-        onNavigateToProfile?.();
-      }
+  const { data: tasteProfile } = useTasteProfileQuery();
+  const {
+    data: courses = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useCourseListQuery();
+  const sortedCourses = [...courses].sort(
+    (a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0),
+  );
+  const recentCourses = sortedCourses.slice(0, 3);
+  const avatar = auth?.user?.profileImageUrl;
+  const openReel = () => {
+    if (reelCourseId && reelError) {
+      void retryReel();
+      return;
     }
+    const id =
+      selectedCourseId || auth?.recentCourseId || recentCourses[0]?.courseId;
+    if (id) setReelCourseId(id);
+    else onNavigateToExplore?.();
   };
-
+  const openTaste = () => {
+    trackButtonClick('btn_home_taste', 'Taste Profile Quick Button');
+    if (tasteProfile) (onNavigateToTasteProfile || onNavigateToProfile)?.();
+    else (onNavigateToPhotoConsent || onNavigateToProfile)?.();
+  };
   return (
     <View style={styles.container} testID='home-screen'>
-      <StatusBar
-        barStyle='dark-content'
-        backgroundColor='transparent'
-        translucent
-      />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <ImageBackground
-            source={APP_IMAGES.HOME_HERO_BG}
-            style={[styles.heroImageBg, { paddingTop: topPadding }]}
-            resizeMode='cover'>
-            {/* Gradient Overlay */}
-            <LinearGradient
-              colors={[
-                hexToRgba(palette.softMint, 0.75),
-                hexToRgba(palette.softMint, 0.5),
-                hexToRgba(palette.softMint, 0.85),
-                palette.softMint,
-              ]}
-              locations={[0, 0.45, 0.8, 1]}
-              style={styles.gradientOverlay}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 20) },
+        ]}>
+        <View style={styles.header}>
+          <View accessible accessibilityLabel={S.brand} style={styles.brand}>
+            <FigmaAsset
+              source={assets.logo}
+              width={587.998}
+              height={187.885}
+              style={styles.brandArtwork}
             />
-
-            {/* Greeting Stack (Bottom-aligned inside Hero Image) */}
-            <View style={styles.greetingStack}>
-              <Text style={styles.greetingText}>
-                {displayName}
-                {UI_STRINGS.HOME.HONORIFIC_NIM},
-              </Text>
-              <Text style={styles.greetingSubText}>
-                {UI_STRINGS.HOME.GREETING_SUBTITLE}
-              </Text>
-            </View>
-          </ImageBackground>
-        </View>
-
-        {/* Main Content Body */}
-        <View style={styles.mainContentBody}>
-          {/* Quick Feature Shortcut Buttons */}
-          <View style={styles.quickIconsRow} testID='quick-icons'>
-            {/* 1. 코스 생성하기 */}
-            <TouchableOpacity
-              style={styles.shortcutBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                trackButtonClick(
-                  'btn_home_create_course',
-                  'Create Course Quick Button',
-                );
-                onNavigateToCreate?.();
-              }}>
-              <View
-                style={[
-                  styles.iconBadge,
-                  { backgroundColor: palette.primary },
-                ]}>
-                <Ionicons name='sparkles' size={16} color={palette.white} />
-              </View>
-              <Text style={styles.shortcutBtnText}>
-                {UI_STRINGS.HOME.QUICK_CREATE_COURSE}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 2. 코스 둘러보기 */}
-            <TouchableOpacity
-              style={styles.shortcutBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                trackButtonClick(
-                  'btn_home_explore',
-                  'Explore Courses Quick Button',
-                );
-                onNavigateToExplore?.();
-              }}>
-              <View
-                style={[
-                  styles.iconBadge,
-                  { backgroundColor: palette.lightTeal },
-                ]}>
-                <Ionicons
-                  name='compass-outline'
-                  size={18}
-                  color={palette.accent}
-                />
-              </View>
-              <Text style={styles.shortcutBtnText}>
-                {UI_STRINGS.HOME.QUICK_EXPLORE_COURSES}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 3. 내 여행 취향 */}
-            <TouchableOpacity
-              style={styles.shortcutBtn}
-              activeOpacity={0.8}
-              onPress={handleTasteQuickAction}>
-              <View
-                style={[
-                  styles.iconBadge,
-                  { backgroundColor: palette.lightTeal },
-                ]}>
-                <Ionicons
-                  name='options-outline'
-                  size={18}
-                  color={palette.accent}
-                />
-              </View>
-              <Text style={styles.shortcutBtnText}>
-                {UI_STRINGS.HOME.QUICK_MY_TASTE}
-              </Text>
-            </TouchableOpacity>
           </View>
-
-          {/* Recent Course Section */}
-          {effectiveCourseId && recentCourse ? (
-            <View
-              style={styles.sectionContainer}
-              testID='recent-course-section'>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>
-                  {UI_STRINGS.HOME.RECENT_COURSE_TITLE}
-                </Text>
-              </View>
-
+          <TouchableOpacity
+            testID='home-profile'
+            accessibilityRole='button'
+            accessibilityLabel={S.profile}
+            onPress={onNavigateToProfile}
+            style={styles.avatarButton}>
+            {avatar ? (
+              <CachedImage source={{ uri: avatar }} style={styles.avatar} />
+            ) : (
+              <FigmaAsset source={assets.person} width={19.4689} height={22} />
+            )}
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.greeting}>
+          {S.greeting(auth?.user?.displayName || S.guest)}
+        </Text>
+        <View style={styles.featureRow}>
+          <TouchableOpacity
+            testID='home-taste-card'
+            accessibilityRole='button'
+            accessibilityLabel={tasteProfile ? S.viewTaste : S.taste}
+            onPress={openTaste}
+            style={[styles.featureCard, styles.tasteCard]}>
+            <View style={styles.featureCaption}>
+              <Text style={styles.tasteLead}>{S.tasteLead}</Text>
+              <Text style={styles.tasteLabel}>{S.taste}</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole='button'
+            accessibilityLabel={S.create}
+            onPress={onNavigateToCreate}
+            style={[styles.featureCard, styles.mapCard]}>
+            <View style={styles.featureCaption}>
+              <Text style={styles.createLead}>{S.createLead}</Text>
+              <Text style={styles.createLabel}>{S.create}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          testID='home-reel'
+          accessibilityRole='button'
+          accessibilityState={{ busy: reelLoading, disabled: reelLoading }}
+          disabled={reelLoading}
+          style={styles.reelButton}
+          onPress={openReel}>
+          <Text style={styles.reelText}>{S.reel}</Text>
+          {reelLoading ? (
+            <ActivityIndicator color={theme.colors.primary} />
+          ) : (
+            <FigmaAsset
+              source={assets.chevron}
+              width={24}
+              height={24}
+              style={styles.forward}
+            />
+          )}
+        </TouchableOpacity>
+        {!!reelCourseId && reelError && (
+          <Text accessibilityRole='alert' style={styles.muted}>
+            {S.reelLoadError}
+          </Text>
+        )}
+        <View testID='recent-course-section' style={styles.recentSection}>
+          <View style={styles.recentHeader}>
+            <TouchableOpacity
+              accessibilityRole='button'
+              onPress={onNavigateToExplore}>
+              <Text style={styles.sectionTitle}>{S.recent}</Text>
+            </TouchableOpacity>
+            {recentCourses.length > 0 && (
               <TouchableOpacity
-                style={styles.compactRouteCard}
-                testID='recent-course-card'
-                activeOpacity={0.85}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_home_recent_course',
-                    'Recent Course Card Click',
-                  );
-                  if (onSelectCourse) {
-                    onSelectCourse(effectiveCourseId);
-                  } else {
-                    onNavigateToExplore?.();
-                  }
-                }}>
-                <Image
-                  testID='recent-course-thumbnail'
-                  source={{
-                    uri:
-                      recentCourse.coverImageUrl ||
-                      getDestinationImageUrl(
-                        recentCourse.destinationCountry || '',
-                        recentCourse.destinationCity || '',
-                      ),
-                  }}
-                  style={styles.cardThumbnail}
+                accessibilityRole='button'
+                onPress={onNavigateToExplore}
+                style={styles.allCourses}>
+                <Text style={styles.allCoursesText}>{S.allCourses}</Text>
+                <FigmaAsset
+                  source={assets.chevron}
+                  width={24}
+                  height={24}
+                  style={styles.forward}
                 />
-                <View style={styles.cardInfoStack}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {recentCourse.title}
-                  </Text>
-                  <Text style={styles.cardMeta}>
-                    {`${recentCourse.destinationCountry || ''} ${recentCourse.destinationCity || ''} • ${recentCourse.totalDays || 0}일`}
-                  </Text>
-                  {recentCourse.recommendationReason ? (
-                    <Text style={styles.cardDesc} numberOfLines={1}>
-                      {recentCourse.recommendationReason}
-                    </Text>
-                  ) : null}
-                  {recentCourse.tags && recentCourse.tags.length > 0 ? (
-                    <View style={styles.tagsRow}>
-                      {recentCourse.tags.slice(0, 3).map((tag, idx) => (
-                        <Text key={idx} style={styles.tagText}>
-                          #{tag}
-                        </Text>
-                      ))}
-                    </View>
-                  ) : null}
-                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+          {isLoading ? (
+            <View style={styles.empty}>
+              <ActivityIndicator color={theme.colors.primary} />
+            </View>
+          ) : isError ? (
+            <View style={styles.empty}>
+              <Text style={styles.muted}>{S.loadError}</Text>
+              <TouchableOpacity onPress={() => refetch()}>
+                <Text style={styles.retry}>{S.retry}</Text>
               </TouchableOpacity>
             </View>
-          ) : null}
-
-          {/* Booking Partner Section */}
-          <View style={styles.sectionContainer} testID='booking-section'>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>
-                {UI_STRINGS.HOME.BOOKING_SECTION_TITLE}
-              </Text>
-              <Text style={styles.partnerSourceText}>
-                {UI_STRINGS.HOME.BOOKING_PARTNER_SOURCE}
-              </Text>
+          ) : recentCourses.length ? (
+            <View style={styles.recentCards}>
+              {recentCourses.map((item) => (
+                <CourseCard
+                  key={item.courseId}
+                  item={item}
+                  onPress={(id) =>
+                    onSelectCourse
+                      ? onSelectCourse(id)
+                      : onNavigateToExplore?.()
+                  }
+                />
+              ))}
             </View>
-
-            <View style={styles.bookingTilesRow}>
-              {/* ✈️ 항공 */}
-              <TouchableOpacity
-                testID='booking-tile-flight'
-                style={[
-                  styles.bookingTile,
-                  { backgroundColor: hexToRgba(palette.primary, 0.08) },
-                ]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  handleOpenBookingPartner(
-                    'flight',
-                    'btn_home_booking_flight',
-                    'Booking Flight Click',
-                  )
-                }>
-                <View
-                  style={[
-                    styles.bookingIconCircle,
-                    { backgroundColor: hexToRgba(palette.primary, 0.18) },
-                  ]}>
-                  <Text style={styles.bookingEmoji}>✈️</Text>
-                </View>
-                <Text style={styles.bookingLabel}>
-                  {UI_STRINGS.HOME.BOOKING_FLIGHT}
-                </Text>
-              </TouchableOpacity>
-
-              {/* 🏨 숙소 */}
-              <TouchableOpacity
-                testID='booking-tile-hotel'
-                style={[
-                  styles.bookingTile,
-                  { backgroundColor: hexToRgba(palette.accent, 0.08) },
-                ]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  handleOpenBookingPartner(
-                    'hotel',
-                    'btn_home_booking_hotel',
-                    'Booking Hotel Click',
-                  )
-                }>
-                <View
-                  style={[
-                    styles.bookingIconCircle,
-                    { backgroundColor: hexToRgba(palette.accent, 0.18) },
-                  ]}>
-                  <Text style={styles.bookingEmoji}>🏨</Text>
-                </View>
-                <Text style={styles.bookingLabel}>
-                  {UI_STRINGS.HOME.BOOKING_HOTEL}
-                </Text>
-              </TouchableOpacity>
-
-              {/* 🎫 투어·티켓 */}
-              <TouchableOpacity
-                testID='booking-tile-ticket'
-                style={[
-                  styles.bookingTile,
-                  { backgroundColor: hexToRgba(palette.purple, 0.08) },
-                ]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  handleOpenBookingPartner(
-                    'ticket',
-                    'btn_home_booking_ticket',
-                    'Booking Ticket Click',
-                  )
-                }>
-                <View
-                  style={[
-                    styles.bookingIconCircle,
-                    { backgroundColor: hexToRgba(palette.purple, 0.18) },
-                  ]}>
-                  <Text style={styles.bookingEmoji}>🎫</Text>
-                </View>
-                <Text style={styles.bookingLabel}>
-                  {UI_STRINGS.HOME.BOOKING_TICKET}
-                </Text>
-              </TouchableOpacity>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.muted}>{S.empty}</Text>
             </View>
+          )}
+        </View>
+        <View testID='booking-section' style={styles.bookingSection}>
+          <Text style={styles.sectionTitle}>{S.booking}</Text>
+          <View style={styles.bookingRow}>
+            {(['flight', 'hotel', 'ticket'] as const).map((kind) => (
+              <TouchableOpacity
+                key={kind}
+                testID={`booking-tile-${kind}`}
+                accessibilityRole='button'
+                accessibilityLabel={S[kind]}
+                style={styles.bookingItem}
+                onPress={() => onOpenBooking?.(kind, {})}>
+                <View style={styles.bookingCircle} accessible={false} />
+                <Text style={styles.bookingLabel}>{S[kind]}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </ScrollView>
+      {!!reelCourseId && reelCourse && (
+        <CourseReelComposer
+          course={reelCourse}
+          courseSummaries={sortedCourses}
+          initialDay={reelCourse.itinerary.days[0]?.day ?? 1}
+          initialStep='intro'
+          onClose={() => setReelCourseId(null)}
+        />
+      )}
     </View>
   );
-};
-
-const STATUS_BAR_HEIGHT =
-  Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  scrollContent: {
-    paddingTop: 0,
-    paddingBottom: 24,
-  },
-  heroSection: {
-    width: '100%',
-    height: 320,
-    backgroundColor: palette.deepNavy,
-  },
-  heroImageBg: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    justifyContent: 'flex-end',
-  },
-  gradientOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
-  heroTopNav: {
-    zIndex: 2,
-  },
-  brandTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: palette.deepNavy,
-    letterSpacing: -0.64,
-  },
-  greetingStack: {
-    gap: 4,
-    zIndex: 2,
-    marginBottom: 8,
-  },
-  greetingText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    lineHeight: 28,
-  },
-  greetingSubText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: palette.deepNavy,
-    lineHeight: 28,
-  },
-  mainContentBody: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 24,
-  },
-  quickIconsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  shortcutBtn: {
-    flex: 1,
-    height: 70,
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shortcutBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  sectionContainer: {
-    gap: 14,
-  },
-  sectionHeaderRow: {
+  container: { flex: 1, backgroundColor: theme.colors.bg.card },
+  content: { paddingHorizontal: 20, paddingTop: 20 },
+  header: {
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.deepNavy,
+  brand: {
+    width: 100,
+    height: (187.885 / 587.998) * 100,
   },
-  partnerSourceText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: palette.mutedText,
+  brandArtwork: {
+    width: 587.998,
+    height: 187.885,
+    transformOrigin: 'top left',
+    transform: [{ scale: 100 / 587.998 }],
   },
-  compactRouteCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 16,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  cardInfoStack: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  cardMeta: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: palette.subText,
-  },
-  cardDesc: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: palette.gray600,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: palette.primary,
-  },
-  bookingTilesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  bookingTile: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  bookingIconCircle: {
+  avatarButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: palette.gray200,
   },
-  bookingEmoji: {
+  avatar: { width: 35, height: 35, borderRadius: 18 },
+  greeting: {
     fontSize: 20,
+    lineHeight: 27,
+    fontWeight: '600',
+    letterSpacing: -1,
+    marginBottom: 16,
+    color: theme.colors.text.primary,
   },
-  bookingLabel: {
-    fontSize: 12,
+  featureRow: { flexDirection: 'row', gap: 20 },
+  featureCard: { flex: 1, height: 207, borderRadius: 16, alignItems: 'center' },
+  tasteCard: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 2, height: 3 },
+    elevation: 4,
+  },
+  mapCard: {
+    overflow: 'hidden',
+    backgroundColor: theme.colors.bg.card,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 2, height: 3 },
+    elevation: 4,
+  },
+  featureCaption: {
+    position: 'absolute',
+    bottom: 21,
+    alignItems: 'center',
+    width: '100%',
+  },
+  tasteLead: {
+    fontSize: 16,
+    lineHeight: 23,
+    letterSpacing: -1,
+    color: theme.colors.text.inverse,
+  },
+  tasteLabel: {
+    fontSize: 16,
+    lineHeight: 23,
+    letterSpacing: -1,
+    fontWeight: '600',
+    color: theme.colors.text.inverse,
+  },
+  createLead: {
+    fontSize: 16,
+    lineHeight: 23,
+    letterSpacing: -1,
+    color: theme.colors.text.primary,
+  },
+  createLabel: {
+    fontSize: 16,
+    lineHeight: 23,
+    letterSpacing: -1,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+  },
+  reelButton: {
+    marginTop: 20,
+    minHeight: 47,
+    borderRadius: 12,
+    backgroundColor: theme.colors.bg.card,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 2, height: 3 },
+    elevation: 4,
+  },
+  reelText: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '500',
-    color: palette.deepNavy,
+    letterSpacing: -1,
+    color: theme.colors.text.primary,
   },
+  forward: { transform: [{ rotate: '180deg' }] },
+  recentSection: { marginTop: 32 },
+  sectionTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    letterSpacing: -1,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+    marginLeft: 4,
+    marginBottom: 16,
+  },
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  allCourses: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 24,
+    marginRight: -8,
+  },
+  allCoursesText: { fontSize: 12, fontWeight: '500', color: palette.gray400 },
+  recentCards: { gap: 16 },
+  empty: {
+    minHeight: 107,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  muted: { fontSize: 16, color: theme.colors.text.muted },
+  retry: { color: theme.colors.primary, fontSize: 16 },
+  bookingSection: { marginTop: 32 },
+  bookingRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  bookingItem: { flex: 1, alignItems: 'center', gap: 6 },
+  bookingCircle: {
+    width: '100%',
+    maxWidth: 103,
+    aspectRatio: 1,
+    borderRadius: 52,
+    backgroundColor: palette.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookingLabel: { fontSize: 16, color: theme.colors.text.primary },
 });

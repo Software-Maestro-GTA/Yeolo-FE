@@ -1,9 +1,10 @@
 /**
  * @file NavigationRoot.tsx
- * @description App routes, back history and shared tab layout including affiliate booking screens.
+ * @description Screen history, completed-flow cleanup, shared-link resumption and session-aware back navigation.
  */
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   BackHandler,
   ToastAndroid,
   Platform,
@@ -11,18 +12,21 @@ import {
   PanResponder,
   View,
   StyleSheet,
-  GestureResponderEvent,
-  PanResponderGestureState,
 } from 'react-native';
-import type { ItineraryStop, BookingKind } from '@yeolo/common';
+import type { BookingKind } from '@yeolo/common';
 import { BookingScreen } from '../screens/BookingScreen';
 import type { BookingContext, OpenBooking } from '../services/bookingService';
-import type { PhotoAccess } from '../services/photoPermissionService';
+import {
+  getPhotoAccess,
+  type PhotoAccess,
+} from '../services/photoPermissionService';
 import type { MbtiType } from '../constants/mbtiProfiles';
 import { AuthContext } from '../context';
 import { NavTab } from '../components/navigation';
 import { MainLayout, OnboardingLayout } from '../layouts';
-import { NAV_STEPS, NAV_TABS, NavStep } from '../constants';
+import { NAV_STEPS, NAV_TABS, NavStep, UI_STRINGS } from '../constants';
+import type { CourseCreateScreenProps } from '../screens/CourseCreateScreen';
+import type { CourseDetailViewState } from '../screens/CourseDetailScreen';
 import {
   LoginScreen,
   HomeScreen,
@@ -40,7 +44,6 @@ import {
   CourseGeneratingScreen,
   CourseDetailScreen,
   CourseShareScreen,
-  PlaceDetailScreen,
 } from '../screens';
 
 const NON_HISTORY_STEPS: NavStep[] = [
@@ -50,6 +53,20 @@ const NON_HISTORY_STEPS: NavStep[] = [
 ];
 
 const MAX_HISTORY_LENGTH = 10;
+const ONBOARDING_FLOW_STEPS: NavStep[] = [
+  NAV_STEPS.PHOTO,
+  NAV_STEPS.PHOTO_AUTH,
+  NAV_STEPS.MBTI_CONSENT,
+  NAV_STEPS.MBTI,
+  NAV_STEPS.MBTI_RESULT,
+  NAV_STEPS.TASTE,
+];
+
+interface NavigationState {
+  step: NavStep | null;
+  history: NavStep[];
+  revision: number;
+}
 
 export interface NavigationRootProps {
   initialStep?: NavStep;
@@ -111,87 +128,178 @@ export function NavigationRoot({
 }: NavigationRootProps = {}) {
   const auth = useContext(AuthContext);
   const [analysisMode, setAnalysisMode] = useState<'full' | 'limited'>('full');
+  const [analysisFailed, setAnalysisFailed] = useState(false);
+  const [analysisRun, setAnalysisRun] = useState(0);
   const [selectedMbti, setSelectedMbti] = useState<MbtiType | null>(null);
   const [activeTasteProfileId, setActiveTasteProfileId] = useState<
     string | undefined
   >();
+  const [recommendedDestination, setRecommendedDestination] =
+    useState<CourseCreateScreenProps['recommendedDestination']>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [selectedShareToken, setSelectedShareToken] =
     useState<string>(initialShareToken);
-  const [selectedPlaceStop, setSelectedPlaceStop] = useState<
-    ItineraryStop | undefined
-  >();
   const [bookingRequest, setBookingRequest] = useState<{
     kind: BookingKind;
     context: BookingContext;
     tab: NavTab;
   } | null>(null);
-  const [history, setHistory] = useState<NavStep[]>([]);
-  const [step, setStep] = useState<NavStep | null>(initialStep || null);
+  const [navigation, setNavigation] = useState<NavigationState>({
+    step: initialStep || null,
+    history: [],
+    revision: 0,
+  });
+  const { step, history, revision } = navigation;
+  const navStateRef = useRef(navigation);
+  const authRef = useRef(auth);
+  authRef.current = auth;
+  const previousAuthenticated = useRef(auth?.isAuthenticated);
+  const photoReanalysisPending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const lastBackPressRef = useRef<number>(0);
+  const detailViewState = useRef<{
+    courseId: string;
+    state: CourseDetailViewState;
+  } | null>(null);
 
-  const goBack = () => {
-    if (history.length > 0) {
-      const prev = history[history.length - 1];
-      setHistory((old) => old.slice(0, -1));
-      setStep(prev);
-    } else {
-      setStep(auth?.isAuthenticated ? NAV_STEPS.COURSE_LIST : NAV_STEPS.LOGIN);
-    }
+  // The ref advances synchronously so double taps and callbacks from an old
+  // screen cannot append history or navigate after that screen has closed.
+  const commitNavigation = (nextStep: NavStep, nextHistory: NavStep[]) => {
+    const next = {
+      step: nextStep,
+      history: nextHistory.slice(-MAX_HISTORY_LENGTH),
+      revision: navStateRef.current.revision + 1,
+    };
+    navStateRef.current = next;
+    lastBackPressRef.current = 0;
+    setNavigation(next);
+  };
+  const isCurrentRoute = () => navStateRef.current.revision === revision;
+  const rootStep = (): NavStep => {
+    if (!authRef.current?.isAuthenticated) return NAV_STEPS.LOGIN;
+    return authRef.current.hasCompletedOnboarding === false
+      ? NAV_STEPS.PHOTO
+      : NAV_STEPS.HOME;
   };
 
-  const navigateTo = (nextStep: NavStep) => {
-    if (nextStep === NAV_STEPS.HOME || nextStep === NAV_STEPS.LOGIN) {
-      setHistory([]);
-    } else if (step && step !== nextStep && !NON_HISTORY_STEPS.includes(step)) {
-      setHistory((prev) => [...prev.slice(-(MAX_HISTORY_LENGTH - 1)), step]);
-    }
-    setStep(nextStep);
+  const goBack = () => {
+    if (!isCurrentRoute()) return;
+    if (step === NAV_STEPS.COURSE_SHARE) setSelectedShareToken('');
+    const previous = history[history.length - 1];
+    const target =
+      previous === NAV_STEPS.LOGIN && authRef.current?.isAuthenticated
+        ? rootStep()
+        : previous || rootStep();
+    commitNavigation(target, history.slice(0, -1));
+  };
+
+  const navigateTo = (
+    nextStep: NavStep,
+    destination?: CourseCreateScreenProps['recommendedDestination'],
+  ) => {
+    if (!isCurrentRoute() || step === nextStep) return;
+    if (nextStep === NAV_STEPS.CREATE_COURSE)
+      setRecommendedDestination(destination);
+    const nextHistory =
+      nextStep === NAV_STEPS.HOME || nextStep === NAV_STEPS.LOGIN
+        ? []
+        : step &&
+            (!NON_HISTORY_STEPS.includes(step) ||
+              (step === NAV_STEPS.TASTE &&
+                analysisFailed &&
+                nextStep === NAV_STEPS.PHOTO_AUTH))
+          ? [...history, step]
+          : history;
+    commitNavigation(nextStep, nextHistory);
+  };
+
+  const returnTo = (target: NavStep) => {
+    if (!isCurrentRoute()) return;
+    const index = history.lastIndexOf(target);
+    commitNavigation(target, index >= 0 ? history.slice(0, index) : []);
+  };
+
+  const finishFlow = (target: NavStep, completedSteps: NavStep[]) => {
+    if (!isCurrentRoute()) return;
+    commitNavigation(
+      target,
+      history.filter(
+        (item) => !completedSteps.includes(item) && item !== target,
+      ),
+    );
+  };
+
+  const closeAnalysis = (fallback: NavStep = NAV_STEPS.HOME) => {
+    if (!isCurrentRoute()) return;
+    const origins = history.filter(
+      (item) => !ONBOARDING_FLOW_STEPS.includes(item),
+    );
+    commitNavigation(
+      origins[origins.length - 1] || fallback,
+      origins.slice(0, -1),
+    );
   };
 
   useEffect(() => {
+    let active = true;
+    let receivedRuntimeLink = false;
     const handleUrl = (url: string | null) => {
-      if (!url) return;
+      if (!active || !url) return;
       const match = /(?:invite|share-links)\/([a-zA-Z0-9_-]+)/.exec(url);
-      if (match && match[1]) {
-        setSelectedShareToken(match[1]);
-        const fallbackStep = auth?.isAuthenticated
-          ? NAV_STEPS.HOME
-          : NAV_STEPS.LOGIN;
-        setHistory((prev) => (prev.length === 0 ? [fallbackStep] : prev));
-        setStep(NAV_STEPS.COURSE_SHARE);
-      }
+      if (!match?.[1]) return;
+      const current = navStateRef.current;
+      setSelectedShareToken(match[1]);
+      const origin = current.step || rootStep();
+      const nextHistory =
+        current.step === NAV_STEPS.COURSE_SHARE
+          ? current.history
+          : [...current.history, origin];
+      commitNavigation(NAV_STEPS.COURSE_SHARE, nextHistory);
     };
 
     Linking.getInitialURL()
-      .then(handleUrl)
+      .then((url) => {
+        if (!receivedRuntimeLink) handleUrl(url);
+      })
       .catch(() => {});
-    const subscription = Linking.addEventListener('url', (event) =>
-      handleUrl(event.url),
-    );
-    return () => subscription.remove();
-  }, [auth?.isAuthenticated]);
+    const subscription = Linking.addEventListener('url', (event) => {
+      receivedRuntimeLink = true;
+      handleUrl(event.url);
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!auth?.isLoading) {
-      if (step === null) {
-        if (auth?.isAuthenticated) {
-          if (selectedShareToken) {
-            setHistory([NAV_STEPS.HOME]);
-            setStep(NAV_STEPS.COURSE_SHARE);
-          } else if (auth?.hasCompletedOnboarding === false) {
-            setStep(NAV_STEPS.PHOTO);
-          } else {
-            setStep(NAV_STEPS.HOME);
-          }
-        } else {
-          if (selectedShareToken) {
-            setHistory([NAV_STEPS.LOGIN]);
-            setStep(NAV_STEPS.COURSE_SHARE);
-          } else {
-            setStep(NAV_STEPS.LOGIN);
-          }
-        }
+    if (auth?.isLoading) return;
+    const wasAuthenticated = previousAuthenticated.current;
+    previousAuthenticated.current = auth?.isAuthenticated;
+    if (wasAuthenticated && !auth?.isAuthenticated) {
+      setSelectedCourseId('');
+      setSelectedShareToken('');
+      setSelectedMbti(null);
+      setActiveTasteProfileId(undefined);
+      setRecommendedDestination(undefined);
+      setBookingRequest(null);
+      setAnalysisMode('full');
+      setAnalysisFailed(false);
+      detailViewState.current = null;
+      commitNavigation(NAV_STEPS.LOGIN, []);
+      return;
+    }
+    if (navStateRef.current.step === null) {
+      if (selectedShareToken) {
+        commitNavigation(NAV_STEPS.COURSE_SHARE, [rootStep()]);
+      } else {
+        commitNavigation(rootStep(), []);
       }
     }
   }, [
@@ -199,74 +307,71 @@ export function NavigationRoot({
     auth?.isLoading,
     auth?.hasCompletedOnboarding,
     selectedShareToken,
-    step,
   ]);
 
   useEffect(() => {
-    if (auth?.recentCourseId && !selectedCourseId) {
+    if (auth?.recentCourseId && !selectedCourseId && auth.isAuthenticated) {
       setSelectedCourseId(auth.recentCourseId);
     }
-  }, [auth?.recentCourseId, selectedCourseId]);
+  }, [auth?.recentCourseId, auth?.isAuthenticated, selectedCourseId]);
 
   useEffect(() => {
     const handleBackPress = () => {
+      if (step === NAV_STEPS.TASTE && analysisFailed) {
+        goBack();
+        return true;
+      }
+      if (step === NAV_STEPS.TASTE && auth?.hasCompletedOnboarding) {
+        closeAnalysis();
+        return true;
+      }
       if (step === NAV_STEPS.GENERATING_COURSE || step === NAV_STEPS.TASTE) {
         if (Platform.OS === 'android') {
           ToastAndroid.show(
-            '진행 중에는 이전으로 돌아갈 수 없습니다.',
+            UI_STRINGS.NAVIGATION.IN_PROGRESS,
             ToastAndroid.SHORT,
           );
         }
         return true;
       }
-
       if (
-        step !== NAV_STEPS.HOME &&
-        step !== NAV_STEPS.LOGIN &&
-        history.length > 0
+        history.length > 0 ||
+        (step !== rootStep() && step !== NAV_STEPS.LOGIN)
       ) {
         goBack();
         return true;
       }
-      if (step !== NAV_STEPS.HOME && step !== NAV_STEPS.LOGIN) {
-        setStep(
-          auth?.isAuthenticated ? NAV_STEPS.COURSE_LIST : NAV_STEPS.LOGIN,
-        );
-        return true;
-      }
-
       const now = Date.now();
-      if (now - lastBackPressRef.current < 2000) {
+      if (
+        lastBackPressRef.current > 0 &&
+        now - lastBackPressRef.current < 2000
+      ) {
         BackHandler.exitApp();
         return true;
       }
       lastBackPressRef.current = now;
       if (Platform.OS === 'android') {
         ToastAndroid.show(
-          '한 번 더 누르시면 앱이 종료됩니다.',
+          UI_STRINGS.NAVIGATION.EXIT_CONFIRM,
           ToastAndroid.SHORT,
         );
       }
       return true;
     };
-
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
       handleBackPress,
     );
-
     return () => subscription.remove();
-  }, [step, history]);
-
-  const navStateRef = useRef({ step, history });
-  useEffect(() => {
-    navStateRef.current = { step, history };
-  }, [step, history]);
+  }, [
+    navigation,
+    auth?.isAuthenticated,
+    auth?.hasCompletedOnboarding,
+    analysisFailed,
+  ]);
 
   const goBackRef = useRef(goBack);
-  useEffect(() => {
-    goBackRef.current = goBack;
-  }, [goBack]);
+  goBackRef.current = goBack;
 
   const panResponder = useMemo(
     () =>
@@ -315,6 +420,7 @@ export function NavigationRoot({
   };
 
   const openBooking: OpenBooking = (kind, context) => {
+    if (!isCurrentRoute()) return;
     setBookingRequest({
       kind,
       context,
@@ -324,12 +430,42 @@ export function NavigationRoot({
   };
 
   const routePhotoAccess = (access: PhotoAccess) => {
+    if (!isCurrentRoute()) return;
     if (access === 'denied') {
       navigateTo(NAV_STEPS.MBTI_CONSENT);
       return;
     }
     setAnalysisMode(access === 'limited' ? 'limited' : 'full');
-    navigateTo(NAV_STEPS.TASTE);
+    setAnalysisFailed(false);
+    setAnalysisRun((value) => value + 1);
+    // Starting again replaces the retained failure/help pair; Back alone preserves it.
+    if (
+      step === NAV_STEPS.PHOTO_AUTH &&
+      history[history.length - 1] === NAV_STEPS.TASTE
+    ) {
+      commitNavigation(NAV_STEPS.TASTE, history.slice(0, -1));
+    } else navigateTo(NAV_STEPS.TASTE);
+  };
+
+  // Reanalysis is an explicit action from an existing photo result; check OS access afresh.
+  const reanalyzeTaste = async () => {
+    if (!isCurrentRoute() || photoReanalysisPending.current) return;
+    photoReanalysisPending.current = true;
+    try {
+      const access = await getPhotoAccess();
+      if (!mounted.current || !isCurrentRoute()) return;
+      if (access === 'denied') navigateTo(NAV_STEPS.PHOTO_AUTH);
+      else routePhotoAccess(access);
+    } catch {
+      if (mounted.current && isCurrentRoute()) {
+        Alert.alert(
+          UI_STRINGS.ONBOARDING.ERROR_TITLE,
+          UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR,
+        );
+      }
+    } finally {
+      photoReanalysisPending.current = false;
+    }
   };
 
   const renderCurrentScreen = () => {
@@ -350,10 +486,19 @@ export function NavigationRoot({
         return (
           <LoginScreen
             onLoginSuccess={(doOnboarding) => {
-              if (doOnboarding) {
-                navigateTo(NAV_STEPS.PHOTO);
+              if (!isCurrentRoute()) return;
+              if (
+                selectedShareToken &&
+                history.includes(NAV_STEPS.COURSE_SHARE)
+              ) {
+                commitNavigation(NAV_STEPS.COURSE_SHARE, [
+                  doOnboarding ? NAV_STEPS.PHOTO : NAV_STEPS.HOME,
+                ]);
               } else {
-                navigateTo(NAV_STEPS.HOME);
+                commitNavigation(
+                  doOnboarding ? NAV_STEPS.PHOTO : NAV_STEPS.HOME,
+                  [],
+                );
               }
             }}
           />
@@ -362,6 +507,7 @@ export function NavigationRoot({
         return (
           <OnboardingLayout>
             <MBTIConsentScreen
+              onBack={history.length > 0 ? goBack : undefined}
               onNext={() => navigateTo(NAV_STEPS.MBTI)}
               onPhoto={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
             />
@@ -371,6 +517,7 @@ export function NavigationRoot({
         return (
           <OnboardingLayout>
             <MbtiInputScreen
+              onBack={goBack}
               onNext={(mbti) => {
                 setSelectedMbti(mbti);
                 navigateTo(NAV_STEPS.MBTI_RESULT);
@@ -387,7 +534,8 @@ export function NavigationRoot({
                 onBack={goBack}
                 onGenerateCourse={async () => {
                   await auth?.setHasCompletedOnboarding?.(true);
-                  navigateTo(NAV_STEPS.CREATE_COURSE);
+                  setRecommendedDestination(undefined);
+                  finishFlow(NAV_STEPS.CREATE_COURSE, ONBOARDING_FLOW_STEPS);
                 }}
                 onPhoto={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
               />
@@ -399,46 +547,78 @@ export function NavigationRoot({
       case NAV_STEPS.PHOTO:
         return (
           <OnboardingLayout>
-            <PhotoConsentScreen onNext={routePhotoAccess} />
-          </OnboardingLayout>
-        );
-      case NAV_STEPS.PHOTO_AUTH:
-        return (
-          <OnboardingLayout>
-            <PhotoAuthExplainScreen onNext={() => routePhotoAccess('all')} />
-          </OnboardingLayout>
-        );
-      case NAV_STEPS.TASTE:
-        return (
-          <OnboardingLayout>
-            <TasteAnalysisScreen
-              mode={analysisMode}
-              onLimitedFinish={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
-              onFinish={(tasteProfileId) => {
-                auth?.setHasCompletedOnboarding?.(true);
-                setActiveTasteProfileId(tasteProfileId);
-                navigateTo(NAV_STEPS.TASTE_PROFILE);
-              }}
-              onFail={() => {
-                if (auth?.hasCompletedOnboarding === false) {
-                  navigateTo(NAV_STEPS.MBTI_CONSENT);
-                } else {
-                  navigateTo(NAV_STEPS.PROFILE);
-                }
-              }}
+            <PhotoConsentScreen
+              onBack={history.length > 0 ? goBack : undefined}
+              onNext={routePhotoAccess}
             />
           </OnboardingLayout>
         );
+      case NAV_STEPS.PHOTO_AUTH:
+      case NAV_STEPS.TASTE:
+        return (
+          <OnboardingLayout>
+            {(step === NAV_STEPS.TASTE ||
+              history[history.length - 1] === NAV_STEPS.TASTE) && (
+              <View
+                key='analysis'
+                style={
+                  step === NAV_STEPS.TASTE ? styles.container : styles.hidden
+                }
+                accessibilityElementsHidden={step === NAV_STEPS.PHOTO_AUTH}
+                importantForAccessibility={
+                  step === NAV_STEPS.PHOTO_AUTH ? 'no-hide-descendants' : 'auto'
+                }>
+                <TasteAnalysisScreen
+                  key={analysisRun}
+                  onClose={
+                    auth?.hasCompletedOnboarding
+                      ? () => closeAnalysis()
+                      : undefined
+                  }
+                  mode={analysisMode}
+                  onFailureBack={goBack}
+                  onFailureStateChange={setAnalysisFailed}
+                  onChooseMbti={() => navigateTo(NAV_STEPS.MBTI)}
+                  onLimitedFinish={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
+                  onFinish={(tasteProfileId) => {
+                    if (!isCurrentRoute() || step !== NAV_STEPS.TASTE) return;
+                    auth?.setHasCompletedOnboarding?.(true);
+                    setSelectedMbti(null);
+                    setActiveTasteProfileId(tasteProfileId);
+                    finishFlow(NAV_STEPS.TASTE_PROFILE, ONBOARDING_FLOW_STEPS);
+                  }}
+                  onFail={() => {
+                    if (auth?.hasCompletedOnboarding === false) {
+                      navigateTo(NAV_STEPS.MBTI_CONSENT);
+                    } else {
+                      closeAnalysis(NAV_STEPS.PROFILE);
+                    }
+                  }}
+                />
+              </View>
+            )}
+            {step === NAV_STEPS.PHOTO_AUTH && (
+              <PhotoAuthExplainScreen
+                key='photo-auth'
+                onBack={history.length > 0 ? goBack : undefined}
+                onNext={routePhotoAccess}
+              />
+            )}
+          </OnboardingLayout>
+        );
+
       case NAV_STEPS.TASTE_PROFILE:
         return (
           <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
             <TasteProfileScreen
+              onBack={goBack}
               tasteProfileId={activeTasteProfileId}
-              onGenerateCourse={() => {
+              onGenerateCourse={(destination) => {
+                if (!isCurrentRoute()) return;
                 auth?.setHasCompletedOnboarding?.(true);
-                navigateTo(NAV_STEPS.CREATE_COURSE);
+                navigateTo(NAV_STEPS.CREATE_COURSE, destination);
               }}
-              onReanalyze={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
+              onReanalyze={reanalyzeTaste}
               onNavigateToIntro={() => navigateTo(NAV_STEPS.PHOTO)}
             />
           </MainLayout>
@@ -447,6 +627,7 @@ export function NavigationRoot({
         return (
           <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
             <ProfileScreen
+              onBack={() => navigateTo(NAV_STEPS.HOME)}
               onNavigateToTasteProfile={() => {
                 if (auth?.hasCompletedOnboarding === false) {
                   navigateTo(NAV_STEPS.PHOTO);
@@ -464,8 +645,8 @@ export function NavigationRoot({
         return (
           <MainLayout currentTab={NAV_TABS.PROFILE} onTabPress={handleTabPress}>
             <ProfileInputScreen
-              onGoBack={() => navigateTo(NAV_STEPS.PROFILE)}
-              onSaveSuccess={() => navigateTo(NAV_STEPS.PROFILE)}
+              onGoBack={() => returnTo(NAV_STEPS.PROFILE)}
+              onSaveSuccess={() => returnTo(NAV_STEPS.PROFILE)}
             />
           </MainLayout>
         );
@@ -473,6 +654,10 @@ export function NavigationRoot({
         return (
           <MainLayout currentTab={NAV_TABS.EXPLORE} onTabPress={handleTabPress}>
             <CourseListScreen
+              onDeleted={(courseId) => {
+                if (selectedCourseId === courseId) setSelectedCourseId('');
+              }}
+              onBack={() => navigateTo(NAV_STEPS.HOME)}
               onSelectCourse={(courseId) => {
                 setSelectedCourseId(courseId);
                 navigateTo(NAV_STEPS.COURSE_DETAIL);
@@ -491,13 +676,20 @@ export function NavigationRoot({
         if (auth?.hasCompletedOnboarding === false) {
           return (
             <OnboardingLayout>
-              <PhotoConsentScreen onNext={routePhotoAccess} />
+              <PhotoConsentScreen
+                onBack={history.length > 0 ? goBack : undefined}
+                onNext={routePhotoAccess}
+              />
             </OnboardingLayout>
           );
         }
         return (
           <MainLayout currentTab={NAV_TABS.CREATE} onTabPress={handleTabPress}>
             <CourseCreateScreen
+              mbti={selectedMbti}
+              recommendedDestination={recommendedDestination}
+              onBack={goBack}
+              onPhoto={() => navigateTo(NAV_STEPS.PHOTO)}
               onSubmit={() => navigateTo(NAV_STEPS.GENERATING_COURSE)}
             />
           </MainLayout>
@@ -506,14 +698,16 @@ export function NavigationRoot({
         return (
           <CourseGeneratingScreen
             onComplete={(courseId) => {
+              if (!isCurrentRoute()) return;
               if (courseId) {
                 setSelectedCourseId(courseId);
               }
-              navigateTo(NAV_STEPS.COURSE_DETAIL);
+              finishFlow(
+                courseId ? NAV_STEPS.COURSE_DETAIL : NAV_STEPS.COURSE_LIST,
+                [NAV_STEPS.CREATE_COURSE, NAV_STEPS.GENERATING_COURSE],
+              );
             }}
-            onRetry={() => {
-              navigateTo(NAV_STEPS.CREATE_COURSE);
-            }}
+            onRetry={() => returnTo(NAV_STEPS.CREATE_COURSE)}
             onNavigateToIntro={() => {
               navigateTo(NAV_STEPS.PHOTO);
             }}
@@ -526,11 +720,20 @@ export function NavigationRoot({
             onTabPress={handleTabPress}
             noTopEdges={true}>
             <CourseDetailScreen
+              key={selectedCourseId}
               onOpenBooking={openBooking}
               courseId={selectedCourseId || ''}
-              onSelectPlace={(stop) => {
-                setSelectedPlaceStop(stop);
-                navigateTo(NAV_STEPS.PLACE_DETAIL);
+              initialViewState={
+                detailViewState.current?.courseId === selectedCourseId
+                  ? detailViewState.current.state
+                  : undefined
+              }
+              onViewStateChange={(state) => {
+                if (isCurrentRoute())
+                  detailViewState.current = {
+                    courseId: selectedCourseId,
+                    state,
+                  };
               }}
               onBack={goBack}
             />
@@ -540,42 +743,26 @@ export function NavigationRoot({
         return (
           <CourseShareScreen
             shareToken={selectedShareToken}
-            courseId={selectedCourseId}
+            courseId={selectedShareToken ? undefined : selectedCourseId}
             onSaveSuccess={(acceptedCourseId) => {
-              if (acceptedCourseId) {
-                setSelectedCourseId(acceptedCourseId);
-              }
-              setHistory([NAV_STEPS.HOME]);
-              setStep(NAV_STEPS.COURSE_DETAIL);
+              if (!isCurrentRoute()) return;
+              setSelectedShareToken('');
+              if (acceptedCourseId) setSelectedCourseId(acceptedCourseId);
+              commitNavigation(
+                acceptedCourseId
+                  ? NAV_STEPS.COURSE_DETAIL
+                  : NAV_STEPS.COURSE_LIST,
+                [rootStep()],
+              );
             }}
-            onDecline={() => {
-              const fallback = auth?.isAuthenticated
-                ? NAV_STEPS.HOME
-                : NAV_STEPS.LOGIN;
-              setHistory([]);
-              setStep(fallback);
-            }}
+            onDecline={goBack}
             onNavigateToLogin={() => {
-              setHistory([NAV_STEPS.COURSE_SHARE]);
-              setStep(NAV_STEPS.LOGIN);
+              if (!isCurrentRoute()) return;
+              commitNavigation(NAV_STEPS.LOGIN, [NAV_STEPS.COURSE_SHARE]);
             }}
           />
         );
 
-      case NAV_STEPS.PLACE_DETAIL:
-        return (
-          <MainLayout
-            currentTab={NAV_TABS.EXPLORE}
-            onTabPress={handleTabPress}
-            noTopEdges={true}>
-            <PlaceDetailScreen
-              onOpenBooking={openBooking}
-              onBack={goBack}
-              stop={selectedPlaceStop}
-              courseId={selectedCourseId}
-            />
-          </MainLayout>
-        );
       case NAV_STEPS.HOME:
       default:
         return (
@@ -624,6 +811,7 @@ export function NavigationRoot({
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: 'none' },
   container: {
     flex: 1,
   },
