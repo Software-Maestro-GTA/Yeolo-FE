@@ -21,11 +21,7 @@ interface PageProps {
   }>;
 }
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-const API_URL =
-  rawApiUrl && !rawApiUrl.includes('api.yeolo.site')
-    ? rawApiUrl
-    : 'https://d1eicq4gephyts.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 function getDestinationOgImage(
   city?: string,
