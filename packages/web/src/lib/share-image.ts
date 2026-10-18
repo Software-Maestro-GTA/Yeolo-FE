@@ -4,8 +4,8 @@
  */
 
 export const DEFAULT_SHARE_IMAGE = {
-  url: '/branding/yeolo-share-type.png',
-  width: 1732,
-  height: 908,
+  url: '/branding/og-image.png',
+  width: 800,
+  height: 400,
   alt: '나를 아는 여행의 시작, 여로 (Yeolo)',
 } as const;

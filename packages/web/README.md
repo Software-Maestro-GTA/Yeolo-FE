@@ -54,3 +54,15 @@ yarn web:start
 # packages/web 폴더 내에서 실행 시
 yarn start
 ```
+
+### 4. Vercel 배포 (Deploy)
+
+```bash
+# 최상위(Root) 폴더에서 실행 시 (프리뷰 배포)
+npx vercel
+
+# 최상위(Root) 폴더에서 실행 시 (프로덕션 배포)
+npx vercel --prod
+```
+
+`@yeolo/common` 워크스페이스 참조 및 `.vercelignore` 설정 적용을 위해 최상위(Root) 폴더에서 실행합니다.
