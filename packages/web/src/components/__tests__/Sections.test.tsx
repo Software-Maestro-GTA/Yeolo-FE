@@ -101,7 +101,7 @@ it('preserves support, partnership and policy navigation in the footer', () => {
   for (const label of ['제휴 제안', '고객센터']) {
     expect(
       screen.getByRole('link', { name: label }).getAttribute('href'),
-    ).toContain('mailto:ksk85628781@gmail.com');
+    ).toContain('mailto:yeolotrip@gmail.com');
   }
   expect(screen.getByRole('link', { name: '서비스 이용약관' })).toHaveAttribute(
     'href',

@@ -34,7 +34,7 @@ export const APP_CONFIG = {
   ],
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
-  DEFAULT_SUPPORT_EMAIL: 'ksk85628781@gmail.com',
+  DEFAULT_SUPPORT_EMAIL: 'yeolotrip@gmail.com',
   /** Maximum representative metadata records sent for taste analysis */
   ANALYSIS_PHOTO_LIMIT: 100,
   /** Initial sampling heuristics; calibrate against real libraries and recommendation quality. */

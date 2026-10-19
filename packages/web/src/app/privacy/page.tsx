@@ -151,9 +151,9 @@ export default function PrivacyPolicyPage() {
             <p>
               문의 이메일:{' '}
               <a
-                href='mailto:ksk85628781@gmail.com'
+                href='mailto:yeolotrip@gmail.com'
                 className='text-blue-ink underline font-medium'>
-                ksk85628781@gmail.com
+                yeolotrip@gmail.com
               </a>
             </p>
           </div>
