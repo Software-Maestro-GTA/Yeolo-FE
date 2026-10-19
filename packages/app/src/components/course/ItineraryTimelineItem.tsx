@@ -3,7 +3,6 @@
  * @description UI v3 일정·교통 정보를 표시하고 Google Place ID로 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
  */
 import SequenceCircleSvg from '../../../assets/images/figma-course/sequence-circle.svg';
-import PlaceExpandSvg from '../../../assets/images/figma-course/place-expand.svg';
 import WalkingSvg from '../../../assets/images/figma-course/walking.svg';
 import BusSvg from '../../../assets/images/figma-course/bus.svg';
 import { Text } from '../common/Typography';
@@ -111,7 +110,6 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
             <Text style={styles.placeName}>
               {place?.placeName || COURSE_UI.UNKNOWN_PLACE}
             </Text>
-            <FigmaAsset source={PlaceExpandSvg} width={14.5} height={14.5} />
           </Pressable>
           <Pressable
             accessibilityRole='link'

@@ -4,7 +4,14 @@
  */
 import React from 'react';
 import { fireEvent, waitFor, act, within } from '@testing-library/react-native';
-import { Share, Alert, Linking, StyleSheet, FlatList } from 'react-native';
+import {
+  Share,
+  Alert,
+  Linking,
+  StyleSheet,
+  FlatList,
+  Animated,
+} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { CourseDetailScreen } from '../src/screens/CourseDetailScreen';
 import * as commonApi from '@yeolo/common';
@@ -203,8 +210,15 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     await AsyncStorage.setItem('accessToken', 'mock-token');
   });
 
-  it('지도는 스크롤 거리만큼 즉시 접히고 목록 높이와 멈춘 위치는 유지된다', async () => {
+  it('네이티브 스크롤로 지도 상단을 접으며 지도와 목록의 레이아웃 크기는 유지한다', async () => {
     jest.useFakeTimers();
+    // Jest has no native event loop; evaluate the same interpolation in JS.
+    const animatedEvent = Animated.event;
+    const eventSpy = jest
+      .spyOn(Animated, 'event')
+      .mockImplementation((mapping, config) =>
+        animatedEvent(mapping, { ...config, useNativeDriver: false }),
+      );
     try {
       jest
         .spyOn(commonApi, 'getCourseDetailApi')
@@ -222,11 +236,20 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       const height = (id: string) =>
         StyleSheet.flatten(screen.getByTestId(id).props.style).height as number;
       const reservedHeight = height('course-controls-spacer');
+      expect(eventSpy).toHaveBeenCalledWith(expect.anything(), {
+        useNativeDriver: true,
+      });
       const scroll = async (y: number, expectedHeight: number) => {
         await fireEvent.scroll(screen.getByTestId('course-detail-list'), {
           nativeEvent: { contentOffset: { x: 0, y } },
         });
-        expect(height('mini-map-card')).toBe(expectedHeight);
+        expect(height('mini-map-card')).toBe(168);
+        const overlay = StyleSheet.flatten(
+          screen.getByTestId('course-controls-motion').props.style,
+        );
+        const visibleMapHeight =
+          168 + Math.min(0, overlay.top + overlay.transform[0].translateY);
+        expect(visibleMapHeight).toBe(expectedHeight);
         expect(height('course-controls-spacer')).toBe(reservedHeight);
       };
       await scroll(119, 168);
@@ -241,11 +264,12 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
       await act(async () => {
         await jest.advanceTimersByTimeAsync(400);
       });
-      expect(height('mini-map-card')).toBe(158);
+      expect(height('mini-map-card')).toBe(168);
       expect(height('course-controls-spacer')).toBe(reservedHeight);
       await scroll(120, 168);
       await scroll(-20, 168);
     } finally {
+      eventSpy.mockRestore();
       jest.useRealTimers();
     }
   });
@@ -281,12 +305,23 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     await screen.findByText('함덕 해수욕장');
     const list = screen.getByTestId('course-detail-list');
     expect(within(list).queryByTestId('course-sticky-controls')).toBeNull();
+    const overlay = screen.getByTestId('course-controls-overlay');
+    expect(overlay).toHaveProp('pointerEvents', 'box-none');
+    expect(StyleSheet.flatten(overlay.props.style)).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    });
     expect(screen.getAllByTestId('day-tab-2')).toHaveLength(1);
     await fireEvent.scroll(list, {
       nativeEvent: { contentOffset: { x: 0, y: 1800 } },
     });
     await fireEvent.press(screen.getByTestId('day-tab-2'));
     expect(screen.getByText('비자림')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('currency-toggle-local'));
+    expect(screen.getByText('$ 250')).toBeTruthy();
   });
 
   it('아래로 내려간 상태에서 날짜를 바꾸면 새 일정의 처음으로 이동하고 같은 날짜 재선택은 유지한다', async () => {
@@ -430,6 +465,99 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     );
     await fireEvent.press(screen.getByTestId('currency-toggle-krw'));
     expect(screen.getByText('₩ 350,000')).toBeTruthy();
+  });
+
+  it.each([
+    { exRateIcon: undefined },
+    { exRateIcon: '   ' },
+    { totalCostExRate: undefined },
+    { totalCostExRate: null },
+    { totalCostExRate: Number.NaN },
+    { totalCostExRate: -1 },
+  ])(
+    '현지 통화 정보가 불완전하면 달러나 0을 만들지 않고 원화로 표시한다: %j',
+    async (missing) => {
+      jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
+        ...mockCourseDetail,
+        ...missing,
+      } as commonApi.CourseDetail);
+      const screen = await render(
+        <CourseDetailScreen
+          courseId={mockCourseDetail.courseId}
+          initialViewState={{ selectedDay: 1, currencyMode: 'LOCAL' }}
+        />,
+      );
+      await screen.findByText('₩ 350,000');
+      expect(screen.queryByTestId('currency-toggle-local')).toBeNull();
+    },
+  );
+
+  it.each(['KRW', 'LOCAL'] as const)(
+    '원화 경비가 있는데 외화가 0이면 %s 선택 상태에서도 원화만 표시한다',
+    async (currencyMode) => {
+      jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
+        ...mockCourseDetail,
+        exRateIcon: '₫',
+        totalCostExRate: 0,
+      });
+      const onViewStateChange = jest.fn();
+      const screen = await render(
+        <CourseDetailScreen
+          courseId={mockCourseDetail.courseId}
+          initialViewState={{ selectedDay: 1, currencyMode }}
+          onViewStateChange={onViewStateChange}
+        />,
+      );
+
+      await screen.findByText('₩ 350,000');
+      expect(screen.queryByTestId('currency-toggle-local')).toBeNull();
+      expect(screen.queryByTestId('currency-toggle-krw')).toBeNull();
+      expect(screen.queryByText('₫ 0')).toBeNull();
+      if (currencyMode === 'LOCAL') {
+        expect(onViewStateChange).toHaveBeenCalledWith({
+          selectedDay: 1,
+          currencyMode: 'KRW',
+        });
+      }
+    },
+  );
+
+  it('합산한 원화 경비가 있는데 외화가 0이면 원화만 표시한다', async () => {
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
+      ...mockCourseDetail,
+      totalCost: undefined,
+      totalCostExRate: 0,
+    });
+    const screen = await render(
+      <CourseDetailScreen
+        courseId={mockCourseDetail.courseId}
+        initialViewState={{ selectedDay: 2, currencyMode: 'LOCAL' }}
+      />,
+    );
+
+    await screen.findByText('₩ 34,000');
+    expect(screen.queryByTestId('currency-toggle-local')).toBeNull();
+    expect(screen.queryByTestId('currency-toggle-krw')).toBeNull();
+    expect(screen.getByTestId('day-tab-2')).toHaveProp('accessibilityState', {
+      selected: true,
+    });
+  });
+
+  it('원화와 외화가 모두 0이면 무료 금액으로 전환할 수 있다', async () => {
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue({
+      ...mockCourseDetail,
+      exRateIcon: '₫',
+      totalCost: 0,
+      totalCostExRate: 0,
+    });
+    const screen = await render(
+      <CourseDetailScreen courseId={mockCourseDetail.courseId} />,
+    );
+    await screen.findByText('₩ 0');
+    await fireEvent.press(screen.getByTestId('currency-toggle-local'));
+    expect(screen.getByText('₫ 0')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('currency-toggle-krw'));
+    expect(screen.getByText('₩ 0')).toBeTruthy();
   });
 
   it('같은 코스가 다시 조회되어도 아직 존재하는 날짜와 통화 선택을 유지한다', async () => {
@@ -706,21 +834,31 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
     });
 
     const shareButton = getByTestId('btn-share');
-    await act(async () => {
-      fireEvent.press(shareButton);
-    });
+    const { Platform } = require('react-native');
+    const originalOS = Platform.OS;
+    try {
+      for (const os of ['ios', 'android']) {
+        Platform.OS = os;
+        shareSpy.mockClear();
+        await act(async () => {
+          fireEvent.press(shareButton);
+        });
 
-    expect(shareApiSpy).toHaveBeenCalledWith(
-      expect.any(String),
-      'mock-token',
-      'test-course-id-123',
-    );
-
-    expect(shareSpy).toHaveBeenCalledWith({
-      message:
-        '[여로] 2박 3일 서귀포 감성 힐링 코스 여행 일정을 공유합니다!\nhttps://www.yeolo.app/invite/token-123',
-      url: 'https://www.yeolo.app/invite/token-123',
-    });
+        expect(shareApiSpy).toHaveBeenCalledWith(
+          expect.any(String),
+          'mock-token',
+          'test-course-id-123',
+        );
+        expect(shareSpy).toHaveBeenCalledTimes(1);
+        expect(shareSpy).toHaveBeenCalledWith(
+          os === 'ios'
+            ? { url: 'https://www.yeolo.app/invite/token-123' }
+            : { message: 'https://www.yeolo.app/invite/token-123' },
+        );
+      }
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 
   it('Share.share 실패 시 iOS에서는 Alert, Android에서는 ToastAndroid로 클립보드 복사 완료 알림이 호출되어야 한다', async () => {

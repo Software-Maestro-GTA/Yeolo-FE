@@ -46,7 +46,6 @@ export const COURSE_UI = {
   DELETE_TITLE: '이 코스를 삭제할까요?',
   DELETE_DESCRIPTION: '삭제된 코스는 다시 복구할 수 없어요',
   DELETE_ERROR: '코스를 삭제하지 못했어요. 다시 시도해 주세요.',
-  EDIT_UNAVAILABLE: '일정 편집은 준비 중입니다.',
   MAP_ERROR: '지도를 불러올 수 없습니다.',
   MAP_OPEN: '지도에서 장소 보기',
   ROUTE_UNAVAILABLE: '이동 경로를 확인할 수 없어요',

@@ -1,8 +1,8 @@
 /**
  * @file TasteAnalysisScreen.tsx
- * @description Real photo analysis with permission-aware retries, back navigation, and an MBTI recovery path.
+ * @description Real photo analysis with a fixed close control, UI v3 content spacing and permission-aware recovery.
  */
-import AnalysisCloseSvg from '../../assets/ui-v3-onboarding/analysis-close.svg';
+import AnalysisExitSvg from '../../assets/ui-v3-onboarding/analysis-exit.svg';
 import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
@@ -33,28 +33,6 @@ interface TasteAnalysisScreenProps {
   onFailureBack?: () => void;
   onChooseMbti?: () => void;
   onFailureStateChange?: (failed: boolean) => void;
-}
-
-function AnalysisHeading({ onClose }: { onClose?: () => void }) {
-  return (
-    <View style={styles.heading}>
-      <View style={styles.titleRow}>
-        <Text style={styles.mainTitle}>
-          {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
-        </Text>
-        {onClose && (
-          <TouchableOpacity
-            onPress={onClose}
-            accessibilityRole='button'
-            accessibilityLabel={ONBOARDING_UI_STRINGS.CLOSE}
-            style={styles.close}
-            testID='analysis-close-button'>
-            <OnboardingSvg source={AnalysisCloseSvg} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
 }
 
 /** Runs the same real metadata analysis for full and selected-photo access. */
@@ -157,6 +135,7 @@ export function TasteAnalysisScreen({
   }, [runPipeline, attempt]);
   const showSelectionFailure =
     needsMorePhotos || (mode === 'limited' && !!errorMessage);
+  const closeAnalysis = onClose || (errorMessage ? onFailureBack : undefined);
   const needsPhotoSettings =
     errorMessage === UI_STRINGS.TASTE_ANALYSIS.PERMISSION_ERROR ||
     errorMessage === UI_STRINGS.PHOTO_AUTH.REQUIRED ||
@@ -243,9 +222,9 @@ export function TasteAnalysisScreen({
           </>
         ) : (
           <>
-            <AnalysisHeading
-              onClose={onClose || (errorMessage ? onFailureBack : undefined)}
-            />
+            <Text style={styles.mainTitle}>
+              {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
+            </Text>
             {errorMessage ? (
               <View style={styles.error} testID='error-container'>
                 <Text style={styles.errorTitle}>
@@ -290,6 +269,16 @@ export function TasteAnalysisScreen({
           </>
         )}
       </ScrollView>
+      {!showSelectionFailure && closeAnalysis && (
+        <TouchableOpacity
+          onPress={closeAnalysis}
+          accessibilityRole='button'
+          accessibilityLabel={ONBOARDING_UI_STRINGS.CLOSE}
+          style={styles.close}
+          testID='analysis-close-button'>
+          <OnboardingSvg source={AnalysisExitSvg} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -301,15 +290,9 @@ const styles = StyleSheet.create({
     paddingTop: 35,
     paddingHorizontal: 20,
   },
-  fullContent: { paddingTop: 46 },
-  heading: { gap: 2 },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  // The global shell owns the status bar inset; Figma places the title 164px below it.
+  fullContent: { paddingTop: 164 },
   mainTitle: {
-    flex: 1,
     fontSize: 24,
     fontWeight: '600',
     color: palette.deepNavy,
@@ -319,11 +302,10 @@ const styles = StyleSheet.create({
   },
   close: {
     position: 'absolute',
-    right: 0,
-    top: -40,
+    right: 14,
+    top: 14,
     width: 44,
     height: 44,
-    marginRight: -10,
     alignItems: 'center',
     justifyContent: 'center',
   },

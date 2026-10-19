@@ -105,7 +105,7 @@ export function HomeScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(insets.bottom, 20) },
+          { paddingBottom: Math.max(insets.bottom + 24, 55) },
         ]}>
         <View style={styles.header}>
           <View accessible accessibilityLabel={S.brand} style={styles.brand}>
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     minHeight: 24,
     marginRight: -8,
   },
-  allCoursesText: { fontSize: 12, fontWeight: '500', color: palette.gray400 },
+  allCoursesText: { fontSize: 16, fontWeight: '500', color: palette.gray400 },
   recentCards: { gap: 16 },
   empty: {
     minHeight: 107,
@@ -407,10 +407,9 @@ const styles = StyleSheet.create({
   retry: { color: theme.colors.primary, fontSize: 16 },
   bookingSection: { marginTop: 32 },
   bookingRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  bookingItem: { flex: 1, alignItems: 'center', gap: 6 },
+  bookingItem: { flex: 1, maxWidth: 103, alignItems: 'center', gap: 6 },
   bookingCircle: {
     width: '100%',
-    maxWidth: 103,
     aspectRatio: 1,
     borderRadius: 52,
     backgroundColor: palette.gray200,

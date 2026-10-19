@@ -1,6 +1,6 @@
 /**
  * @file placeCategories.ts
- * @description Korean display labels for the seven verified public place categories; raw place types remain unchanged.
+ * @description Korean display labels for server-assigned place categories; raw place types remain unchanged.
  */
 
 export const PLACE_CATEGORY_LABELS = {
@@ -11,6 +11,8 @@ export const PLACE_CATEGORY_LABELS = {
   NATURE: '자연·산책',
   ACTIVITY: '액티비티·체험',
   NIGHTLIFE: '야경·나이트',
+  AIRPORT: '공항',
+  LODGING: '숙소',
 } as const;
 
 export type PlaceCategoryCode = keyof typeof PLACE_CATEGORY_LABELS;

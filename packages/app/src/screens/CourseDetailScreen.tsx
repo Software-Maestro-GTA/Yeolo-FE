@@ -1,9 +1,10 @@
 /**
  * @file CourseDetailScreen.tsx
- * @description Renders course timelines, normalized currency selection, and scrollable booking/share actions within device safe areas.
+ * @description Renders course timelines with native scroll clipping, verified currency totals and safe booking/share actions.
  */
 import BackSvg from '../../assets/images/figma-course/back.svg';
 import ShareSvg from '../../assets/images/figma-course/share.svg';
+import ReelSvg from '../../assets/images/figma-course/reel.svg';
 import BookingShadeSvg from '../../assets/images/figma-course/booking-shade.svg';
 import BookingArrowSvg from '../../assets/images/figma-course/booking-arrow.svg';
 import TicketShadeSvg from '../../assets/images/figma-course/ticket-shade.svg';
@@ -54,7 +55,7 @@ import {
 } from '../services/bookingService';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { CourseReelComposer } from '../components/course/CourseReelComposer';
 
 import { useBackground, AuthContext } from '../context';
@@ -102,16 +103,24 @@ export function CourseDetailScreen({
   const scrollOffset = React.useRef(new Animated.Value(0)).current;
   const [introHeight, setIntroHeight] = useState(0);
   const [controlsDetailsHeight, setControlsDetailsHeight] = useState(0);
-  // Spend the next 40px of scrolling on collapse, with no timed animation or list resize.
-  const mapHeight = React.useMemo(
+  // Move the fixed-size header on the UI thread. Clipping the upper map strip
+  // avoids resizing native maps or racing scroll events against JS layout.
+  const controlsTranslateY = React.useMemo(
     () =>
       scrollOffset.interpolate({
         inputRange: [
-          introHeight,
+          0,
           introHeight + COURSE_MAP_EXPANDED_HEIGHT - COURSE_MAP_COMPACT_HEIGHT,
         ],
-        outputRange: [COURSE_MAP_EXPANDED_HEIGHT, COURSE_MAP_COMPACT_HEIGHT],
-        extrapolate: 'clamp',
+        outputRange: [
+          0,
+          -(
+            introHeight +
+            COURSE_MAP_EXPANDED_HEIGHT -
+            COURSE_MAP_COMPACT_HEIGHT
+          ),
+        ],
+        extrapolateRight: 'clamp',
       }),
     [scrollOffset, introHeight],
   );
@@ -128,12 +137,12 @@ export function CourseDetailScreen({
       }).spacer,
     [controlsDetailsHeight],
   );
-  const controlsTop = React.useMemo(
+  const cornersTranslateY = React.useMemo(
     () =>
       scrollOffset.interpolate({
         inputRange: [0, Math.max(introHeight, 1)],
-        outputRange: [introHeight, 0],
-        extrapolate: 'clamp',
+        outputRange: [0, -introHeight],
+        extrapolateRight: 'clamp',
       }),
     [scrollOffset, introHeight],
   );
@@ -177,18 +186,14 @@ export function CourseDetailScreen({
 
     createShareLinkMutation.mutate(courseId, {
       onSuccess: async (shareData) => {
-        const shareTitle =
-          course?.title || UI_STRINGS.COURSE_DETAIL.DEFAULT_COURSE_TITLE;
         const inviteUrl = shareData.shareToken
           ? `${APP_CONFIG.INVITE_BASE_URL}/${shareData.shareToken}`
           : shareData.shareUrl;
-        const shareMessage = `[여로] ${shareTitle} 여행 일정을 공유합니다!\n${inviteUrl}`;
 
         try {
-          await Share.share({
-            message: shareMessage,
-            url: inviteUrl,
-          });
+          await Share.share(
+            Platform.OS === 'ios' ? { url: inviteUrl } : { message: inviteUrl },
+          );
         } catch (shareError) {
           Clipboard.setString(inviteUrl);
           if (Platform.OS === 'android') {
@@ -227,11 +232,30 @@ export function CourseDetailScreen({
   const [currencyMode, setCurrencyMode] = useState<
     CourseDetailViewState['currencyMode']
   >(initialViewState?.currencyMode ?? 'KRW');
-  const localCurrencySymbol = course?.exRateIcon?.trim() || '$';
+  const calculatedTotalCost =
+    course?.totalCost ??
+    course?.itinerary?.days?.reduce((acc, d) => {
+      return (
+        acc +
+        (d.stops?.reduce((sAcc, s) => {
+          return sAcc + (s?.cost || 0) + (s?.transportToNext?.cost || 0);
+        }, 0) || 0)
+      );
+    }, 0) ??
+    0;
+  const localCurrencySymbol = course?.exRateIcon?.trim() || '';
   const localCurrencyIsKrw = ['₩', '￦', 'KRW', '원'].includes(
     localCurrencySymbol.toUpperCase(),
   );
-  const displayedCurrencyMode = localCurrencyIsKrw ? 'KRW' : currencyMode;
+  const canShowLocalCurrency = Boolean(
+    localCurrencySymbol &&
+    !localCurrencyIsKrw &&
+    course?.totalCostExRate != null &&
+    Number.isFinite(course.totalCostExRate) &&
+    course.totalCostExRate >= 0 &&
+    !(calculatedTotalCost > 0 && course.totalCostExRate === 0),
+  );
+  const displayedCurrencyMode = canShowLocalCurrency ? currencyMode : 'KRW';
   const updateViewState = (state: CourseDetailViewState) => {
     if (
       state.selectedDay === selectedDay &&
@@ -253,6 +277,7 @@ export function CourseDetailScreen({
     [],
   );
   useEffect(() => {
+    if (!course) return;
     const days = course?.itinerary?.days;
     const nextDay =
       days?.length && !days.some((day) => day.day === selectedDay)
@@ -267,6 +292,7 @@ export function CourseDetailScreen({
       currencyMode: displayedCurrencyMode,
     });
   }, [
+    course,
     course?.itinerary?.days,
     selectedDay,
     currencyMode,
@@ -325,17 +351,6 @@ export function CourseDetailScreen({
       </View>
     );
   }
-
-  const calculatedTotalCost =
-    course.totalCost ??
-    course.itinerary?.days?.reduce((acc, d) => {
-      return (
-        acc +
-        (d.stops?.reduce((sAcc, s) => {
-          return sAcc + (s?.cost || 0) + (s?.transportToNext?.cost || 0);
-        }, 0) || 0)
-      );
-    }, 0);
 
   const budgetSymbol =
     displayedCurrencyMode === 'KRW' ? '₩' : localCurrencySymbol;
@@ -398,12 +413,6 @@ export function CourseDetailScreen({
           accessibilityHint={currentDayData?.memo}
           testID='day-header'>
           <Text style={styles.dayDate}>{dayLabel}</Text>
-          <Text
-            style={styles.editText}
-            accessibilityState={{ disabled: true }}
-            accessibilityLabel={COURSE_UI.EDIT_UNAVAILABLE}>
-            {COURSE_UI.EDIT}
-          </Text>
         </View>
       );
     if (item.kind === 'stop')
@@ -445,24 +454,9 @@ export function CourseDetailScreen({
               trackButtonClick('btn_course_detail_reel', 'Create Course Reel');
               setReelOpen(true);
             }}>
-            <Svg width={24} height={24} viewBox='0 0 24 24' fill='none'>
-              <Rect
-                x={3}
-                y={4}
-                width={18}
-                height={16}
-                rx={2}
-                stroke={palette.gray400}
-                strokeWidth={1.5}
-              />
-              <Path
-                d='M7 4V20M17 4V20M3 8H7M3 12H21M3 16H7M17 8H21M17 16H21'
-                stroke={palette.gray400}
-                strokeWidth={1.5}
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              />
-            </Svg>
+            <View style={styles.reelIcon}>
+              <ReelSvg />
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             testID='btn-share'
@@ -475,7 +469,7 @@ export function CourseDetailScreen({
         </View>
       </View>
       <View style={styles.timelineViewport}>
-        <FlatList
+        <Animated.FlatList
           ref={detailList}
           testID='course-detail-list'
           data={rows}
@@ -489,7 +483,7 @@ export function CourseDetailScreen({
           showsVerticalScrollIndicator={false}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollOffset } } }],
-            { useNativeDriver: false },
+            { useNativeDriver: true },
           )}
           scrollEventThrottle={16}
           contentInsetAdjustmentBehavior='never'
@@ -608,107 +602,143 @@ export function CourseDetailScreen({
             </View>
           }
         />
-        {/* Layout positioning keeps Android touch bounds aligned after scrolling. */}
-        <Animated.View
-          style={[
-            styles.floatingControls,
-            { top: controlsTop, opacity: introHeight > 0 ? 1 : 0 },
-          ]}>
-          <View style={styles.controls} testID='course-sticky-controls'>
-            <CourseMiniMapView
-              stopCoordinates={mapData.coordinates}
-              mapRegion={mapData.region}
-              viewportHeight={mapHeight}
-              onInteractionStart={handleMapInteractionStart}
-              onInteractionEnd={handleMapInteractionEnd}
-            />
-            <View
-              style={styles.controlsDetails}
-              testID='course-controls-details'
-              onLayout={(event) =>
-                setControlsDetailsHeight(event.nativeEvent.layout.height)
-              }>
-              <CourseDayTabs
-                days={course.itinerary?.days}
-                selectedDay={selectedDay}
-                onSelectDay={(day) => {
-                  if (day === selectedDay) return;
-                  trackButtonClick(
-                    'btn_course_detail_day_tab',
-                    `Select Day ${day}`,
-                    { day },
-                  );
-                  updateViewState({
-                    selectedDay: day,
-                    currencyMode: displayedCurrencyMode,
-                  });
-                  detailList.current?.scrollToOffset({
-                    offset: 0,
-                    animated: true,
-                  });
-                }}
+        {/* The full viewport parent keeps translated Android controls hittable. */}
+        <View
+          testID='course-controls-overlay'
+          style={styles.controlsOverlay}
+          pointerEvents='box-none'>
+          <Animated.View
+            testID='course-controls-motion'
+            style={[
+              styles.floatingControls,
+              {
+                top: introHeight,
+                opacity: introHeight > 0 ? 1 : 0,
+                transform: [{ translateY: controlsTranslateY }],
+              },
+            ]}>
+            <View style={styles.controls} testID='course-sticky-controls'>
+              <CourseMiniMapView
+                stopCoordinates={mapData.coordinates}
+                mapRegion={mapData.region}
+                onInteractionStart={handleMapInteractionStart}
+                onInteractionEnd={handleMapInteractionEnd}
               />
-              <View style={styles.summarySection} testID='summary-section'>
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>
-                    {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
-                  </Text>
-                  <Text style={styles.summaryValue}>
-                    {formattedBudgetDisplay}
-                  </Text>
-                </View>
-                {!localCurrencyIsKrw && (
-                  <View style={styles.currencyToggleGroup}>
-                    <TouchableOpacity
-                      testID='currency-toggle-krw'
-                      accessibilityRole='button'
-                      accessibilityState={{ selected: currencyMode === 'KRW' }}
-                      style={[
-                        styles.currencyToggleBtn,
-                        currencyMode === 'KRW' &&
-                          styles.currencyToggleBtnActive,
-                      ]}
-                      onPress={() =>
-                        updateViewState({ selectedDay, currencyMode: 'KRW' })
-                      }>
-                      <Text
-                        style={[
-                          styles.currencyToggleText,
-                          currencyMode === 'KRW' &&
-                            styles.currencyToggleTextActive,
-                        ]}>
-                        ₩
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      testID='currency-toggle-local'
-                      accessibilityRole='button'
-                      accessibilityState={{
-                        selected: currencyMode === 'LOCAL',
-                      }}
-                      style={[
-                        styles.currencyToggleBtn,
-                        currencyMode === 'LOCAL' &&
-                          styles.currencyToggleBtnActive,
-                      ]}
-                      onPress={() =>
-                        updateViewState({ selectedDay, currencyMode: 'LOCAL' })
-                      }>
-                      <Text
-                        style={[
-                          styles.currencyToggleText,
-                          currencyMode === 'LOCAL' &&
-                            styles.currencyToggleTextActive,
-                        ]}>
-                        {localCurrencySymbol}
-                      </Text>
-                    </TouchableOpacity>
+              <View
+                style={styles.controlsDetails}
+                testID='course-controls-details'
+                onLayout={(event) =>
+                  setControlsDetailsHeight(event.nativeEvent.layout.height)
+                }>
+                <CourseDayTabs
+                  days={course.itinerary?.days}
+                  selectedDay={selectedDay}
+                  onSelectDay={(day) => {
+                    if (day === selectedDay) return;
+                    trackButtonClick(
+                      'btn_course_detail_day_tab',
+                      `Select Day ${day}`,
+                      { day },
+                    );
+                    updateViewState({
+                      selectedDay: day,
+                      currencyMode: displayedCurrencyMode,
+                    });
+                    detailList.current?.scrollToOffset({
+                      offset: 0,
+                      animated: true,
+                    });
+                  }}
+                />
+                <View style={styles.summarySection} testID='summary-section'>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryTitle}>
+                      {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      {formattedBudgetDisplay}
+                    </Text>
                   </View>
-                )}
+                  {canShowLocalCurrency && (
+                    <View style={styles.currencyToggleGroup}>
+                      <TouchableOpacity
+                        testID='currency-toggle-krw'
+                        accessibilityRole='button'
+                        accessibilityState={{
+                          selected: currencyMode === 'KRW',
+                        }}
+                        style={[
+                          styles.currencyToggleBtn,
+                          currencyMode === 'KRW' &&
+                            styles.currencyToggleBtnActive,
+                        ]}
+                        onPress={() =>
+                          updateViewState({ selectedDay, currencyMode: 'KRW' })
+                        }>
+                        <Text
+                          style={[
+                            styles.currencyToggleText,
+                            currencyMode === 'KRW' &&
+                              styles.currencyToggleTextActive,
+                          ]}>
+                          ₩
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID='currency-toggle-local'
+                        accessibilityRole='button'
+                        accessibilityState={{
+                          selected: currencyMode === 'LOCAL',
+                        }}
+                        style={[
+                          styles.currencyToggleBtn,
+                          currencyMode === 'LOCAL' &&
+                            styles.currencyToggleBtnActive,
+                        ]}
+                        onPress={() =>
+                          updateViewState({
+                            selectedDay,
+                            currencyMode: 'LOCAL',
+                          })
+                        }>
+                        <Text
+                          style={[
+                            styles.currencyToggleText,
+                            currencyMode === 'LOCAL' &&
+                              styles.currencyToggleTextActive,
+                          ]}>
+                          {localCurrencySymbol}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+          {/* Round the newly exposed map edge without resizing its native surface. */}
+          <Animated.View
+            pointerEvents='none'
+            style={[
+              styles.mapTopCorners,
+              {
+                top: introHeight,
+                opacity: introHeight > 0 ? 1 : 0,
+                transform: [{ translateY: cornersTranslateY }],
+              },
+            ]}>
+            <Svg width={16} height={16} viewBox='0 0 16 16'>
+              <Path d='M0 0H16A16 16 0 0 0 0 16Z' fill={palette.white} />
+            </Svg>
+            <Svg
+              width={16}
+              height={16}
+              viewBox='0 0 16 16'
+              style={styles.rightMapCorner}>
+              <Path d='M0 0H16A16 16 0 0 0 0 16Z' fill={palette.white} />
+            </Svg>
+          </Animated.View>
+        </View>
       </View>
       {reelOpen && (
         <CourseReelComposer
@@ -724,8 +754,31 @@ export function CourseDetailScreen({
 
 const styles = StyleSheet.create({
   controlsDetails: { gap: 20 },
-  timelineViewport: { flex: 1 },
+  timelineViewport: { flex: 1, overflow: 'hidden' },
+  controlsOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   floatingControls: { position: 'absolute', left: 0, right: 0, zIndex: 1 },
+  mapTopCorners: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  rightMapCorner: { transform: [{ scaleX: -1 }] },
+  reelIcon: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   screenContainer: { flex: 1, backgroundColor: palette.white },
   centerContainer: {
     justifyContent: 'center',
@@ -864,7 +917,6 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gray100,
   },
   dayDate: { fontSize: 16, color: palette.subText },
-  editText: { fontSize: 16, color: palette.gray600 },
   timelineRow: { paddingHorizontal: 20, backgroundColor: palette.gray100 },
   footer: {
     padding: 20,
