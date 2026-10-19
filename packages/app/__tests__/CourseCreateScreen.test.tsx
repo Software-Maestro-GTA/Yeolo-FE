@@ -17,6 +17,7 @@ import {
   revealDestinationCountry,
 } from './mocks/destinationPickerLayout';
 import { CourseCreateScreen } from '../src/screens/CourseCreateScreen';
+import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { COURSE_POPULAR_DESTINATIONS } from '../src/constants/courseUiStrings';
 import { getTasteProfileQueryKey } from '../src/hooks/queries/useTasteProfileQuery';
 
@@ -676,6 +677,76 @@ describe('CourseCreateScreen (UI v3 & API-LOC-1~3 / API-COURSE-1)', () => {
       }),
     );
   });
+
+  it.each(['completed', 'failed'])(
+    '이전 %s 상태를 토큰 조회나 로딩 화면 진입보다 먼저 지운다',
+    async (previous) => {
+      useCourseStore.setState({
+        createdCourseId: previous === 'completed' ? 'previous-course' : null,
+        error: previous === 'failed' ? '이전 요청 실패' : null,
+      });
+      const onComplete = jest.fn();
+      const onSubmit = jest.fn();
+      function Flow() {
+        const [submitted, setSubmitted] = React.useState(false);
+        return submitted ? (
+          <CourseGeneratingScreen onComplete={onComplete} />
+        ) : (
+          <CourseCreateScreen
+            mbti='INFP'
+            onSubmit={() => {
+              onSubmit(useCourseStore.getState());
+              setSubmitted(true);
+            }}
+          />
+        );
+      }
+      const screen = await render(<Flow />);
+      const dates = nextMonthDates();
+      await fireEvent.press(screen.getByTestId('open-destination-sheet'));
+      await layoutDestinationCountries();
+      await fireEvent.press(
+        await screen.findByTestId('destination-country-포르투갈'),
+      );
+      await fireEvent.press(
+        await screen.findByTestId('destination-city-리스본'),
+      );
+      await fireEvent.press(screen.getByTestId('open-date-sheet'));
+      await fireEvent.press(
+        await screen.findByTestId(`calendar-day-${dates.start}`),
+      );
+      await fireEvent.press(
+        await screen.findByTestId(`calendar-day-${dates.end}`),
+      );
+      await fireEvent.press(screen.getByTestId('confirm-travel-dates'));
+
+      let resolveToken!: (value: string) => void;
+      const tokenRead = new Promise<string>((resolve) => {
+        resolveToken = resolve;
+      });
+      jest.spyOn(AsyncStorage, 'getItem').mockReturnValueOnce(tokenRead);
+      try {
+        await fireEvent.press(screen.getByTestId('submit-course-btn'));
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ createdCourseId: null, error: null }),
+        );
+        // Keep token lookup pending beyond the stale completion's one-second delay.
+        await act(
+          async () => new Promise((resolve) => setTimeout(resolve, 1200)),
+        );
+        expect(onComplete).not.toHaveBeenCalled();
+        expect(
+          screen.getByTestId('progress-bar-container').props.accessibilityValue
+            .now,
+        ).toBeLessThan(15);
+        expect(screen.getByTestId('step-3-pending')).toBeTruthy();
+      } finally {
+        await act(async () => {
+          resolveToken('mock-bearer-token');
+        });
+      }
+    },
+  );
 
   it('예산 트랙을 터치하면 예산이 바뀌며 양 끝 값은 50~1,000만원으로 제한된다', async () => {
     const { getByTestId, getByText } = await render(<CourseCreateScreen />);

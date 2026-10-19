@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description Course API with cancellable SSE generation and terminal completion, plus detail, list, and delete requests (API-COURSE-1~4).
+ * @description Course API with cancellable SSE generation and terminal success/error handling, plus detail, list, and delete requests (API-COURSE-1~4).
  */
 import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
@@ -26,7 +26,7 @@ export interface CourseStreamOptions {
 }
 
 /**
- * Sends POST /api/courses request and parses SSE progress & complete events (API-COURSE-1).
+ * Sends POST /api/courses and handles SSE progress, complete, and error events (API-COURSE-1).
  *
  * @param apiUrl Base backend URL
  * @param accessToken User JWT access token
@@ -34,6 +34,7 @@ export interface CourseStreamOptions {
  * @param callbacks Event callbacks for progress and complete
  * @param options Optional cancellation signal owned by the generation task
  * @returns Generated courseId string
+ * @throws ApiError with the server status and message when generation fails.
  */
 export async function createCourseStreamApi(
   apiUrl: string,
@@ -100,6 +101,11 @@ export async function createCourseStreamApi(
         const parsed = JSON.parse(event.data);
         if (event.type === 'progress') {
           callbacks?.onProgress?.(parsed as CourseProgressEvent);
+        } else if (event.type === 'error') {
+          throw new ApiError(
+            parsed.status || 500,
+            parsed.message || '여행 코스 생성에 실패했습니다.',
+          );
         } else if (event.type === 'complete') {
           if (!parsed.data?.courseId || parsed.status !== 200) {
             throw new ApiError(

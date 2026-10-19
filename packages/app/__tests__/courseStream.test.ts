@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  * @file courseStream.test.ts
- * @description Regression tests for terminal SSE completion and canceled course creation requests.
+ * @description Regression tests for terminal SSE success, server errors, and canceled course creation requests.
  */
 import { http, HttpResponse } from 'msw';
 import { createCourseStreamApi } from '../../common/src/api/course';
@@ -99,6 +99,40 @@ it('rejects an unsuccessful terminal event without publishing a course ID', asyn
   ).rejects.toThrow('생성 실패');
   expect(complete).not.toHaveBeenCalled();
 });
+
+it.each([
+  [404, '사용자의 취향 정보를 찾을 수 없습니다.'],
+  [500, 'AI 여행 코스 생성에 실패했습니다.'],
+])(
+  'preserves the status %i and message from a terminal server error',
+  async (status, message) => {
+    const progress = jest.fn();
+    const complete = jest.fn();
+    server.use(
+      http.post(
+        '*/api/courses',
+        () =>
+          new HttpResponse(
+            [
+              'event: progress\ndata: {"step":"GENERATING_COURSE","message":"생성 중"}\n\n',
+              `event: error\ndata: ${JSON.stringify({ status, message, data: null })}\n\n`,
+              'event: complete\ndata: {"status":200,"message":"완료","data":{"courseId":"after-error"}}\n\n',
+            ].join(''),
+            { headers: { 'Content-Type': 'text/event-stream' } },
+          ),
+      ),
+    );
+
+    await expect(
+      createCourseStreamApi('https://api.test', 'test-token', payload, {
+        onProgress: progress,
+        onComplete: complete,
+      }),
+    ).rejects.toMatchObject({ name: 'ApiError', status, message });
+    expect(progress).toHaveBeenCalledTimes(1);
+    expect(complete).not.toHaveBeenCalled();
+  },
+);
 
 it('rejects a request canceled by the execution owner without publishing completion', async () => {
   const complete = jest.fn();

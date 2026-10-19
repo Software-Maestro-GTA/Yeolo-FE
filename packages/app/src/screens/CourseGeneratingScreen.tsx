@@ -1,13 +1,12 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Displays SSE course progress and delayed completion, stopping visual animations on failure or unmount.
+ * @description Displays smoothly estimated bar/ring progress in the UI v3 layout while server events alone confirm stage and course completion.
  */
 import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
 import CompletedCheckSvg from '../../assets/images/figma-course/completed-check.svg';
 import LoadingRingSvg from '../../assets/images/figma-course/loading-ring.svg';
-import LoadingFillSvg from '../../assets/images/figma-course/loading-fill.svg';
 import { Text } from '../components/common/Typography';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,12 +14,14 @@ import {
   Animated,
   Easing,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourseStore } from '@yeolo/common';
 import { palette } from '../theme/colors';
@@ -39,6 +40,12 @@ export interface CourseGeneratingScreenProps {
 }
 
 type StepStatus = 'pending' | 'loading' | 'completed';
+const GENERATION_STAGE_COUNT = 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * 9;
+// Rounded 4pt caps cover 4pt of the gap. Keep another 4pt visibly open
+// throughout generation; only a saved course replaces the arc with a check.
+const RING_WORKING_GAP = 8;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onComplete,
@@ -47,8 +54,15 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const safeAreaStyles = StyleSheet.create({
-    content: { paddingBottom: insets.bottom + 36 },
+    // UI v3 anchors the caption at y=456 on its 844pt canvas. Keep that
+    // vertical balance without restoring the excluded airplane artwork.
+    // BackgroundImageLayout already reserves the top safe area.
+    content: {
+      paddingTop: Math.max(24, windowHeight * (456 / 844) - insets.top),
+      paddingBottom: insets.bottom + 36,
+    },
   });
   const { trackButtonClick } = useGA4ButtonClick();
   const queryClient = useQueryClient();
@@ -61,106 +75,108 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     resetCourseState,
   } = useCourseStore();
 
-  // Progress Bar Animation Value (0 ~ 100)
-  const progressAnim = useRef(new Animated.Value(5)).current;
-  const spinnerAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (error) return;
-    const spinner = Animated.loop(
-      Animated.timing(spinnerAnim, {
-        toValue: 1,
-        duration: 1000,
-        easing: Easing.linear,
-        useNativeDriver: true,
+  const strings = UI_STRINGS.COURSE_GENERATING;
+  const progressAnim = useRef(
+    new Animated.Value(createdCourseId ? 100 : 5),
+  ).current;
+  const [displayPercentage, setDisplayPercentage] = useState(
+    createdCourseId ? 100 : 5,
+  );
+  const animatedWidth = useMemo(
+    () =>
+      progressAnim.interpolate({
+        inputRange: [0, 100],
+        outputRange: ['0%', '100%'],
+        extrapolate: 'clamp',
       }),
-    );
-    spinner.start();
-    return () => spinner.stop();
-  }, [spinnerAnim, error]);
-  const [displayPercentage, setDisplayPercentage] = useState<number>(5);
+    [progressAnim],
+  );
+  const animatedRingOffset = useMemo(
+    () =>
+      progressAnim.interpolate({
+        inputRange: [0, 100],
+        outputRange: [RING_CIRCUMFERENCE, RING_WORKING_GAP],
+        extrapolate: 'clamp',
+      }),
+    [progressAnim],
+  );
 
-  // Sync listener to update percentage text
   useEffect(() => {
-    const listenerId = progressAnim.addListener(({ value }) => {
-      setDisplayPercentage(Math.min(100, Math.round(value)));
+    // Only accessibility text needs React state; both shapes consume the same
+    // animated value directly, without waiting for rounded percentage updates.
+    const listener = progressAnim.addListener(({ value }) => {
+      setDisplayPercentage(Math.max(0, Math.min(100, Math.round(value))));
     });
-    return () => {
-      progressAnim.removeListener(listenerId);
-    };
+    return () => progressAnim.removeListener(listener);
   }, [progressAnim]);
 
-  // Compute Checklist Card statuses
-  let step1Status: StepStatus = 'pending';
-  let step2Status: StepStatus = 'pending';
+  // Public SSE exposes taste loading and combined course generation only.
+  // Internal place/route validation can repeat and is not forwarded by BE.
+  // Only a persisted course ID confirms completion; step/message strings cannot.
+  const completed = Boolean(createdCourseId);
+  const step1Status: StepStatus =
+    completed || progressStep === 'GENERATING_COURSE'
+      ? 'completed'
+      : progressStep === 'LOADING_TASTE_PREFERENCE'
+        ? 'loading'
+        : 'pending';
+  const step2Status: StepStatus = completed
+    ? 'completed'
+    : progressStep === 'GENERATING_COURSE'
+      ? 'loading'
+      : 'pending';
+  const completedStages = completed
+    ? GENERATION_STAGE_COUNT
+    : step1Status === 'completed'
+      ? 1
+      : 0;
+  const progressLabel = strings.COMPLETED_STAGES(
+    completedStages,
+    GENERATION_STAGE_COUNT,
+  );
+  const progressTitle = completed
+    ? strings.COMPLETE_TITLE
+    : progressMessage || strings.MAIN_TITLE;
 
-  if (createdCourseId || progressStep === 'COMPLETE') {
-    step1Status = 'completed';
-    step2Status = 'completed';
-  } else if (progressStep === 'GENERATING_COURSE') {
-    step1Status = 'completed';
-    step2Status = 'loading';
-  } else if (progressStep === 'LOADING_TASTE_PREFERENCE') {
-    step1Status = 'loading';
-    step2Status = 'pending';
-  }
-
-  // Handle Continuous Logarithmic Progress Animation
+  // Estimated progress stays independent of SSE stage/message changes, so
+  // a late stage event never resets the bar. Each segment starts exactly where
+  // the last finished; only the actual saved course can fill the final 1%.
   useEffect(() => {
     if (error) return;
-    if (createdCourseId || progressStep === 'COMPLETE') {
-      // Smoothly animate from current percentage up to 100% without jump
-      Animated.timing(progressAnim, {
-        toValue: 100,
-        duration: 700,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
-      }).start();
-      return () => progressAnim.stopAnimation();
-    }
-
-    let targetValue = 65;
-    let animDuration = 1800;
-
-    if (progressStep === 'GENERATING_COURSE') {
-      targetValue = 92;
-      animDuration = 2200;
-    } else if (progressStep === 'LOADING_TASTE_PREFERENCE') {
-      targetValue = 65;
-      animDuration = 1600;
-    }
-
-    // Logarithmic Easing curve (fast initial boost from current value to target)
-    Animated.timing(progressAnim, {
-      toValue: targetValue,
-      duration: animDuration,
-      easing: Easing.out(Easing.poly(3)),
-      useNativeDriver: false,
-    }).start();
-
-    // Smooth creeping effect up to 96% while waiting for completion
-    const creepingInterval = setInterval(() => {
-      progressAnim.stopAnimation((currentVal) => {
-        if (currentVal < 96) {
-          const nextVal = Math.min(96, currentVal + 0.25);
+    // A new attempt can reuse this component after a completed/error state.
+    // Never animate down from a previous attempt's completed value.
+    if (!completed) progressAnim.setValue(5);
+    const animation = completed
+      ? Animated.timing(progressAnim, {
+          toValue: 100,
+          duration: 600,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: false,
+        })
+      : Animated.sequence([
           Animated.timing(progressAnim, {
-            toValue: nextVal,
-            duration: 300,
-            easing: Easing.linear,
+            toValue: 92,
+            duration: 90000,
+            easing: Easing.out(Easing.quad),
             useNativeDriver: false,
-          }).start();
-        }
-      });
-    }, 300);
-
+          }),
+          Animated.timing(progressAnim, {
+            toValue: 99,
+            duration: 600000,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
+          }),
+        ]);
+    animation.start();
     return () => {
-      clearInterval(creepingInterval);
+      animation.stop();
       progressAnim.stopAnimation();
     };
-  }, [createdCourseId, progressStep, progressAnim, error]);
+  }, [completed, progressAnim, error]);
 
   // 1-second delay before navigating to Course Detail screen upon completion
   useEffect(() => {
-    if (!createdCourseId) return;
+    if (!createdCourseId || error) return;
 
     queryClient.invalidateQueries({ queryKey: COURSE_LIST_QUERY_KEY });
 
@@ -171,7 +187,7 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [createdCourseId, onComplete, queryClient]);
+  }, [createdCourseId, error, onComplete, queryClient]);
 
   const handleRetry = () => {
     trackButtonClick('btn_course_generating_retry', 'Retry Course Generation');
@@ -257,46 +273,61 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
       return (
         <View style={styles.loadingCircle} testID={`${testIdPrefix}-loading`}>
           <FigmaAsset source={LoadingRingSvg} width={22} height={22} />
-          <Animated.View
-            style={[
-              styles.spinner,
-              {
-                transform: [
-                  {
-                    rotate: spinnerAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '360deg'],
-                    }),
-                  },
-                ],
-              },
-            ]}>
-            <FigmaAsset source={LoadingFillSvg} width={22} height={22} />
-          </Animated.View>
+          <Svg
+            width={22}
+            height={22}
+            viewBox='0 0 22 22'
+            style={styles.loadingArc}
+            accessible={false}>
+            <AnimatedCircle
+              testID={`${testIdPrefix}-progress-arc`}
+              cx={11}
+              cy={11}
+              r={9}
+              fill='none'
+              stroke={palette.primary}
+              strokeWidth={4}
+              strokeLinecap='round'
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={animatedRingOffset}
+              transform='rotate(-90 11 11)'
+            />
+          </Svg>
         </View>
       );
     }
     return (
-      <View style={styles.pendingCircle} testID={`${testIdPrefix}-pending`}>
-        <View style={styles.innerPendingDot} />
+      <View style={styles.indicator} testID={`${testIdPrefix}-pending`}>
+        <FigmaAsset source={LoadingRingSvg} width={22} height={22} />
       </View>
     );
   };
 
-  const renderStepText = (status: StepStatus, label: string) => {
-    if (status === 'completed') {
-      return <Text style={styles.completedStepText}>{label}</Text>;
-    }
-    if (status === 'loading') {
-      return <Text style={styles.activeStepText}>{label}</Text>;
-    }
-    return <Text style={styles.pendingStepText}>{label}</Text>;
+  const renderStep = (
+    status: StepStatus,
+    label: string,
+    testId: string,
+    description?: string,
+  ) => {
+    const statusLabel =
+      status === 'completed'
+        ? strings.STATUS_COMPLETED
+        : status === 'loading'
+          ? strings.STATUS_LOADING
+          : strings.STATUS_PENDING;
+    return (
+      <View
+        testID={testId}
+        accessible
+        accessibilityLabel={`${label}, ${statusLabel}${status === 'loading' && description ? `. ${description}` : ''}`}
+        accessibilityState={{ busy: status === 'loading' }}>
+        <View style={styles.stepRow}>
+          {renderStepIndicator(status, testId)}
+          <Text style={styles.stepText}>{label}</Text>
+        </View>
+      </View>
+    );
   };
-
-  const animatedWidth = progressAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
 
   return (
     <View style={styles.screenContainer}>
@@ -310,17 +341,21 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
           showsVerticalScrollIndicator={false}>
           <View style={styles.mainBodyContainer} testID='main-content'>
             <View
-              style={styles.illustration}
-              testID='course-loading-illustration'
-              accessible={false}
-            />
-            <View
               style={styles.progressBarContainer}
               testID='progress-bar-container'
+              accessible
               accessibilityRole='progressbar'
-              accessibilityValue={{ min: 0, max: 100, now: displayPercentage }}>
+              accessibilityLabel={`${progressTitle}. ${strings.PROGRESS_LABEL}`}
+              accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: displayPercentage,
+                text: completed
+                  ? progressLabel
+                  : `${strings.ESTIMATED_PROGRESS(displayPercentage)}. ${progressLabel}`,
+              }}>
               <Text style={styles.mainTitle} testID='progress-text'>
-                {progressMessage || UI_STRINGS.COURSE_GENERATING.MAIN_TITLE}
+                {progressTitle}
               </Text>
               <View style={styles.progressTrack}>
                 <Animated.View
@@ -329,27 +364,23 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
               </View>
             </View>
             <View style={styles.checklistCard} testID='checklist-card'>
-              <View style={styles.stepRow} testID='step-1'>
-                {renderStepIndicator(step1Status, 'step-1')}
-                {renderStepText(
-                  step1Status,
-                  UI_STRINGS.COURSE_GENERATING.STEP_1,
-                )}
-              </View>
-              <View style={styles.stepRow} testID='step-2'>
-                {renderStepIndicator(step2Status, 'step-2')}
-                {renderStepText(
-                  step2Status,
-                  UI_STRINGS.COURSE_GENERATING.STEP_2,
-                )}
-              </View>
-              <View style={styles.stepRow} testID='step-3'>
-                {renderStepIndicator(step2Status, 'step-3')}
-                {renderStepText(
-                  step2Status,
-                  UI_STRINGS.COURSE_GENERATING.STEP_3,
-                )}
-              </View>
+              {renderStep(
+                step1Status,
+                strings.STEP_1,
+                'step-1',
+                strings.TASTE_DESCRIPTION,
+              )}
+              {renderStep(
+                step2Status,
+                strings.STEP_2,
+                'step-2',
+                strings.GENERATION_DESCRIPTION,
+              )}
+              {renderStep(
+                completed ? 'completed' : 'pending',
+                strings.COMPLETE_NOTICE,
+                'step-3',
+              )}
             </View>
           </View>
         </ScrollView>
@@ -363,36 +394,39 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   contentContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 36,
+    paddingHorizontal: 24,
   },
   mainBodyContainer: { alignItems: 'center', width: '100%' },
-  illustration: {
-    width: '100%',
-    maxWidth: 390,
-    aspectRatio: 390 / 300,
-    overflow: 'hidden',
-  },
   mainTitle: {
     fontSize: 16,
     fontWeight: '500',
     color: palette.legacyCaption,
     textAlign: 'center',
-    lineHeight: 22,
-    letterSpacing: -0.7,
+    lineHeight: 19,
+    letterSpacing: -1,
   },
   checklistCard: {
-    marginTop: 46,
-    gap: 22,
+    marginTop: 50,
+    gap: 13,
+    width: 198,
+    maxWidth: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 32,
   },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    minHeight: 28,
+    gap: 10,
+    minHeight: 37,
   },
+  stepText: {
+    fontSize: 20,
+    lineHeight: 37,
+    fontWeight: '500',
+    color: palette.legacyText,
+    letterSpacing: -1,
+    flexShrink: 1,
+  },
+  indicator: { width: 22, height: 22 },
   completedCircle: {
     width: 22,
     height: 22,
@@ -402,47 +436,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   completedCheck: { position: 'absolute', top: 5, left: 5 },
-  spinner: { position: 'absolute', width: 22, height: 22 },
-  completedStepText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: palette.legacyText,
-    letterSpacing: -0.7,
-    flexShrink: 1,
-  },
-  loadingCircle: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 3,
-    borderColor: palette.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  innerPendingDot: { width: 0, height: 0 },
-  activeStepText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: palette.legacyText,
-    letterSpacing: -0.7,
-    flexShrink: 1,
-  },
-  pendingStepText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: palette.legacyText,
-    letterSpacing: -0.7,
-    flexShrink: 1,
-  },
-  progressBarContainer: { width: '64%', maxWidth: 300, gap: 18 },
+  loadingCircle: { width: 22, height: 22 },
+  loadingArc: { position: 'absolute', width: 22, height: 22 },
+  progressBarContainer: { width: '100%', alignItems: 'center', gap: 16 },
   progressTrack: {
-    width: '100%',
+    width: 249,
+    maxWidth: '100%',
     height: 9,
     borderRadius: 5,
     backgroundColor: palette.gray200,

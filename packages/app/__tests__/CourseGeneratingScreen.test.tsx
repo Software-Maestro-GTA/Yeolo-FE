@@ -1,10 +1,10 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
- * @description Course generation states, delayed navigation, and animation cleanup on failure or unmount.
+ * @description Verifies smooth estimated progress shared by the bar and active ring while server events retain authority over completion.
  */
 import React from 'react';
 import { Animated } from 'react-native';
-import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
 import { renderWithQueryClient as render } from './test-utils';
@@ -28,6 +28,137 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     jest.useRealTimers();
   });
 
+  it('이전 완료 상태에서 새 생성이 시작되면 진행률과 완료 이동을 초기화한다', async () => {
+    jest.useFakeTimers();
+    useCourseStore.setState({ createdCourseId: 'previous-course' });
+    const onComplete = jest.fn();
+    const screen = await render(
+      <CourseGeneratingScreen onComplete={onComplete} />,
+    );
+    await act(async () => {
+      useCourseStore.setState({
+        createdCourseId: null,
+        isGenerating: true,
+        progressStep: 'GENERATING_COURSE',
+      });
+    });
+    const value = () =>
+      screen.getByTestId('progress-bar-container').props.accessibilityValue.now;
+    expect(value()).toBe(5);
+    await act(async () => jest.advanceTimersByTime(1500));
+    expect(value()).toBeGreaterThan(5);
+    expect(value()).toBeLessThan(15);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('오래 기다려도 진행 중 원호의 둥근 양 끝이 겹쳐 완성된 원처럼 보이지 않는다', async () => {
+    const timing = jest.spyOn(Animated, 'timing');
+    useCourseStore.setState({ progressStep: 'GENERATING_COURSE' });
+    const screen = await render(<CourseGeneratingScreen />);
+    const progress = timing.mock.calls[0][0] as Animated.Value;
+    await act(async () => progress.setValue(99));
+    const arc = screen.getByTestId('step-2-progress-arc');
+    // Two rounded caps cover one stroke width of the centerline gap.
+    expect(
+      arc.props.strokeDashoffset - arc.props.strokeWidth,
+    ).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByTestId('step-2-completed')).toBeNull();
+  });
+
+  it('서버 대기 중에도 바와 활성 링이 함께 차오르고 완료 전에는 100%가 되지 않는다', async () => {
+    jest.useFakeTimers();
+    const loop = jest.spyOn(Animated, 'loop');
+    useCourseStore.setState({
+      isGenerating: true,
+      progressStep: 'GENERATING_COURSE',
+    });
+    const screen = await render(<CourseGeneratingScreen />);
+    const value = () =>
+      screen.getByTestId('progress-bar-container').props.accessibilityValue.now;
+    const initial = value();
+    await act(async () => jest.advanceTimersByTime(10000));
+    expect(value()).toBeGreaterThan(initial);
+    const early = value();
+    await act(async () => jest.advanceTimersByTime(20000));
+    expect(value()).toBeGreaterThan(early);
+    expect(
+      screen.getByTestId('progress-bar-container').props.accessibilityValue
+        .text,
+    ).toContain('예상 진행');
+    expect(screen.getByTestId('step-2-progress-arc')).toBeTruthy();
+    expect(screen.queryByTestId('step-3-loading')).toBeNull();
+    await act(async () => jest.advanceTimersByTime(700000));
+    expect(value()).toBeLessThan(100);
+    expect(screen.getByTestId('step-3-pending')).toBeTruthy();
+    expect(loop).not.toHaveBeenCalled();
+  });
+
+  it('같은 진행 값으로 바와 원호를 그리며 SSE 단계가 바뀌어도 역행하지 않는다', async () => {
+    jest.useFakeTimers();
+    const timing = jest.spyOn(Animated, 'timing');
+    useCourseStore.setState({ progressStep: 'LOADING_TASTE_PREFERENCE' });
+    const screen = await render(<CourseGeneratingScreen />);
+    const progress = timing.mock.calls[0][0] as Animated.Value;
+    for (const value of [25, 60, 85]) {
+      await act(async () => progress.setValue(value));
+      expect(
+        screen.getByTestId('progress-bar-container').props.accessibilityValue
+          .now,
+      ).toBe(value);
+      expect(
+        screen.getByTestId('step-1-progress-arc').props.strokeDashoffset,
+      ).toBeCloseTo(2 * Math.PI * 9 - ((2 * Math.PI * 9 - 8) * value) / 100);
+    }
+    const animations = timing.mock.calls.length;
+    await act(async () =>
+      useCourseStore.setState({ progressStep: 'GENERATING_COURSE' }),
+    );
+    expect(timing).toHaveBeenCalledTimes(animations);
+    expect(
+      screen.getByTestId('progress-bar-container').props.accessibilityValue.now,
+    ).toBe(85);
+    expect(
+      screen.getByTestId('step-2-progress-arc').props.strokeDashoffset,
+    ).toBeCloseTo(2 * Math.PI * 9 - (2 * Math.PI * 9 - 8) * 0.85);
+    expect(screen.getByTestId('step-1-completed')).toBeTruthy();
+    expect(screen.getByTestId('step-3-pending')).toBeTruthy();
+    await act(async () =>
+      useCourseStore.setState({ createdCourseId: 'saved-course' }),
+    );
+    await act(async () => jest.advanceTimersByTime(700));
+    expect(
+      screen.getByTestId('progress-bar-container').props.accessibilityValue.now,
+    ).toBe(100);
+    expect(screen.getByTestId('step-2-completed')).toBeTruthy();
+    expect(screen.getByTestId('step-3-completed')).toBeTruthy();
+    expect(screen.getByTestId('progress-text')).toHaveTextContent(
+      '여행 코스가 준비됐어요',
+    );
+  });
+
+  it.each(['COMPLETE', 'UNKNOWN_STEP'])(
+    'courseId 없는 %s 단계는 완료로 표시하거나 이동하지 않는다',
+    async (progressStep) => {
+      jest.useFakeTimers();
+      const onComplete = jest.fn();
+      useCourseStore.setState({
+        progressStep,
+        progressMessage: '서버에서 전달한 안내',
+      });
+      const screen = await render(
+        <CourseGeneratingScreen onComplete={onComplete} />,
+      );
+      await act(async () => jest.advanceTimersByTime(10000));
+      expect(screen.getByTestId('step-3-pending')).toBeTruthy();
+      expect(screen.queryByTestId('step-2-completed')).toBeNull();
+      expect(
+        screen.getByTestId('progress-bar-container').props.accessibilityValue
+          .now,
+      ).toBeLessThan(100);
+      expect(onComplete).not.toHaveBeenCalled();
+    },
+  );
+
   it('SSE 시작 전(1단계 진행전)에는 UI v3 타이틀과 1단계·2단계 모두 대기 상태(pending)로 렌더링되어야 한다', async () => {
     const mockOnComplete = jest.fn();
 
@@ -36,9 +167,9 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     );
 
     expect(getByText('딱 맞는 코스를 생성하고 있어요')).toBeTruthy();
-    expect(getByText('취향 데이터 스캔 중...')).toBeTruthy();
-    expect(getByText('맞춤형 여행지 탐색 중...')).toBeTruthy();
-    expect(getByText('최적 동선 구성 중...')).toBeTruthy();
+    expect(getByText('취향 정보 확인 중...')).toBeTruthy();
+    expect(getByText('맞춤형 여행지 생성 중...')).toBeTruthy();
+    expect(getByText('코스 전송 중...')).toBeTruthy();
     expect(getByTestId('step-1-pending')).toBeTruthy();
     expect(getByTestId('step-2-pending')).toBeTruthy();
   });
@@ -151,8 +282,6 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     const timing = jest.spyOn(Animated, 'timing');
     const loop = jest.spyOn(Animated, 'loop');
     await render(<CourseGeneratingScreen />);
-    const spinner = loop.mock.results[0].value;
-    const stopSpinner = jest.spyOn(spinner, 'stop');
     const progress = timing.mock.calls.find(
       ([, config]) => !config.useNativeDriver,
     )![0];
@@ -162,7 +291,7 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
       useCourseStore.setState({ error: '일시적으로 코스를 생성할 수 없어요.' });
     });
 
-    expect(stopSpinner).toHaveBeenCalledTimes(1);
+    expect(loop).not.toHaveBeenCalled();
     expect(stopProgress).toHaveBeenCalled();
     const animationsAtFailure = timing.mock.calls.length;
     await act(async () => {

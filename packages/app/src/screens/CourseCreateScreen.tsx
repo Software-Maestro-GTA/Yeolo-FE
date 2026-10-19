@@ -21,7 +21,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { CourseCreateRequest, TasteProfile } from '@yeolo/common';
+import {
+  useCourseStore,
+  type CourseCreateRequest,
+  type TasteProfile,
+} from '@yeolo/common';
 import {
   useCourseCreateForm,
   useCourseCreateMutation,
@@ -66,6 +70,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
   useGA4ScreenTracking('CourseCreateScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const createCourseMutation = useCourseCreateMutation();
+  const isGenerating = useCourseStore((state) => state.isGenerating);
   const [destinationOpen, setDestinationOpen] = useState(false);
   const [popularDestinations] = useState(() => {
     const countries = [
@@ -120,6 +125,14 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     (taste.error?.status === 404 || taste.isSuccess);
   const showTasteCard = hasTaste || !tasteMissing || Boolean(onPhoto);
   const form = useCourseCreateForm((data) => {
+    if (
+      createCourseMutation.isPending ||
+      useCourseStore.getState().isGenerating
+    )
+      return;
+    // The mutation awaits token storage before the store starts the request.
+    // Clear the previous result synchronously, before mounting its loading UI.
+    useCourseStore.getState().resetCourseState();
     trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
       country: data.destinationCountry,
       city: data.destinationCity,
@@ -135,7 +148,8 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     form.startDate && form.endDate
       ? `${form.startDate.slice(2).replace(/-/g, '.')} - ${form.endDate.slice(2).replace(/-/g, '.')}`
       : COURSE_UI.DATE_PLACEHOLDER;
-  const disabled = !form.isFormValid || createCourseMutation.isPending;
+  const disabled =
+    !form.isFormValid || createCourseMutation.isPending || isGenerating;
   return (
     <SafeAreaView
       style={styles.screenContainer}
