@@ -919,7 +919,7 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
   });
 
   it.each(['flight', 'hotel', 'ticket'])(
-    '코스 %s 예약에 목적지·날짜를 전달하고 숙소·티켓만 자동 검색한다',
+    '코스 %s 예약에 목적지·날짜를 전달하고 자동 검색한다',
     async (kind) => {
       jest
         .spyOn(commonApi, 'getCourseDetailApi')
@@ -939,10 +939,44 @@ describe('CourseDetailScreen (FUN-3: 추천 일정 카드/타임라인 상세 �
         country: '대한민국',
         startDate: '2026-08-01',
         endDate: '2026-08-02',
-        ...(kind === 'flight' ? {} : { autoSearch: true }),
+        autoSearch: true,
       });
     },
   );
+
+  it('다른 날짜를 보고 있어도 첫날 첫 공항을 항공권 도착 공항으로 전달한다', async () => {
+    const course = JSON.parse(
+      JSON.stringify(mockCourseDetail),
+    ) as commonApi.CourseDetail;
+    const firstStop = course.itinerary.days[0].stops[0];
+    firstStop.place = {
+      ...firstStop.place,
+      category: 'AIRPORT',
+      placeName: '제주국제공항',
+    };
+    // Day/sequence fields, rather than response ordering or the selected date, identify the entry airport.
+    course.itinerary.days[0].stops.reverse();
+    course.itinerary.days.reverse();
+    jest.spyOn(commonApi, 'getCourseDetailApi').mockResolvedValue(course);
+    const onOpenBooking = jest.fn();
+    const ui = await render(
+      <CourseDetailScreen
+        courseId={course.courseId}
+        onOpenBooking={onOpenBooking}
+      />,
+    );
+    await ui.findByText('제주');
+    await fireEvent.press(ui.getByTestId('day-tab-2'));
+    await fireEvent.press(ui.getByTestId('btn-flight-cta'));
+    expect(onOpenBooking).toHaveBeenCalledWith('flight', {
+      keyword: '제주',
+      country: '대한민국',
+      startDate: '2026-08-01',
+      endDate: '2026-08-02',
+      arrivalAirportName: '제주국제공항',
+      autoSearch: true,
+    });
+  });
 
   it('CourseDetailScreen 마운트 시 AsyncStorage에 recentCourseId를 저장하고 AuthContext 상태를 갱신해야 한다', async () => {
     jest

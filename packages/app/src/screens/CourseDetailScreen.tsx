@@ -221,8 +221,8 @@ export function CourseDetailScreen({
   const handleOpenBooking = (kind: BookingKind) => {
     trackButtonClick(`btn_${kind}_cta`, `Open ${kind} Booking`);
     onOpenBooking?.(kind, {
-      ...courseBookingContext(course),
-      ...(kind !== 'flight' && { autoSearch: true }),
+      ...courseBookingContext(course, kind),
+      autoSearch: true,
     });
   };
 

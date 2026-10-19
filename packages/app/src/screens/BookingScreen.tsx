@@ -33,6 +33,7 @@ import {
 import {
   myRealTrip,
   isBookingDate,
+  resolveCourseArrivalAirport,
   type BookingContext,
 } from '../services/bookingService';
 import { APP_CONFIG } from '../constants/config';
@@ -92,7 +93,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setBackground({ noTopEdges: false });
     return resetBackground;
   }, [setBackground, resetBackground]);
-  const [keyword, setKeyword] = useState(context.keyword || '');
+  const [keyword, setKeyword] = useState(
+    (kind === 'flight' && context.arrivalAirportName) || context.keyword || '',
+  );
   const [destinationCountry, setDestinationCountry] = useState(
     context.country?.trim() || '',
   );
@@ -129,6 +132,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const airportTouched = useRef({ departure: false, arrival: false });
+  const airportPrefill = useRef<
+    Partial<Record<AirportTarget, AbortController>>
+  >({});
   const regionTouched = useRef(false);
   const listRef = useRef<FlatList<Choice>>(null);
   const hotelQuery = useRef<HotelQuery | null>(null);
@@ -183,24 +189,35 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
 
   useEffect(() => {
     if (kind !== 'flight') return;
-    const controller = new AbortController();
-    const preselect = async (target: AirportTarget, query: string) => {
-      if (!query.trim()) return;
+    const controllers = {
+      departure: new AbortController(),
+      arrival: new AbortController(),
+    };
+    airportPrefill.current = controllers;
+    const preselect = async (target: AirportTarget) => {
+      const controller = controllers[target];
+      if (airportTouched.current[target]) return;
       try {
-        const airports = await myRealTrip.searchAirports(
-          query,
-          controller.signal,
-        );
+        const airports =
+          target === 'departure'
+            ? await myRealTrip.searchAirports('인천', controller.signal)
+            : [];
         const airport =
-          (target === 'departure'
-            ? airports.find(({ airport: item }) => item.code === 'ICN')
-            : undefined) || airports[0];
+          target === 'departure'
+            ? airports.find(({ airport: item }) => item.code === 'ICN') ||
+              airports[0]
+            : await resolveCourseArrivalAirport(context, controller.signal);
         if (
-          !airport ||
           controller.signal.aborted ||
+          !mounted.current ||
           airportTouched.current[target]
         )
           return;
+        if (!airport) {
+          if (context.autoSearch && !autoSearchStarted.current)
+            setMessage(S.FLIGHT_AIRPORT_REQUIRED);
+          return;
+        }
         const { code, koName, enName } = airport.airport;
         const label = `${koName || enName || code} (${code})`;
         if (target === 'departure') {
@@ -210,14 +227,37 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           setKeyword(label);
           setArrCode(code);
         }
-      } catch {
-        // The user can still search and select an airport manually.
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          !mounted.current ||
+          airportTouched.current[target] ||
+          !context.autoSearch ||
+          autoSearchStarted.current
+        )
+          return;
+        setMessage(
+          error instanceof MyRealTripError && error.code === 'configuration'
+            ? S.UNAVAILABLE
+            : error instanceof MyRealTripError && error.status === 429
+              ? S.RATE_LIMIT
+              : S.ERROR,
+        );
       }
     };
-    void preselect('departure', '인천');
-    void preselect('arrival', context.keyword || '');
-    return () => controller.abort();
-  }, [kind, context.keyword]);
+    void preselect('departure');
+    void preselect('arrival');
+    return () => {
+      controllers.departure.abort();
+      controllers.arrival.abort();
+    };
+  }, [
+    kind,
+    context.keyword,
+    context.country,
+    context.arrivalAirportName,
+    context.autoSearch,
+  ]);
 
   useEffect(() => {
     if (kind !== 'hotel' || !context.keyword?.trim()) return;
@@ -325,6 +365,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setFlightFallback(false);
   };
   const close = () => {
+    autoSearchStarted.current = true;
+    airportPrefill.current.departure?.abort();
+    airportPrefill.current.arrival?.abort();
     active.current?.abort();
     onBack();
   };
@@ -430,6 +473,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         }
       }
     }
+    airportPrefill.current.departure?.abort();
+    airportPrefill.current.arrival?.abort();
     clearResults();
     Keyboard.dismiss();
     if (kind === 'ticket') transitionForm(true);
@@ -445,7 +490,12 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           ) => {
             if (selectedCode) return selectedCode;
             const query = value.replace(/ \([A-Z]{3}\)$/, '').trim();
-            const [match] = await myRealTrip.searchAirports(query, signal);
+            const match =
+              target === 'arrival' &&
+              !airportTouched.current.arrival &&
+              context.arrivalAirportName
+                ? await resolveCourseArrivalAirport(context, signal)
+                : (await myRealTrip.searchAirports(query, signal))[0];
             if (!match || signal.aborted || !mounted.current) return '';
             const { code, koName, enName } = match.airport;
             const label = `${koName || enName || code} (${code})`;
@@ -524,9 +574,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   };
   useEffect(() => {
     if (
-      kind === 'flight' ||
       !context.autoSearch ||
-      !context.keyword?.trim() ||
+      (kind === 'flight' ? !depCode || !arrCode : !context.keyword?.trim()) ||
       (kind === 'hotel' && !regionId)
     )
       return;
@@ -536,7 +585,17 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       search();
     }, 0);
     return () => clearTimeout(timer);
-  }, [kind, context.autoSearch, context.keyword, regionId, start, end, adults]);
+  }, [
+    kind,
+    context.autoSearch,
+    context.keyword,
+    regionId,
+    depCode,
+    arrCode,
+    start,
+    end,
+    adults,
+  ]);
   const loadMoreProducts = (retry = false) => {
     if (
       kind === 'flight' ||
@@ -624,6 +683,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     Keyboard.dismiss();
   };
   const chooseAirport = (item: Choice) => {
+    autoSearchStarted.current = true;
+    const target = airportSearch?.target || 'arrival';
+    airportPrefill.current[target]?.abort();
     if (airportSearch?.target === 'departure') {
       airportTouched.current.departure = true;
       setDeparture(item.label);
@@ -640,6 +702,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   };
   const changeAirportQuery = (target: AirportTarget, next: string) => {
     airportTouched.current[target] = true;
+    airportPrefill.current[target]?.abort();
     clearResults();
     if (target === 'departure') {
       setDeparture(next);
@@ -650,6 +713,13 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     }
     setAirportChoices([]);
     setAirportSearch({ target, query: next });
+  };
+  const openAirport = (target: AirportTarget, value: string) => {
+    if (active.current) return;
+    autoSearchStarted.current = true;
+    airportTouched.current[target] = true;
+    airportPrefill.current[target]?.abort();
+    setAirportSearch({ target, query: value.replace(/ \([A-Z]{3}\)$/, '') });
   };
   const airportField = (
     target: AirportTarget,
@@ -666,18 +736,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         editable={!busy}
         autoCapitalize='none'
         showSoftInputOnFocus={false}
-        onPressIn={() =>
-          setAirportSearch({
-            target,
-            query: value.replace(/ \([A-Z]{3}\)$/, ''),
-          })
-        }
-        onFocus={() =>
-          setAirportSearch({
-            target,
-            query: value.replace(/ \([A-Z]{3}\)$/, ''),
-          })
-        }
+        onPressIn={() => openAirport(target, value)}
+        onFocus={() => openAirport(target, value)}
         onChangeText={(next) => changeAirportQuery(target, next)}
       />
     </View>

@@ -1,6 +1,6 @@
 /**
  * @file BookingScreen.test.tsx
- * @description Booking entry, automatic course hotel search, overlays, validation, retry and cancellation flows.
+ * @description Booking entry, airport fallback and automatic course searches, overlays, validation, retry and cancellation flows.
  */
 import React from 'react';
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
@@ -792,6 +792,301 @@ test('숙소 결과 끝에서 다음 페이지를 이어 붙이고 맨 위로 �
     expect(ui.getByTestId('booking-scroll-top')).toBeTruthy(),
   );
   await fireEvent.press(ui.getByTestId('booking-scroll-top'));
+});
+
+const courseFlightContext = {
+  keyword: '도쿄',
+  country: '일본',
+  arrivalAirportName: '나리타 국제공항',
+  startDate: '2099-12-30',
+  endDate: '2100-01-02',
+  autoSearch: true,
+};
+type AirportMatches = Awaited<ReturnType<typeof myRealTrip.searchAirports>>;
+const incheonAirport = { airport: { code: 'ICN', koName: '인천' } };
+const naritaAirport = { airport: { code: 'NRT', koName: '나리타' } };
+
+test('코스 공항명이 있으면 도시보다 먼저 조회하고 공급자가 반환한 공항 코드를 선택한다', async () => {
+  const airports = jest
+    .spyOn(myRealTrip, 'searchAirports')
+    .mockImplementation(async (query) => {
+      if (query === '인천')
+        return [{ airport: { code: 'GMP', koName: '김포' } }, incheonAirport];
+      return query === courseFlightContext.arrivalAirportName
+        ? [naritaAirport]
+        : [{ airport: { code: 'HND', koName: '하네다' } }];
+    });
+  const link = jest.spyOn(myRealTrip, 'createFlightLink');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={{ ...courseFlightContext, autoSearch: false }}
+      onBack={jest.fn()}
+    />,
+  );
+  await waitFor(() =>
+    expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('나리타 (NRT)'),
+  );
+  expect(ui.getByLabelText(S.DEPARTURE).props.value).toBe('인천 (ICN)');
+  expect(airports.mock.calls.map(([query]) => query)).toEqual([
+    '인천',
+    '나리타 국제공항',
+  ]);
+  expect(link).not.toHaveBeenCalled();
+});
+
+test.each(['empty', 'error'] as const)(
+  '코스 공항명 검색이 %s이면 국가와 도시로 조회하고 성공 뒤 추가 조회를 멈춘다',
+  async (failure) => {
+    const airports = jest
+      .spyOn(myRealTrip, 'searchAirports')
+      .mockImplementation(async (query) => {
+        if (query === '인천') return [incheonAirport];
+        if (query === '나리타 국제공항') {
+          if (failure === 'error') throw new MyRealTripError('request', 500);
+          return [];
+        }
+        return query === '일본 도쿄' ? [naritaAirport] : [];
+      });
+    const ui = await render(
+      <BookingScreen
+        kind='flight'
+        context={{ ...courseFlightContext, autoSearch: false }}
+        onBack={jest.fn()}
+      />,
+    );
+    await waitFor(() =>
+      expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('나리타 (NRT)'),
+    );
+    expect(
+      airports.mock.calls
+        .map(([query]) => query)
+        .filter((query) => query !== '인천'),
+    ).toEqual(['나리타 국제공항', '일본 도쿄']);
+  },
+);
+
+test('공항명과 국가·도시 검색이 비어 있으면 도시 단독 검색으로 한 번 더 조회한다', async () => {
+  const airports = jest
+    .spyOn(myRealTrip, 'searchAirports')
+    .mockImplementation(async (query) => {
+      if (query === '인천') return [incheonAirport];
+      return query === '도쿄' ? [naritaAirport] : [];
+    });
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={{ ...courseFlightContext, autoSearch: false }}
+      onBack={jest.fn()}
+    />,
+  );
+  await waitFor(() =>
+    expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('나리타 (NRT)'),
+  );
+  expect(
+    airports.mock.calls
+      .map(([query]) => query)
+      .filter((query) => query !== '인천'),
+  ).toEqual(['나리타 국제공항', '일본 도쿄', '도쿄']);
+});
+
+test('코스 항공 예약은 두 공항 조회가 모두 끝난 뒤 유효한 날짜로 외부 결과를 한 번만 연다', async () => {
+  let resolveDeparture!: (matches: AirportMatches) => void;
+  let resolveArrival!: (matches: AirportMatches) => void;
+  jest.spyOn(myRealTrip, 'searchAirports').mockImplementation(
+    (query) =>
+      new Promise((resolve) => {
+        if (query === '인천') resolveDeparture = resolve;
+        else resolveArrival = resolve;
+      }),
+  );
+  const link = jest
+    .spyOn(myRealTrip, 'createFlightLink')
+    .mockResolvedValue('https://myrealt.rip/course-flight');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={courseFlightContext}
+      onBack={jest.fn()}
+    />,
+  );
+  await act(async () => resolveArrival([naritaAirport]));
+  expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('나리타 (NRT)');
+  expect(link).not.toHaveBeenCalled();
+  await act(async () => resolveDeparture([incheonAirport]));
+  await waitFor(() =>
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      'https://myrealt.rip/course-flight',
+    ),
+  );
+  expect(link).toHaveBeenCalledWith(
+    {
+      depAirportCd: 'ICN',
+      arrAirportCd: 'NRT',
+      depDate: '2099-12-30',
+      arrDate: '2100-01-02',
+      adult: 1,
+    },
+    expect.anything(),
+  );
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  expect(link).toHaveBeenCalledTimes(1);
+  expect(Linking.openURL).toHaveBeenCalledTimes(1);
+});
+
+test('코스 도착 공항 응답 전에 직접 입력하면 늦은 응답이 입력을 덮거나 자동 예약을 열지 않는다', async () => {
+  let resolveArrival!: (matches: AirportMatches) => void;
+  jest.spyOn(myRealTrip, 'searchAirports').mockImplementation((query) => {
+    if (query === '인천') return Promise.resolve([incheonAirport]);
+    if (query === '오사카')
+      return Promise.resolve([{ airport: { code: 'KIX', koName: '간사이' } }]);
+    return new Promise((resolve) => {
+      resolveArrival = resolve;
+    });
+  });
+  const link = jest
+    .spyOn(myRealTrip, 'createFlightLink')
+    .mockResolvedValue('https://myrealt.rip/manual-flight');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={courseFlightContext}
+      onBack={jest.fn()}
+    />,
+  );
+  await fireEvent.changeText(ui.getByLabelText(S.ARRIVAL), '오사카');
+  await act(async () => resolveArrival([naritaAirport]));
+  expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('오사카');
+  await fireEvent.press(await ui.findByTestId('airport-suggestion-KIX'));
+  expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('간사이 (KIX)');
+  expect(link).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByTestId('booking-search'));
+  await waitFor(() =>
+    expect(link).toHaveBeenCalledWith(
+      expect.objectContaining({ depAirportCd: 'ICN', arrAirportCd: 'KIX' }),
+      expect.anything(),
+    ),
+  );
+});
+
+test.each(['back', 'unmount'] as const)(
+  '코스 항공 예약 조회 중 %s이면 공항 요청을 취소하고 후속 검색이나 외부 이동을 막는다',
+  async (dismissal) => {
+    let resolveArrival!: (matches: AirportMatches) => void;
+    let arrivalSignal!: AbortSignal;
+    const airports = jest
+      .spyOn(myRealTrip, 'searchAirports')
+      .mockImplementation((query, signal) => {
+        if (query === '인천') return Promise.resolve([incheonAirport]);
+        arrivalSignal = signal!;
+        return new Promise((resolve) => {
+          resolveArrival = resolve;
+        });
+      });
+    const link = jest.spyOn(myRealTrip, 'createFlightLink');
+    const onBack = jest.fn();
+    const ui = await render(
+      <BookingScreen
+        kind='flight'
+        context={courseFlightContext}
+        onBack={onBack}
+      />,
+    );
+    if (dismissal === 'back') {
+      await fireEvent.press(ui.getByLabelText(S.BACK));
+      expect(onBack).toHaveBeenCalledTimes(1);
+    } else {
+      await ui.unmount();
+    }
+    expect(arrivalSignal.aborted).toBe(true);
+    await act(async () => resolveArrival([]));
+    expect(airports).toHaveBeenCalledTimes(2);
+    expect(link).not.toHaveBeenCalled();
+    expect(Linking.openURL).not.toHaveBeenCalled();
+  },
+);
+
+test('자동 항공 링크 생성이 실패하면 반복 요청하지 않고 검색 버튼으로 재시도한다', async () => {
+  jest
+    .spyOn(myRealTrip, 'searchAirports')
+    .mockImplementation(async (query) =>
+      query === '인천' ? [incheonAirport] : [naritaAirport],
+    );
+  const link = jest
+    .spyOn(myRealTrip, 'createFlightLink')
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValueOnce('https://myrealt.rip/retried-flight');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={courseFlightContext}
+      onBack={jest.fn()}
+    />,
+  );
+  await ui.findByText(S.ERROR);
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  expect(link).toHaveBeenCalledTimes(1);
+  expect(Linking.openURL).not.toHaveBeenCalled();
+  await fireEvent.press(ui.getByTestId('booking-search'));
+  await waitFor(() =>
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      'https://myrealt.rip/retried-flight',
+    ),
+  );
+  expect(link).toHaveBeenCalledTimes(2);
+});
+
+test('공항 자동 조회가 요청 제한이면 국가·도시로 요청을 늘리지 않고 직접 검색을 기다린다', async () => {
+  const airports = jest
+    .spyOn(myRealTrip, 'searchAirports')
+    .mockImplementation(async (query) => {
+      if (query === '인천') return [incheonAirport];
+      throw new MyRealTripError('request', 429);
+    });
+  const link = jest.spyOn(myRealTrip, 'createFlightLink');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={courseFlightContext}
+      onBack={jest.fn()}
+    />,
+  );
+  await waitFor(() =>
+    expect(airports).toHaveBeenCalledWith('나리타 국제공항', expect.anything()),
+  );
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  expect(airports.mock.calls.map(([query]) => query)).toEqual([
+    '인천',
+    '나리타 국제공항',
+  ]);
+  expect(link).not.toHaveBeenCalled();
+  expect(ui.getByTestId('booking-search')).toBeTruthy();
+});
+
+test('자동 항공 예약은 공항이 확인되어도 유효하지 않은 날짜로 외부 링크를 만들지 않는다', async () => {
+  jest
+    .spyOn(myRealTrip, 'searchAirports')
+    .mockImplementation(async (query) =>
+      query === '인천' ? [incheonAirport] : [naritaAirport],
+    );
+  const link = jest.spyOn(myRealTrip, 'createFlightLink');
+  const ui = await render(
+    <BookingScreen
+      kind='flight'
+      context={{
+        ...courseFlightContext,
+        startDate: '2000-01-01',
+        endDate: '2000-01-02',
+      }}
+      onBack={jest.fn()}
+    />,
+  );
+  await waitFor(() =>
+    expect(ui.getByLabelText(S.ARRIVAL).props.value).toBe('나리타 (NRT)'),
+  );
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  expect(link).not.toHaveBeenCalled();
+  expect(Linking.openURL).not.toHaveBeenCalled();
 });
 
 test('왕복 항공은 사용자가 고른 두 공항과 날짜로 링크를 생성한다', async () => {
