@@ -80,11 +80,29 @@ function ReelEditor({
   const focusedInput = useRef<number | null>(null);
   const revealFrame = useRef<number | null>(null);
   const editorScrollOffset = useRef(0);
+  const keyboardReady = useRef(Keyboard.isVisible());
+  const revealRevision = useRef(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(() =>
+    Keyboard.isVisible(),
+  );
+  const editorInsets = useMemo(
+    () => makeEditorInsets(insets.bottom, keyboardVisible),
+    [insets.bottom, keyboardVisible],
+  );
+  const cancelReveal = useCallback(() => {
+    revealRevision.current += 1;
+    if (revealFrame.current !== null) {
+      cancelAnimationFrame(revealFrame.current);
+      revealFrame.current = null;
+    }
+  }, []);
   const revealFocusedInput = useCallback(() => {
-    if (revealFrame.current !== null) cancelAnimationFrame(revealFrame.current);
+    cancelReveal();
+    if (!keyboardReady.current || focusedInput.current === null) return;
+    const revision = revealRevision.current;
     revealFrame.current = requestAnimationFrame(() => {
       revealFrame.current = null;
-      if (focusedInput.current === null) return;
+      if (!keyboardReady.current || focusedInput.current === null) return;
       const target = focusedInput.current;
       const viewport = editorList.current?.getNativeScrollRef() as
         React.ElementRef<typeof View> | null | undefined;
@@ -92,33 +110,68 @@ function ReelEditor({
         UIManager.measureInWindow(
           target,
           (_inputX, inputTop, _inputWidth, inputHeight) => {
-            if (focusedInput.current !== target || height <= 0) return;
+            if (
+              focusedInput.current !== target ||
+              revealRevision.current !== revision ||
+              !keyboardReady.current ||
+              height <= 32
+            )
+              return;
             const visibleTop = top + 16;
             const visibleBottom = top + height - 16;
+            // A tall field cannot fit both edges: keep its top visible instead
+            // of alternating between top/bottom alignment on each layout.
             const delta =
-              inputTop + inputHeight > visibleBottom
-                ? inputTop + inputHeight - visibleBottom
-                : inputTop < visibleTop
-                  ? inputTop - visibleTop
-                  : 0;
+              inputHeight > visibleBottom - visibleTop
+                ? inputTop - visibleTop
+                : inputTop + inputHeight > visibleBottom
+                  ? inputTop + inputHeight - visibleBottom
+                  : inputTop < visibleTop
+                    ? inputTop - visibleTop
+                    : 0;
             if (Math.abs(delta) < 1) return;
+            const nextOffset = Math.max(0, editorScrollOffset.current + delta);
+            // A layout can arrive before onScroll acknowledges this movement.
+            // Keep subsequent corrections anchored to the requested position;
+            // onScroll will still replace it with the actual clamped offset.
+            editorScrollOffset.current = nextOffset;
             editorList.current?.scrollToOffset({
-              offset: Math.max(0, editorScrollOffset.current + delta),
-              animated: true,
+              offset: nextOffset,
+              // Do not run a second scrolling animation against the keyboard's
+              // viewport resize. Correct only the final, measured obstruction.
+              animated: false,
             });
           },
         );
       });
     });
-  }, []);
+  }, [cancelReveal]);
   useEffect(() => {
-    const shown = Keyboard.addListener('keyboardDidShow', revealFocusedInput);
-    return () => {
-      shown.remove();
-      if (revealFrame.current !== null)
-        cancelAnimationFrame(revealFrame.current);
+    const willShow = Keyboard.addListener('keyboardWillShow', () => {
+      keyboardReady.current = false;
+      setKeyboardVisible(true);
+      cancelReveal();
+    });
+    const shown = Keyboard.addListener('keyboardDidShow', () => {
+      keyboardReady.current = true;
+      setKeyboardVisible(true);
+      revealFocusedInput();
+    });
+    const hideKeyboard = () => {
+      keyboardReady.current = false;
+      setKeyboardVisible(false);
+      cancelReveal();
     };
-  }, [revealFocusedInput]);
+    const willHide = Keyboard.addListener('keyboardWillHide', hideKeyboard);
+    const hidden = Keyboard.addListener('keyboardDidHide', hideKeyboard);
+    return () => {
+      willShow.remove();
+      shown.remove();
+      willHide.remove();
+      hidden.remove();
+      cancelReveal();
+    };
+  }, [cancelReveal, revealFocusedInput]);
   const focusInput: NonNullable<
     React.ComponentProps<typeof TextInput>['onFocus']
   > = (event) => {
@@ -127,6 +180,7 @@ function ReelEditor({
   };
   const blurInput = () => {
     focusedInput.current = null;
+    cancelReveal();
   };
   const [editorDialog, setEditorDialog] = useState<ReelEditorDialogMode>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -512,6 +566,8 @@ function ReelEditor({
                           ]}
                           onPress={() => {
                             if (selectedDay === d.day) return;
+                            blurInput();
+                            Keyboard.dismiss();
                             invalidate();
                             setMap(null);
                             setSelectedDay(d.day);
@@ -555,108 +611,120 @@ function ReelEditor({
                         />
                       </TouchableOpacity>
                     </View>
-                    <FlatList
-                      ref={editorList}
-                      testID='reel-editor-list'
-                      onLayout={revealFocusedInput}
-                      onContentSizeChange={revealFocusedInput}
-                      keyboardDismissMode='on-drag'
-                      scrollEventThrottle={16}
-                      onScroll={(event) => {
-                        editorScrollOffset.current =
-                          event.nativeEvent.contentOffset.y;
-                      }}
-                      style={styles.editorList}
-                      data={stops}
-                      keyExtractor={(stop) => stop.place.placeId}
-                      renderItem={renderStop}
-                      keyboardShouldPersistTaps='handled'
-                      contentContainerStyle={styles.content}
-                      extraData={{ draft, busy }}
-                      ListEmptyComponent={
-                        <Text style={styles.hint}>{S.EMPTY_DAY}</Text>
-                      }
-                      ListHeaderComponent={
-                        settingsVisible ? (
-                          <View style={styles.settings}>
-                            <Text style={styles.label}>{S.TITLE_LABEL}</Text>
-                            <TextInput
-                              testID='reel-title'
-                              onFocus={focusInput}
-                              onBlur={blurInput}
-                              accessibilityLabel={S.TITLE_LABEL}
-                              style={styles.input}
-                              value={title}
-                              maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
-                              editable={!busy}
-                              onChangeText={(value) => {
-                                if (value !== title) setHasEdits(true);
-                                invalidate();
-                                setTitle(value);
-                              }}
-                            />
-                            <Text style={styles.label}>{S.ENDING_LABEL}</Text>
-                            <TextInput
-                              testID='reel-ending'
-                              onFocus={focusInput}
-                              onBlur={blurInput}
-                              accessibilityLabel={S.ENDING_LABEL}
-                              style={styles.input}
-                              value={ending}
-                              maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
-                              editable={!busy}
-                              multiline
-                              onChangeText={(value) => {
-                                if (value !== ending) setHasEdits(true);
-                                invalidate();
-                                setEnding(value);
-                              }}
-                            />
-                          </View>
-                        ) : null
-                      }
-                      ListFooterComponent={
-                        <>
-                          {!!error && (
-                            <Text
-                              accessibilityRole='alert'
-                              style={styles.error}>
-                              {error}
-                            </Text>
-                          )}
-                          {busyPhase === 'photo' && (
-                            <ActivityIndicator
-                              accessibilityLabel={S.LOADING_PHOTO}
-                              color={palette.primary}
-                            />
-                          )}
-                        </>
-                      }
-                    />
-                    <SafeAreaView
-                      style={[styles.footer, styles.editorFooter]}
-                      edges={['bottom']}>
-                      <TouchableOpacity
-                        testID='reel-create'
-                        accessibilityRole='button'
-                        accessibilityState={{ disabled: !plan || !map || busy }}
-                        disabled={!plan || !map || busy}
-                        style={[
-                          styles.primary,
-                          (!plan || !map || busy) && styles.disabled,
+                    <View style={styles.editorBody}>
+                      <FlatList
+                        ref={editorList}
+                        testID='reel-editor-list'
+                        onLayout={revealFocusedInput}
+                        onContentSizeChange={revealFocusedInput}
+                        keyboardDismissMode='on-drag'
+                        onScrollBeginDrag={blurInput}
+                        scrollEventThrottle={16}
+                        onScroll={(event) => {
+                          editorScrollOffset.current =
+                            event.nativeEvent.contentOffset.y;
+                        }}
+                        style={styles.editorList}
+                        data={stops}
+                        keyExtractor={(stop) => stop.place.placeId}
+                        renderItem={renderStop}
+                        keyboardShouldPersistTaps='handled'
+                        contentContainerStyle={[
+                          styles.content,
+                          editorInsets.content,
                         ]}
-                        onPress={() => {
-                          void create();
-                        }}>
-                        <Text
-                          style={[
-                            styles.primaryText,
-                            (!plan || !map || busy) && styles.disabledText,
-                          ]}>
-                          {S.CREATE}
-                        </Text>
-                      </TouchableOpacity>
-                    </SafeAreaView>
+                        extraData={{ draft, busy }}
+                        ListEmptyComponent={
+                          <Text style={styles.hint}>{S.EMPTY_DAY}</Text>
+                        }
+                        ListHeaderComponent={
+                          settingsVisible ? (
+                            <View style={styles.settings}>
+                              <Text style={styles.label}>{S.TITLE_LABEL}</Text>
+                              <TextInput
+                                testID='reel-title'
+                                onFocus={focusInput}
+                                onBlur={blurInput}
+                                accessibilityLabel={S.TITLE_LABEL}
+                                style={styles.input}
+                                value={title}
+                                maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
+                                editable={!busy}
+                                onChangeText={(value) => {
+                                  if (value !== title) setHasEdits(true);
+                                  invalidate();
+                                  setTitle(value);
+                                }}
+                              />
+                              <Text style={styles.label}>{S.ENDING_LABEL}</Text>
+                              <TextInput
+                                testID='reel-ending'
+                                onFocus={focusInput}
+                                onBlur={blurInput}
+                                accessibilityLabel={S.ENDING_LABEL}
+                                style={[styles.input, styles.multilineInput]}
+                                value={ending}
+                                maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
+                                editable={!busy}
+                                multiline
+                                onChangeText={(value) => {
+                                  if (value !== ending) setHasEdits(true);
+                                  invalidate();
+                                  setEnding(value);
+                                }}
+                              />
+                            </View>
+                          ) : null
+                        }
+                        ListFooterComponent={
+                          <>
+                            {!!error && (
+                              <Text
+                                accessibilityRole='alert'
+                                style={styles.error}>
+                                {error}
+                              </Text>
+                            )}
+                            {busyPhase === 'photo' && (
+                              <ActivityIndicator
+                                accessibilityLabel={S.LOADING_PHOTO}
+                                color={palette.primary}
+                              />
+                            )}
+                          </>
+                        }
+                      />
+                      {!keyboardVisible && (
+                        <SafeAreaView
+                          style={[styles.footer, styles.editorFooter]}
+                          edges={['bottom']}>
+                          <TouchableOpacity
+                            testID='reel-create'
+                            accessibilityRole='button'
+                            accessibilityState={{
+                              disabled: !plan || !map || busy,
+                            }}
+                            disabled={!plan || !map || busy}
+                            style={[
+                              styles.primary,
+                              styles.createButton,
+                              (!plan || !map || busy) && styles.disabled,
+                            ]}
+                            onPress={() => {
+                              void create();
+                            }}>
+                            <Text
+                              style={[
+                                styles.primaryText,
+                                styles.createButtonText,
+                                (!plan || !map || busy) && styles.disabledText,
+                              ]}>
+                              {S.CREATE}
+                            </Text>
+                          </TouchableOpacity>
+                        </SafeAreaView>
+                      )}
+                    </View>
                   </>
                 )}
               </>
@@ -855,6 +923,12 @@ export function CourseReelComposer({
   );
 }
 
+function makeEditorInsets(bottomInset: number, keyboardVisible: boolean) {
+  return StyleSheet.create({
+    content: { paddingBottom: keyboardVisible ? 16 : bottomInset + 100 },
+  });
+}
+
 function makeProgressStyles(progress: number) {
   const fraction = Math.min(1, Math.max(0, progress));
   return StyleSheet.create({
@@ -894,8 +968,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  editorBody: { flex: 1, backgroundColor: palette.gray100 },
   editorList: { flex: 1, backgroundColor: palette.gray100 },
-  editorFooter: { backgroundColor: palette.gray100 },
+  editorFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 16,
+    paddingBottom: 22,
+    backgroundColor: palette.gray100,
+  },
+  createButton: {
+    boxShadow: [
+      {
+        offsetX: 2,
+        offsetY: 3,
+        blurRadius: 16,
+        color: hexToRgba(palette.black, 0.12),
+      },
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: 8,
+        color: hexToRgba(palette.black, 0.05),
+      },
+    ],
+  },
+  createButtonText: { lineHeight: 37 },
   courseMeta: {
     paddingHorizontal: 24,
     paddingTop: 8,
@@ -994,7 +1094,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: palette.gray100,
   },
-  captionArea: { minHeight: 55, textAlignVertical: 'top' },
+  captionArea: { minHeight: 55, maxHeight: 114, textAlignVertical: 'top' },
+  multilineInput: { maxHeight: 114, textAlignVertical: 'top' },
   settingsToggle: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -59,15 +59,133 @@ describe('CourseReelComposer', () => {
     UIManager.measureInWindow = originalMeasureInWindow;
   });
 
-  it('reveals the focused caption again after the keyboard and list viewport resize', async () => {
-    const reveal = jest.fn();
+  it('waits for the keyboard before revealing a caption and does not scroll again once visible', async () => {
+    let scrollOffset = 0;
+    const reveal = jest.fn(({ offset }: { offset: number }) => {
+      scrollOffset = offset;
+    });
     jest.spyOn(FlatList.prototype, 'getNativeScrollRef').mockReturnValue({
       measureInWindow: (callback: (...values: number[]) => void) =>
         callback(0, 200, 360, 180),
     } as any);
     jest.spyOn(FlatList.prototype, 'scrollToOffset').mockImplementation(reveal);
     UIManager.measureInWindow = jest.fn((_target, callback) =>
-      callback(0, 400, 300, 70),
+      callback(0, 400 - scrollOffset, 300, 70),
+    );
+    const listeners = new Map<string, (...args: any[]) => void>();
+    const originalAdd = Keyboard.addListener.bind(Keyboard);
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((name, callback) => {
+      listeners.set(name, callback);
+      return originalAdd(name, callback);
+    });
+    const ui = await mount();
+    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+      nativeEvent: { target: 42 },
+    });
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
+      nativeEvent: { layout: { width: 360, height: 180 } },
+    });
+    await act(
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(reveal).not.toHaveBeenCalled();
+    await act(async () => {
+      listeners.get('keyboardDidShow')?.({
+        endCoordinates: { screenY: 400, height: 300 },
+      });
+    });
+    await waitFor(() =>
+      expect(reveal).toHaveBeenCalledWith({ offset: 106, animated: false }),
+    );
+    expect(ui.queryByTestId('reel-create')).toBeNull();
+    reveal.mockClear();
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
+      nativeEvent: { layout: { width: 360, height: 180 } },
+    });
+    await act(
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(reveal).not.toHaveBeenCalled();
+    await act(async () => listeners.get('keyboardDidHide')?.({}));
+    expect(ui.getByTestId('reel-create')).toBeTruthy();
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
+      nativeEvent: { layout: { width: 360, height: 500 } },
+    });
+    await act(
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(reveal).not.toHaveBeenCalled();
+  });
+
+  it('keeps consecutive keyboard layout corrections at the latest requested offset until native scroll catches up', async () => {
+    let viewportHeight = 180;
+    let scrollOffset = 0;
+    const reveal = jest.fn(({ offset }: { offset: number }) => {
+      scrollOffset = offset;
+    });
+    jest.spyOn(FlatList.prototype, 'getNativeScrollRef').mockReturnValue({
+      measureInWindow: (callback: (...values: number[]) => void) =>
+        callback(0, 200, 360, viewportHeight),
+    } as any);
+    jest.spyOn(FlatList.prototype, 'scrollToOffset').mockImplementation(reveal);
+    UIManager.measureInWindow = jest.fn((_target, callback) =>
+      callback(0, 400 - scrollOffset, 300, 70),
+    );
+    const listeners = new Map<string, (...args: any[]) => void>();
+    const originalAdd = Keyboard.addListener.bind(Keyboard);
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((name, callback) => {
+      listeners.set(name, callback);
+      return originalAdd(name, callback);
+    });
+    const ui = await mount();
+    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+      nativeEvent: { target: 42 },
+    });
+    await act(async () =>
+      listeners.get('keyboardDidShow')?.({
+        endCoordinates: { screenY: 400, height: 300 },
+      }),
+    );
+    await waitFor(() =>
+      expect(reveal).toHaveBeenLastCalledWith({ offset: 106, animated: false }),
+    );
+    // The native view has moved, but its onScroll event has not reached JS yet.
+    viewportHeight = 170;
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
+      nativeEvent: { layout: { width: 360, height: viewportHeight } },
+    });
+    await waitFor(() =>
+      expect(reveal).toHaveBeenLastCalledWith({ offset: 116, animated: false }),
+    );
+    // A clamped native position must still replace the requested position.
+    scrollOffset = 100;
+    await fireEvent.scroll(ui.getByTestId('reel-editor-list'), {
+      nativeEvent: { contentOffset: { y: scrollOffset } },
+    });
+    viewportHeight = 160;
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
+      nativeEvent: { layout: { width: 360, height: viewportHeight } },
+    });
+    await waitFor(() =>
+      expect(reveal).toHaveBeenLastCalledWith({ offset: 126, animated: false }),
+    );
+  });
+
+  it('does not bounce a tall focused field between the top and bottom or override a user drag', async () => {
+    let scrollOffset = 0;
+    const reveal = jest.fn(({ offset }: { offset: number }) => {
+      scrollOffset = offset;
+    });
+    jest.spyOn(FlatList.prototype, 'getNativeScrollRef').mockReturnValue({
+      measureInWindow: (callback: (...values: number[]) => void) =>
+        callback(0, 200, 360, 80),
+    } as any);
+    jest.spyOn(FlatList.prototype, 'scrollToOffset').mockImplementation(reveal);
+    UIManager.measureInWindow = jest.fn((_target, callback) =>
+      callback(0, 400 - scrollOffset, 300, 150),
     );
     const listeners = new Map<string, (...args: any[]) => void>();
     const originalAdd = Keyboard.addListener.bind(Keyboard);
@@ -85,20 +203,67 @@ describe('CourseReelComposer', () => {
       });
     });
     await waitFor(() =>
-      expect(reveal).toHaveBeenCalledWith({ offset: 106, animated: true }),
+      expect(reveal).toHaveBeenCalledWith({ offset: 184, animated: false }),
     );
+    await fireEvent.scroll(ui.getByTestId('reel-editor-list'), {
+      nativeEvent: { contentOffset: { y: scrollOffset } },
+    });
     reveal.mockClear();
     await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
-      nativeEvent: { layout: { width: 360, height: 180 } },
+      nativeEvent: { layout: { width: 360, height: 80 } },
     });
-    await waitFor(() =>
-      expect(reveal).toHaveBeenCalledWith({ offset: 106, animated: true }),
+    await act(
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
     );
-    await fireEvent(ui.getByTestId('reel-caption-카페'), 'blur');
-    reveal.mockClear();
+    expect(reveal).not.toHaveBeenCalled();
+    await fireEvent(ui.getByTestId('reel-editor-list'), 'scrollBeginDrag');
+    scrollOffset = 0;
     await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
-      nativeEvent: { layout: { width: 360, height: 500 } },
+      nativeEvent: { layout: { width: 360, height: 80 } },
     });
+    await act(
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(reveal).not.toHaveBeenCalled();
+  });
+
+  it('ignores measurements from an input that lost focus or from before the keyboard closed', async () => {
+    const reveal = jest.fn();
+    jest.spyOn(FlatList.prototype, 'getNativeScrollRef').mockReturnValue({
+      measureInWindow: (callback: (...values: number[]) => void) =>
+        callback(0, 200, 360, 180),
+    } as any);
+    jest.spyOn(FlatList.prototype, 'scrollToOffset').mockImplementation(reveal);
+    const pending = new Map<number, (...values: number[]) => void>();
+    UIManager.measureInWindow = jest.fn((target, callback) => {
+      pending.set(target, callback);
+    });
+    const listeners = new Map<string, (...args: any[]) => void>();
+    const originalAdd = Keyboard.addListener.bind(Keyboard);
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((name, callback) => {
+      listeners.set(name, callback);
+      return originalAdd(name, callback);
+    });
+    const ui = await mount();
+    await act(async () =>
+      listeners.get('keyboardDidShow')?.({
+        endCoordinates: { screenY: 400, height: 300 },
+      }),
+    );
+    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+      nativeEvent: { target: 42 },
+    });
+    await waitFor(() => expect(pending.has(42)).toBe(true));
+    await fireEvent(ui.getByTestId('reel-caption-바다'), 'focus', {
+      nativeEvent: { target: 84 },
+    });
+    await waitFor(() => expect(pending.has(84)).toBe(true));
+    await act(async () => pending.get(42)?.(0, 500, 300, 70));
+    expect(reveal).not.toHaveBeenCalled();
+    await act(async () => listeners.get('keyboardWillHide')?.({}));
+    await act(async () => pending.get(84)?.(0, 500, 300, 70));
     expect(reveal).not.toHaveBeenCalled();
   });
 
