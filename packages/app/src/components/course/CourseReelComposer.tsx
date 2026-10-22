@@ -188,10 +188,8 @@ function ReelEditor({
   const [selectedDay, setSelectedDay] = useState(initialDay);
   const [drafts, setDrafts] = useState<Record<number, DayDraft>>({});
   const [hasEdits, setHasEdits] = useState(false);
-  const [title, setTitle] = useState(
-    `${course.destinationCity}${S.TITLE_SUFFIX}`,
-  );
-  const [ending, setEnding] = useState<string>(S.ENDING_DEFAULT);
+  const [title, setTitle] = useState('');
+  const [ending, setEnding] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState(0);
@@ -251,16 +249,8 @@ function ReelEditor({
     const photo = draft.photos.find((p) => p.placeId === stop.place.placeId);
     return (
       draft.text?.[stop.place.placeId] ?? {
-        placeName:
-          photo?.placeName ??
-          stop.place.placeName.slice(0, APP_CONFIG.REEL.TITLE_LIMIT),
-        caption:
-          photo?.caption ??
-          (
-            stop.memo?.trim() ||
-            stop.reason?.trim() ||
-            stop.place.placeName
-          ).slice(0, APP_CONFIG.REEL.CAPTION_LIMIT),
+        placeName: photo?.placeName ?? '',
+        caption: photo?.caption ?? '',
       }
     );
   }
@@ -647,6 +637,8 @@ function ReelEditor({
                                 onBlur={blurInput}
                                 accessibilityLabel={S.TITLE_LABEL}
                                 style={styles.input}
+                                placeholder={S.TITLE_PLACEHOLDER}
+                                placeholderTextColor={palette.mutedText}
                                 value={title}
                                 maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
                                 editable={!busy}
@@ -663,6 +655,8 @@ function ReelEditor({
                                 onBlur={blurInput}
                                 accessibilityLabel={S.ENDING_LABEL}
                                 style={[styles.input, styles.multilineInput]}
+                                placeholder={S.ENDING_PLACEHOLDER}
+                                placeholderTextColor={palette.mutedText}
                                 value={ending}
                                 maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
                                 editable={!busy}

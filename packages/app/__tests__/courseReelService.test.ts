@@ -55,6 +55,11 @@ describe('course reel service', () => {
       caption: '기억하고 싶은 순간',
     });
   });
+  it('제목과 그날의 한 줄을 비우면 기본 문구를 영상에 추가하지 않는다', () => {
+    const plan = buildReelPlan(day, photos, '', '');
+    expect(plan.scenes[0].title).toBe('');
+    expect(plan.scenes.at(-1)).toMatchObject({ title: '', caption: '' });
+  });
   it('지도 캡처가 없으면 배경 없는 영상을 생성하지 않는다', async () => {
     const generateAsync = jest.fn();
     (requireOptionalNativeModule as jest.Mock).mockReturnValue({

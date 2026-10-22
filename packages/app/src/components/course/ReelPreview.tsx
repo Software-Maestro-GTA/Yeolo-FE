@@ -136,12 +136,12 @@ export function ReelPreview({
           <Text
             style={[styles.sceneTitle, !scene && styles.emptyText]}
             numberOfLines={2}>
-            {scene?.title || UI_STRINGS.REEL.PREVIEW}
+            {scene?.title ?? UI_STRINGS.REEL.PREVIEW}
           </Text>
           <Text
             style={[styles.sceneCaption, !scene && styles.emptyText]}
             numberOfLines={4}>
-            {scene?.caption ||
+            {scene?.caption ??
               (intro
                 ? BOOKING_REEL_UI.REEL.SAMPLE
                 : UI_STRINGS.REEL.EMPTY_PHOTOS)}

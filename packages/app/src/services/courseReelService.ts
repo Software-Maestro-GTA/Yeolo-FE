@@ -178,12 +178,7 @@ export function buildReelPlan(
           c.PHOTO_SECONDS,
         ),
       ),
-      photoScene(
-        first.photo.uri,
-        videoTitle,
-        ending || UI_STRINGS.REEL.ENDING_DEFAULT,
-        c.ENDING_SECONDS,
-      ),
+      photoScene(first.photo.uri, videoTitle, ending, c.ENDING_SECONDS),
     ],
   };
 }
