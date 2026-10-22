@@ -319,7 +319,12 @@ export function CourseDetailScreen({
     return (
       <View style={[styles.screenContainer, styles.centerContainer]}>
         <ActivityIndicator size='large' color={palette.primary} />
-        <Text style={styles.loadingText}>{COURSE_UI.LOADING_COURSE}</Text>
+        <Text
+          lineBreakStrategyIOS='hangul-word'
+          textBreakStrategy='balanced'
+          style={styles.loadingText}>
+          {COURSE_UI.LOADING_COURSE}
+        </Text>
       </View>
     );
   }
@@ -327,10 +332,16 @@ export function CourseDetailScreen({
   if (error || !course) {
     return (
       <View style={[styles.screenContainer, styles.centerContainer]}>
-        <Text style={styles.errorText}>
+        <Text
+          lineBreakStrategyIOS='hangul-word'
+          textBreakStrategy='balanced'
+          style={styles.errorText}>
           {UI_STRINGS.COURSE_DETAIL.ERROR_TITLE}
         </Text>
-        <Text style={styles.errorSubText}>
+        <Text
+          lineBreakStrategyIOS='hangul-word'
+          textBreakStrategy='balanced'
+          style={styles.errorSubText}>
           {error?.message || COURSE_UI.COURSE_ERROR}
         </Text>
         <TouchableOpacity
@@ -344,7 +355,10 @@ export function CourseDetailScreen({
             refetch();
           }}
           activeOpacity={0.8}>
-          <Text style={styles.retryButtonText}>
+          <Text
+            lineBreakStrategyIOS='hangul-word'
+            textBreakStrategy='balanced'
+            style={styles.retryButtonText}>
             {UI_STRINGS.COURSE_LIST.RETRY_BUTTON}
           </Text>
         </TouchableOpacity>
@@ -388,14 +402,33 @@ export function CourseDetailScreen({
           testID='course-detail-header'
           accessibilityLabel={course.title}>
           <View style={styles.headerTitleRow}>
-            <Text style={styles.headerTitle}>{course.destinationCountry}</Text>
+            <Text
+              lineBreakStrategyIOS='hangul-word'
+              textBreakStrategy='balanced'
+              style={styles.headerTitle}>
+              {course.destinationCountry}
+            </Text>
             <View style={styles.headerTitleDivider} />
-            <Text style={styles.headerTitle}>{course.destinationCity}</Text>
+            <Text
+              lineBreakStrategyIOS='hangul-word'
+              textBreakStrategy='balanced'
+              style={styles.headerTitle}>
+              {course.destinationCity}
+            </Text>
           </View>
-          <Text style={styles.headerSubtitle}>{dateRange}</Text>
+          <Text
+            lineBreakStrategyIOS='hangul-word'
+            textBreakStrategy='balanced'
+            style={styles.headerSubtitle}>
+            {dateRange}
+          </Text>
           <View style={styles.tags}>
             {course.tags?.map((tag) => (
-              <Text key={tag} style={styles.tag}>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                key={tag}
+                style={styles.tag}>
                 #{tag.replace(/^#/, '')}
               </Text>
             ))}
@@ -412,7 +445,12 @@ export function CourseDetailScreen({
           style={styles.dayHeader}
           accessibilityHint={currentDayData?.memo}
           testID='day-header'>
-          <Text style={styles.dayDate}>{dayLabel}</Text>
+          <Text
+            lineBreakStrategyIOS='hangul-word'
+            textBreakStrategy='balanced'
+            style={styles.dayDate}>
+            {dayLabel}
+          </Text>
         </View>
       );
     if (item.kind === 'stop')
@@ -494,7 +532,12 @@ export function CourseDetailScreen({
           ListFooterComponent={
             <View style={styles.footer}>
               {!currentDayData?.stops?.length && (
-                <Text style={styles.emptyText}>{COURSE_UI.EMPTY_DAY}</Text>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='balanced'
+                  style={styles.emptyText}>
+                  {COURSE_UI.EMPTY_DAY}
+                </Text>
               )}
               <View style={styles.bookingRow}>
                 <TouchableOpacity
@@ -519,9 +562,17 @@ export function CourseDetailScreen({
                     />
                   </View>
                   <View style={styles.bookingContent}>
-                    <Text style={styles.bookingTitle}>{COURSE_UI.FLIGHT}</Text>
+                    <Text
+                      lineBreakStrategyIOS='hangul-word'
+                      textBreakStrategy='balanced'
+                      style={styles.bookingTitle}>
+                      {COURSE_UI.FLIGHT}
+                    </Text>
                     <View style={styles.bookingDescription}>
-                      <Text style={styles.bookingSubtitle}>
+                      <Text
+                        lineBreakStrategyIOS='hangul-word'
+                        textBreakStrategy='balanced'
+                        style={styles.bookingSubtitle}>
                         {COURSE_UI.FLIGHT_DESC}
                       </Text>
                       <FigmaAsset
@@ -551,9 +602,17 @@ export function CourseDetailScreen({
                     />
                   </View>
                   <View style={styles.bookingContent}>
-                    <Text style={styles.bookingTitle}>{COURSE_UI.HOTEL}</Text>
+                    <Text
+                      lineBreakStrategyIOS='hangul-word'
+                      textBreakStrategy='balanced'
+                      style={styles.bookingTitle}>
+                      {COURSE_UI.HOTEL}
+                    </Text>
                     <View style={styles.bookingDescription}>
-                      <Text style={styles.bookingSubtitle}>
+                      <Text
+                        lineBreakStrategyIOS='hangul-word'
+                        textBreakStrategy='balanced'
+                        style={styles.bookingSubtitle}>
                         {course.destinationCity} {COURSE_UI.HOTEL_RECOMMENDED}
                       </Text>
                       <FigmaAsset
@@ -582,7 +641,12 @@ export function CourseDetailScreen({
                   style={styles.ticketShade}
                 />
                 <View style={styles.ticketContent}>
-                  <Text style={styles.bookingTitle}>{COURSE_UI.TICKET}</Text>
+                  <Text
+                    lineBreakStrategyIOS='hangul-word'
+                    textBreakStrategy='balanced'
+                    style={styles.bookingTitle}>
+                    {COURSE_UI.TICKET}
+                  </Text>
                   <FigmaAsset
                     source={BookingArrowSvg}
                     width={14.5}
@@ -595,7 +659,10 @@ export function CourseDetailScreen({
                 accessibilityRole='button'
                 style={styles.bottomShareBtn}
                 onPress={handleShareCourse}>
-                <Text style={styles.bottomShareBtnText}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='balanced'
+                  style={styles.bottomShareBtnText}>
                   {UI_STRINGS.COURSE_DETAIL.SHARE_COURSE_BUTTON}
                 </Text>
               </TouchableOpacity>
@@ -652,10 +719,16 @@ export function CourseDetailScreen({
                 />
                 <View style={styles.summarySection} testID='summary-section'>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>
+                    <Text
+                      lineBreakStrategyIOS='hangul-word'
+                      textBreakStrategy='balanced'
+                      style={styles.summaryTitle}>
                       {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
                     </Text>
-                    <Text style={styles.summaryValue}>
+                    <Text
+                      lineBreakStrategyIOS='hangul-word'
+                      textBreakStrategy='balanced'
+                      style={styles.summaryValue}>
                       {formattedBudgetDisplay}
                     </Text>
                   </View>
@@ -676,6 +749,8 @@ export function CourseDetailScreen({
                           updateViewState({ selectedDay, currencyMode: 'KRW' })
                         }>
                         <Text
+                          lineBreakStrategyIOS='hangul-word'
+                          textBreakStrategy='balanced'
                           style={[
                             styles.currencyToggleText,
                             currencyMode === 'KRW' &&
@@ -702,6 +777,8 @@ export function CourseDetailScreen({
                           })
                         }>
                         <Text
+                          lineBreakStrategyIOS='hangul-word'
+                          textBreakStrategy='balanced'
                           style={[
                             styles.currencyToggleText,
                             currencyMode === 'LOCAL' &&

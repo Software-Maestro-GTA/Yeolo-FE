@@ -2,6 +2,8 @@
  * @file ItineraryTimelineItem.tsx
  * @description UI v3 일정·교통 정보를 표시하고 Google Place ID로 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
  */
+import MemoSvg from '../../../assets/figma-v3/screen-media/memo.svg';
+import ReasonSvg from '../../../assets/figma-v3/screen-media/reason.svg';
 import SequenceCircleSvg from '../../../assets/images/figma-course/sequence-circle.svg';
 import WalkingSvg from '../../../assets/images/figma-course/walking.svg';
 import BusSvg from '../../../assets/images/figma-course/bus.svg';
@@ -105,9 +107,17 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                 height={16}
                 style={styles.sequenceCircle}
               />
-              <Text style={styles.sequenceText}>{stop.sequence}</Text>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                style={styles.sequenceText}>
+                {stop.sequence}
+              </Text>
             </View>
-            <Text style={styles.placeName}>
+            <Text
+              lineBreakStrategyIOS='hangul-word'
+              textBreakStrategy='balanced'
+              style={styles.placeName}>
               {place?.placeName || COURSE_UI.UNKNOWN_PLACE}
             </Text>
           </Pressable>
@@ -125,15 +135,26 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         </View>
         <View style={styles.metadata}>
           {Boolean(displayCategory) && (
-            <Text style={styles.metadataText}>{displayCategory}</Text>
+            <Text
+              lineBreakStrategyIOS='hangul-word'
+              textBreakStrategy='balanced'
+              style={styles.metadataText}>
+              {displayCategory}
+            </Text>
           )}
           {Boolean(displayCategory) && <View style={styles.divider} />}
-          <Text style={styles.metadataText}>
+          <Text
+            lineBreakStrategyIOS='hangul-word'
+            textBreakStrategy='balanced'
+            style={styles.metadataText}>
             {stop.stayMinutes}
             {COURSE_UI.MINUTES}
           </Text>
           <View style={styles.divider} />
-          <Text style={styles.metadataText}>
+          <Text
+            lineBreakStrategyIOS='hangul-word'
+            textBreakStrategy='balanced'
+            style={styles.metadataText}>
             {stop.cost == null
               ? UI_STRINGS.COURSE_DETAIL.NO_INFO
               : `₩${stop.cost.toLocaleString()}`}
@@ -142,25 +163,36 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         <View style={styles.tips}>
           {Boolean(reason) && (
             <View style={styles.tip}>
-              <Image
-                source={require('../../../assets/images/figma-course/sparkles.png')}
-                style={styles.reasonIcon}
-              />
-              <Text style={styles.tipText}>{reason}</Text>
+              <View style={styles.tipIcon}>
+                <ReasonSvg />
+              </View>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                style={styles.tipText}>
+                {reason}
+              </Text>
             </View>
           )}
           {distinctMemo && (
             <View style={styles.tip}>
-              <Image
-                source={require('../../../assets/images/figma-course/tip.png')}
-                style={styles.tipIcon}
-              />
-              <Text style={styles.tipText}>{memo}</Text>
+              <View style={styles.tipIcon}>
+                <MemoSvg />
+              </View>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                style={styles.tipText}>
+                {memo}
+              </Text>
             </View>
           )}
           {!reason && !distinctMemo && (
             <View style={styles.tip}>
-              <Text style={styles.tipText}>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                style={styles.tipText}>
                 {UI_STRINGS.COURSE_DETAIL.NO_INFO}
               </Text>
             </View>
@@ -177,7 +209,10 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   size={18}
                   color={palette.subText}
                 />
-                <Text style={styles.metadataText}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='balanced'
+                  style={styles.metadataText}>
                   {COURSE_UI.ROUTE_UNAVAILABLE}
                 </Text>
               </View>
@@ -187,7 +222,10 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   accessibilityLabel={COURSE_UI.DIRECTIONS_OPEN}
                   onPress={openDirections}
                   style={styles.directionsButton}>
-                  <Text style={styles.directionsText}>
+                  <Text
+                    lineBreakStrategyIOS='hangul-word'
+                    textBreakStrategy='balanced'
+                    style={styles.directionsText}>
                     {COURSE_UI.DIRECTIONS_OPEN}
                   </Text>
                   <Ionicons
@@ -212,7 +250,10 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                     color={palette.subText}
                   />
                 )}
-                <Text style={styles.metadataText}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='balanced'
+                  style={styles.metadataText}>
                   {COURSE_UI.TRANSPORT[transport.type]}{' '}
                   {transport.minutes == null
                     ? ''
@@ -221,16 +262,27 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                 {transport.distance != null && (
                   <>
                     <View style={styles.divider} />
-                    <Text style={styles.metadataText}>
+                    <Text
+                      lineBreakStrategyIOS='hangul-word'
+                      textBreakStrategy='balanced'
+                      style={styles.metadataText}>
                       {Number((transport.distance / 1000).toFixed(1))}km
                     </Text>
                   </>
                 )}
                 {transport.cost != null && (
-                  <Text style={styles.fare}>{transportCost}</Text>
+                  <Text
+                    lineBreakStrategyIOS='hangul-word'
+                    textBreakStrategy='balanced'
+                    style={styles.fare}>
+                    {transportCost}
+                  </Text>
                 )}
               </View>
-              <Text style={styles.transitMemo}>
+              <Text
+                lineBreakStrategyIOS='hangul-word'
+                textBreakStrategy='balanced'
+                style={styles.transitMemo}>
                 {transport.memo?.trim() ||
                   UI_STRINGS.COURSE_DETAIL.RECOMMENDED_ROUTE_TIP}
               </Text>
@@ -309,8 +361,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 5,
   },
-  reasonIcon: { width: 17, height: 17, marginTop: 1 },
-  tipIcon: { width: 19, height: 19, opacity: 0.4 },
+  tipIcon: { width: 18, height: 18 },
   tipText: {
     flex: 1,
     fontSize: 14,
