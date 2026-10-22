@@ -5,6 +5,7 @@
 import YeoloLogoSvg from '../../assets/branding/yeolo-logo.svg';
 import ChevronSvg from '../../assets/figma/home/chevron.svg';
 import PersonSvg from '../../assets/figma/profile/person.svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useContext, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,8 +29,14 @@ import {
 import { CourseCard } from '../components/course/CourseCard';
 import { CourseReelComposer } from '../components/course/CourseReelComposer';
 import { FigmaAsset } from '../components/common/FigmaAsset';
+import { HomeFeatureArtwork } from '../components/common/HomeFeatureArtwork';
 import { CachedImage } from '../components/common/CachedImage';
 
+const bookingArtwork = {
+  flight: require('../../assets/figma-v3/screen-media/booking-flight.png'),
+  hotel: require('../../assets/figma-v3/screen-media/booking-hotel.png'),
+  ticket: require('../../assets/figma-v3/screen-media/booking-ticket.png'),
+};
 const assets = {
   logo: YeoloLogoSvg,
   chevron: ChevronSvg,
@@ -139,6 +146,12 @@ export function HomeScreen({
             accessibilityLabel={tasteProfile ? S.viewTaste : S.taste}
             onPress={openTaste}
             style={[styles.featureCard, styles.tasteCard]}>
+            <HomeFeatureArtwork kind='taste' />
+            <LinearGradient
+              colors={[palette.transparent, palette.accent]}
+              style={styles.featureGradient}
+              pointerEvents='none'
+            />
             <View style={styles.featureCaption}>
               <Text style={styles.tasteLead}>{S.tasteLead}</Text>
               <Text style={styles.tasteLabel}>{S.taste}</Text>
@@ -149,6 +162,12 @@ export function HomeScreen({
             accessibilityLabel={S.create}
             onPress={onNavigateToCreate}
             style={[styles.featureCard, styles.mapCard]}>
+            <HomeFeatureArtwork kind='create' />
+            <LinearGradient
+              colors={[palette.transparent, palette.deepNavy]}
+              style={styles.featureGradient}
+              pointerEvents='none'
+            />
             <View style={styles.featureCaption}>
               <Text style={styles.createLead}>{S.createLead}</Text>
               <Text style={styles.createLabel}>{S.create}</Text>
@@ -243,7 +262,18 @@ export function HomeScreen({
                 accessibilityLabel={S[kind]}
                 style={styles.bookingItem}
                 onPress={() => onOpenBooking?.(kind, {})}>
-                <View style={styles.bookingCircle} accessible={false} />
+                <View style={styles.bookingCircle} accessible={false}>
+                  <CachedImage
+                    source={bookingArtwork[kind]}
+                    style={
+                      kind === 'ticket'
+                        ? styles.ticketArtwork
+                        : styles.bookingArtwork
+                    }
+                    contentFit='contain'
+                    testID={`home-booking-${kind}-artwork`}
+                  />
+                </View>
                 <Text style={styles.bookingLabel}>{S[kind]}</Text>
               </TouchableOpacity>
             ))}
@@ -301,7 +331,13 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   featureRow: { flexDirection: 'row', gap: 20 },
-  featureCard: { flex: 1, height: 207, borderRadius: 16, alignItems: 'center' },
+  featureCard: {
+    flex: 1,
+    height: 207,
+    borderRadius: 16,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
   tasteCard: {
     backgroundColor: theme.colors.primary,
     shadowColor: theme.colors.shadow,
@@ -312,12 +348,18 @@ const styles = StyleSheet.create({
   },
   mapCard: {
     overflow: 'hidden',
-    backgroundColor: theme.colors.bg.card,
+    backgroundColor: palette.gray800,
     shadowColor: theme.colors.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 2, height: 3 },
     elevation: 4,
+  },
+  featureGradient: {
+    position: 'absolute',
+    bottom: -52,
+    width: '100%',
+    height: 130,
   },
   featureCaption: {
     position: 'absolute',
@@ -342,14 +384,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 23,
     letterSpacing: -1,
-    color: theme.colors.text.primary,
+    color: theme.colors.text.inverse,
   },
   createLabel: {
     fontSize: 16,
     lineHeight: 23,
     letterSpacing: -1,
     fontWeight: '600',
-    color: theme.colors.text.primary,
+    color: theme.colors.text.inverse,
   },
   reelButton: {
     marginTop: 20,
@@ -410,11 +452,13 @@ const styles = StyleSheet.create({
   bookingItem: { flex: 1, maxWidth: 103, alignItems: 'center', gap: 6 },
   bookingCircle: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: 52,
-    backgroundColor: palette.gray200,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: palette.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bookingArtwork: { width: 60, height: 60 },
+  ticketArtwork: { width: 59, height: 59 },
   bookingLabel: { fontSize: 16, color: theme.colors.text.primary },
 });

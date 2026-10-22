@@ -4,6 +4,25 @@
  */
 
 // Native decoding and cache hits are verified in the simulator, not by Jest.
+jest.mock('expo-video', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    VideoView: (props) => React.createElement(View, props),
+    useVideoPlayer: jest.fn((source, setup) =>
+      React.useMemo(() => {
+        const player = {
+          play: jest.fn(),
+          pause: jest.fn(),
+          addListener: jest.fn(() => ({ remove: jest.fn() })),
+        };
+        setup?.(player);
+        return player;
+      }, [source]),
+    ),
+  };
+});
+
 jest.mock('expo-image', () => {
   const mockReact = require('react');
   const {

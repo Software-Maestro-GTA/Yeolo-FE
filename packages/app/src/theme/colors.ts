@@ -28,6 +28,7 @@ export const palette = {
   gray200: '#E8EDF3',
   gray300: '#D0D8E2',
   gray950: '#101722',
+  gray800: '#273445', // UI v3 course creation card
   subBlue: '#2589DC',
   primaryTint: '#DDEEFF',
   privacyRed: '#E24D40',

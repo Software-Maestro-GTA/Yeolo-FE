@@ -1,0 +1,30 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="101.3" height="54.9" viewBox="0 0 101.3 54.9" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 55">
+<g id="Vector 59" filter="url(#filter0_f_0_12)">
+<path d="M47.7222 44L20.5 41.3333L41.9148 28L69.5 29.1429L47.7222 44Z" fill="#2589DC"/>
+</g>
+<g id="Vector 60" filter="url(#filter1_f_0_12)">
+<path d="M49.6111 44L8 36L48.5 8L88 12.5L49.6111 44Z" fill="#2589DC"/>
+</g>
+<g id="Ellipse 120" filter="url(#filter2_f_0_12)">
+<ellipse cx="87.5" cy="42.5" rx="9" ry="4" fill="#2589DC"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_f_0_12" x="9.6" y="17.1" width="70.8" height="37.8" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="5.45" result="effect1_foregroundBlur_0_12"/>
+</filter>
+<filter id="filter1_f_0_12" x="0" y="0" width="96" height="52" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="4" result="effect1_foregroundBlur_0_12"/>
+</filter>
+<filter id="filter2_f_0_12" x="73.7" y="33.7" width="27.6" height="17.6" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2.4" result="effect1_foregroundBlur_0_12"/>
+</filter>
+</defs>
+</svg>

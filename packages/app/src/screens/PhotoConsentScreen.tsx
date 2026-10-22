@@ -3,6 +3,7 @@
  * @description Photo consent and native permission request with the current UI v3 assurance list and blue action (1196:175).
  */
 import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
+import { LoopingVideo } from '../components/common/LoopingVideo';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -112,7 +113,14 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
         <Text style={styles.mainTitle}>
           {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
         </Text>
-        <View style={styles.heroContainer} />
+        <View style={styles.heroContainer}>
+          <LoopingVideo
+            source={require('../../assets/figma-v3/screen-media/onboarding.mp4')}
+            poster={require('../../assets/figma-v3/screen-media/onboarding-poster.png')}
+            style={styles.heroVideo}
+            testID='onboarding-video'
+          />
+        </View>
         <View style={styles.assuranceCard} testID='assurance-card'>
           <Text style={styles.assuranceTitle}>
             {UI_STRINGS.PHOTO_CONSENT.ASSURANCE_TITLE}
@@ -175,8 +183,11 @@ const styles = StyleSheet.create({
   },
   heroContainer: {
     flexGrow: 1,
-    minHeight: 350,
+    minHeight: 347,
+    alignItems: 'center',
+    paddingTop: 32,
   },
+  heroVideo: { width: 278, maxWidth: '100%', aspectRatio: 1 },
   assuranceCard: { gap: 12, marginBottom: 32 },
   assuranceTitle: {
     fontSize: 20,

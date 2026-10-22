@@ -18,7 +18,7 @@ describe('PhotoConsentScreen UI & Navigation', () => {
     jest.clearAllMocks();
   });
 
-  it('최신 Figma UI v3 타이틀, 안심 안내 목록 및 동의 버튼을 표시하고 이전 삽화는 표시하지 않는다', async () => {
+  it('최신 Figma UI v3 타이틀, 온보딩 영상, 안심 안내 목록 및 동의 버튼을 표시한다', async () => {
     const { getByText, getByTestId, queryByTestId } = await render(
       <PhotoConsentScreen onNext={mockOnNext} />,
     );
@@ -32,7 +32,9 @@ describe('PhotoConsentScreen UI & Navigation', () => {
     expect(getByText(/취향파악이 끝나면 데이터는 소멸돼요/)).toBeTruthy();
     expect(getByText('내 여행 취향 알아보기')).toBeTruthy();
 
-    expect(queryByTestId('hero-illustration')).toBeNull();
+    expect(
+      getByTestId('onboarding-video', { includeHiddenElements: true }),
+    ).toBeTruthy();
     expect(getByTestId('assurance-card')).toBeTruthy();
     expect(queryByTestId('coupon-tooltip-badge')).toBeNull();
     expect(getByTestId('consent-start-button')).toBeTruthy();

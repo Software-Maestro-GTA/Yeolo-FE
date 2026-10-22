@@ -154,7 +154,9 @@ describe('TasteAnalysisScreen UI & Progress', () => {
       />,
     );
     expect(getByText('열심히 분석하고 있어요')).toBeTruthy();
-    expect(queryByTestId('analysis-illustration')).toBeNull();
+    expect(
+      getByTestId('taste-analysis-video', { includeHiddenElements: true }),
+    ).toBeTruthy();
     expect(getByTestId('analysis-progress-message')).toBeTruthy();
     await fireEvent.press(getByTestId('analysis-close-button'));
     expect(onClose).toHaveBeenCalledTimes(1);

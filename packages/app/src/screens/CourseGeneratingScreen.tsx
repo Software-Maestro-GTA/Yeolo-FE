@@ -5,6 +5,7 @@
 import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
 import CompletedCheckSvg from '../../assets/images/figma-course/completed-check.svg';
 import LoadingRingSvg from '../../assets/images/figma-course/loading-ring.svg';
+import { LoopingVideo } from '../components/common/LoopingVideo';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
@@ -56,11 +57,10 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const safeAreaStyles = StyleSheet.create({
-    // UI v3 anchors the caption at y=456 on its 844pt canvas. Keep that
-    // vertical balance without restoring the excluded airplane artwork.
+    // The video starts at y=145; the caption remains at y=456 on the 844pt canvas.
     // BackgroundImageLayout already reserves the top safe area.
     content: {
-      paddingTop: Math.max(24, windowHeight * (456 / 844) - insets.top),
+      paddingTop: Math.max(24, windowHeight * (145 / 844) - insets.top),
       paddingBottom: insets.bottom + 36,
     },
   });
@@ -323,7 +323,9 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
         accessibilityState={{ busy: status === 'loading' }}>
         <View style={styles.stepRow}>
           {renderStepIndicator(status, testId)}
-          <Text style={styles.stepText}>{label}</Text>
+          <Text style={styles.stepText} numberOfLines={1} adjustsFontSizeToFit>
+            {label}
+          </Text>
         </View>
       </View>
     );
@@ -340,6 +342,12 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
           scrollIndicatorInsets={{ bottom: insets.bottom }}
           showsVerticalScrollIndicator={false}>
           <View style={styles.mainBodyContainer} testID='main-content'>
+            <LoopingVideo
+              source={require('../../assets/figma-v3/screen-media/course-generation.mp4')}
+              poster={require('../../assets/figma-v3/screen-media/course-generation-poster.png')}
+              style={styles.generationVideo}
+              testID='course-generation-video'
+            />
             <View
               style={styles.progressBarContainer}
               testID='progress-bar-container'
@@ -396,6 +404,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
   },
+  generationVideo: {
+    width: 320,
+    maxWidth: '100%',
+    aspectRatio: 320 / 280,
+    marginBottom: 31,
+  },
   mainBodyContainer: { alignItems: 'center', width: '100%' },
   mainTitle: {
     fontSize: 16,
@@ -408,7 +422,7 @@ const styles = StyleSheet.create({
   checklistCard: {
     marginTop: 50,
     gap: 13,
-    width: 198,
+    width: 249,
     maxWidth: '100%',
     alignSelf: 'center',
   },

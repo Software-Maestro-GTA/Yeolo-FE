@@ -4,6 +4,7 @@
  */
 import AnalysisExitSvg from '../../assets/ui-v3-onboarding/analysis-exit.svg';
 import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
+import { LoopingVideo } from '../components/common/LoopingVideo';
 import { Text } from '../components/common/Typography';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -13,6 +14,7 @@ import {
   Linking,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addListener, presentPermissionsPicker } from 'expo-media-library';
@@ -48,8 +50,10 @@ export function TasteAnalysisScreen({
 }: TasteAnalysisScreenProps) {
   useGA4ScreenTracking('TasteAnalysisScreen');
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const insetStyles = StyleSheet.create({
     content: { paddingBottom: insets.bottom + 40 },
+    video: { width: Math.min(width, 393) },
   });
   const {
     runPipeline,
@@ -225,6 +229,14 @@ export function TasteAnalysisScreen({
             <Text style={styles.mainTitle}>
               {UI_STRINGS.TASTE_ANALYSIS.MAIN_TITLE}
             </Text>
+            {!errorMessage && (
+              <LoopingVideo
+                source={require('../../assets/figma-v3/screen-media/taste-analysis.mp4')}
+                poster={require('../../assets/figma-v3/screen-media/taste-analysis-poster.png')}
+                style={[styles.analysisVideo, insetStyles.video]}
+                testID='taste-analysis-video'
+              />
+            )}
             {errorMessage ? (
               <View style={styles.error} testID='error-container'>
                 <Text style={styles.errorTitle}>
@@ -290,8 +302,13 @@ const styles = StyleSheet.create({
     paddingTop: 35,
     paddingHorizontal: 20,
   },
-  // The global shell owns the status bar inset; Figma places the title 164px below it.
-  fullContent: { paddingTop: 164 },
+  // Global shell reserves the status bar; the latest Figma heading starts at y=150.
+  fullContent: { paddingTop: 106 },
+  analysisVideo: {
+    aspectRatio: 390 / 394,
+    alignSelf: 'center',
+    marginHorizontal: -20,
+  },
   mainTitle: {
     fontSize: 24,
     fontWeight: '600',
