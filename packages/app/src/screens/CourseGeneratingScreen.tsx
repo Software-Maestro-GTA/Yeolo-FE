@@ -36,8 +36,7 @@ import {
 
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
-  onRetry?: () => void;
-  onNavigateToIntro?: () => void;
+  onReturnToCreate?: () => void;
 }
 
 type StepStatus = 'pending' | 'loading' | 'completed';
@@ -50,8 +49,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onComplete,
-  onRetry,
-  onNavigateToIntro,
+  onReturnToCreate,
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
   const insets = useSafeAreaInsets();
@@ -189,19 +187,13 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     };
   }, [createdCourseId, error, onComplete, queryClient]);
 
-  const handleRetry = () => {
-    trackButtonClick('btn_course_generating_retry', 'Retry Course Generation');
-    resetCourseState();
-    onRetry?.();
-  };
-
-  const handleGoIntro = () => {
+  const handleReturnToCreate = () => {
     trackButtonClick(
-      'btn_course_generating_go_intro',
-      'Navigate to Intro from Course Error',
+      'btn_course_generating_return_to_create',
+      'Return to Course Create from Course Error',
     );
     resetCourseState();
-    onNavigateToIntro?.();
+    onReturnToCreate?.();
   };
 
   if (error) {
@@ -224,25 +216,14 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
               <Text style={styles.errorSubtitle}>{error}</Text>
 
               <View style={styles.errorButtonContainer}>
-                {onNavigateToIntro && (
-                  <TouchableOpacity
-                    testID='go-intro-btn'
-                    style={styles.introButton}
-                    onPress={handleGoIntro}
-                    activeOpacity={0.8}>
-                    <Text style={styles.introButtonText}>
-                      {UI_STRINGS.COURSE_GENERATING.GO_INTRO_BTN}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
                 <TouchableOpacity
-                  testID='retry-btn'
-                  style={styles.retryButton}
-                  onPress={handleRetry}
+                  testID='return-to-create-btn'
+                  accessibilityRole='button'
+                  style={styles.returnButton}
+                  onPress={handleReturnToCreate}
                   activeOpacity={0.8}>
-                  <Text style={styles.retryButtonText}>
-                    {UI_STRINGS.COURSE_GENERATING.RETRY_BTN}
+                  <Text style={styles.returnButtonText}>
+                    {UI_STRINGS.COURSE_GENERATING.RETURN_TO_CREATE_BTN}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -501,29 +482,15 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 10,
   },
-  introButton: {
+  returnButton: {
     backgroundColor: palette.primary,
     paddingVertical: 14,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
   },
-  introButtonText: {
+  returnButtonText: {
     color: palette.white,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  retryButton: {
-    backgroundColor: palette.softMint,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    paddingVertical: 14,
-    borderRadius: 14,
-    width: '100%',
-    alignItems: 'center',
-  },
-  retryButtonText: {
-    color: palette.deepNavy,
     fontSize: 15,
     fontWeight: '600',
   },

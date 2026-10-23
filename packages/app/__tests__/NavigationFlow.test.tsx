@@ -108,14 +108,14 @@ jest.mock('../src/screens/CourseGeneratingScreen', () => {
   const React = require('react');
   const { Button, Text } = require('react-native');
   return {
-    CourseGeneratingScreen: ({ onComplete, onRetry }: any) => (
+    CourseGeneratingScreen: ({ onComplete, onReturnToCreate }: any) => (
       <>
         <Text>Generating route</Text>
         <Button
           title='Generation complete'
           onPress={() => onComplete('generated-course')}
         />
-        <Button title='Retry creation' onPress={onRetry} />
+        <Button title='Retry creation' onPress={onReturnToCreate} />
       </>
     ),
   };

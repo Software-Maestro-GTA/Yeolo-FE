@@ -707,10 +707,7 @@ export function NavigationRoot({
                 [NAV_STEPS.CREATE_COURSE, NAV_STEPS.GENERATING_COURSE],
               );
             }}
-            onRetry={() => returnTo(NAV_STEPS.CREATE_COURSE)}
-            onNavigateToIntro={() => {
-              navigateTo(NAV_STEPS.PHOTO);
-            }}
+            onReturnToCreate={() => returnTo(NAV_STEPS.CREATE_COURSE)}
           />
         );
       case NAV_STEPS.COURSE_DETAIL:

@@ -259,22 +259,25 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     );
   });
 
-  it('에러 발생 시 실패 메시지와 재시도 버튼이 노출되고 이전 입력값을 유지할 수 있어야 한다', async () => {
-    const mockOnRetry = jest.fn();
+  it('에러 발생 시 코스 생성 화면으로 돌아가는 버튼만 표시한다', async () => {
+    const mockOnReturnToCreate = jest.fn();
 
     useCourseStore.setState({ error: '여행 조건 입력값이 올바르지 않습니다.' });
 
-    const { getByTestId, getByText } = await render(
-      <CourseGeneratingScreen onRetry={mockOnRetry} />,
+    const { getByTestId, getByText, queryByText, getAllByRole } = await render(
+      <CourseGeneratingScreen onReturnToCreate={mockOnReturnToCreate} />,
     );
 
     expect(getByText('코스 생성 중 오류가 발생했습니다')).toBeTruthy();
+    expect(getByText('여행 코스 생성 화면으로')).toBeTruthy();
+    expect(queryByText('시작 화면으로 이동')).toBeNull();
+    expect(getAllByRole('button')).toHaveLength(1);
 
     await act(async () => {
-      fireEvent.press(getByTestId('retry-btn'));
+      fireEvent.press(getByTestId('return-to-create-btn'));
     });
 
-    expect(mockOnRetry).toHaveBeenCalled();
+    expect(mockOnReturnToCreate).toHaveBeenCalled();
   });
 
   it('생성 중 실패하면 보이지 않는 애니메이션과 주기적인 진행률 갱신을 중지한다', async () => {
@@ -331,28 +334,27 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     },
   );
 
-  it('코스 생성 중 에러 발생 시 시작 화면으로 이동 버튼(go-intro-btn)이 노출되고 클릭 시 Intro 화면(onNavigateToIntro)으로 이동해야 한다', async () => {
-    const mockOnNavigateToIntro = jest.fn();
-    const mockOnRetry = jest.fn();
-
+  it('생성 실패 상태를 초기화한 다음 코스 생성 화면으로 돌아간다', async () => {
+    const onReturnToCreate = jest.fn(() => {
+      expect(useCourseStore.getState()).toMatchObject({
+        error: null,
+        errorCode: null,
+        progressStep: null,
+        progressMessage: null,
+        createdCourseId: null,
+        isGenerating: false,
+      });
+    });
     useCourseStore.setState({
+      progressStep: 'GENERATING_COURSE',
+      progressMessage: '여행 코스를 생성 중입니다.',
       error: '코스 생성 중 서버 오류가 발생했습니다.',
       errorCode: 500,
     });
-
-    const { getByTestId, getByText } = await render(
-      <CourseGeneratingScreen
-        onRetry={mockOnRetry}
-        onNavigateToIntro={mockOnNavigateToIntro}
-      />,
+    const ui = await render(
+      <CourseGeneratingScreen onReturnToCreate={onReturnToCreate} />,
     );
-
-    expect(getByText('시작 화면으로 이동')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.press(getByTestId('go-intro-btn'));
-    });
-
-    expect(mockOnNavigateToIntro).toHaveBeenCalled();
+    await fireEvent.press(ui.getByTestId('return-to-create-btn'));
+    expect(onReturnToCreate).toHaveBeenCalledTimes(1);
   });
 });

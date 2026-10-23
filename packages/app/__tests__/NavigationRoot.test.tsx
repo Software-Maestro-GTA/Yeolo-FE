@@ -124,10 +124,16 @@ jest.mock('../src/screens', () => {
       </>
     ),
     ProfileScreen: () => <Text>ProfileScreen</Text>,
-    CourseCreateScreen: ({ mbti, recommendedDestination, onBack }: any) => (
+    CourseCreateScreen: ({
+      mbti,
+      recommendedDestination,
+      onBack,
+      onSubmit,
+    }: any) => (
       <>
         <Text>CourseCreateScreen</Text>
         <Button title='Create Back' onPress={onBack} />
+        <Button title='Generate Course' onPress={onSubmit} />
         {recommendedDestination && (
           <Text>
             {recommendedDestination.countryName},{' '}
@@ -137,11 +143,14 @@ jest.mock('../src/screens', () => {
         <Text>{mbti ? `Create with ${mbti}` : 'Create with photos'}</Text>
       </>
     ),
-    CourseGeneratingScreen: ({ onComplete }: any) => (
-      <Button
-        title='Complete Course Generation'
-        onPress={() => onComplete?.('course-123')}
-      />
+    CourseGeneratingScreen: ({ onComplete, onReturnToCreate }: any) => (
+      <>
+        <Button
+          title='Complete Course Generation'
+          onPress={() => onComplete?.('course-123')}
+        />
+        <Button title='Return to Course Create' onPress={onReturnToCreate} />
+      </>
     ),
     CourseDetailScreen: ({ courseId, onBack }: any) => (
       <React.Fragment>
@@ -175,6 +184,23 @@ describe('NavigationRoot - course detail and onboarding navigation', () => {
     login: jest.fn(),
     logout: jest.fn(),
   };
+
+  it('생성 실패 후 코스 생성 화면으로 돌아가고 뒤로가기로 실패 화면을 다시 열지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Return to Course Create'));
+    expect(ui.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(ui.queryByText('Go to Photo Next')).toBeNull();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+    await fireEvent.press(ui.getByText('Create Back'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+  });
 
   it('opens CourseDetailScreen from the home course list', async () => {
     const { queryByText, getByText } = await render(
