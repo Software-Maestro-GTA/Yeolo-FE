@@ -58,16 +58,19 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-test('투어·티켓 쿠폰팩에서 해외 전용 할인 조건을 확인하고 코드를 복사한다', async () => {
+test('투어·티켓 쿠폰팩에서 코드와 중복 안내를 숨기고 할인 조건 및 복사 기능을 유지한다', async () => {
   const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
   expect(ui.getByTestId('ticket-coupon-pack')).toBeTruthy();
-  expect(ui.getByText('PACKMKTP1000')).toBeTruthy();
+  expect(ui.queryByText(S.COUPON_NOTE)).toBeNull();
+  expect(
+    ui.getByText('복사한 코드를 마이리얼트립 결제 화면에 입력해 주세요.'),
+  ).toBeTruthy();
   for (const [code, minimum, discount] of [
     ['PACKMKTP1000', '50,000원', '1,000원'],
     ['PACKMKTP3000', '100,000원', '3,000원'],
     ['PACKMKTP5000', '150,000원', '5,000원'],
   ]) {
-    expect(ui.getByText(code)).toBeTruthy();
+    expect(ui.queryByText(code)).toBeNull();
     expect(ui.getByText(`${minimum} 이상 구매 시`)).toBeTruthy();
     expect(ui.getByText(discount)).toBeTruthy();
   }

@@ -51,7 +51,6 @@ export function TicketCouponPack() {
                 <Text style={styles.condition}>
                   {coupon.minimumPrice.toLocaleString()}원 {S.COUPON_CONDITION}
                 </Text>
-                <Text style={styles.code}>{coupon.code}</Text>
               </View>
               <TouchableOpacity
                 testID={`ticket-coupon-copy-${coupon.code}`}
@@ -73,7 +72,6 @@ export function TicketCouponPack() {
               </TouchableOpacity>
             </View>
           ))}
-          <Text style={styles.note}>{S.COUPON_NOTE}</Text>
         </View>
       )}
     </View>
@@ -128,7 +126,6 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   condition: { color: palette.mutedText, fontSize: 14, letterSpacing: -1 },
-  code: { color: palette.mutedText, fontSize: 10, fontWeight: '700' },
   copyButton: {
     width: 44,
     height: 44,
@@ -138,5 +135,4 @@ const styles = StyleSheet.create({
     backgroundColor: palette.primary,
   },
   copyText: { color: palette.white, fontSize: 12, fontWeight: '600' },
-  note: { color: palette.mutedText, fontSize: 11, lineHeight: 17 },
 });
