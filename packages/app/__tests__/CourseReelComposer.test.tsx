@@ -54,6 +54,64 @@ describe('CourseReelComposer', () => {
         onClose={jest.fn()}
       />,
     );
+  it('장소 ID가 비어 있어도 모든 장소의 사진과 문구를 각각 편집하고 영상에 반영한다', async () => {
+    const course = {
+      ...reelCourse,
+      itinerary: {
+        days: reelCourse.itinerary.days.map((day) => ({
+          ...day,
+          stops: day.stops.map((stop) => ({
+            ...stop,
+            place: { ...stop.place, googlePlaceId: '' },
+          })),
+        })),
+      },
+    };
+    const ui = await render(
+      <CourseReelComposer course={course} initialDay={1} onClose={jest.fn()} />,
+    );
+    expect(ui.getByText('카페')).toBeTruthy();
+    expect(ui.getByText('바다')).toBeTruthy();
+    const addCafe = ui.getByLabelText(`카페 ${S.ADD_PHOTO}`);
+    const addSea = ui.getByLabelText(`바다 ${S.ADD_PHOTO}`);
+    await fireEvent.press(addCafe);
+    await fireEvent.changeText(
+      ui.getByLabelText(`카페 ${S.PLACE_NAME_LABEL}`),
+      '우리 카페',
+    );
+    await fireEvent.changeText(
+      ui.getByLabelText(`카페 ${S.CAPTION_LABEL}`),
+      '커피',
+    );
+    await fireEvent.press(addSea);
+    await fireEvent.changeText(
+      ui.getByLabelText(`바다 ${S.PLACE_NAME_LABEL}`),
+      '우리 바다',
+    );
+    await fireEvent.changeText(
+      ui.getByLabelText(`바다 ${S.CAPTION_LABEL}`),
+      '파도',
+    );
+    expect(ui.getByLabelText(`카페 ${S.PLACE_NAME_LABEL}`).props.value).toBe(
+      '우리 카페',
+    );
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    expect(ui.getByLabelText(`바다 ${S.CAPTION_LABEL}`).props.value).toBe(
+      '파도',
+    );
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    const plan = jest.mocked(service.generateReel).mock.calls[0][0];
+    expect(
+      plan.scenes
+        .slice(2, -1)
+        .map(({ title, caption }) => ({ title, caption })),
+    ).toEqual([
+      { title: '우리 카페', caption: '커피' },
+      { title: '우리 바다', caption: '파도' },
+    ]);
+  });
   afterEach(() => {
     jest.restoreAllMocks();
     UIManager.measureInWindow = originalMeasureInWindow;

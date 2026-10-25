@@ -1,6 +1,6 @@
 /**
  * @file CourseReelComposer.tsx
- * @description Course-day photo/caption editor with portrait preview and cancellable MP4 export/save/share.
+ * @description Course-day photo/caption editor with independent local stop keys, portrait preview and cancellable MP4 export/save/share.
  */
 import React, {
   useCallback,
@@ -48,6 +48,7 @@ import {
   saveReel,
   shareReel,
   reelPhotoStops,
+  reelStopKey,
   type ReelPhoto,
   type ReelMapSnapshot,
 } from '../../services/courseReelService';
@@ -246,11 +247,9 @@ function ReelEditor({
     setDrafts((prev) => ({ ...prev, [selectedDay]: next }));
   }
   function stopText(stop: ItineraryStop) {
-    const photo = draft.photos.find(
-      (p) => p.placeId === stop.place.googlePlaceId,
-    );
+    const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
     return (
-      draft.text?.[stop.place.googlePlaceId] ?? {
+      draft.text?.[reelStopKey(stop)] ?? {
         placeName: photo?.placeName ?? '',
         caption: photo?.caption ?? '',
       }
@@ -263,19 +262,15 @@ function ReelEditor({
     const text = { ...stopText(stop), ...change };
     updateDraft({
       ...draft,
-      text: { ...draft.text, [stop.place.googlePlaceId]: text },
+      text: { ...draft.text, [reelStopKey(stop)]: text },
       photos: draft.photos.map((photo) =>
-        photo.placeId === stop.place.googlePlaceId
-          ? { ...photo, ...text }
-          : photo,
+        photo.placeId === reelStopKey(stop) ? { ...photo, ...text } : photo,
       ),
     });
   }
   async function addPhoto(stop: ItineraryStop) {
     if (operation.current) return;
-    const existing = draft.photos.find(
-      (p) => p.placeId === stop.place.googlePlaceId,
-    );
+    const existing = draft.photos.find((p) => p.placeId === reelStopKey(stop));
     if (!existing && draft.photos.length >= APP_CONFIG.REEL.MAX_PHOTOS) {
       setError(S.LIMIT);
       return;
@@ -289,11 +284,9 @@ function ReelEditor({
         updateDraft({
           ...draft,
           photos: [
-            ...draft.photos.filter(
-              (p) => p.placeId !== stop.place.googlePlaceId,
-            ),
+            ...draft.photos.filter((p) => p.placeId !== reelStopKey(stop)),
             {
-              placeId: stop.place.googlePlaceId,
+              placeId: reelStopKey(stop),
               uri,
               ...stopText(stop),
             },
@@ -357,13 +350,11 @@ function ReelEditor({
   }
   const stops = useMemo(() => (day ? reelPhotoStops(day) : []), [day]);
   function renderStop({ item: stop }: { item: ItineraryStop }) {
-    const photo = draft.photos.find(
-      (p) => p.placeId === stop.place.googlePlaceId,
-    );
+    const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
     return (
       <View style={styles.placeCard}>
         <TouchableOpacity
-          testID={`reel-photo-${stop.place.googlePlaceId}`}
+          testID={`reel-photo-${reelStopKey(stop)}`}
           accessibilityRole='button'
           accessibilityLabel={`${stop.place.placeName} ${photo ? S.CHANGE_PHOTO : S.ADD_PHOTO}`}
           style={styles.photo}
@@ -382,7 +373,7 @@ function ReelEditor({
             </Text>
           </View>
           <TextInput
-            testID={`reel-place-name-${stop.place.googlePlaceId}`}
+            testID={`reel-place-name-${reelStopKey(stop)}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.PLACE_NAME_LABEL}`}
@@ -395,7 +386,7 @@ function ReelEditor({
             onChangeText={(placeName) => updateStopText(stop, { placeName })}
           />
           <TextInput
-            testID={`reel-caption-${stop.place.googlePlaceId}`}
+            testID={`reel-caption-${reelStopKey(stop)}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.CAPTION_LABEL}`}
@@ -626,7 +617,7 @@ function ReelEditor({
                         }}
                         style={styles.editorList}
                         data={stops}
-                        keyExtractor={(stop) => stop.place.googlePlaceId}
+                        keyExtractor={(stop) => reelStopKey(stop)}
                         renderItem={renderStop}
                         keyboardShouldPersistTaps='handled'
                         contentContainerStyle={[

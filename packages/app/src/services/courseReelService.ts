@@ -1,6 +1,6 @@
 /**
  * @file courseReelService.ts
- * @description Course-day reel storyboard, explicit photo picking and on-device MP4 export lifecycle.
+ * @description Course-day reel location keys, storyboard, explicit photo picking and on-device MP4 export lifecycle.
  */
 import type { ItineraryDay, ItineraryStop } from '@yeolo/common';
 import { requireOptionalNativeModule } from 'expo';
@@ -10,7 +10,7 @@ import { UI_STRINGS } from '../constants/strings';
 import { palette } from '../theme/colors';
 
 export interface ReelPhoto {
-  /** Local photo key referencing the itinerary place.googlePlaceId. */
+  /** Local photo key from reelStopKey; never passed to Google Maps as a place ID. */
   placeId: string;
   uri: string;
   caption: string;
@@ -94,14 +94,20 @@ export function reelMapCoordinates(day: ItineraryDay): ReelMapCoordinate[] {
       label: String(sequence),
     }));
 }
-/** Returns each photo location once, even if the itinerary revisits the same place. */
+/** Returns a local per-day key, preserving stops without a Google place ID by their sequence. */
+export function reelStopKey(stop: ItineraryStop): string {
+  return stop.place.googlePlaceId?.trim() || `stop:${stop.sequence}`;
+}
+
+/** Deduplicates identified locations while keeping stops without Google place IDs. */
 export function reelPhotoStops(day: ItineraryDay): ItineraryStop[] {
   const seen = new Set<string>();
   return [...day.stops]
     .sort((a, b) => a.sequence - b.sequence)
     .filter((stop) => {
-      if (seen.has(stop.place.googlePlaceId)) return false;
-      seen.add(stop.place.googlePlaceId);
+      const key = reelStopKey(stop);
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 }
@@ -118,9 +124,7 @@ export function buildReelPlan(
 ): ReelPlan {
   const c = APP_CONFIG.REEL;
   const selected = reelPhotoStops(day).flatMap((stop) => {
-    const photo = photos.find(
-      (p) => p.placeId === stop.place.googlePlaceId && p.uri,
-    );
+    const photo = photos.find((p) => p.placeId === reelStopKey(stop) && p.uri);
     return photo ? [{ stop, photo }] : [];
   });
   if (photoOrder) {

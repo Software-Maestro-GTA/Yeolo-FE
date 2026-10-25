@@ -8,6 +8,7 @@ import {
   buildReelPlan,
   captureReelMap,
   reelMapCoordinates,
+  reelPhotoStops,
   generateReel,
   pickReelPhoto,
   cancelReel,
@@ -82,6 +83,24 @@ describe('course reel service', () => {
     expect(plan.scenes.filter((s) => s.title === '카페')).toHaveLength(1);
     expect(reelMapCoordinates(revisited)).toHaveLength(7);
   });
+  it.each([undefined, null, '', '   '])(
+    'Google 장소 ID가 없어도 서로 다른 일정 장소를 누락하지 않는다 (ID=%s)',
+    (googlePlaceId) => {
+      const missingIds = {
+        ...day,
+        stops: day.stops.map((stop) => ({
+          ...stop,
+          place: {
+            ...stop.place,
+            googlePlaceId: googlePlaceId as unknown as string,
+          },
+        })),
+      };
+      expect(
+        reelPhotoStops(missingIds).map((stop) => stop.place.placeName),
+      ).toEqual(['카페', '바다']);
+    },
+  );
   it('선택한 첫 장면을 쓰되 본문 사진은 코스의 방문 순서로 배치한다', () => {
     const plan = buildReelPlan(
       day,
