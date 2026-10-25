@@ -181,12 +181,14 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
               <View style={styles.tipIcon}>
                 <ReasonSvg />
               </View>
-              <Text
-                lineBreakStrategyIOS='hangul-word'
-                textBreakStrategy='balanced'
-                style={styles.tipText}>
-                {reason}
-              </Text>
+              <View style={styles.tipContent}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='highQuality'
+                  style={styles.tipText}>
+                  {reason}
+                </Text>
+              </View>
             </View>
           )}
           {distinctMemo && (
@@ -194,22 +196,26 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
               <View style={styles.tipIcon}>
                 <MemoSvg />
               </View>
-              <Text
-                lineBreakStrategyIOS='hangul-word'
-                textBreakStrategy='balanced'
-                style={styles.tipText}>
-                {memo}
-              </Text>
+              <View style={styles.tipContent}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='highQuality'
+                  style={styles.tipText}>
+                  {memo}
+                </Text>
+              </View>
             </View>
           )}
           {!reason && !distinctMemo && (
             <View style={styles.tip}>
-              <Text
-                lineBreakStrategyIOS='hangul-word'
-                textBreakStrategy='balanced'
-                style={styles.tipText}>
-                {UI_STRINGS.COURSE_DETAIL.NO_INFO}
-              </Text>
+              <View style={styles.tipContent}>
+                <Text
+                  lineBreakStrategyIOS='hangul-word'
+                  textBreakStrategy='highQuality'
+                  style={styles.tipText}>
+                  {UI_STRINGS.COURSE_DETAIL.NO_INFO}
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -376,9 +382,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 5,
   },
-  tipIcon: { width: 18, height: 18 },
+  tipIcon: { width: 18, height: 18, flexShrink: 0 },
+  tipContent: { flex: 1, minWidth: 0 },
   tipText: {
-    flex: 1,
+    width: '100%',
     fontSize: 14,
     color: palette.deepNavy,
     lineHeight: 18,
