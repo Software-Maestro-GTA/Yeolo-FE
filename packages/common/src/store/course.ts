@@ -1,13 +1,18 @@
 /**
  * @file course.ts
- * @description Screen-independent course creation state with duplicate submission protection and terminal completion.
+ * @description Screen-independent course creation state with duplicate submission protection, terminal completion and local interruption reasons.
  */
 import { create } from 'zustand';
 import type { CourseCreateRequest, CourseState } from '../types/course';
-import { createCourseStreamApi } from '../api/course';
+import {
+  createCourseStreamApi,
+  CourseStreamError,
+  type CourseStreamErrorReason,
+} from '../api/course';
 import { ApiError } from '../api/errors';
 
 export interface CourseStoreState extends CourseState {
+  errorReason: CourseStreamErrorReason | null;
   setProgress: (step: string, message: string) => void;
   setComplete: (courseId: string) => void;
   setError: (error: string, errorCode?: number) => void;
@@ -27,6 +32,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
   progressMessage: null,
   error: null,
   errorCode: null,
+  errorReason: null,
 
   setProgress: (step: string, message: string) => {
     set({
@@ -35,6 +41,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
       progressMessage: message,
       error: null,
       errorCode: null,
+      errorReason: null,
     });
   },
 
@@ -44,6 +51,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
       isGenerating: false,
       error: null,
       errorCode: 200,
+      errorReason: null,
     });
   },
 
@@ -52,6 +60,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
       isGenerating: false,
       error,
       errorCode,
+      errorReason: null,
     });
   },
 
@@ -63,6 +72,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
       progressMessage: null,
       error: null,
       errorCode: null,
+      errorReason: null,
     });
   },
 
@@ -77,6 +87,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
       isGenerating: true,
       error: null,
       errorCode: null,
+      errorReason: null,
       createdCourseId: null,
       progressStep: 'INIT',
       progressMessage: '코스 생성 준비 중...',
@@ -97,6 +108,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
             isGenerating: false,
             error: null,
             errorCode: 200,
+            errorReason: null,
           });
         },
       });
@@ -116,6 +128,7 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
         isGenerating: false,
         error: message,
         errorCode: status,
+        errorReason: err instanceof CourseStreamError ? err.reason : null,
       });
       return null;
     }

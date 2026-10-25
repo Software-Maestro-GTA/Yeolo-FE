@@ -1,12 +1,18 @@
 /**
  * @file courseBackgroundService.test.ts
- * @description Execution lease ordering, expiration, screen unmount and cleanup regression tests for course generation.
+ * @description Verifies course execution leases, background interruption classification, task isolation and screen-independent completion.
  */
 import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { requireOptionalNativeModule } from 'expo';
-import { createCourseStreamApi, useCourseStore } from '@yeolo/common';
+import { AppState, type AppStateStatus } from 'react-native';
+import {
+  ApiError,
+  CourseStreamError,
+  createCourseStreamApi,
+  useCourseStore,
+} from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createBackgroundCourseStreamApi } from '../src/services/courseBackgroundService';
 import { useCourseCreateMutation } from '../src/hooks/queries/useCourseMutations';
@@ -42,9 +48,23 @@ const native = {
     return { remove };
   }),
 };
+const initialAppState = AppState.currentState;
+const appStateListeners = new Set<(state: AppStateStatus) => void>();
+const changeAppState = (state: AppStateStatus) => {
+  AppState.currentState = state;
+  appStateListeners.forEach((listener) => listener(state));
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
+  AppState.currentState = 'active';
+  appStateListeners.clear();
+  jest
+    .spyOn(AppState, 'addEventListener')
+    .mockImplementation((_event, listener) => {
+      appStateListeners.add(listener);
+      return { remove: () => appStateListeners.delete(listener) };
+    });
   useCourseStore.getState().resetCourseState();
   native.startAsync.mockResolvedValue('foreground-service');
   native.updateAsync.mockResolvedValue(undefined);
@@ -56,6 +76,98 @@ beforeEach(() => {
       return complete.data.courseId;
     },
   );
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+  AppState.currentState = initialAppState;
+});
+
+it.each([
+  ['background', true, 'background_interrupted'],
+  ['background', false, null],
+  ['active', true, 'connection_lost'],
+  ['inactive', true, 'connection_lost'],
+] as const)(
+  'classifies a failure after %s (transport=%s) without masking server errors',
+  async (state, transportFailure, expectedReason) => {
+    let fail!: (error: Error) => void;
+    (createCourseStreamApi as jest.Mock).mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    const pending = useCourseStore
+      .getState()
+      .createCourse(
+        'https://api.test',
+        payload,
+        'test-token',
+        createBackgroundCourseStreamApi,
+      );
+    await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalled());
+    changeAppState(state);
+    changeAppState('active');
+    fail(
+      transportFailure
+        ? new CourseStreamError(500, 'connection lost', 'connection_lost')
+        : new ApiError(500, 'server generation failed'),
+    );
+    await expect(pending).resolves.toBeNull();
+    expect(useCourseStore.getState().errorReason).toBe(expectedReason);
+    if (!transportFailure)
+      expect(useCourseStore.getState().error).toBe('server generation failed');
+    expect(appStateListeners.size).toBe(0);
+
+    // A second foreground-only request must not inherit the first task's history.
+    const next = useCourseStore
+      .getState()
+      .createCourse(
+        'https://api.test',
+        payload,
+        'test-token',
+        createBackgroundCourseStreamApi,
+      );
+    await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalledTimes(2));
+    fail(new CourseStreamError(500, 'next connection lost', 'connection_lost'));
+    await expect(next).resolves.toBeNull();
+    expect(useCourseStore.getState().errorReason).toBe('connection_lost');
+    expect(appStateListeners.size).toBe(0);
+    useCourseStore.getState().resetCourseState();
+    expect(useCourseStore.getState().errorReason).toBeNull();
+  },
+);
+
+it('preserves success after leaving and returning to the app', async () => {
+  let finish!: () => void;
+  (createCourseStreamApi as jest.Mock).mockImplementation(
+    (_url, _token, _payload, callbacks) =>
+      new Promise<string>((resolve) => {
+        finish = () => {
+          callbacks.onComplete(complete);
+          resolve(complete.data.courseId);
+        };
+      }),
+  );
+  const pending = useCourseStore
+    .getState()
+    .createCourse(
+      'https://api.test',
+      payload,
+      'test-token',
+      createBackgroundCourseStreamApi,
+    );
+  await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalled());
+  changeAppState('background');
+  changeAppState('active');
+  finish();
+  await expect(pending).resolves.toBe('background-course');
+  expect(useCourseStore.getState()).toMatchObject({
+    error: null,
+    errorReason: null,
+  });
+  expect(appStateListeners.size).toBe(0);
 });
 
 it('sends no request until native background execution is actually granted', async () => {
@@ -134,16 +246,18 @@ it('aborts an expired request, ignores unrelated tasks, and releases the lease',
   await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalled());
   const id = native.startAsync.mock.calls[0][0];
   const signal = (createCourseStreamApi as jest.Mock).mock.calls[0][4].signal;
+  changeAppState('background');
   expire({ jobId: 'another-job' });
   expect(signal.aborted).toBe(false);
   const rejected = expect(pending).rejects.toThrow(
-    UI_STRINGS.COURSE_GENERATING.BACKGROUND_EXPIRED,
+    UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_MESSAGE,
   );
   expire({ jobId: id });
   await rejected;
   expect(signal.aborted).toBe(true);
   expect(native.finishAsync).toHaveBeenCalledWith(id, false);
   expect(remove).toHaveBeenCalledTimes(1);
+  expect(appStateListeners.size).toBe(0);
 });
 
 it('releases the native task on a server error without replacing its message', async () => {

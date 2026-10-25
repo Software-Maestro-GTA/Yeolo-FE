@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description Course API with cancellable SSE generation and terminal success/error handling, plus detail, list, and delete requests (API-COURSE-1~4).
+ * @description Course API with cancellable SSE generation, distinct connection failures and terminal server outcomes, plus detail, list, and delete requests (API-COURSE-1~4).
  */
 import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
@@ -23,6 +23,20 @@ export interface CourseStreamCallbacks {
 
 export interface CourseStreamOptions {
   signal?: AbortSignal;
+}
+
+export type CourseStreamErrorReason =
+  'connection_lost' | 'background_interrupted';
+
+/** Identifies local stream interruptions without misclassifying server API errors. */
+export class CourseStreamError extends ApiError {
+  constructor(
+    status: number,
+    message: string,
+    public readonly reason: CourseStreamErrorReason,
+  ) {
+    super(status, message);
+  }
 }
 
 /**
@@ -144,14 +158,19 @@ export async function createCourseStreamApi(
       }
       throw new ApiError(status, message);
     }
-    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+    throw new CourseStreamError(
+      500,
+      error?.message || '네트워크 오류가 발생했습니다.',
+      'connection_lost',
+    );
   }
 
   if (!courseId) {
     logger.error('[CourseAPI] Course generation finished without courseId');
-    throw new ApiError(
+    throw new CourseStreamError(
       400,
       '여행 코스 생성 중 Course ID를 수신하지 못했습니다.',
+      'connection_lost',
     );
   }
 

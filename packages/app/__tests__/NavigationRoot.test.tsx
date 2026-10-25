@@ -1,6 +1,6 @@
 /**
  * @file NavigationRoot.test.tsx
- * @description Verifies UI v3 screen transitions, onboarding paths and course deep links.
+ * @description Verifies UI v3 navigation, course interruption home/history cleanup, onboarding paths and deep links.
  */
 import React from 'react';
 import { BackHandler, Platform, PanResponder } from 'react-native';
@@ -143,13 +143,21 @@ jest.mock('../src/screens', () => {
         <Text>{mbti ? `Create with ${mbti}` : 'Create with photos'}</Text>
       </>
     ),
-    CourseGeneratingScreen: ({ onComplete, onReturnToCreate }: any) => (
+    CourseGeneratingScreen: ({
+      onComplete,
+      onReturnToCreate,
+      onReturnHome,
+    }: any) => (
       <>
         <Button
           title='Complete Course Generation'
           onPress={() => onComplete?.('course-123')}
         />
         <Button title='Return to Course Create' onPress={onReturnToCreate} />
+        <Button
+          title='Background Connection Interrupted'
+          onPress={onReturnHome}
+        />
       </>
     ),
     CourseDetailScreen: ({ courseId, onBack }: any) => (
@@ -174,7 +182,7 @@ jest.mock('../src/screens', () => {
   };
 });
 
-import { NAV_STEPS } from '../src/constants';
+import { NAV_STEPS, UI_STRINGS } from '../src/constants';
 
 describe('NavigationRoot - course detail and onboarding navigation', () => {
   const mockAuthContext = {
@@ -201,6 +209,49 @@ describe('NavigationRoot - course detail and onboarding navigation', () => {
     expect(ui.getByText('Create Course')).toBeTruthy();
     expect(ui.queryByText('Complete Course Generation')).toBeNull();
   });
+
+  it.each(['confirm', 'backdrop', 'requestClose'])(
+    'shows an app info dialog over home after an interruption and dismisses via %s without returning to generation',
+    async (dismissal) => {
+      const ui = await render(
+        <AuthContext.Provider value={mockAuthContext as any}>
+          <NavigationRoot />
+        </AuthContext.Provider>,
+      );
+      await fireEvent.press(ui.getByText('Create Course'));
+      await fireEvent.press(ui.getByText('Generate Course'));
+      await fireEvent.press(ui.getByText('Background Connection Interrupted'));
+      expect(ui.getByTestId('course-interruption-notice')).toBeTruthy();
+      expect(
+        ui.getByText(UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_TITLE),
+      ).toBeTruthy();
+      expect(
+        ui.getByText(
+          UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_MESSAGE,
+        ),
+      ).toBeTruthy();
+      expect(ui.queryByText('Complete Course Generation')).toBeNull();
+      if (dismissal === 'confirm')
+        await fireEvent.press(ui.getByText(UI_STRINGS.COMMON.CONFIRM));
+      else if (dismissal === 'backdrop')
+        await fireEvent.press(
+          ui.getByTestId('course-interruption-notice-backdrop', {
+            includeHiddenElements: true,
+          }),
+        );
+      else
+        await fireEvent(
+          ui.getByTestId('course-interruption-notice'),
+          'requestClose',
+        );
+      expect(ui.queryByTestId('course-interruption-notice')).toBeNull();
+      expect(ui.getByText('Create Course')).toBeTruthy();
+      await fireEvent.press(ui.getByText('Create Course'));
+      await fireEvent.press(ui.getByText('Create Back'));
+      expect(ui.getByText('Create Course')).toBeTruthy();
+      expect(ui.queryByText('Complete Course Generation')).toBeNull();
+    },
+  );
 
   it('opens CourseDetailScreen from the home course list', async () => {
     const { queryByText, getByText } = await render(

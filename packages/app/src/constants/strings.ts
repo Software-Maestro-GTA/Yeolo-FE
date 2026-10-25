@@ -385,6 +385,9 @@ export const UI_STRINGS = {
       '코스 생성을 시작하지 못했습니다. 앱 화면에서 다시 시도해주세요.',
     BACKGROUND_EXPIRED:
       '기기에서 백그라운드 작업이 중단되었습니다. 코스 목록에서 생성 결과를 먼저 확인해주세요.',
+    BACKGROUND_INTERRUPTED_TITLE: '코스 생성 연결이 끊겼어요',
+    BACKGROUND_INTERRUPTED_MESSAGE:
+      '앱을 벗어난 동안 코스 생성 연결이 끊겼습니다. 코스 목록에서 생성 결과를 확인해주세요.',
   },
   COURSE_DETAIL: {
     MAIN_TITLE: '일본 도쿄',

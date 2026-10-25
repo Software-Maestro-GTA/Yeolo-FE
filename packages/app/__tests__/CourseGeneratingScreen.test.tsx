@@ -1,18 +1,22 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
- * @description Verifies smooth estimated progress shared by the bar and active ring while server events retain authority over completion.
+ * @description Verifies estimated progress, terminal outcomes and foreground-only notice/home routing after background connection loss.
  */
 import React from 'react';
-import { Animated } from 'react-native';
+import { Alert, Animated, AppState, type AppStateStatus } from 'react-native';
 import { fireEvent, act } from '@testing-library/react-native';
 import { CourseGeneratingScreen } from '../src/screens/CourseGeneratingScreen';
 import { useCourseStore } from '@yeolo/common';
 import { renderWithQueryClient as render } from './test-utils';
 
+const initialAppState = AppState.currentState;
+
 describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 딜레이 연동)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useRealTimers();
+    AppState.currentState = 'active';
+    useCourseStore.getState().resetCourseState();
     useCourseStore.setState({
       createdCourseId: null,
       isGenerating: false,
@@ -25,7 +29,75 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
 
   afterEach(() => {
     jest.restoreAllMocks();
+    AppState.currentState = initialAppState;
     jest.useRealTimers();
+  });
+
+  it('waits for foreground, then returns home once without a native alert after a background disconnect', async () => {
+    AppState.currentState = 'background';
+    const listeners = new Set<(state: AppStateStatus) => void>();
+    jest
+      .spyOn(AppState, 'addEventListener')
+      .mockImplementation((_event, listener) => {
+        listeners.add(listener);
+        return { remove: () => listeners.delete(listener) };
+      });
+    const alert = jest.spyOn(Alert, 'alert');
+    const onReturnHome = jest.fn();
+    const onComplete = jest.fn();
+    useCourseStore.setState({
+      error: 'connection interrupted',
+      errorReason: 'background_interrupted',
+    });
+    const ui = await render(
+      <CourseGeneratingScreen
+        onReturnHome={onReturnHome}
+        onComplete={onComplete}
+      />,
+    );
+    expect(alert).not.toHaveBeenCalled();
+    expect(onReturnHome).not.toHaveBeenCalled();
+    await act(async () => listeners.forEach((listener) => listener('active')));
+    expect(onReturnHome).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
+    expect(useCourseStore.getState()).toMatchObject({
+      isGenerating: false,
+      error: null,
+      errorReason: null,
+      createdCourseId: null,
+    });
+    await act(async () => listeners.forEach((listener) => listener('active')));
+    expect(onReturnHome).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
+    expect(onComplete).not.toHaveBeenCalled();
+    await ui.unmount();
+    expect(listeners.size).toBe(0);
+  });
+
+  it('keeps ordinary generation errors on the existing retry screen', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    const onReturnHome = jest.fn();
+    useCourseStore.getState().setError('서버 생성 실패', 500);
+    const ui = await render(
+      <CourseGeneratingScreen onReturnHome={onReturnHome} />,
+    );
+    expect(ui.getByText('서버 생성 실패')).toBeTruthy();
+    expect(ui.getByTestId('return-to-create-btn')).toBeTruthy();
+    expect(onReturnHome).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('immediately handles a background interruption reported after foreground resumption', async () => {
+    const alert = jest.spyOn(Alert, 'alert');
+    const onReturnHome = jest.fn();
+    useCourseStore.setState({
+      error: 'connection interrupted',
+      errorReason: 'background_interrupted',
+    });
+    await render(<CourseGeneratingScreen onReturnHome={onReturnHome} />);
+    expect(onReturnHome).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
+    expect(useCourseStore.getState().errorReason).toBeNull();
   });
 
   it('이전 완료 상태에서 새 생성이 시작되면 진행률과 완료 이동을 초기화한다', async () => {

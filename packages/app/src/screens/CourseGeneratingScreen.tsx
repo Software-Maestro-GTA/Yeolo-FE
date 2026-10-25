@@ -1,6 +1,6 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Displays smoothly estimated bar/ring progress in the UI v3 layout while server events alone confirm stage and course completion.
+ * @description Displays estimated course progress and signals foreground-only home routing after background connection interruptions.
  */
 import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
 import CompletedCheckSvg from '../../assets/images/figma-course/completed-check.svg';
@@ -14,6 +14,8 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  AppState,
+  type AppStateStatus,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
@@ -37,6 +39,7 @@ import {
 export interface CourseGeneratingScreenProps {
   onComplete?: (courseId: string) => void;
   onReturnToCreate?: () => void;
+  onReturnHome?: () => void;
 }
 
 type StepStatus = 'pending' | 'loading' | 'completed';
@@ -50,6 +53,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   onComplete,
   onReturnToCreate,
+  onReturnHome,
 }) => {
   useGA4ScreenTracking('CourseGeneratingScreen');
   const insets = useSafeAreaInsets();
@@ -70,10 +74,28 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     progressStep,
     progressMessage,
     error,
+    errorReason,
     resetCourseState,
   } = useCourseStore();
 
   const strings = UI_STRINGS.COURSE_GENERATING;
+  const interruptionHandled = useRef(false);
+  useEffect(() => {
+    if (!error || errorReason !== 'background_interrupted') {
+      interruptionHandled.current = false;
+      return;
+    }
+    const returnHome = (state: AppStateStatus) => {
+      if (state !== 'active' || interruptionHandled.current || !onReturnHome)
+        return;
+      interruptionHandled.current = true;
+      resetCourseState();
+      onReturnHome();
+    };
+    const subscription = AppState.addEventListener('change', returnHome);
+    returnHome(AppState.currentState);
+    return () => subscription.remove();
+  }, [error, errorReason, onReturnHome, resetCourseState]);
   const progressAnim = useRef(
     new Animated.Value(createdCourseId ? 100 : 5),
   ).current;

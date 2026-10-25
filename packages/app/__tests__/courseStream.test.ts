@@ -77,7 +77,53 @@ it('rejects an incomplete stream instead of treating a disconnect as success', a
   );
   await expect(
     createCourseStreamApi('https://api.test', 'test-token', payload),
-  ).rejects.toThrow('Course ID');
+  ).rejects.toMatchObject({
+    reason: 'connection_lost',
+    message: expect.stringContaining('Course ID'),
+  });
+});
+
+it('classifies a network failure separately from explicit server errors', async () => {
+  server.use(http.post('*/api/courses', () => HttpResponse.error()));
+  await expect(
+    createCourseStreamApi('https://api.test', 'test-token', payload),
+  ).rejects.toMatchObject({ reason: 'connection_lost' });
+});
+
+it('classifies a connection breaking during generation without publishing completion', async () => {
+  const progress = jest.fn();
+  const complete = jest.fn();
+  server.use(
+    http.post('*/api/courses', () => {
+      let sent = false;
+      return new HttpResponse(
+        new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            if (!sent) {
+              sent = true;
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'event: progress\ndata: {"step":"GENERATING_COURSE","message":"생성 중"}\n\n',
+                ),
+              );
+            } else {
+              await new Promise((resolve) => setTimeout(resolve, 20));
+              controller.error(new Error('connection lost while generating'));
+            }
+          },
+        }),
+        { headers: { 'Content-Type': 'text/event-stream' } },
+      );
+    }),
+  );
+  await expect(
+    createCourseStreamApi('https://api.test', 'test-token', payload, {
+      onProgress: progress,
+      onComplete: complete,
+    }),
+  ).rejects.toMatchObject({ reason: 'connection_lost' });
+  expect(progress).toHaveBeenCalledTimes(1);
+  expect(complete).not.toHaveBeenCalled();
 });
 
 it('rejects an unsuccessful terminal event without publishing a course ID', async () => {

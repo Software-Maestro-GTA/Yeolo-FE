@@ -1,6 +1,6 @@
 /**
  * @file NavigationRoot.tsx
- * @description Screen history, completed-flow cleanup, shared-link resumption and session-aware back navigation.
+ * @description Screen history, flow cleanup, course interruption home routing with shared guidance, shared-link resumption and session-aware back navigation.
  */
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -27,6 +27,7 @@ import { MainLayout, OnboardingLayout } from '../layouts';
 import { NAV_STEPS, NAV_TABS, NavStep, UI_STRINGS } from '../constants';
 import type { CourseCreateScreenProps } from '../screens/CourseCreateScreen';
 import type { CourseDetailViewState } from '../screens/CourseDetailScreen';
+import { InfoDialog } from '../components/common/InfoDialog';
 import {
   LoginScreen,
   HomeScreen,
@@ -137,6 +138,8 @@ export function NavigationRoot({
   const [recommendedDestination, setRecommendedDestination] =
     useState<CourseCreateScreenProps['recommendedDestination']>();
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [showCourseInterruptionNotice, setShowCourseInterruptionNotice] =
+    useState(false);
   const [selectedShareToken, setSelectedShareToken] =
     useState<string>(initialShareToken);
   const [bookingRequest, setBookingRequest] = useState<{
@@ -171,6 +174,7 @@ export function NavigationRoot({
   // The ref advances synchronously so double taps and callbacks from an old
   // screen cannot append history or navigate after that screen has closed.
   const commitNavigation = (nextStep: NavStep, nextHistory: NavStep[]) => {
+    setShowCourseInterruptionNotice(false);
     const next = {
       step: nextStep,
       history: nextHistory.slice(-MAX_HISTORY_LENGTH),
@@ -708,6 +712,11 @@ export function NavigationRoot({
               );
             }}
             onReturnToCreate={() => returnTo(NAV_STEPS.CREATE_COURSE)}
+            onReturnHome={() => {
+              if (!isCurrentRoute()) return;
+              navigateTo(NAV_STEPS.HOME);
+              setShowCourseInterruptionNotice(true);
+            }}
           />
         );
       case NAV_STEPS.COURSE_DETAIL:
@@ -803,6 +812,14 @@ export function NavigationRoot({
       testID='navigation-root-container'
       {...panResponder.panHandlers}>
       {renderCurrentScreen()}
+      <InfoDialog
+        visible={showCourseInterruptionNotice && step === NAV_STEPS.HOME}
+        testID='course-interruption-notice'
+        title={UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_TITLE}
+        message={UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_MESSAGE}
+        closeLabel={UI_STRINGS.COMMON.CONFIRM}
+        onDismiss={() => setShowCourseInterruptionNotice(false)}
+      />
     </View>
   );
 }

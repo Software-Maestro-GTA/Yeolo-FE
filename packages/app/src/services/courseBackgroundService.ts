@@ -1,11 +1,12 @@
 /**
  * @file courseBackgroundService.ts
- * @description Protects the shared course SSE request with a native execution lease independent of screen lifecycle.
+ * @description Protects course SSE with native execution and classifies connection interruptions after background transitions independently of screens.
  */
 import { requireOptionalNativeModule } from 'expo';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   createCourseStreamApi,
+  CourseStreamError,
   logger,
   type CourseStreamCallbacks,
   type CourseCreateRequest,
@@ -59,6 +60,10 @@ export async function createBackgroundCourseStreamApi(
   let expired = false;
   let completed = false;
   let mode = '';
+  let wasBackgrounded = AppState.currentState === 'background';
+  const appStateSubscription = AppState.addEventListener('change', (state) => {
+    if (state === 'background') wasBackgrounded = true;
+  });
   const subscription = native.addListener('onExpired', (event) => {
     if (event.jobId !== jobId || completed) return;
     expired = true;
@@ -107,10 +112,24 @@ export async function createBackgroundCourseStreamApi(
     completed = true;
     return courseId;
   } catch (error) {
+    // Leaving the app is evidence of context, not proof of a server-side failure.
+    if (
+      wasBackgrounded &&
+      (expired ||
+        (error instanceof CourseStreamError &&
+          error.reason === 'connection_lost'))
+    ) {
+      throw new CourseStreamError(
+        500,
+        strings.BACKGROUND_INTERRUPTED_MESSAGE,
+        'background_interrupted',
+      );
+    }
     if (expired) throw new Error(strings.BACKGROUND_EXPIRED);
     throw error;
   } finally {
     subscription.remove();
+    appStateSubscription.remove();
     // Cleanup failures must not overwrite the API outcome.
     try {
       await native.finishAsync(jobId, completed);
