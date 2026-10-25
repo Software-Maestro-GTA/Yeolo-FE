@@ -10,6 +10,7 @@ import { UI_STRINGS } from '../constants/strings';
 import { palette } from '../theme/colors';
 
 export interface ReelPhoto {
+  /** Local photo key referencing the itinerary place.googlePlaceId. */
   placeId: string;
   uri: string;
   caption: string;
@@ -99,8 +100,8 @@ export function reelPhotoStops(day: ItineraryDay): ItineraryStop[] {
   return [...day.stops]
     .sort((a, b) => a.sequence - b.sequence)
     .filter((stop) => {
-      if (seen.has(stop.place.placeId)) return false;
-      seen.add(stop.place.placeId);
+      if (seen.has(stop.place.googlePlaceId)) return false;
+      seen.add(stop.place.googlePlaceId);
       return true;
     });
 }
@@ -117,7 +118,9 @@ export function buildReelPlan(
 ): ReelPlan {
   const c = APP_CONFIG.REEL;
   const selected = reelPhotoStops(day).flatMap((stop) => {
-    const photo = photos.find((p) => p.placeId === stop.place.placeId && p.uri);
+    const photo = photos.find(
+      (p) => p.placeId === stop.place.googlePlaceId && p.uri,
+    );
     return photo ? [{ stop, photo }] : [];
   });
   if (photoOrder) {

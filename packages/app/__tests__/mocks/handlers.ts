@@ -383,7 +383,7 @@ export const handlers = [
                       memo: '탁 트인 에메랄드빛 바다 산책',
                       reason: '에메랄드빛 바다 풍경과 산책로 추천',
                       place: {
-                        placeId: 'place-1',
+                        googlePlaceId: 'place-1',
                         placeName: '함덕 해수욕장',
                         category: '해변',
                         latitude: 33.5434,
@@ -404,7 +404,7 @@ export const handlers = [
                       memo: '시그니처 제주 우도 땅콩 라떼',
                       reason: '바다 전망 오션뷰 카페 추천',
                       place: {
-                        placeId: 'place-2',
+                        googlePlaceId: 'place-2',
                         placeName: '카페 델문도',
                         category: '카페',
                         latitude: 33.5436,
@@ -425,7 +425,7 @@ export const handlers = [
                       memo: '몰입형 몰디브 미디어아트 관람',
                       reason: '감성 실내 전시 및 사진 촬영 추천',
                       place: {
-                        placeId: 'place-3',
+                        googlePlaceId: 'place-3',
                         placeName: '아르떼뮤지엄 제주',
                         category: '미술관',
                         latitude: 33.3963,
@@ -453,7 +453,7 @@ export const handlers = [
                       memo: '천년의 숲 피톤치드 산책',
                       reason: '자연 휴양 숲길 산책로',
                       place: {
-                        placeId: 'place-4',
+                        googlePlaceId: 'place-4',
                         placeName: '비자림',
                         category: '관광',
                         latitude: 33.4912,
@@ -474,7 +474,7 @@ export const handlers = [
                       memo: '전복돌솥밥과 고등어 구이',
                       reason: '해안가 싱싱한 전복요리 맛집',
                       place: {
-                        placeId: 'place-5',
+                        googlePlaceId: 'place-5',
                         placeName: '명진전복',
                         category: '관광',
                         latitude: 33.5317,

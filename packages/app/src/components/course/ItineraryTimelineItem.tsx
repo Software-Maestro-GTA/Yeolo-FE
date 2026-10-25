@@ -20,6 +20,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import {
   getPlaceCategoryLabel,
+  logger,
   type ItineraryStop,
   type ItineraryPlace,
 } from '@yeolo/common';
@@ -59,21 +60,35 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
         ? `₩${transport.cost.toLocaleString()}`
         : UI_STRINGS.COURSE_DETAIL.SEPARATE_TRANSIT_COST;
   const openMap = () => {
-    const placeId = place?.placeId?.trim();
-    const query = place?.placeName?.trim() || placeId;
+    const googlePlaceId = place?.googlePlaceId?.trim();
+    const query = place?.placeName?.trim() || googlePlaceId;
     if (!query) {
       Alert.alert(COURSE_UI.MAP_ERROR);
       return;
     }
-    const placeIdParam = placeId
-      ? `&query_place_id=${encodeURIComponent(placeId)}`
+    const googlePlaceIdParam = googlePlaceId
+      ? `&query_place_id=${encodeURIComponent(googlePlaceId)}`
       : '';
-    void Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}${placeIdParam}`,
-    ).catch(() => Alert.alert(COURSE_UI.MAP_ERROR));
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}${googlePlaceIdParam}`;
+    logger.info('[GoogleMaps] Open place', {
+      sequence: stop.sequence,
+      sourcePlace: {
+        placeName: place?.placeName,
+        googlePlaceId: place?.googlePlaceId,
+        latitude: place?.latitude,
+        longitude: place?.longitude,
+      },
+      searchParams: {
+        api: '1',
+        query,
+        ...(googlePlaceId ? { query_place_id: googlePlaceId } : {}),
+      },
+      url,
+    });
+    void Linking.openURL(url).catch(() => Alert.alert(COURSE_UI.MAP_ERROR));
   };
-  const originId = place?.placeId?.trim();
-  const destinationId = nextPlace?.placeId?.trim();
+  const originId = place?.googlePlaceId?.trim();
+  const destinationId = nextPlace?.googlePlaceId?.trim();
   const origin = place?.placeName?.trim() || originId;
   const destination = nextPlace?.placeName?.trim() || destinationId;
   const openDirections = () => {

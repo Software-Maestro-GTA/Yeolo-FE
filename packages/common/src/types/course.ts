@@ -63,7 +63,7 @@ export interface CourseState {
 }
 
 export interface ItineraryPlace {
-  placeId: string;
+  googlePlaceId: string;
   placeName: string;
   category: string;
   latitude: number;

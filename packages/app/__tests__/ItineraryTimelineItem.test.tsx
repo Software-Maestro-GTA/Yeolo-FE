@@ -18,7 +18,7 @@ const baseStop: ItineraryStop = {
   reason: '',
   cost: 0,
   place: {
-    placeId: 'ChIJ_yeolo_test_place',
+    googlePlaceId: 'ChIJ_yeolo_test_place',
     placeName: '함덕 해수욕장',
     category: 'NATURE',
     latitude: 33.5434,
@@ -66,7 +66,11 @@ describe('ItineraryTimelineItem', () => {
     const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     const stop = {
       ...baseStop,
-      place: { ...baseStop.place, placeId: ' ', placeName: '카페 A&B / 서울' },
+      place: {
+        ...baseStop.place,
+        googlePlaceId: ' ',
+        placeName: '카페 A&B / 서울',
+      },
     };
     const { getByTestId } = await render(
       <ItineraryTimelineItem stop={stop} isLast />,
@@ -77,6 +81,26 @@ describe('ItineraryTimelineItem', () => {
       api: '1',
       query: '카페 A&B / 서울',
     });
+  });
+
+  it('이전 내부 UUID 필드가 남아 있어도 Google ID 대신 전달하지 않는다', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    const stop = {
+      ...baseStop,
+      place: {
+        ...baseStop.place,
+        googlePlaceId: '',
+        placeId: '50b5aac6-a2af-453c-8d77-8e7ae6e266b6',
+      },
+    };
+    const { getByTestId } = await render(
+      <ItineraryTimelineItem stop={stop} isLast />,
+    );
+    await fireEvent.press(getByTestId('map-link-1'));
+    const url = new URL(openURL.mock.calls[0][0]);
+    expect(url.searchParams.get('query')).toBe(baseStop.place.placeName);
+    expect(url.searchParams.has('query_place_id')).toBe(false);
+    expect(openURL.mock.calls[0][0]).not.toContain(stop.place.placeId);
   });
 
   it('장소명이 없어도 Place ID로 지도 링크를 연다', async () => {
@@ -102,7 +126,7 @@ describe('ItineraryTimelineItem', () => {
       <ItineraryTimelineItem
         stop={{
           ...baseStop,
-          place: { ...baseStop.place, placeId: '', placeName: '' },
+          place: { ...baseStop.place, googlePlaceId: '', placeName: '' },
         }}
         isLast
       />,
@@ -303,7 +327,7 @@ const unknownStop: ItineraryStop = {
 };
 const nextPlace = {
   ...baseStop.place,
-  placeId: 'ChIJ_next_place',
+  googlePlaceId: 'ChIJ_next_place',
   placeName: '카페 A&B / 제주',
 };
 
@@ -333,9 +357,9 @@ describe('unknown 이동 구간', () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({
       api: '1',
       origin: baseStop.place.placeName,
-      origin_place_id: baseStop.place.placeId,
+      origin_place_id: baseStop.place.googlePlaceId,
       destination: nextPlace.placeName,
-      destination_place_id: nextPlace.placeId,
+      destination_place_id: nextPlace.googlePlaceId,
     });
   });
 
@@ -344,7 +368,7 @@ describe('unknown 이동 구간', () => {
     const screen = await render(
       <ItineraryTimelineItem
         stop={unknownStop}
-        nextPlace={{ ...nextPlace, placeId: '' }}
+        nextPlace={{ ...nextPlace, googlePlaceId: '' }}
         isLast={false}
       />,
     );
@@ -355,7 +379,7 @@ describe('unknown 이동 구간', () => {
     expect(url.searchParams.get('destination')).toBe(nextPlace.placeName);
     expect(url.searchParams.has('destination_place_id')).toBe(false);
     expect(url.searchParams.get('origin_place_id')).toBe(
-      baseStop.place.placeId,
+      baseStop.place.googlePlaceId,
     );
   });
 

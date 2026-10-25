@@ -246,9 +246,11 @@ function ReelEditor({
     setDrafts((prev) => ({ ...prev, [selectedDay]: next }));
   }
   function stopText(stop: ItineraryStop) {
-    const photo = draft.photos.find((p) => p.placeId === stop.place.placeId);
+    const photo = draft.photos.find(
+      (p) => p.placeId === stop.place.googlePlaceId,
+    );
     return (
-      draft.text?.[stop.place.placeId] ?? {
+      draft.text?.[stop.place.googlePlaceId] ?? {
         placeName: photo?.placeName ?? '',
         caption: photo?.caption ?? '',
       }
@@ -261,15 +263,19 @@ function ReelEditor({
     const text = { ...stopText(stop), ...change };
     updateDraft({
       ...draft,
-      text: { ...draft.text, [stop.place.placeId]: text },
+      text: { ...draft.text, [stop.place.googlePlaceId]: text },
       photos: draft.photos.map((photo) =>
-        photo.placeId === stop.place.placeId ? { ...photo, ...text } : photo,
+        photo.placeId === stop.place.googlePlaceId
+          ? { ...photo, ...text }
+          : photo,
       ),
     });
   }
   async function addPhoto(stop: ItineraryStop) {
     if (operation.current) return;
-    const existing = draft.photos.find((p) => p.placeId === stop.place.placeId);
+    const existing = draft.photos.find(
+      (p) => p.placeId === stop.place.googlePlaceId,
+    );
     if (!existing && draft.photos.length >= APP_CONFIG.REEL.MAX_PHOTOS) {
       setError(S.LIMIT);
       return;
@@ -283,9 +289,11 @@ function ReelEditor({
         updateDraft({
           ...draft,
           photos: [
-            ...draft.photos.filter((p) => p.placeId !== stop.place.placeId),
+            ...draft.photos.filter(
+              (p) => p.placeId !== stop.place.googlePlaceId,
+            ),
             {
-              placeId: stop.place.placeId,
+              placeId: stop.place.googlePlaceId,
               uri,
               ...stopText(stop),
             },
@@ -349,11 +357,13 @@ function ReelEditor({
   }
   const stops = useMemo(() => (day ? reelPhotoStops(day) : []), [day]);
   function renderStop({ item: stop }: { item: ItineraryStop }) {
-    const photo = draft.photos.find((p) => p.placeId === stop.place.placeId);
+    const photo = draft.photos.find(
+      (p) => p.placeId === stop.place.googlePlaceId,
+    );
     return (
       <View style={styles.placeCard}>
         <TouchableOpacity
-          testID={`reel-photo-${stop.place.placeId}`}
+          testID={`reel-photo-${stop.place.googlePlaceId}`}
           accessibilityRole='button'
           accessibilityLabel={`${stop.place.placeName} ${photo ? S.CHANGE_PHOTO : S.ADD_PHOTO}`}
           style={styles.photo}
@@ -372,7 +382,7 @@ function ReelEditor({
             </Text>
           </View>
           <TextInput
-            testID={`reel-place-name-${stop.place.placeId}`}
+            testID={`reel-place-name-${stop.place.googlePlaceId}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.PLACE_NAME_LABEL}`}
@@ -385,7 +395,7 @@ function ReelEditor({
             onChangeText={(placeName) => updateStopText(stop, { placeName })}
           />
           <TextInput
-            testID={`reel-caption-${stop.place.placeId}`}
+            testID={`reel-caption-${stop.place.googlePlaceId}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.CAPTION_LABEL}`}
@@ -616,7 +626,7 @@ function ReelEditor({
                         }}
                         style={styles.editorList}
                         data={stops}
-                        keyExtractor={(stop) => stop.place.placeId}
+                        keyExtractor={(stop) => stop.place.googlePlaceId}
                         renderItem={renderStop}
                         keyboardShouldPersistTaps='handled'
                         contentContainerStyle={[

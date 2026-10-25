@@ -11,7 +11,7 @@ export function reelStop(id: string, sequence: number): ItineraryStop {
     memo: `${id}에서 잠시 쉬어가기`,
     reason: '',
     place: {
-      placeId: id,
+      googlePlaceId: id,
       placeName: id,
       category: '카페',
       latitude: 35 + sequence * 0.01,

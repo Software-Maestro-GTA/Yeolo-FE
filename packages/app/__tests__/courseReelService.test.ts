@@ -121,7 +121,7 @@ describe('course reel service', () => {
       reelStop(String(i), i + 1),
     );
     const six = stops.map((s) => ({
-      placeId: s.place.placeId,
+      placeId: s.place.googlePlaceId,
       uri: 'file:///photo.jpg',
       caption: '',
     }));

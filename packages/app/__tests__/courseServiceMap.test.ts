@@ -27,7 +27,7 @@ it('겹치거나 가까운 장소의 원래 좌표와 순서를 보존하고 누
       memo: null,
     },
     place: {
-      placeId: `place-${index}`,
+      googlePlaceId: `place-${index}`,
       placeName: `장소 ${index + 1}`,
       category: 'SPOT',
       ...coordinate,

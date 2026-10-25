@@ -94,7 +94,7 @@ const mockCourseDetail: commonApi.CourseDetail = {
             reason: '바다 전망 추천',
             cost: 0,
             place: {
-              placeId: 'place-1',
+              googlePlaceId: 'place-1',
               placeName: '함덕 해수욕장',
               category: '해변',
               latitude: 33.5434,
@@ -116,7 +116,7 @@ const mockCourseDetail: commonApi.CourseDetail = {
             reason: '커피 품질 및 바다 뷰 우수',
             cost: 15000,
             place: {
-              placeId: 'place-2',
+              googlePlaceId: 'place-2',
               placeName: '감성 카페 델문도',
               category: '카페',
               latitude: 33.5436,
@@ -145,7 +145,7 @@ const mockCourseDetail: commonApi.CourseDetail = {
             reason: '',
             cost: 0,
             place: {
-              placeId: 'place-3',
+              googlePlaceId: 'place-3',
               placeName: '비자림',
               category: '관광지',
               latitude: 33.4912,

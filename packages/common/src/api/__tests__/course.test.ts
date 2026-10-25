@@ -115,7 +115,7 @@ describe('Course API Unit Tests (API-COURSE-1~4)', () => {
                             reason: '도쿄 야경 명소',
                             cost: 25000,
                             place: {
-                              placeId: 'place-1',
+                              googlePlaceId: 'ChIJ_course_test_place',
                               placeName: '시부야 스카이',
                               category: '관광명소',
                               latitude: 35.658,
@@ -151,6 +151,9 @@ describe('Course API Unit Tests (API-COURSE-1~4)', () => {
       expect(detail.totalCostExRate).toBe(49500);
       expect(detail.exRateIcon).toBe('¥');
       expect(detail.itinerary.days[0].stops[0].cost).toBe(25000);
+      expect(detail.itinerary.days[0].stops[0].place.googlePlaceId).toBe(
+        'ChIJ_course_test_place',
+      );
     });
   });
 
