@@ -1,16 +1,27 @@
 /**
  * @file CourseListScreen.tsx
- * @description UI v3 최근 코스 목록과 편집·삭제 확인을 실제 코스 API 및 최근 코스 상태에 연결합니다.
+ * @description 최근 코스 목록에서 편집 시 카드를 밀어 삭제 버튼을 드러내고, 확인 후 삭제와 최근 코스 상태를 관리합니다.
  */
 import BackSvg from '../../assets/images/figma-course/back.svg';
 import DeleteSvg from '../../assets/images/figma-course/delete.svg';
-import React, { useState, useMemo, useCallback, useContext } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from 'react';
 import {
   StyleSheet,
   View,
   Pressable,
   FlatList,
   ActivityIndicator,
+  AccessibilityInfo,
+  Animated,
+  Easing,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +59,73 @@ export function CourseListScreen({
   const { trackButtonClick } = useGA4ButtonClick();
   const auth = useContext(AuthContext);
   const [editing, setEditing] = useState(false);
+  const [deleteActionsVisible, setDeleteActionsVisible] = useState(false);
+  const editOffset = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const animatedCardStyle = useMemo(
+    () => ({ transform: [{ translateX: editOffset }] }),
+    [editOffset],
+  );
+  const animatedDeleteStyle = useMemo(
+    () => ({
+      opacity: editOffset.interpolate({
+        inputRange: [0, 60],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+    }),
+    [editOffset],
+  );
+
+  useEffect(() => {
+    let disposed = false;
+    let preferenceChanged = false;
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      (enabled) => {
+        preferenceChanged = true;
+        setReduceMotion(enabled);
+      },
+    );
+    AccessibilityInfo.isReduceMotionEnabled().then(
+      (enabled) => {
+        if (!disposed && !preferenceChanged) setReduceMotion(enabled);
+      },
+      () => {
+        if (!disposed && !preferenceChanged) setReduceMotion(true);
+      },
+    );
+    return () => {
+      disposed = true;
+      subscription.remove();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    let active = true;
+    const toValue = editing ? 60 : 0;
+    if (reduceMotion) {
+      editOffset.stopAnimation();
+      editOffset.setValue(toValue);
+      setDeleteActionsVisible(editing);
+      return;
+    }
+    if (editing) setDeleteActionsVisible(true);
+    const animation = Animated.timing(editOffset, {
+      toValue,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (active && finished && !editing) setDeleteActionsVisible(false);
+    });
+    return () => {
+      active = false;
+      animation.stop();
+    };
+  }, [editing, reduceMotion, editOffset]);
+
   const [courseToDelete, setCourseToDelete] = useState<CourseSummary | null>(
     null,
   );
@@ -180,6 +258,7 @@ export function CourseListScreen({
       )}
       <FlatList
         data={visibleCourses}
+        extraData={{ editing, deleteActionsVisible }}
         keyExtractor={(item) => item.courseId}
         contentContainerStyle={[styles.list, safeAreaStyles.list]}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
@@ -187,23 +266,37 @@ export function CourseListScreen({
         ListEmptyComponent={renderEmpty}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            {editing && (
-              <Pressable
-                testID={`delete-course-${item.courseId}`}
-                accessibilityRole='button'
-                accessibilityLabel={`${item.title} ${COURSE_UI.DELETE}`}
-                style={styles.deleteButton}
-                onPress={() => openDelete(item)}>
-                <FigmaAsset source={DeleteSvg} width={13.5} height={14.5} />
-              </Pressable>
+            {deleteActionsVisible && (
+              <Animated.View
+                style={[styles.deleteButtonWrapper, animatedDeleteStyle]}
+                pointerEvents={editing ? 'auto' : 'none'}
+                accessibilityElementsHidden={!editing}
+                importantForAccessibility={
+                  editing ? 'auto' : 'no-hide-descendants'
+                }>
+                <Pressable
+                  testID={`delete-course-${item.courseId}`}
+                  accessibilityRole='button'
+                  accessibilityLabel={`${item.title} ${COURSE_UI.DELETE}`}
+                  disabled={!editing}
+                  style={styles.deleteButton}
+                  onPress={() => openDelete(item)}>
+                  <FigmaAsset source={DeleteSvg} width={13.5} height={14.5} />
+                </Pressable>
+              </Animated.View>
             )}
-            <View style={editing ? styles.shiftedCard : styles.cardWrapper}>
+            <Animated.View
+              style={[styles.cardWrapper, animatedCardStyle]}
+              pointerEvents={
+                !editing && deleteActionsVisible ? 'none' : 'auto'
+              }>
               <CourseCard
                 item={item}
-                onPress={editing ? undefined : onSelectCourse}
-                onLongPress={openDelete}
+                onPress={
+                  editing || deleteActionsVisible ? undefined : onSelectCourse
+                }
               />
-            </View>
+            </Animated.View>
           </View>
         )}
       />
@@ -268,11 +361,12 @@ const styles = StyleSheet.create({
     minHeight: 107,
     justifyContent: 'center',
   },
-  cardWrapper: { width: '100%' },
-  shiftedCard: { width: '100%', transform: [{ translateX: 60 }] },
-  deleteButton: {
+  cardWrapper: { width: '100%', zIndex: 1 },
+  deleteButtonWrapper: {
     position: 'absolute',
     left: 0,
+  },
+  deleteButton: {
     width: 40,
     height: 40,
     borderRadius: 20,

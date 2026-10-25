@@ -3,6 +3,7 @@
  * @description Unit and integration tests for CourseListScreen and CourseDeleteModal matching Figma UI specifications.
  */
 import React from 'react';
+import { AccessibilityInfo, Animated } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CourseListScreen } from '../src/screens/CourseListScreen';
 import * as commonApi from '@yeolo/common';
@@ -98,13 +99,128 @@ describe('CourseListScreen UI v3 목록 및 삭제', () => {
     expect(deletion).not.toHaveBeenCalled();
   });
 
-  it('길게 누르기로도 기존 삭제 확인 동선을 유지한다', async () => {
+  it('일반 모드에서는 카드를 눌러도 삭제 버튼이 렌더링되지 않고 편집에서만 나타난다', async () => {
     const screen = await render(<CourseListScreen />);
-    await fireEvent(
-      await screen.findByTestId('course-card-course-uuid-1'),
-      'longPress',
-    );
-    expect(screen.getByTestId('course-delete-modal-card')).toBeTruthy();
+    const card = await screen.findByTestId('course-card-course-uuid-1');
+    const hiddenDelete = () =>
+      screen.queryByTestId('delete-course-course-uuid-1', {
+        includeHiddenElements: true,
+      });
+
+    expect(hiddenDelete()).toBeNull();
+    await fireEvent(card, 'pressIn');
+    expect(hiddenDelete()).toBeNull();
+    await fireEvent(card, 'pressOut');
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(screen.getByTestId('delete-course-course-uuid-1')).toBeEnabled();
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(screen.queryByTestId('delete-course-course-uuid-1')).toBeNull();
+    await waitFor(() => expect(hiddenDelete()).toBeNull());
+    await fireEvent(card, 'pressIn');
+    expect(hiddenDelete()).toBeNull();
+    await fireEvent(card, 'pressOut');
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+  });
+
+  it('편집을 연속 전환해도 편집 중 상세 이동을 막고 완료 후 다시 연결한다', async () => {
+    const onSelect = jest.fn();
+    const screen = await render(<CourseListScreen onSelectCourse={onSelect} />);
+    const card = await screen.findByTestId('course-card-course-uuid-1');
+    for (let i = 0; i < 2; i += 1) {
+      await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+      await fireEvent.press(card);
+      expect(onSelect).not.toHaveBeenCalled();
+      await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId('delete-course-course-uuid-1', {
+            includeHiddenElements: true,
+          }),
+        ).toBeNull(),
+      );
+    }
+    await fireEvent.press(card);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('course-uuid-1');
+  });
+
+  it('완료 시 삭제 버튼은 비활성 상태로 닫힘을 마친 뒤 제거되고 재편집에도 유지된다', async () => {
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(false);
+    const finishes: Array<() => void> = [];
+    const timing = Animated.timing;
+    jest.spyOn(Animated, 'timing').mockImplementation((value, config) => {
+      if (config.duration !== 280) return timing(value, config);
+      return {
+        start: (callback) => {
+          finishes.push(() => callback?.({ finished: true }));
+        },
+        stop: jest.fn(),
+        reset: jest.fn(),
+      };
+    });
+    const screen = await render(<CourseListScreen />);
+    await screen.findByTestId('course-card-course-uuid-1');
+    await waitFor(() => expect(finishes.length).toBeGreaterThan(0));
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await act(async () => finishes[finishes.length - 1]());
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+
+    const closingDelete = screen.getByTestId('delete-course-course-uuid-1', {
+      includeHiddenElements: true,
+    });
+    expect(closingDelete).toBeDisabled();
+    expect(screen.queryByTestId('delete-course-course-uuid-1')).toBeNull();
+    await fireEvent.press(closingDelete);
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+
+    const finishOldClose = finishes[finishes.length - 1];
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await act(async () => finishOldClose());
+    expect(screen.getByTestId('delete-course-course-uuid-1')).toBeEnabled();
+
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await act(async () => finishes[finishes.length - 1]());
+    expect(
+      screen.queryByTestId('delete-course-course-uuid-1', {
+        includeHiddenElements: true,
+      }),
+    ).toBeNull();
+  });
+
+  it('카드를 길게 눌러도 삭제 확인이나 편집 모드가 열리지 않는다', async () => {
+    const deletion = jest.spyOn(commonApi, 'deleteCourseApi');
+    const screen = await render(<CourseListScreen />);
+    const card = await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent(card, 'longPress');
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+    expect(screen.getByText('편집')).toBeTruthy();
+    expect(deletion).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent(card, 'longPress');
+    expect(screen.queryByTestId('course-delete-modal-card')).toBeNull();
+    expect(screen.getByTestId('course-card-course-uuid-1')).toBeTruthy();
+    expect(deletion).not.toHaveBeenCalled();
+  });
+
+  it('동작 줄이기가 활성화되어 있으면 완료 시 삭제 버튼을 즉시 제거한다', async () => {
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(true);
+    const screen = await render(<CourseListScreen />);
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(screen.getByTestId('delete-course-course-uuid-1')).toBeEnabled();
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    expect(
+      screen.queryByTestId('delete-course-course-uuid-1', {
+        includeHiddenElements: true,
+      }),
+    ).toBeNull();
   });
 
   it('확인 후 삭제 성공 시 목록에서 제거하고 recent storage와 선택 ID를 정리한다', async () => {
@@ -114,10 +230,9 @@ describe('CourseListScreen UI v3 목록 및 삭제', () => {
       .mockResolvedValue(undefined);
     const onDeleted = jest.fn();
     const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
-    await fireEvent(
-      await screen.findByTestId('course-card-course-uuid-1'),
-      'longPress',
-    );
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent.press(screen.getByTestId('delete-course-course-uuid-1'));
     await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
     await waitFor(() =>
       expect(onDeleted).toHaveBeenCalledWith('course-uuid-1'),
@@ -142,10 +257,9 @@ describe('CourseListScreen UI v3 목록 및 삭제', () => {
       .mockResolvedValueOnce(undefined);
     const onDeleted = jest.fn();
     const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
-    await fireEvent(
-      await screen.findByTestId('course-card-course-uuid-1'),
-      'longPress',
-    );
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent.press(screen.getByTestId('delete-course-course-uuid-1'));
     await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
     await screen.findByText('offline');
     expect(screen.getByTestId('course-card-course-uuid-1')).toBeTruthy();
@@ -163,10 +277,9 @@ describe('CourseListScreen UI v3 목록 및 삭제', () => {
     jest.spyOn(commonApi, 'deleteCourseApi').mockResolvedValue(undefined);
     const onDeleted = jest.fn();
     const screen = await render(<CourseListScreen onDeleted={onDeleted} />);
-    await fireEvent(
-      await screen.findByTestId('course-card-course-uuid-1'),
-      'longPress',
-    );
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent.press(screen.getByTestId('delete-course-course-uuid-1'));
     await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
     await waitFor(() => expect(onDeleted).toHaveBeenCalled());
     expect(await AsyncStorage.getItem('recentCourseId')).toBe('course-uuid-2');
@@ -188,10 +301,9 @@ describe('CourseListScreen UI v3 목록 및 삭제', () => {
       }),
     );
     const screen = await render(<CourseListScreen />);
-    await fireEvent(
-      await screen.findByTestId('course-card-course-uuid-1'),
-      'longPress',
-    );
+    await screen.findByTestId('course-card-course-uuid-1');
+    await fireEvent.press(screen.getByTestId('toggle-course-edit'));
+    await fireEvent.press(screen.getByTestId('delete-course-course-uuid-1'));
     await fireEvent.press(screen.getByTestId('btn-confirm-delete'));
     await waitFor(() => expect(deletion).toHaveBeenCalledTimes(1));
     await waitFor(() =>

@@ -16,7 +16,6 @@ import { Text } from '../common/Typography';
 export interface CourseCardProps {
   item: CourseSummary;
   onPress?: (courseId: string) => void;
-  onLongPress?: (course: CourseSummary) => void;
   placeNames?: readonly string[];
   testID?: string;
   selected?: boolean;
@@ -26,7 +25,6 @@ export interface CourseCardProps {
 export const CourseCard: React.FC<CourseCardProps> = ({
   item,
   onPress,
-  onLongPress,
   placeNames,
   testID,
   selected,
@@ -52,7 +50,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       }
       accessibilityLabel={item.title}
       onPress={() => onPress?.(item.courseId)}
-      onLongPress={() => onLongPress?.(item)}
       testID={testID ?? `course-card-${item.courseId}`}>
       <View style={styles.details}>
         <View style={styles.destination}>
