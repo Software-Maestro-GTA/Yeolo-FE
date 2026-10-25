@@ -4,7 +4,7 @@
  */
 import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
-import React from 'react';
+import React, { useState } from 'react';
 import type { TasteProfile } from '@yeolo/common';
 import {
   View,
@@ -19,6 +19,7 @@ import { UI_STRINGS } from '../constants';
 import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
 import { OnboardingSvg } from '../components/taste/OnboardingIllustrations';
 import { TasteTicket } from '../components/taste/TasteTicket';
+import { TasteReanalysisSheet } from '../components/taste/TasteReanalysisSheet';
 import { OnboardingButton } from '../components/onboarding/OnboardingButton';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useTasteProfileQuery } from '../hooks/queries/useTasteProfileQuery';
@@ -39,6 +40,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   onBack,
 }) => {
   useGA4ScreenTracking('TasteProfileScreen');
+  const [showReanalysisSheet, setShowReanalysisSheet] = useState(false);
   const insets = useSafeAreaInsets();
   const insetStyles = StyleSheet.create({
     content: { paddingBottom: insets.bottom + 2 },
@@ -59,7 +61,7 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
   };
   const reanalyze = () => {
     trackButtonClick('btn_taste_profile_reanalyze', 'Reanalyze Taste Profile');
-    onReanalyze?.();
+    setShowReanalysisSheet(true);
   };
   return (
     <View style={styles.screen} testID='screen-container'>
@@ -126,6 +128,14 @@ export const TasteProfileScreen: React.FC<TasteProfileScreenProps> = ({
           />
         )}
       </ScrollView>
+      <TasteReanalysisSheet
+        visible={showReanalysisSheet}
+        onClose={() => setShowReanalysisSheet(false)}
+        onConfirm={() => {
+          setShowReanalysisSheet(false);
+          onReanalyze?.();
+        }}
+      />
     </View>
   );
 };

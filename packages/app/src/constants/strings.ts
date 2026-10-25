@@ -293,6 +293,10 @@ export const UI_STRINGS = {
     MAIN_TITLE: '여행 취향 분석 결과예요!',
     RECOMMEND_CITY_TITLE: '추천 여행지',
     REANALYZE_BUTTON: '취향 분석 다시받기',
+    REANALYZE_NOTICE:
+      '갤러리에 새 사진이 없다면\n분석 결과가 이전과 비슷할 수 있어요.',
+    REANALYZE_CONFIRM: '내 여행 취향 다시 알아보기',
+    REANALYZE_CLOSE: '취향 재분석 안내 닫기',
     PACING_LABEL: 'PACING',
     ACTIVITY_LABEL: 'ACTIVITY',
     SEASON_LABEL: 'SEASON',

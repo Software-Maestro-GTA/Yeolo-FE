@@ -76,14 +76,15 @@ describe('TasteProfileScreen UI v3 & API-PREF-4 Integration', () => {
     ).toBeTruthy();
   });
 
-  it('여행 코스 추천받기 및 취향 분석 다시받기 버튼 클릭 시 각각 콜백이 호출되어야 한다', async () => {
-    const { findByTestId, getByTestId } = await render(
-      <TasteProfileScreen
-        tasteProfileId='550e8400-e29b-41d4-a716-446655440001'
-        onGenerateCourse={mockOnGenerateCourse}
-        onReanalyze={mockOnReanalyze}
-      />,
-    );
+  it('코스 추천은 바로 진행하고 재분석은 안내 시트에서 확인한 뒤 진행한다', async () => {
+    const { findByTestId, getByTestId, getByText, queryByTestId } =
+      await render(
+        <TasteProfileScreen
+          tasteProfileId='550e8400-e29b-41d4-a716-446655440001'
+          onGenerateCourse={mockOnGenerateCourse}
+          onReanalyze={mockOnReanalyze}
+        />,
+      );
 
     const generateButton = await findByTestId('generate-course-button');
     await act(async () => {
@@ -94,10 +95,63 @@ describe('TasteProfileScreen UI v3 & API-PREF-4 Integration', () => {
       expect.objectContaining({ countryName: '포르투갈', cityName: '리스본' }),
     );
 
+    expect(queryByTestId('taste-reanalysis-sheet')).toBeNull();
     const reanalyzeButton = getByTestId('reanalyze-button');
     await act(async () => {
       fireEvent.press(reanalyzeButton);
     });
+    expect(getByTestId('taste-reanalysis-sheet')).toBeTruthy();
+    expect(
+      getByText(
+        '갤러리에 새 사진이 없다면\n분석 결과가 이전과 비슷할 수 있어요.',
+      ),
+    ).toBeTruthy();
+    expect(mockOnReanalyze).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.press(getByText('내 여행 취향 다시 알아보기'));
+    });
     expect(mockOnReanalyze).toHaveBeenCalledTimes(1);
+    expect(queryByTestId('taste-reanalysis-sheet')).toBeNull();
   });
+
+  it.each(['close', 'backdrop', 'back'])(
+    '%s로 안내 시트를 닫으면 재분석 없이 결과를 유지하고 다시 열 수 있다',
+    async (dismissal) => {
+      const screen = await render(
+        <TasteProfileScreen
+          tasteProfileId='550e8400-e29b-41d4-a716-446655440001'
+          onReanalyze={mockOnReanalyze}
+        />,
+      );
+      const reanalyzeButton = await screen.findByTestId('reanalyze-button');
+      await act(async () => {
+        fireEvent.press(reanalyzeButton);
+      });
+      expect(screen.getByTestId('taste-reanalysis-sheet')).toBeTruthy();
+
+      await act(async () => {
+        if (dismissal === 'back') {
+          fireEvent(
+            screen.getByTestId('taste-reanalysis-modal'),
+            'requestClose',
+          );
+        } else {
+          fireEvent.press(
+            screen.getByTestId(`taste-reanalysis-${dismissal}`, {
+              includeHiddenElements: true,
+            }),
+          );
+        }
+      });
+
+      expect(screen.queryByTestId('taste-reanalysis-sheet')).toBeNull();
+      expect(screen.getByTestId('taste-ticket-card')).toBeTruthy();
+      expect(mockOnReanalyze).not.toHaveBeenCalled();
+      await act(async () => {
+        fireEvent.press(screen.getByTestId('reanalyze-button'));
+      });
+      expect(screen.getByTestId('taste-reanalysis-sheet')).toBeTruthy();
+    },
+  );
 });
