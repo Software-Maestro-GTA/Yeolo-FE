@@ -22,3 +22,9 @@ Static PNGs/SVGs are downloaded exports/source assets. Original SVG root dimensi
 ## 2026-10-22 duration correction
 
 `onboarding.mp4` and `taste-analysis.mp4` are each exactly 4.000 seconds (120 frames at 30 fps). The original enclosing Figma frames have 2-second timelines; exporting them directly truncated the embedded 4-second clips. These assets were re-exported using temporary frame copies with 4-second timelines, then cropped spatially without changing playback speed. Temporary copies were removed and the source timelines were preserved. The second halves include the onboarding confirmation/bin and analysis category bubbles. Posters were regenerated from the corrected clips.
+
+## 2026-10-25 course cloud loop correction
+
+`course-generation.mp4` is exactly 1.500 seconds, 90 frames at 60 fps. The source front cloud (`1442:392`) had two translation keyframes at 1.5s with conflicting Y values (0 and 4), producing a visible jump both at the last frame and at repeat. A temporary copy of `1196:1011` was exported with one endpoint and a continuous 0 → +4 → −4 → 0 translation at 0, 0.375, 1.125 and 1.5 seconds. The front cloud uses the existing rear cloud's easing so velocity is continuous at repeat. Plane/rear-cloud motion, artwork, layout, duration and source Figma nodes were preserved. The temporary export copy was removed.
+
+The 60-fps export is cropped to the same 640 × 560 artwork slot, retaining exactly the first 90 frames so the inclusive endpoint is not duplicated. The poster is its first decoded frame. Frame analysis of the shaded front-cloud region measured a loop-boundary luminance-centroid jump of 5.051px before and 0.351px after; the corrected maximum interior frame step is 0.404px. This checks asset continuity, not device frame delivery.
