@@ -57,6 +57,7 @@
     "whatwg-fetch": "^3.6.20"
   },
   "scripts": {
+    "postinstall": "node scripts/patchExpoModulesJsi.js",
     "build:android:local": "dotenv -e .env.production -- eas build --platform android --profile production --local --output ./build/app.aab",
     "build:android:apk": "dotenv -e .env.production -- eas build --platform android --profile preview --local --output ./build/app.apk",
     "build:ios:local": "dotenv -e .env.production -- eas build --platform ios --profile production --local --output ./build/app.ipa",
@@ -72,6 +73,7 @@
     "ios:prod": "dotenv -e .env.production -- expo run:ios --configuration Release",
     "web": "expo start --web",
     "lint": "tsc --noEmit",
+    "test:build-hooks": "node --test scripts/__tests__/*.test.cjs",
     "test": "jest --watchAll=false --forceExit --testTimeout=10000"
   },
   "private": true
