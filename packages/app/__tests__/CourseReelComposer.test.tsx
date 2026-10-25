@@ -1,6 +1,6 @@
 /**
  * @file CourseReelComposer.test.tsx
- * @description Reel editor tests covering per-date drafts, native export, retries and canceled component cleanup.
+ * @description Reel editor tests covering per-date drafts, shared guidance dialog dismissal, native export, retries and canceled component cleanup.
  */
 import React from 'react';
 import { Alert, FlatList, Keyboard, UIManager } from 'react-native';
@@ -423,12 +423,14 @@ describe('CourseReelComposer', () => {
     expect(ui.getByText(/한국 · 부산/)).toBeTruthy();
     expect(ui.getByText(/2026.10.04/)).toBeTruthy();
     expect(alert).not.toHaveBeenCalled();
-    await fireEvent.press(ui.getByTestId('reel-dialog-close'));
+    await fireEvent.press(ui.getByTestId('reel-info-modal-close'));
     expect(ui.queryByTestId('reel-info-modal')).toBeNull();
     await fireEvent.press(ui.getByTestId('reel-info'));
     // The modal card hides its backdrop from screen readers, but touch still dismisses it.
     await fireEvent.press(
-      ui.getByTestId('reel-dialog-backdrop', { includeHiddenElements: true }),
+      ui.getByTestId('reel-info-modal-backdrop', {
+        includeHiddenElements: true,
+      }),
     );
     expect(ui.queryByTestId('reel-info-modal')).toBeNull();
     await fireEvent.press(ui.getByTestId('reel-info'));

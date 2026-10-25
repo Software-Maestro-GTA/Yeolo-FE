@@ -1,11 +1,12 @@
 /**
  * @file ReelEditorDialog.tsx
- * @description Reel guidance and discard confirmation using the booking info and course deletion modal styles.
+ * @description Reel guidance through the shared info dialog and draft discard confirmation using course deletion modal styles.
  */
 import ModalCloseSvg from '../../../assets/images/figma-course/modal-close.svg';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../common/Typography';
 import { FigmaAsset } from '../common/FigmaAsset';
+import { InfoDialog } from '../common/InfoDialog';
 import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
 import { palette, hexToRgba } from '../../theme/colors';
 
@@ -27,74 +28,64 @@ export function ReelEditorDialog({
   onLeave: () => void;
 }) {
   if (!mode) return null;
-  const leaving = mode === 'leave';
+  if (mode === 'info')
+    return (
+      <InfoDialog
+        visible
+        testID='reel-info-modal'
+        title={V.INFO_TITLE}
+        message={V.INFO(destination, date)}
+        closeLabel={V.CLOSE}
+        onDismiss={onDismiss}
+      />
+    );
   return (
     <Modal
-      testID={`reel-${mode}-modal`}
+      testID='reel-leave-modal'
       visible
       transparent
       animationType='fade'
       onRequestClose={onDismiss}>
-      <View style={leaving ? styles.leaveOverlay : styles.infoOverlay}>
+      <View style={styles.leaveOverlay}>
         <Pressable
           testID='reel-dialog-backdrop'
           accessible={false}
           style={StyleSheet.absoluteFill}
           onPress={onDismiss}
         />
-        <View
-          style={leaving ? styles.leaveCard : styles.infoCard}
-          accessibilityViewIsModal>
-          {leaving ? (
-            <>
-              <Pressable
-                testID='reel-dialog-close'
-                accessibilityRole='button'
-                accessibilityLabel={V.CLOSE}
-                style={styles.close}
-                onPress={onDismiss}>
-                <FigmaAsset source={ModalCloseSvg} width={24} height={24} />
-              </Pressable>
-              <View style={styles.summary}>
-                <Text style={styles.destination}>{destination}</Text>
-                <Text style={styles.date}>{date}</Text>
-              </View>
-              <Text style={styles.leaveTitle} accessibilityRole='header'>
-                {V.LEAVE_TITLE}
-              </Text>
-              <Text style={styles.leaveMessage}>{V.LEAVE_MESSAGE}</Text>
-              <View style={styles.actions}>
-                <Pressable
-                  testID='reel-keep-editing'
-                  accessibilityRole='button'
-                  style={styles.cancelButton}
-                  onPress={onDismiss}>
-                  <Text style={styles.cancelText}>{V.KEEP_EDITING}</Text>
-                </Pressable>
-                <Pressable
-                  testID='reel-confirm-leave'
-                  accessibilityRole='button'
-                  style={styles.leaveButton}
-                  onPress={onLeave}>
-                  <Text style={styles.buttonText}>{V.LEAVE}</Text>
-                </Pressable>
-              </View>
-            </>
-          ) : (
-            <>
-              <Text style={styles.infoTitle} accessibilityRole='header'>
-                {V.INFO_TITLE}
-              </Text>
-              <Text style={styles.infoBody}>{V.INFO(destination, date)}</Text>
-              <Pressable
-                testID='reel-dialog-close'
-                accessibilityRole='button'
-                style={styles.infoClose}
-                onPress={onDismiss}>
-                <Text style={styles.buttonText}>{V.CLOSE}</Text>
-              </Pressable>
-            </>
-          )}
+        <View style={styles.leaveCard} accessibilityViewIsModal>
+          <Pressable
+            testID='reel-dialog-close'
+            accessibilityRole='button'
+            accessibilityLabel={V.CLOSE}
+            style={styles.close}
+            onPress={onDismiss}>
+            <FigmaAsset source={ModalCloseSvg} width={24} height={24} />
+          </Pressable>
+          <View style={styles.summary}>
+            <Text style={styles.destination}>{destination}</Text>
+            <Text style={styles.date}>{date}</Text>
+          </View>
+          <Text style={styles.leaveTitle} accessibilityRole='header'>
+            {V.LEAVE_TITLE}
+          </Text>
+          <Text style={styles.leaveMessage}>{V.LEAVE_MESSAGE}</Text>
+          <View style={styles.actions}>
+            <Pressable
+              testID='reel-keep-editing'
+              accessibilityRole='button'
+              style={styles.cancelButton}
+              onPress={onDismiss}>
+              <Text style={styles.cancelText}>{V.KEEP_EDITING}</Text>
+            </Pressable>
+            <Pressable
+              testID='reel-confirm-leave'
+              accessibilityRole='button'
+              style={styles.leaveButton}
+              onPress={onLeave}>
+              <Text style={styles.buttonText}>{V.LEAVE}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -102,30 +93,6 @@ export function ReelEditorDialog({
 }
 
 const styles = StyleSheet.create({
-  infoOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: hexToRgba(palette.deepNavy, 0.4),
-  },
-  infoCard: {
-    width: '100%',
-    maxWidth: 360,
-    padding: 24,
-    borderRadius: 20,
-    backgroundColor: palette.white,
-    gap: 18,
-  },
-  infoTitle: { fontSize: 18, fontWeight: '600', color: palette.deepNavy },
-  infoBody: { fontSize: 15, lineHeight: 23, color: palette.subText },
-  infoClose: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: palette.primary,
-  },
   leaveOverlay: {
     flex: 1,
     backgroundColor: hexToRgba(palette.black, 0.7),
