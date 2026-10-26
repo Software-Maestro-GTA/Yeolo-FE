@@ -1,6 +1,6 @@
 /**
  * @file Typography.tsx
- * @description 로드된 Pretendard의 실제 굵기를 선택하며 네이티브 텍스트 속성과 ref를 유지합니다.
+ * @description 단어 우선 줄바꿈과 Pretendard 굵기를 공통 적용하며 원문·네이티브 속성·ref를 유지합니다.
  */
 import React, { createContext, forwardRef, useContext } from 'react';
 import {
@@ -31,7 +31,13 @@ export function TypographyProvider({
 }
 
 export const Text = forwardRef<NativeText, TextProps>(function Text(
-  { style, ...props },
+  {
+    style,
+    lineBreakStrategyIOS = 'hangul-word',
+    textBreakStrategy = 'highQuality',
+    android_hyphenationFrequency = 'none',
+    ...props
+  },
   ref,
 ) {
   const loaded = useContext(FontReadyContext);
@@ -44,13 +50,28 @@ export const Text = forwardRef<NativeText, TextProps>(function Text(
       : undefined;
   return (
     <WeightContext.Provider value={weight}>
-      <NativeText ref={ref} {...props} style={[style, font]} />
+      <NativeText
+        ref={ref}
+        {...props}
+        lineBreakStrategyIOS={lineBreakStrategyIOS}
+        textBreakStrategy={textBreakStrategy}
+        android_hyphenationFrequency={android_hyphenationFrequency}
+        style={[style, font]}
+      />
     </WeightContext.Provider>
   );
 });
 
 export const TextInput = forwardRef<NativeTextInput, TextInputProps>(
-  function TextInput({ style, ...props }, ref) {
+  function TextInput(
+    {
+      style,
+      lineBreakStrategyIOS = 'hangul-word',
+      textBreakStrategy = 'highQuality',
+      ...props
+    },
+    ref,
+  ) {
     const loaded = useContext(FontReadyContext);
     const flattened = StyleSheet.flatten(style);
     const font: TextStyle | undefined =
@@ -60,6 +81,14 @@ export const TextInput = forwardRef<NativeTextInput, TextInputProps>(
             fontWeight: 'normal',
           }
         : undefined;
-    return <NativeTextInput ref={ref} {...props} style={[style, font]} />;
+    return (
+      <NativeTextInput
+        ref={ref}
+        {...props}
+        lineBreakStrategyIOS={lineBreakStrategyIOS}
+        textBreakStrategy={textBreakStrategy}
+        style={[style, font]}
+      />
+    );
   },
 );

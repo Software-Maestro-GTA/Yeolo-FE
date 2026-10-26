@@ -51,6 +51,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   letter-spacing: -0.025em;
+  /* Keep Korean words together across all text, with a fallback for long URLs. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 button,
 a,
@@ -73,13 +76,6 @@ button {
 ::selection {
   background: var(--mint-light);
   color: var(--foreground);
-}
-h1,
-h2,
-h3,
-p {
-  word-break: keep-all;
-  overflow-wrap: anywhere;
 }
 .site-container {
   width: min(var(--page-width), calc(100% - 80px));
