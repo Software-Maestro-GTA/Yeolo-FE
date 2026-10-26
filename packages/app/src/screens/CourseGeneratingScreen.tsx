@@ -1,8 +1,9 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Displays estimated course progress and signals foreground-only home routing after background connection interruptions.
+ * @description Displays course progress with non-cancelling back navigation, completion and foreground-only interruption guidance.
  */
 import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
+import BackSvg from '../../assets/images/figma-course/back.svg';
 import CompletedCheckSvg from '../../assets/images/figma-course/completed-check.svg';
 import LoadingRingSvg from '../../assets/images/figma-course/loading-ring.svg';
 import { LoopingVideo } from '../components/common/LoopingVideo';
@@ -37,6 +38,7 @@ import {
 } from '../hooks';
 
 export interface CourseGeneratingScreenProps {
+  onBack?: () => void;
   onComplete?: (courseId: string) => void;
   onReturnToCreate?: () => void;
   onReturnHome?: () => void;
@@ -51,6 +53,7 @@ const RING_WORKING_GAP = 8;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
+  onBack,
   onComplete,
   onReturnToCreate,
   onReturnHome,
@@ -337,6 +340,17 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   return (
     <View style={styles.screenContainer}>
       <View style={styles.safeArea}>
+        {onBack && (
+          <TouchableOpacity
+            testID='course-generating-back'
+            accessibilityRole='button'
+            accessibilityLabel={strings.BACK}
+            accessibilityHint={strings.CONTINUE_ELSEWHERE}
+            style={styles.backButton}
+            onPress={onBack}>
+            <FigmaAsset source={BackSvg} width={24} height={24} />
+          </TouchableOpacity>
+        )}
         <ScrollView
           contentContainerStyle={[
             styles.contentContainer,
@@ -401,6 +415,16 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  backButton: {
+    position: 'absolute',
+    top: 0,
+    left: 14,
+    zIndex: 1,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   screenContainer: { flex: 1, backgroundColor: palette.white },
   safeArea: { flex: 1 },
   contentContainer: {

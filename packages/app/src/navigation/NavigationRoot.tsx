@@ -1,6 +1,6 @@
 /**
  * @file NavigationRoot.tsx
- * @description Screen history, flow cleanup, course interruption home routing with shared guidance, shared-link resumption and session-aware back navigation.
+ * @description Screen history, session-aware navigation and course progress/result access while using other features.
  */
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -13,7 +13,7 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
-import type { BookingKind } from '@yeolo/common';
+import { useCourseStore, type BookingKind } from '@yeolo/common';
 import { BookingScreen } from '../screens/BookingScreen';
 import type { BookingContext, OpenBooking } from '../services/bookingService';
 import {
@@ -28,6 +28,7 @@ import { NAV_STEPS, NAV_TABS, NavStep, UI_STRINGS } from '../constants';
 import type { CourseCreateScreenProps } from '../screens/CourseCreateScreen';
 import type { CourseDetailViewState } from '../screens/CourseDetailScreen';
 import { InfoDialog } from '../components/common/InfoDialog';
+import { CourseGenerationStatusCard } from '../components/course/CourseGenerationStatusCard';
 import {
   LoginScreen,
   HomeScreen,
@@ -128,6 +129,30 @@ export function NavigationRoot({
   initialShareToken = '',
 }: NavigationRootProps = {}) {
   const auth = useContext(AuthContext);
+  const isGenerating = useCourseStore((state) => state.isGenerating);
+  const generatedCourseId = useCourseStore((state) => state.createdCourseId);
+  const generationMessage = useCourseStore((state) => state.progressMessage);
+  const generationError = useCourseStore((state) => state.error);
+  const [generationSession, setGenerationSession] = useState<{
+    destination?: string;
+    awaitingStart: boolean;
+  } | null>(null);
+  const [showGenerationStatus, setShowGenerationStatus] = useState(false);
+  const generationActive = Boolean(
+    generationSession && (generationSession.awaitingStart || isGenerating),
+  );
+  useEffect(() => {
+    if (isGenerating || generatedCourseId || generationError) {
+      setGenerationSession((session) =>
+        session?.awaitingStart ? { ...session, awaitingStart: false } : session,
+      );
+    }
+  }, [
+    isGenerating,
+    generatedCourseId,
+    generationError,
+    generationSession?.awaitingStart,
+  ]);
   const [analysisMode, setAnalysisMode] = useState<'full' | 'limited'>('full');
   const [analysisFailed, setAnalysisFailed] = useState(false);
   const [analysisRun, setAnalysisRun] = useState(0);
@@ -207,6 +232,8 @@ export function NavigationRoot({
     nextStep: NavStep,
     destination?: CourseCreateScreenProps['recommendedDestination'],
   ) => {
+    if (nextStep === NAV_STEPS.CREATE_COURSE && generationActive)
+      nextStep = NAV_STEPS.GENERATING_COURSE;
     if (!isCurrentRoute() || step === nextStep) return;
     if (nextStep === NAV_STEPS.CREATE_COURSE)
       setRecommendedDestination(destination);
@@ -238,6 +265,44 @@ export function NavigationRoot({
       ),
     );
   };
+
+  const leaveGeneration = () => {
+    if (!isCurrentRoute()) return;
+    setGenerationSession((session) => session ?? { awaitingStart: false });
+    setShowGenerationStatus(true);
+    navigateTo(NAV_STEPS.HOME);
+  };
+
+  const openGenerationStatus = () => {
+    if (!isCurrentRoute()) return;
+    if (generatedCourseId) {
+      setSelectedCourseId(generatedCourseId);
+      setShowGenerationStatus(false);
+      setGenerationSession(null);
+      const previousScreens = history.filter(
+        (item) =>
+          item !== NAV_STEPS.CREATE_COURSE &&
+          item !== NAV_STEPS.GENERATING_COURSE,
+      );
+      commitNavigation(
+        NAV_STEPS.COURSE_DETAIL,
+        step &&
+          step !== NAV_STEPS.COURSE_DETAIL &&
+          step !== NAV_STEPS.CREATE_COURSE &&
+          !NON_HISTORY_STEPS.includes(step)
+          ? [...previousScreens, step]
+          : previousScreens,
+      );
+    } else navigateTo(NAV_STEPS.GENERATING_COURSE);
+  };
+
+  useEffect(() => {
+    if (
+      step === NAV_STEPS.COURSE_DETAIL &&
+      selectedCourseId === generatedCourseId
+    )
+      setShowGenerationStatus(false);
+  }, [step, selectedCourseId, generatedCourseId]);
 
   const closeAnalysis = (fallback: NavStep = NAV_STEPS.HOME) => {
     if (!isCurrentRoute()) return;
@@ -287,6 +352,8 @@ export function NavigationRoot({
     const wasAuthenticated = previousAuthenticated.current;
     previousAuthenticated.current = auth?.isAuthenticated;
     if (wasAuthenticated && !auth?.isAuthenticated) {
+      setGenerationSession(null);
+      setShowGenerationStatus(false);
       setSelectedCourseId('');
       setSelectedShareToken('');
       setSelectedMbti(null);
@@ -329,7 +396,11 @@ export function NavigationRoot({
         closeAnalysis();
         return true;
       }
-      if (step === NAV_STEPS.GENERATING_COURSE || step === NAV_STEPS.TASTE) {
+      if (step === NAV_STEPS.GENERATING_COURSE) {
+        leaveGeneration();
+        return true;
+      }
+      if (step === NAV_STEPS.TASTE) {
         if (Platform.OS === 'android') {
           ToastAndroid.show(
             UI_STRINGS.NAVIGATION.IN_PROGRESS,
@@ -694,15 +765,25 @@ export function NavigationRoot({
               recommendedDestination={recommendedDestination}
               onBack={goBack}
               onPhoto={() => navigateTo(NAV_STEPS.PHOTO)}
-              onSubmit={() => navigateTo(NAV_STEPS.GENERATING_COURSE)}
+              onSubmit={(data) => {
+                setGenerationSession({
+                  destination: data?.destinationCity,
+                  awaitingStart: true,
+                });
+                setShowGenerationStatus(false);
+                navigateTo(NAV_STEPS.GENERATING_COURSE);
+              }}
             />
           </MainLayout>
         );
       case NAV_STEPS.GENERATING_COURSE:
         return (
           <CourseGeneratingScreen
+            onBack={leaveGeneration}
             onComplete={(courseId) => {
               if (!isCurrentRoute()) return;
+              setShowGenerationStatus(false);
+              setGenerationSession(null);
               if (courseId) {
                 setSelectedCourseId(courseId);
               }
@@ -711,9 +792,15 @@ export function NavigationRoot({
                 [NAV_STEPS.CREATE_COURSE, NAV_STEPS.GENERATING_COURSE],
               );
             }}
-            onReturnToCreate={() => returnTo(NAV_STEPS.CREATE_COURSE)}
+            onReturnToCreate={() => {
+              setShowGenerationStatus(false);
+              setGenerationSession(null);
+              returnTo(NAV_STEPS.CREATE_COURSE);
+            }}
             onReturnHome={() => {
               if (!isCurrentRoute()) return;
+              setShowGenerationStatus(false);
+              setGenerationSession(null);
               navigateTo(NAV_STEPS.HOME);
               setShowCourseInterruptionNotice(true);
             }}
@@ -811,7 +898,39 @@ export function NavigationRoot({
       style={styles.container}
       testID='navigation-root-container'
       {...panResponder.panHandlers}>
-      {renderCurrentScreen()}
+      <View style={styles.screen}>{renderCurrentScreen()}</View>
+      {showGenerationStatus &&
+        auth?.isAuthenticated &&
+        step !== NAV_STEPS.GENERATING_COURSE &&
+        step !== NAV_STEPS.LOGIN && (
+          <CourseGenerationStatusCard
+            status={
+              generatedCourseId
+                ? 'complete'
+                : generationError
+                  ? 'error'
+                  : 'generating'
+            }
+            title={
+              generatedCourseId
+                ? UI_STRINGS.COURSE_GENERATING.COMPLETE_TITLE
+                : generationError
+                  ? UI_STRINGS.COURSE_GENERATING.MINI_ERROR_TITLE
+                  : UI_STRINGS.COURSE_GENERATING.MINI_TITLE(
+                      generationSession?.destination,
+                    )
+            }
+            message={
+              generatedCourseId
+                ? UI_STRINGS.COURSE_GENERATING.MINI_READY_MESSAGE
+                : generationError ||
+                  generationMessage ||
+                  UI_STRINGS.COURSE_GENERATING.CONTINUE_ELSEWHERE
+            }
+            onPress={openGenerationStatus}
+            onDismiss={() => setShowGenerationStatus(false)}
+          />
+        )}
       <InfoDialog
         visible={showCourseInterruptionNotice && step === NAV_STEPS.HOME}
         testID='course-interruption-notice'
@@ -825,6 +944,7 @@ export function NavigationRoot({
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   hidden: { display: 'none' },
   container: {
     flex: 1,

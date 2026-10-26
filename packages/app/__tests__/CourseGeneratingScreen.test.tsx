@@ -1,6 +1,6 @@
 /**
  * @file CourseGeneratingScreen.test.tsx
- * @description Verifies estimated progress, terminal outcomes and foreground-only notice/home routing after background connection loss.
+ * @description Verifies non-cancelling back navigation, estimated progress, terminal outcomes and foreground-only interruption guidance.
  */
 import React from 'react';
 import { Alert, Animated, AppState, type AppStateStatus } from 'react-native';
@@ -12,6 +12,23 @@ import { renderWithQueryClient as render } from './test-utils';
 const initialAppState = AppState.currentState;
 
 describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 딜레이 연동)', () => {
+  it('뒤로가기로 화면을 나가도 생성 상태와 진행 단계를 유지한다', async () => {
+    const onBack = jest.fn();
+    useCourseStore.setState({
+      isGenerating: true,
+      progressStep: 'GENERATING_COURSE',
+    });
+    const ui = await render(<CourseGeneratingScreen onBack={onBack} />);
+    await fireEvent.press(ui.getByTestId('course-generating-back'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+    await ui.unmount();
+    expect(useCourseStore.getState()).toMatchObject({
+      isGenerating: true,
+      progressStep: 'GENERATING_COURSE',
+      createdCourseId: null,
+      error: null,
+    });
+  });
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -159,7 +176,17 @@ describe('CourseGeneratingScreen (TSK-58: 코스 생성 동적 단계 및 1초 �
     ).toContain('예상 진행');
     expect(screen.getByTestId('step-2-progress-arc')).toBeTruthy();
     expect(screen.queryByTestId('step-3-loading')).toBeNull();
-    await act(async () => jest.advanceTimersByTime(700000));
+    // TimingAnimation uses Date.now(). Jump across each segment and flush its
+    // next frame instead of rendering over 43,000 frames for twelve minutes.
+    await act(async () => {
+      jest.setSystemTime(Date.now() + 90000);
+      jest.advanceTimersByTime(32);
+    });
+    await act(async () => {
+      jest.setSystemTime(Date.now() + 700000);
+      jest.advanceTimersByTime(32);
+    });
+    expect(value()).toBe(99);
     expect(value()).toBeLessThan(100);
     expect(screen.getByTestId('step-3-pending')).toBeTruthy();
     expect(loop).not.toHaveBeenCalled();

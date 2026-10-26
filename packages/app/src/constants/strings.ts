@@ -356,6 +356,16 @@ export const UI_STRINGS = {
     SUBMIT_BUTTON: '여행 코스 생성하기',
   },
   COURSE_GENERATING: {
+    BACK: '뒤로 가기',
+    CONTINUE_ELSEWHERE: '다른 기능을 사용하는 동안에도 코스를 만들고 있어요.',
+    MINI_TITLE: (destination?: string) =>
+      destination ? `${destination} 코스 생성 중` : '여행 코스 생성 중',
+    MINI_READY_MESSAGE: '완성된 여행 일정을 확인해보세요.',
+    MINI_PROGRESS: '진행 보기',
+    MINI_RESULT: '결과 보기',
+    MINI_ERROR_TITLE: '코스 생성 상태를 확인해주세요',
+    MINI_ERROR_ACTION: '상태 보기',
+    MINI_DISMISS: '코스 생성 알림 닫기',
     MAIN_TITLE: '딱 맞는 코스를 생성하고 있어요',
     SUB_TITLE: '여정이 완성되기까지 조금만 기다려주세요.',
     STEP_1: '취향 정보 확인 중...',
@@ -387,7 +397,7 @@ export const UI_STRINGS = {
       '기기에서 백그라운드 작업이 중단되었습니다. 코스 목록에서 생성 결과를 먼저 확인해주세요.',
     BACKGROUND_INTERRUPTED_TITLE: '코스 생성 연결이 끊겼어요',
     BACKGROUND_INTERRUPTED_MESSAGE:
-      '앱을 벗어난 동안 코스 생성 연결이 끊겼습니다. 코스 목록에서 생성 결과를 확인해주세요.',
+      '앱을 벗어난 동안 코스 생성 연결이 끊겼습니다. 잠시 후 코스 목록에서 생성 결과를 확인해주세요.',
   },
   COURSE_DETAIL: {
     MAIN_TITLE: '일본 도쿄',

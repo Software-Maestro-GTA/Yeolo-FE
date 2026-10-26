@@ -1,6 +1,6 @@
 /**
  * @file useCourseMutations.ts
- * @description Custom TanStack Query mutation hook for creating travel courses (FUN-6, API-FB-8).
+ * @description Course mutations with screen-independent generation, startup failure state and course-list invalidation.
  */
 import {
   useMutation,
@@ -14,7 +14,7 @@ import {
   deleteCourseApi,
   logger,
 } from '@yeolo/common';
-import { APP_CONFIG } from '../../constants';
+import { APP_CONFIG, UI_STRINGS } from '../../constants';
 import { COURSE_LIST_QUERY_KEY } from './useCourseListQuery';
 import { createBackgroundCourseStreamApi } from '../../services/courseBackgroundService';
 
@@ -37,6 +37,9 @@ export function useCourseCreateMutation({
           .createCourse(apiUrl, data, token, createBackgroundCourseStreamApi);
       } catch (err: unknown) {
         logger.error('Failed to trigger createCourse store action:', err);
+        useCourseStore
+          .getState()
+          .setError(UI_STRINGS.COURSE_GENERATING.BACKGROUND_START_ERROR);
         throw err;
       }
     },

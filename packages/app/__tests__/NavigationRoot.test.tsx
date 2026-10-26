@@ -3,6 +3,7 @@
  * @description Verifies UI v3 navigation, course interruption home/history cleanup, onboarding paths and deep links.
  */
 import React from 'react';
+import { useCourseStore } from '@yeolo/common';
 import { BackHandler, Platform, PanResponder } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import {
@@ -147,8 +148,10 @@ jest.mock('../src/screens', () => {
       onComplete,
       onReturnToCreate,
       onReturnHome,
+      onBack,
     }: any) => (
       <>
+        <Button title='Leave Course Generation' onPress={onBack} />
         <Button
           title='Complete Course Generation'
           onPress={() => onComplete?.('course-123')}
@@ -185,6 +188,12 @@ jest.mock('../src/screens', () => {
 import { NAV_STEPS, UI_STRINGS } from '../src/constants';
 
 describe('NavigationRoot - course detail and onboarding navigation', () => {
+  beforeEach(async () =>
+    act(async () => useCourseStore.getState().resetCourseState()),
+  );
+  afterEach(async () =>
+    act(async () => useCourseStore.getState().resetCourseState()),
+  );
   const mockAuthContext = {
     isAuthenticated: true,
     isLoading: false,
@@ -192,6 +201,152 @@ describe('NavigationRoot - course detail and onboarding navigation', () => {
     login: jest.fn(),
     logout: jest.fn(),
   };
+
+  it('생성 중 홈으로 나가 다른 기능을 사용하고 완료 카드로 해당 결과를 연다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await act(async () =>
+      useCourseStore.setState({
+        isGenerating: true,
+        progressStep: 'GENERATING_COURSE',
+        progressMessage: '여행 코스를 구성하고 있어요',
+      }),
+    );
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.getByTestId('course-generation-status-action')).toBeTruthy();
+    expect(useCourseStore.getState().isGenerating).toBe(true);
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status-action')).toBeNull();
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.getState().setComplete('new-generated-course'),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(
+      ui.queryByText('CourseDetailScreen: new-generated-course'),
+    ).toBeNull();
+    expect(ui.getByText('결과 보기')).toBeTruthy();
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(
+      ui.getByText('CourseDetailScreen: new-generated-course'),
+    ).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status-action')).toBeNull();
+    await fireEvent.press(ui.getByText('Detail Back'));
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+  });
+
+  it('Android 뒤로가기와 생성 재진입은 새 요청 없이 진행 중인 화면을 연다', async () => {
+    const back = jest.spyOn(BackHandler, 'addEventListener');
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    const handler = back.mock.calls
+      .filter(([event]) => event === 'hardwareBackPress')
+      .at(-1)![1];
+    await act(async () => {
+      expect(handler({} as never)).toBe(true);
+    });
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.getByText('진행 보기')).toBeTruthy();
+    // Includes the token-reading window before the store has started the stream.
+    await fireEvent.press(ui.getByText('Create Course'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    expect(ui.queryByText('CourseCreateScreen')).toBeNull();
+    back.mockRestore();
+  });
+
+  it('다른 화면에서 실패해도 완료로 표시하거나 자동 이동하지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.getState().setError('코스 생성에 실패했어요', 500),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.getByText('코스 생성에 실패했어요')).toBeTruthy();
+    expect(ui.queryByText('결과 보기')).toBeNull();
+    await fireEvent.press(ui.getByTestId('course-generation-status-dismiss'));
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('진행 화면에서 완료하면 기존 결과 이동을 유지하고 미니 카드는 남기지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Complete Course Generation'));
+    expect(ui.getByText('CourseDetailScreen: course-123')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('이탈 후 연결이 끊기면 상태 보기를 눌렀을 때 기존 연결 끊김 안내 동선을 연다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.setState({
+        error: '연결이 끊겼어요',
+        errorReason: 'background_interrupted',
+        isGenerating: false,
+      }),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    await fireEvent.press(ui.getByText('Background Connection Interrupted'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.getByTestId('course-interruption-notice')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('로그아웃 후에는 완료된 이전 계정의 진행 카드를 표시하지 않는다', async () => {
+    const screen = (authenticated: boolean) => (
+      <AuthContext.Provider
+        value={{ ...mockAuthContext, isAuthenticated: authenticated } as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>
+    );
+    const ui = await render(screen(true));
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await ui.rerender(screen(false));
+    await act(async () =>
+      useCourseStore.getState().setComplete('old-account-course'),
+    );
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+    await ui.rerender(screen(true));
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+    expect(ui.queryByText('CourseDetailScreen: old-account-course')).toBeNull();
+  });
 
   it('생성 실패 후 코스 생성 화면으로 돌아가고 뒤로가기로 실패 화면을 다시 열지 않는다', async () => {
     const ui = await render(

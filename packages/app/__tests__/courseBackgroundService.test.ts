@@ -316,6 +316,7 @@ it('continues generation after the initiating screen unmounts', async () => {
       }),
   );
   const queryClient = createTestQueryClient();
+  const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
   const { result, unmount } = await renderHook(
@@ -335,10 +336,29 @@ it('continues generation after the initiating screen unmounts', async () => {
     expect(useCourseStore.getState().createdCourseId).toBe('background-course'),
   );
   expect(useCourseStore.getState().error).toBeNull();
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['courses'] });
   expect(native.finishAsync).toHaveBeenCalledWith(
     native.startAsync.mock.calls[0][0],
     true,
   );
+});
+
+it('토큰 조회 실패도 스토어 오류로 전달해 전역 진행 카드가 대기에 남지 않는다', async () => {
+  jest
+    .spyOn(AsyncStorage, 'getItem')
+    .mockRejectedValueOnce(new Error('storage read failed'));
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+  const { result } = await renderHook(() => useCourseCreateMutation(), {
+    wrapper,
+  });
+  await act(async () => result.current.mutate(payload));
+  await waitFor(() => expect(result.current.isError).toBe(true));
+  expect(useCourseStore.getState().error).toBe(
+    UI_STRINGS.COURSE_GENERATING.BACKGROUND_START_ERROR,
+  );
+  expect(createCourseStreamApi).not.toHaveBeenCalled();
 });
 
 it('does not replace the running request when another screen submits again', async () => {
