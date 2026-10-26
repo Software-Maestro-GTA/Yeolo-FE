@@ -1,10 +1,10 @@
 /**
  * @file BookingScreen.test.tsx
- * @description Booking entry, airport fallback and automatic course searches, overlays, validation, retry and cancellation flows.
+ * @description Booking entry, keyboard-aware ticket search actions, airport fallback, automatic course searches, overlays, validation and cancellation flows.
  */
 import React from 'react';
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
-import { Linking, StyleSheet } from 'react-native';
+import { Keyboard, Linking, StyleSheet } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MyRealTripError } from '@yeolo/common';
 import * as commonApi from '@yeolo/common';
@@ -57,6 +57,144 @@ beforeEach(() => {
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 afterEach(() => jest.restoreAllMocks());
+
+test.each(['context', 'picker'])(
+  '숙소는 %s에서 선택한 국가·도시만 표시하고 API 지역 ID로 조회한다',
+  async (entry) => {
+    jest.spyOn(commonApi, 'fetchCountriesApi').mockResolvedValue({
+      status: 200,
+      message: 'ok',
+      data: { countries: [{ countryName: '일본' }] },
+    });
+    jest.spyOn(commonApi, 'fetchCitiesApi').mockResolvedValue({
+      status: 200,
+      message: 'ok',
+      data: { cities: [{ cityName: '나고야' }] },
+    });
+    const regions = jest
+      .spyOn(myRealTrip, 'searchRegions')
+      .mockResolvedValue([
+        { regionId: 90210, name: '名古屋', subName: '아이치, 일본' },
+      ]);
+    const search = jest
+      .spyOn(myRealTrip, 'searchHotels')
+      .mockResolvedValue(hotelPage);
+    const ui = await render(
+      <BookingScreen
+        kind='hotel'
+        context={{
+          startDate: '2099-12-30',
+          endDate: '2100-01-02',
+          ...(entry === 'context'
+            ? { country: '일본', keyword: '나고야' }
+            : {}),
+        }}
+        onBack={jest.fn()}
+      />,
+    );
+    if (entry === 'picker') {
+      await fireEvent(ui.getByLabelText(S.HOTEL_LOCATION), 'pressIn');
+      await layoutDestinationCountries();
+      await fireEvent.press(await revealDestinationCountry('일본'));
+      await fireEvent.press(await ui.findByTestId('destination-city-나고야'));
+    }
+    await waitFor(() =>
+      expect(regions).toHaveBeenCalledWith('나고야', false, expect.anything()),
+    );
+    await waitFor(() =>
+      expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+        '일본  |  나고야',
+      ),
+    );
+    await fireEvent.press(ui.getByTestId('booking-search'));
+    const summary = within(await ui.findByTestId('hotel-search-summary'));
+    expect(summary.getByText('일본')).toBeTruthy();
+    expect(summary.getByText('나고야')).toBeTruthy();
+    expect(summary.queryByText(/아이치|名古屋/)).toBeNull();
+    expect(search).toHaveBeenCalledWith(
+      {
+        regionId: 90210,
+        checkIn: '2099-12-30',
+        checkOut: '2100-01-02',
+        adultCount: 1,
+      },
+      expect.anything(),
+    );
+    await fireEvent.press(ui.getByTestId('hotel-toggle-form'));
+    expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+      '일본  |  나고야',
+    );
+  },
+);
+
+test.each(['pressIn', 'focus'])(
+  '투어·티켓 입력창 %s로 공통 국가·도시 선택창을 열고 선택한 도시로 검색한다',
+  async (event) => {
+    jest.spyOn(commonApi, 'fetchCountriesApi').mockResolvedValue({
+      status: 200,
+      message: 'ok',
+      data: { countries: [{ countryName: '프랑스' }] },
+    });
+    jest.spyOn(commonApi, 'fetchCitiesApi').mockResolvedValue({
+      status: 200,
+      message: 'ok',
+      data: { cities: [{ cityName: '파리' }] },
+    });
+    const search = jest
+      .spyOn(myRealTrip, 'searchTicketPage')
+      .mockResolvedValue(ticketPage([product]));
+    const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
+    const input = ui.getByLabelText(S.KEYWORD);
+    await fireEvent(input, event);
+    expect(ui.getByTestId('destination-sheet')).toBeTruthy();
+    expect(input.props.showSoftInputOnFocus).toBe(false);
+    expect(search).not.toHaveBeenCalled();
+    await layoutDestinationCountries();
+    await fireEvent.press(await revealDestinationCountry('프랑스'));
+    await fireEvent.press(await ui.findByTestId('destination-city-파리'));
+    expect(ui.queryByTestId('destination-sheet')).toBeNull();
+    expect(ui.getByLabelText(S.KEYWORD).props.value).toBe('프랑스  |  파리');
+    await fireEvent.press(ui.getByTestId('booking-search'));
+    const summary = within(await ui.findByTestId('ticket-search-summary'));
+    expect(summary.getByText('프랑스')).toBeTruthy();
+    expect(summary.getByText('파리')).toBeTruthy();
+    expect(search).toHaveBeenCalledWith('파리', 1, expect.anything());
+  },
+);
+
+test.each(['keyboardWillShow', 'keyboardDidShow'])(
+  '투어·티켓은 %s 시 검색 버튼을 숨기고 키보드가 완전히 닫힌 뒤 복원한다',
+  async (showEvent) => {
+    jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const listeners = new Map<string, (...args: any[]) => void>();
+    const originalAdd = Keyboard.addListener.bind(Keyboard);
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((name, callback) => {
+      listeners.set(name, callback);
+      return originalAdd(name, callback);
+    });
+    const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
+    expect(ui.getByTestId('booking-search')).toBeTruthy();
+    await act(async () => listeners.get(showEvent)?.({}));
+    expect(ui.queryByTestId('booking-search')).toBeNull();
+    const input = ui.getByLabelText(S.KEYWORD);
+    await fireEvent.changeText(input, '부산');
+    expect(ui.getByLabelText(S.KEYWORD).props.value).toBe('부산');
+    await fireEvent(input, 'submitEditing');
+    expect(dismiss).toHaveBeenCalled();
+    await act(async () => listeners.get('keyboardWillHide')?.({}));
+    expect(ui.queryByTestId('booking-search')).toBeNull();
+    await act(async () => listeners.get('keyboardDidHide')?.({}));
+    expect(ui.getByTestId('booking-search')).toBeTruthy();
+  },
+);
+
+test('이미 키보드가 열린 상태로 투어·티켓 화면에 진입해도 검색 버튼을 올리지 않는다', async () => {
+  jest.spyOn(Keyboard, 'isVisible').mockReturnValue(true);
+  const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
+  expect(ui.queryByTestId('booking-search')).toBeNull();
+  expect(ui.getByLabelText(S.KEYWORD)).toBeTruthy();
+});
 
 test('투어·티켓 쿠폰팩에서 코드와 중복 안내를 숨기고 할인 조건 및 복사 기능을 유지한다', async () => {
   const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
@@ -207,7 +345,9 @@ test('숙소는 장소의 첫 지역을 자동 선택하고 숫자 입력을 숙
     />,
   );
   await waitFor(() =>
-    expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe('제주시'),
+    expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+      '대한민국  |  제주',
+    ),
   );
   expect(regions).toHaveBeenCalledWith('제주', true, expect.anything());
   expect(ui.queryByText(S.SEARCH_LOCATION)).toBeNull();
@@ -343,7 +483,9 @@ test.each(['hotel', 'ticket'] as const)(
     );
     if (kind === 'hotel') {
       await waitFor(() =>
-        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe('제주시'),
+        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+          '대한민국  |  제주',
+        ),
       );
       await fireEvent.changeText(ui.getByLabelText(S.ADULTS), '2');
     } else {
@@ -352,7 +494,9 @@ test.each(['hotel', 'ticket'] as const)(
     const expectInputs = () => {
       expect(ui.queryByTestId(`${kind}-search-summary`)).toBeNull();
       if (kind === 'hotel') {
-        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe('제주시');
+        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+          '대한민국  |  제주',
+        );
         expect(ui.getByLabelText(S.HOTEL_CHECK_IN).props.value).toBe(
           courseHotelContext.startDate,
         );
@@ -415,7 +559,9 @@ test.each(['hotel', 'ticket'] as const)(
     );
     if (kind === 'hotel')
       await waitFor(() =>
-        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe('제주시'),
+        expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+          '대한민국  |  제주',
+        ),
       );
     await fireEvent.press(ui.getByTestId('booking-search'));
     await ui.findByTestId(`${kind}-results-section`);
@@ -461,7 +607,9 @@ test('홈 숙소 예약은 유효한 기본 조건이 있어도 자동 검색하
     <BookingScreen kind='hotel' context={context} onBack={jest.fn()} />,
   );
   await waitFor(() =>
-    expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe('제주시'),
+    expect(ui.getByLabelText(S.HOTEL_LOCATION).props.value).toBe(
+      '대한민국  |  제주',
+    ),
   );
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -682,7 +830,8 @@ test.each([
     await act(async () => resolveProducts(hotelPage));
     expect(await ui.findByText(hotelProduct.itemName)).toBeTruthy();
     const summary = ui.getByTestId('hotel-search-summary');
-    expect(within(summary).getByText('제주시')).toBeTruthy();
+    expect(within(summary).getByText('대한민국')).toBeTruthy();
+    expect(within(summary).getByText('제주')).toBeTruthy();
     expect(search).toHaveBeenCalledTimes(1);
   },
 );
@@ -1475,6 +1624,7 @@ test('투어 예약 정보는 국가와 도시를 함께 표시하고 지역 변
   expect(search).toHaveBeenCalledWith('도쿄', 1, expect.anything());
   expect(search).toHaveBeenCalledTimes(1);
   await fireEvent.press(ui.getByTestId('ticket-toggle-form'));
+  expect(ui.getByLabelText(S.KEYWORD).props.value).toBe('일본  |  도쿄');
   await fireEvent.press(ui.getByTestId('booking-destination-picker'));
   await layoutDestinationCountries();
   await fireEvent.press(await revealDestinationCountry('프랑스'));
@@ -1486,6 +1636,7 @@ test('투어 예약 정보는 국가와 도시를 함께 표시하고 지역 변
   expect(summary.queryByText('일본')).toBeNull();
   expect(search).toHaveBeenLastCalledWith('파리', 1, expect.anything());
   await fireEvent.press(ui.getByTestId('ticket-toggle-form'));
+  expect(ui.getByLabelText(S.KEYWORD).props.value).toBe('프랑스  |  파리');
   await fireEvent.press(ui.getByTestId('booking-destination-picker'));
   await layoutDestinationCountries();
   expect(await revealDestinationCountry('프랑스')).toHaveProp(

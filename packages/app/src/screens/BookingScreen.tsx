@@ -1,6 +1,6 @@
 /**
  * @file BookingScreen.tsx
- * @description Entry-aware booking searches with smooth form transitions, readable product cards, and overlay price guidance.
+ * @description Booking searches preserving selected country/city labels separately from provider region IDs, with shared destination selection and safe-area keyboard avoidance.
  */
 import { CachedImageBackground } from '../components/common/CachedImage';
 import React, { useEffect, useRef, useState } from 'react';
@@ -52,7 +52,12 @@ import { BookingAirportSheet } from '../components/booking/BookingAirportSheet';
 
 const S = UI_STRINGS.BOOKING;
 const V = BOOKING_REEL_UI.BOOKING;
-type Choice = { id: string; label: string; product?: BookingProduct };
+type Choice = {
+  id: string;
+  label: string;
+  regionName?: string;
+  product?: BookingProduct;
+};
 type AirportTarget = 'departure' | 'arrival';
 type FieldType = 'text' | 'number' | 'date';
 type HotelQuery = {
@@ -85,9 +90,27 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     list: { paddingBottom: insets.bottom + 24 },
     scrollTop: { bottom: insets.bottom + 20 },
   });
-  const [headerHeight, setHeaderHeight] = useState(64);
   const [destinationVisible, setDestinationVisible] = useState(false);
   const [datesVisible, setDatesVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(() =>
+    Keyboard.isVisible(),
+  );
+  useEffect(() => {
+    if (kind !== 'ticket') return;
+    setKeyboardVisible(Keyboard.isVisible());
+    const show = () => setKeyboardVisible(true);
+    const willShow = Keyboard.addListener('keyboardWillShow', show);
+    const didShow = Keyboard.addListener('keyboardDidShow', show);
+    // Wait until the keyboard is gone so the footer never rides its closing animation.
+    const didHide = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
+    return () => {
+      willShow.remove();
+      didShow.remove();
+      didHide.remove();
+    };
+  }, [kind]);
   useEffect(() => {
     // BackgroundImageLayout owns the top inset; do not add a second safe area here.
     setBackground({ noTopEdges: false });
@@ -260,10 +283,11 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   ]);
 
   useEffect(() => {
-    if (kind !== 'hotel' || !context.keyword?.trim()) return;
+    const city = context.keyword?.trim();
+    if (kind !== 'hotel' || !city) return;
     const controller = new AbortController();
     void myRealTrip
-      .searchRegions(context.keyword.trim(), domestic, controller.signal)
+      .searchRegions(city, domestic, controller.signal)
       .then((regions) => {
         const region = regions[0];
         if (controller.signal.aborted || regionTouched.current) return;
@@ -273,7 +297,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           return;
         }
         setRegionId(region.regionId);
-        setKeyword([region.name, region.subName].filter(Boolean).join(' · '));
+        setKeyword(context.country?.trim() ? city : region.name);
       })
       .catch(() => {
         if (controller.signal.aborted || regionTouched.current) return;
@@ -301,6 +325,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           regions.map((region) => ({
             id: String(region.regionId),
             label: [region.name, region.subName].filter(Boolean).join(' · '),
+            regionName: region.name,
           })),
         );
       } catch {
@@ -676,7 +701,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   const chooseRegion = (item: Choice) => {
     regionTouched.current = true;
     setRegionId(Number(item.id));
-    setKeyword(item.label);
+    setKeyword(item.regionName ?? item.label);
     setRegionSearch(null);
     setRegionChoices([]);
     clearResults();
@@ -742,6 +767,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       />
     </View>
   );
+  const destinationLabel = destinationCountry
+    ? `${destinationCountry}  |  ${keyword}`
+    : keyword;
   const field = (
     label: string,
     value: string,
@@ -759,8 +787,17 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         maxLength={type === 'date' ? 10 : 100}
         autoCapitalize='none'
         keyboardType={type === 'text' ? 'default' : 'number-pad'}
-        showSoftInputOnFocus={type !== 'date'}
-        onPressIn={type === 'date' ? openDates : undefined}
+        returnKeyType={type === 'text' ? 'done' : undefined}
+        onSubmitEditing={type === 'text' ? Keyboard.dismiss : undefined}
+        showSoftInputOnFocus={type !== 'date' && type !== 'text'}
+        onPressIn={
+          type === 'date'
+            ? openDates
+            : type === 'text'
+              ? openDestination
+              : undefined
+        }
+        onFocus={type === 'text' ? openDestination : undefined}
         onChangeText={(value) => {
           clearResults();
           change(
@@ -864,9 +901,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   return (
     <View style={styles.screen} testID={`booking-screen-${kind}`}>
       <StatusBar barStyle='dark-content' />
-      <View
-        style={styles.header}
-        onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
+      <View style={styles.header}>
         <TouchableOpacity
           accessibilityRole='button'
           accessibilityLabel={S.BACK}
@@ -889,7 +924,8 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       </View>
       <KeyboardAvoidingView
         style={styles.content}
-        keyboardVerticalOffset={insets.top + headerHeight}
+        // Its local frame already includes the header above it; only the outer safe area is missing.
+        keyboardVerticalOffset={insets.top}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.resultsViewport}>
           <FlatList
@@ -969,7 +1005,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                     <View
                       testID={`${kind}-search-summary`}
                       style={styles.summaryChips}>
-                      {kind === 'ticket' && destinationCountry ? (
+                      {destinationCountry ? (
                         <View style={styles.destinationChip}>
                           <Text style={styles.destinationChipText}>
                             {destinationCountry}
@@ -1041,13 +1077,14 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                                 placeholder={S.HOTEL_LOCATION}
                                 placeholderTextColor={palette.mutedText}
                                 style={styles.input}
-                                value={keyword}
+                                value={destinationLabel}
                                 editable={!busy}
                                 showSoftInputOnFocus={false}
                                 onPressIn={openDestination}
                                 onFocus={openDestination}
                                 onChangeText={(value) => {
                                   regionTouched.current = true;
+                                  setDestinationCountry('');
                                   setKeyword(value);
                                   setRegionId(undefined);
                                   setRegionChoices([]);
@@ -1098,7 +1135,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                         </>
                       )}
                       {kind === 'ticket' &&
-                        field(S.KEYWORD, keyword, (value) => {
+                        field(S.KEYWORD, destinationLabel, (value) => {
                           if (value.trim() !== keyword.trim()) {
                             setDestinationCountry('');
                           }
@@ -1250,8 +1287,6 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                           style={[styles.hotelName, styles.hotelTitle]}
                           numberOfLines={2}
                           ellipsizeMode='tail'
-                          lineBreakStrategyIOS='hangul-word'
-                          textBreakStrategy='balanced'
                           android_hyphenationFrequency='none'>
                           {item.label}
                         </Text>
@@ -1295,8 +1330,6 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                         style={[styles.hotelName, styles.hotelTitle]}
                         numberOfLines={2}
                         ellipsizeMode='tail'
-                        lineBreakStrategyIOS='hangul-word'
-                        textBreakStrategy='balanced'
                         android_hyphenationFrequency='none'>
                         {item.label}
                       </Text>
@@ -1395,7 +1428,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
             </TouchableOpacity>
           )}
         </View>
-        {!formCollapsed && (
+        {!formCollapsed && (kind !== 'ticket' || !keyboardVisible) && (
           <View style={[styles.fixedFooter, safeAreaStyles.footer]}>
             {button(
               kind === 'flight'
@@ -1445,11 +1478,6 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
               );
               if (!signal.aborted && regions[0]) {
                 setRegionId(regions[0].regionId);
-                setKeyword(
-                  [regions[0].name, regions[0].subName]
-                    .filter(Boolean)
-                    .join(' · '),
-                );
                 setRegionSearch(null);
               }
             });
