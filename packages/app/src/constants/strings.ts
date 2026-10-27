@@ -197,6 +197,7 @@ export const UI_STRINGS = {
     ],
     START: '내 여행 취향 알아보기',
     OPEN_SETTINGS: '설정 열기',
+    SETTINGS_CTA: '권한 설정으로 이동',
     REQUIRED: '전체 사진 접근을 허용한 뒤 다시 눌러주세요.',
     READY: '전체 접근이 허용되었어요. 여행 취향을 알아볼 수 있어요.',
     PERMISSION_CHECK_ERROR:

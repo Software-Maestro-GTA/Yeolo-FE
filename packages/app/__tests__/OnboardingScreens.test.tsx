@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { AppState, Linking, Platform, type AppStateStatus } from 'react-native';
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent } from '@testing-library/react-native';
 import { getPermissionsAsync } from 'expo-media-library';
 import { PhotoAuthExplainScreen } from '../src/screens/PhotoAuthExplainScreen';
 import { MBTIConsentScreen } from '../src/screens/MBTIConsentScreen';
@@ -45,6 +45,43 @@ beforeEach(() => {
   });
 });
 afterEach(() => jest.restoreAllMocks());
+
+it.each([
+  ['ios', 'limited', 'granted'],
+  ['ios', 'none', 'denied'],
+  ['android', 'limited', 'granted'],
+  ['android', 'none', 'denied'],
+] as const)(
+  '%s with %s access offers only the settings CTA and opens settings',
+  async (platform, accessPrivileges, status) => {
+    permission.mockResolvedValue({ status, accessPrivileges });
+    jest.replaceProperty(Platform, 'OS', platform);
+    const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
+    const next = jest.fn();
+    const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
+
+    expect(open).not.toHaveBeenCalled();
+    await fireEvent.press(
+      screen.getByRole('button', { name: '권한 설정으로 이동' }),
+    );
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(next).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('전체 사진 접근을 허용한 뒤 다시 눌러주세요.'),
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', { name: '권한 설정으로 이동' }),
+    ).not.toHaveProp(
+      'accessibilityHint',
+      '전체 사진 접근을 허용한 뒤 다시 눌러주세요.',
+    );
+    expect(screen.queryByText(UI_STRINGS.PHOTO_AUTH.START)).toBeNull();
+    expect(
+      screen.getAllByRole('button', { name: '권한 설정으로 이동' }),
+    ).toHaveLength(1);
+  },
+);
 
 it('shows the captured Android permission steps and opens app settings from each step', async () => {
   jest.replaceProperty(Platform, 'OS', 'android');
@@ -100,11 +137,11 @@ it.each([
 ])('access %s cannot start analysis', async (accessPrivileges, status) => {
   permission.mockResolvedValue({ status, accessPrivileges });
   const next = jest.fn();
+  const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
   const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
-  await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
-  await waitFor(() => expect(permission).toHaveBeenCalledTimes(2));
+  await fireEvent.press(screen.getByText('권한 설정으로 이동'));
+  expect(open).toHaveBeenCalledTimes(1);
   expect(next).not.toHaveBeenCalled();
-  expect(screen.getByText(UI_STRINGS.PHOTO_AUTH.REQUIRED)).toBeTruthy();
 });
 
 it('keeps selected-photo analysis unavailable after returning from settings with limited access', async () => {
@@ -120,16 +157,27 @@ it('keeps selected-photo analysis unavailable after returning from settings with
   await act(async () => resume('active'));
   expect(next).not.toHaveBeenCalled();
   expect(screen.queryByText('선택한 사진으로 다시 분석')).toBeNull();
-  await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
-  expect(next).not.toHaveBeenCalled();
-  expect(screen.getByText(UI_STRINGS.PHOTO_AUTH.REQUIRED)).toBeTruthy();
+  expect(screen.queryByText(UI_STRINGS.PHOTO_AUTH.START)).toBeNull();
+  expect(screen.getByText('권한 설정으로 이동')).toBeTruthy();
 });
 
-it('does not continue if selected-photo permission is revoked before pressing start', async () => {
+it('switches to settings after permission is revoked while away', async () => {
+  let resume!: (state: AppStateStatus) => void;
+  jest
+    .spyOn(AppState, 'addEventListener')
+    .mockImplementation((_event, listener) => {
+      resume = listener;
+      return { remove: jest.fn() };
+    });
+  permission.mockResolvedValue({ status: 'granted', accessPrivileges: 'all' });
   const next = jest.fn();
   const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
+  expect(screen.getByText(UI_STRINGS.PHOTO_AUTH.START)).toBeTruthy();
+  expect(screen.queryByText('권한 설정으로 이동')).toBeNull();
   permission.mockResolvedValue({ status: 'denied', accessPrivileges: 'none' });
-  await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
+  await act(async () => resume('active'));
+  expect(screen.queryByText(UI_STRINGS.PHOTO_AUTH.START)).toBeNull();
+  expect(screen.getByText('권한 설정으로 이동')).toBeTruthy();
   expect(next).not.toHaveBeenCalled();
 });
 
@@ -147,7 +195,7 @@ it('opens settings, refreshes on resume, and waits for an explicit start tap', a
   const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
   await fireEvent.press(
     screen.getByRole('button', {
-      name: `${UI_STRINGS.PHOTO_AUTH.IOS_STEPS[0]}. ${UI_STRINGS.PHOTO_AUTH.OPEN_SETTINGS}`,
+      name: '권한 설정으로 이동',
     }),
   );
   expect(open).toHaveBeenCalledTimes(1);
@@ -159,6 +207,7 @@ it('opens settings, refreshes on resume, and waits for an explicit start tap', a
   expect(next).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
   expect(next).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('권한 설정으로 이동')).toBeNull();
   await screen.unmount();
   expect(remove).toHaveBeenCalled();
 });
@@ -168,6 +217,7 @@ it('rechecks a revoked permission even if the initial check was full', async () 
     status: 'granted',
     accessPrivileges: 'all',
   });
+  const open = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
   const next = jest.fn();
   const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
   expect(
@@ -175,6 +225,8 @@ it('rechecks a revoked permission even if the initial check was full', async () 
   ).toHaveProp('accessibilityHint', UI_STRINGS.PHOTO_AUTH.READY);
   await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
   expect(next).not.toHaveBeenCalled();
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('권한 설정으로 이동')).toBeTruthy();
 });
 
 it('permission check and settings failures remain recoverable in the same screen', async () => {
@@ -184,14 +236,13 @@ it('permission check and settings failures remain recoverable in the same screen
     .mockRejectedValue(new Error('settings error'));
   const next = jest.fn();
   const screen = await render(<PhotoAuthExplainScreen onNext={next} />);
-  await fireEvent.press(screen.getByText(UI_STRINGS.PHOTO_AUTH.START));
   expect(
     screen.getByText(UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR),
   ).toBeTruthy();
   expect(next).not.toHaveBeenCalled();
   await fireEvent.press(
     screen.getByRole('button', {
-      name: `${UI_STRINGS.PHOTO_AUTH.IOS_STEPS[0]}. ${UI_STRINGS.PHOTO_AUTH.OPEN_SETTINGS}`,
+      name: '권한 설정으로 이동',
     }),
   );
   expect(screen.getByText(UI_STRINGS.PHOTO_AUTH.SETTINGS_ERROR)).toBeTruthy();

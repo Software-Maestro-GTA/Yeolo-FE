@@ -1,6 +1,6 @@
 /**
  * @file PhotoAuthExplainScreen.tsx
- * @description Platform-specific photo access guidance using cropped settings images and full-access verification before analysis.
+ * @description Platform-specific photo guidance with a permission-aware settings or analysis action.
  */
 import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
 import { Text } from '../components/common/Typography';
@@ -40,28 +40,31 @@ export function PhotoAuthExplainScreen({
   const insetStyles = StyleSheet.create({
     content: { paddingBottom: insets.bottom + 20 },
   });
-  const [message, setMessage] = useState<string>(
-    UI_STRINGS.PHOTO_AUTH.REQUIRED,
-  );
-  const [checking, setChecking] = useState(false);
-  const [attempted, setAttempted] = useState(false);
+  const [message, setMessage] = useState<string>();
+  const [hasFullAccess, setHasFullAccess] = useState(false);
+  const [checking, setChecking] = useState(true);
   const busy = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
     let active = true;
     const refresh = async () => {
+      setChecking(true);
       try {
         const access = await getPhotoAccess();
         if (active) {
+          setHasFullAccess(access === 'all');
           setMessage(
-            access === 'all'
-              ? UI_STRINGS.PHOTO_AUTH.READY
-              : UI_STRINGS.PHOTO_AUTH.REQUIRED,
+            access === 'all' ? UI_STRINGS.PHOTO_AUTH.READY : undefined,
           );
         }
       } catch {
-        if (active) setMessage(UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR);
+        if (active) {
+          setHasFullAccess(false);
+          setMessage(UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR);
+        }
+      } finally {
+        if (active) setChecking(false);
       }
     };
     void refresh();
@@ -78,15 +81,24 @@ export function PhotoAuthExplainScreen({
     if (busy.current) return;
     busy.current = true;
     setChecking(true);
-    setAttempted(true);
     try {
+      if (!hasFullAccess) {
+        await openSettings();
+        return;
+      }
       const access = await getPhotoAccess();
       if (!mounted.current) return;
+      setHasFullAccess(access === 'all');
       if (access === 'all') onNext(access);
-      else setMessage(UI_STRINGS.PHOTO_AUTH.REQUIRED);
+      else {
+        setMessage(undefined);
+        await openSettings();
+      }
     } catch {
-      if (mounted.current)
+      if (mounted.current) {
+        setHasFullAccess(false);
         setMessage(UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR);
+      }
     } finally {
       busy.current = false;
       if (mounted.current) setChecking(false);
@@ -185,15 +197,18 @@ export function PhotoAuthExplainScreen({
             </Pressable>
           ))}
         </View>
-        {message !== UI_STRINGS.PHOTO_AUTH.READY &&
-          (attempted || message !== UI_STRINGS.PHOTO_AUTH.REQUIRED) && (
-            <Text accessibilityLiveRegion='polite' style={styles.status}>
-              {message}
-            </Text>
-          )}
+        {message && message !== UI_STRINGS.PHOTO_AUTH.READY ? (
+          <Text accessibilityLiveRegion='polite' style={styles.status}>
+            {message}
+          </Text>
+        ) : null}
         <View style={styles.actions}>
           <OnboardingButton
-            label={UI_STRINGS.PHOTO_AUTH.START}
+            label={
+              hasFullAccess
+                ? UI_STRINGS.PHOTO_AUTH.START
+                : UI_STRINGS.PHOTO_AUTH.SETTINGS_CTA
+            }
             onPress={() => void continueWithPhotos()}
             disabled={checking}
             accessibilityHint={message}
@@ -258,9 +273,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  androidAppImage: { aspectRatio: 880 / 650 },
-  androidPermissionsImage: { aspectRatio: 880 / 510 },
-  androidPhotosImage: { aspectRatio: 880 / 750 },
+  androidAppImage: { aspectRatio: 1079 / 595 },
+  androidPermissionsImage: { aspectRatio: 1080 / 210 },
+  androidPhotosImage: { aspectRatio: 1079 / 697 },
   imageCrop: { width: '100%', overflow: 'hidden' },
   searchCrop: { aspectRatio: 1170 / 213 },
   photosCrop: { aspectRatio: 1170 / 308 },
