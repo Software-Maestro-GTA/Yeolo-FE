@@ -1,6 +1,6 @@
 /**
  * @file CourseGeneratingScreen.tsx
- * @description Displays course progress with non-cancelling back navigation, completion and foreground-only interruption guidance.
+ * @description 공통 추정 진행률로 코스 생성 게이지를 표시하며 뒤로가기·완료·연결 중단 안내를 처리합니다.
  */
 import CompletedRingSvg from '../../assets/images/figma-course/completed-ring.svg';
 import BackSvg from '../../assets/images/figma-course/back.svg';
@@ -14,7 +14,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Easing,
   AppState,
   type AppStateStatus,
   ScrollView,
@@ -31,6 +30,7 @@ import { useCourseStore } from '@yeolo/common';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { FigmaAsset } from '../components/common/FigmaAsset';
+import { useCourseGenerationProgress } from '../hooks/useCourseGenerationProgress';
 import {
   useGA4ScreenTracking,
   useGA4ButtonClick,
@@ -38,6 +38,7 @@ import {
 } from '../hooks';
 
 export interface CourseGeneratingScreenProps {
+  progress?: Animated.Value;
   onBack?: () => void;
   onComplete?: (courseId: string) => void;
   onReturnToCreate?: () => void;
@@ -53,6 +54,7 @@ const RING_WORKING_GAP = 8;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
+  progress: sharedProgress,
   onBack,
   onComplete,
   onReturnToCreate,
@@ -99,9 +101,13 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
     returnHome(AppState.currentState);
     return () => subscription.remove();
   }, [error, errorReason, onReturnHome, resetCourseState]);
-  const progressAnim = useRef(
-    new Animated.Value(createdCourseId ? 100 : 5),
-  ).current;
+  const completed = Boolean(createdCourseId);
+  const progressAnim = useCourseGenerationProgress({
+    active: true,
+    completed,
+    error,
+    sharedProgress,
+  });
   const [displayPercentage, setDisplayPercentage] = useState(
     createdCourseId ? 100 : 5,
   );
@@ -136,7 +142,6 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   // Public SSE exposes taste loading and combined course generation only.
   // Internal place/route validation can repeat and is not forwarded by BE.
   // Only a persisted course ID confirms completion; step/message strings cannot.
-  const completed = Boolean(createdCourseId);
   const step1Status: StepStatus =
     completed || progressStep === 'GENERATING_COURSE'
       ? 'completed'
@@ -160,42 +165,6 @@ export const CourseGeneratingScreen: React.FC<CourseGeneratingScreenProps> = ({
   const progressTitle = completed
     ? strings.COMPLETE_TITLE
     : progressMessage || strings.MAIN_TITLE;
-
-  // Estimated progress stays independent of SSE stage/message changes, so
-  // a late stage event never resets the bar. Each segment starts exactly where
-  // the last finished; only the actual saved course can fill the final 1%.
-  useEffect(() => {
-    if (error) return;
-    // A new attempt can reuse this component after a completed/error state.
-    // Never animate down from a previous attempt's completed value.
-    if (!completed) progressAnim.setValue(5);
-    const animation = completed
-      ? Animated.timing(progressAnim, {
-          toValue: 100,
-          duration: 600,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: false,
-        })
-      : Animated.sequence([
-          Animated.timing(progressAnim, {
-            toValue: 92,
-            duration: 90000,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: false,
-          }),
-          Animated.timing(progressAnim, {
-            toValue: 99,
-            duration: 600000,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: false,
-          }),
-        ]);
-    animation.start();
-    return () => {
-      animation.stop();
-      progressAnim.stopAnimation();
-    };
-  }, [completed, progressAnim, error]);
 
   // 1-second delay before navigating to Course Detail screen upon completion
   useEffect(() => {

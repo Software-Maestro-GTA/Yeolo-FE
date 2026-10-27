@@ -29,6 +29,7 @@ import type { CourseCreateScreenProps } from '../screens/CourseCreateScreen';
 import type { CourseDetailViewState } from '../screens/CourseDetailScreen';
 import { InfoDialog } from '../components/common/InfoDialog';
 import { CourseGenerationStatusCard } from '../components/course/CourseGenerationStatusCard';
+import { useCourseGenerationProgress } from '../hooks/useCourseGenerationProgress';
 import {
   LoginScreen,
   HomeScreen,
@@ -141,6 +142,14 @@ export function NavigationRoot({
   const generationActive = Boolean(
     generationSession && (generationSession.awaitingStart || isGenerating),
   );
+  const generationProgress = useCourseGenerationProgress({
+    active: Boolean(
+      auth?.isAuthenticated &&
+      (generationSession?.awaitingStart || isGenerating),
+    ),
+    completed: Boolean(generatedCourseId),
+    error: generationError,
+  });
   useEffect(() => {
     if (isGenerating || generatedCourseId || generationError) {
       setGenerationSession((session) =>
@@ -779,6 +788,7 @@ export function NavigationRoot({
       case NAV_STEPS.GENERATING_COURSE:
         return (
           <CourseGeneratingScreen
+            progress={generationProgress}
             onBack={leaveGeneration}
             onComplete={(courseId) => {
               if (!isCurrentRoute()) return;
@@ -904,6 +914,7 @@ export function NavigationRoot({
         step !== NAV_STEPS.GENERATING_COURSE &&
         step !== NAV_STEPS.LOGIN && (
           <CourseGenerationStatusCard
+            progress={generationProgress}
             status={
               generatedCourseId
                 ? 'complete'
@@ -925,7 +936,7 @@ export function NavigationRoot({
                 ? UI_STRINGS.COURSE_GENERATING.MINI_READY_MESSAGE
                 : generationError ||
                   generationMessage ||
-                  UI_STRINGS.COURSE_GENERATING.CONTINUE_ELSEWHERE
+                  UI_STRINGS.COURSE_GENERATING.MINI_DEFAULT_MESSAGE
             }
             onPress={openGenerationStatus}
             onDismiss={() => setShowGenerationStatus(false)}

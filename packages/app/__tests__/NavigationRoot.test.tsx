@@ -260,7 +260,13 @@ describe('NavigationRoot - course detail and onboarding navigation', () => {
       expect(handler({} as never)).toBe(true);
     });
     expect(ui.getByText('Create Course')).toBeTruthy();
-    expect(ui.getByText('진행 보기')).toBeTruthy();
+    expect(
+      ui.getByTestId('course-generation-status-action').props.accessibilityState
+        .busy,
+    ).toBe(true);
+    expect(
+      ui.getByText(UI_STRINGS.COURSE_GENERATING.MINI_DEFAULT_MESSAGE),
+    ).toBeTruthy();
     // Includes the token-reading window before the store has started the stream.
     await fireEvent.press(ui.getByText('Create Course'));
     expect(ui.getByText('Complete Course Generation')).toBeTruthy();

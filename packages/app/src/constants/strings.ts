@@ -359,7 +359,10 @@ export const UI_STRINGS = {
     BACK: '뒤로 가기',
     CONTINUE_ELSEWHERE: '다른 기능을 사용하는 동안에도 코스를 만들고 있어요.',
     MINI_TITLE: (destination?: string) =>
-      destination ? `${destination} 코스 생성 중` : '여행 코스 생성 중',
+      destination
+        ? `${destination} 코스를 생성하고 있어요`
+        : '여행 코스를 생성하고 있어요',
+    MINI_DEFAULT_MESSAGE: '최적 동선 구성 중...',
     MINI_READY_MESSAGE: '완성된 여행 일정을 확인해보세요.',
     MINI_PROGRESS: '진행 보기',
     MINI_RESULT: '결과 보기',
