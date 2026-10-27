@@ -1,6 +1,6 @@
 /**
  * @file LoginScreen.tsx
- * @description Platform-aware OAuth login with native provider labels, standalone logos and UI v3 safe-area actions.
+ * @description 최신 Figma 로그인 화면의 로컬 영상과 안전 영역을 적용하며 OAuth·고객 지원 동작을 유지합니다.
  */
 import { Text } from '../components/common/Typography';
 import React, { useContext, useEffect, useState } from 'react';
@@ -16,7 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@yeolo/common';
 import { UI_STRINGS } from '../constants';
-import { palette } from '../theme/colors';
+import { hexToRgba, palette } from '../theme/colors';
+import { LoopingVideo } from '../components/common/LoopingVideo';
 import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
 import { AuthContext, useBackground } from '../context';
 import {
@@ -39,7 +40,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const { setBackground, resetBackground } = useBackground();
 
   useEffect(() => {
-    setBackground({ backgroundColor: palette.primary });
+    setBackground({ backgroundColor: palette.white });
     return resetBackground;
   }, [setBackground, resetBackground]);
 
@@ -134,12 +135,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <Text style={styles.subTitle}>{UI_STRINGS.AUTH.SUB_TITLE}</Text>
           </View>
           <View
-            style={styles.heroIllustration}
+            style={[
+              styles.heroIllustration,
+              !isAppleAvailable && styles.androidIllustration,
+            ]}
             testID='login-hero-illustration'
-            accessible={false}
-          />
+            accessible={false}>
+            <LoopingVideo
+              source={require('../../assets/figma-v3/screen-media/login.mp4')}
+              poster={require('../../assets/figma-v3/screen-media/login-poster.png')}
+              style={StyleSheet.absoluteFill}
+              testID='login-hero-video'
+            />
+          </View>
         </View>
-        <SafeAreaView style={styles.bottomCardContainer} edges={['bottom']}>
+        <SafeAreaView
+          style={[
+            styles.bottomCardContainer,
+            !isAppleAvailable && styles.androidBottomCard,
+          ]}
+          edges={['bottom']}>
           <TouchableOpacity
             accessibilityRole='button'
             accessibilityLabel={ONBOARDING_UI_STRINGS.GOOGLE_LOGIN}
@@ -182,7 +197,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               disabled={isLoggingIn}
               activeOpacity={0.8}
               testID='apple-login-button'>
-              <View style={styles.providerLogo} accessible={false}>
+              <View
+                style={[styles.providerLogo, styles.appleProviderLogo]}
+                accessible={false}>
                 <Ionicons
                   name='logo-apple'
                   size={24}
@@ -214,43 +231,59 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 };
 
 const styles = StyleSheet.create({
-  screenBackground: { flex: 1, backgroundColor: palette.primary },
+  screenBackground: { flex: 1, backgroundColor: palette.white },
   content: { flexGrow: 1 },
   hero: { flexGrow: 1, minHeight: 526, paddingTop: 50, overflow: 'hidden' },
   androidHero: { minHeight: 566 },
-  titleSection: { paddingHorizontal: 24, gap: 19 },
+  titleSection: { paddingHorizontal: 20, gap: 12 },
   mainTitle: {
     fontSize: 32,
     lineHeight: 42,
     fontWeight: '700',
     letterSpacing: -1,
-    color: palette.white,
+    color: palette.deepNavy,
   },
   subTitle: {
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '500',
     letterSpacing: -1,
-    color: palette.white,
+    color: palette.gray500,
   },
   heroIllustration: {
-    width: 267,
-    height: 267,
-    alignSelf: 'flex-end',
-    marginRight: -21,
-    marginTop: 48,
-    marginBottom: 10,
+    position: 'absolute',
+    width: 333,
+    height: 333,
+    right: -26,
+    bottom: -3,
   },
+  androidIllustration: { bottom: -1 },
   bottomCardContainer: {
+    minHeight: 274,
     backgroundColor: palette.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingTop: 48,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     gap: 16,
     alignItems: 'center',
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: 8,
+        color: hexToRgba(palette.black, 0.05),
+      },
+      {
+        offsetX: 2,
+        offsetY: 3,
+        blurRadius: 16,
+        color: hexToRgba(palette.black, 0.12),
+      },
+    ],
   },
+  androidBottomCard: { minHeight: 234, paddingTop: 46 },
   providerButton: {
     width: '100%',
     maxWidth: 350,
@@ -269,14 +302,16 @@ const styles = StyleSheet.create({
   appleLoginButton: { backgroundColor: palette.black },
   providerLogo: {
     position: 'absolute',
-    left: 24,
-    top: 19,
-    width: 24,
-    height: 24,
+    left: 28,
+    top: 14,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   googleLogo: { width: 24, height: 24 },
+  appleProviderLogo: { left: 24, top: 19, width: 24, height: 24 },
   providerLabel: {
     fontSize: 18,
     lineHeight: 26,

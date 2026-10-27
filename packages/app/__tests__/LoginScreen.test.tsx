@@ -1,10 +1,10 @@
 /**
  * @file LoginScreen.test.tsx
- * @description Unit tests for LoginScreen layout, style parameters, and OAuth login action trigger.
+ * @description 로그인 영상의 접근성 처리와 플랫폼별 OAuth 성공·취소·오류 동작을 검증합니다.
  */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert, Platform, ToastAndroid } from 'react-native';
+import { AccessibilityInfo, Alert, Platform, ToastAndroid } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { AuthContext } from '../src/context/AuthContext';
 import { LoginScreen } from '../src/screens/LoginScreen';
@@ -38,11 +38,15 @@ describe('LoginScreen UI & Interaction', () => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest.spyOn(ToastAndroid, 'show').mockImplementation(() => {});
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValue(false);
     Platform.OS = 'android';
   });
 
   afterEach(() => {
     Platform.OS = originalPlatform;
+    jest.restoreAllMocks();
   });
 
   it('UI v3 문구, 일러스트 및 로그인 버튼이 정상적으로 렌더링되어야 한다', async () => {
@@ -62,6 +66,33 @@ describe('LoginScreen UI & Interaction', () => {
 
     expect(getByTestId('apple-login-button')).toBeTruthy();
   });
+
+  it.each(['ios', 'android'] as const)(
+    '%s 로그인 화면에 무음 영상을 연결하고 동작 줄이기에서는 정지 이미지를 표시한다',
+    async (platform) => {
+      Platform.OS = platform;
+      const motion = jest
+        .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+        .mockResolvedValue(true);
+      try {
+        const ui = await renderLoginScreen();
+        const hidden = { includeHiddenElements: true };
+        const video = ui.getByTestId('login-hero-video-player', hidden);
+        expect(video.props.nativeControls).toBe(false);
+        expect(video.props.player).toMatchObject({ loop: true, muted: true });
+        expect(video.props.player.play).not.toHaveBeenCalled();
+        expect(ui.getByTestId('login-hero-video-poster', hidden)).toBeTruthy();
+        expect(
+          ui.getByRole('button', { name: '구글로 시작하기' }),
+        ).toBeTruthy();
+        expect(ui.queryByTestId('apple-login-button') !== null).toBe(
+          platform === 'ios',
+        );
+      } finally {
+        motion.mockRestore();
+      }
+    },
+  );
 
   it('Google 계정으로 계속하기 버튼 클릭 시 promptAsync 혹은 로그인 로직이 촉발되어야 한다', async () => {
     mockLoginWithGoogle.mockResolvedValueOnce({
