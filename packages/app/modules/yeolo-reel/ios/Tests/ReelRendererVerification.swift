@@ -32,7 +32,11 @@ final class VerifyApp: UIResponder, UIApplicationDelegate {
       let mapFile = dir.appendingPathComponent("map.png")
       try mapImage.pngData()!.write(to: mapFile)
       let route: [String: Any] = ["kind":"route", "uri":mapFile.absoluteString, "title":"오늘의 발자취", "caption":"DAY 1", "seconds":2, "points":[["x":0.3,"y":0.35,"label":"1"],["x":0.7,"y":0.55,"label":"2"]]]
-      let plan: [String: Any] = ["width":720,"height":1280,"fps":24,"backgroundColor":"#0D2137","accentColor":"#F59E0B","textColor":"#FFFFFF","scenes":[scene,route,scene]]
+      let brandImage = UIGraphicsImageRenderer(size:CGSize(width:16,height:16)).image { ctx in
+        UIColor.white.setFill();ctx.fill(CGRect(x:0,y:0,width:16,height:16))
+      }
+      let brand = ["uri":"data:image/png;base64,"+brandImage.pngData()!.base64EncodedString()]
+      let plan: [String: Any] = ["width":720,"height":1280,"fps":24,"brandMark":brand,"backgroundColor":"#0D2137","accentColor":"#F59E0B","textColor":"#FFFFFF","scenes":[scene,route,scene]]
       let json = String(data: try JSONSerialization.data(withJSONObject:plan), encoding:.utf8)!
       let output = dir.appendingPathComponent("sample.mp4")
       try? FileManager.default.removeItem(at:output)
@@ -44,27 +48,31 @@ final class VerifyApp: UIResponder, UIApplicationDelegate {
       let reader = try AVAssetReader(asset:asset)
       let frames = AVAssetReaderTrackOutput(track:track, outputSettings:[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32BGRA])
       reader.add(frames); reader.startReading()
-      var count = 0; var colored = false; var mapBackground = false; var attributionStrip = false
+      var count = 0; var colored = false; var mapBackground = false; var attributionStrip = false;var brandVisible = false;var routeBrandVisible = false
       while let sample = frames.copyNextSampleBuffer() {
         if count == 0, let pixel = CMSampleBufferGetImageBuffer(sample) {
           CVPixelBufferLockBaseAddress(pixel, .readOnly)
           let ptr = CVPixelBufferGetBaseAddress(pixel)!.assumingMemoryBound(to:UInt8.self)
           let offset = 200*CVPixelBufferGetBytesPerRow(pixel)+360*4
           colored = ptr[offset+2] > 150 && ptr[offset] < 80
+          let mark = 53*CVPixelBufferGetBytesPerRow(pixel)+666*4
+          brandVisible = ptr[mark]>230 && ptr[mark+1]>230 && ptr[mark+2]>230
           CVPixelBufferUnlockBaseAddress(pixel,.readOnly)
         }
         if count == 84, let pixel = CMSampleBufferGetImageBuffer(sample) {
           CVPixelBufferLockBaseAddress(pixel, .readOnly)
           let ptr = CVPixelBufferGetBaseAddress(pixel)!.assumingMemoryBound(to: UInt8.self)
-          let offset = 200 * CVPixelBufferGetBytesPerRow(pixel) + 360 * 4
+          let offset = 400 * CVPixelBufferGetBytesPerRow(pixel) + 360 * 4
           mapBackground = ptr[offset + 1] > 150 && ptr[offset + 2] < 80
-          let strip = 830 * CVPixelBufferGetBytesPerRow(pixel) + 360 * 4
+          let strip = 960 * CVPixelBufferGetBytesPerRow(pixel) + 360 * 4
           attributionStrip = ptr[strip] > 230 && ptr[strip+1] > 230 && ptr[strip+2] > 230
+          let mark = 53*CVPixelBufferGetBytesPerRow(pixel)+666*4
+          routeBrandVisible = ptr[mark]>230 && ptr[mark+1]>230 && ptr[mark+2]>230
           CVPixelBufferUnlockBaseAddress(pixel, .readOnly)
         }
         count += 1
       }
-      guard count == 192, colored, mapBackground, attributionStrip, reader.status == .completed else { throw ReelError.encoding }
+      guard count == 192, colored, mapBackground, attributionStrip, brandVisible, routeBrandVisible, reader.status == .completed else { throw ReelError.encoding }
       let canceledFile = dir.appendingPathComponent("cancel.mp4")
       var canceledWorked = false
       do { try ReelRenderer.render(json:json, output:canceledFile,canceled:{true},progress:{_ in}) }

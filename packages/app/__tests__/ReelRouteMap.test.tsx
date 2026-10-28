@@ -94,6 +94,127 @@ describe('ReelRouteMap', () => {
     await unmount();
     expect(service.deleteReel).toHaveBeenCalledWith(snapshot.uri);
   });
+  it('같은 날짜의 위치 변경·삭제에도 지도를 다시 만들고 남은 좌표로 범위를 계산한다', async () => {
+    const onReady = jest.fn();
+    const day = reelCourse.itinerary.days[0];
+    const ui = await render(
+      <ReelRouteMap day={day} onReady={onReady} disabled={false} />,
+    );
+    const previousMap = ui.getByTestId('reel-google-map');
+    await fireEvent(previousMap, 'mapLoaded');
+    const changed = {
+      ...day,
+      stops: [
+        {
+          ...day.stops[1],
+          place: { ...day.stops[1].place, latitude: 37.57, longitude: 126.98 },
+        },
+      ],
+    };
+    await ui.rerender(
+      <ReelRouteMap day={changed} onReady={onReady} disabled={false} />,
+    );
+    const nextMap = ui.getByTestId('reel-google-map');
+    expect(nextMap).not.toBe(previousMap);
+    expect(nextMap.props.initialRegion).toMatchObject({
+      latitude: 37.57,
+      longitude: 126.98,
+      latitudeDelta: 0.008,
+      longitudeDelta: 0.008,
+    });
+    expect(service.deleteReel).toHaveBeenCalledWith(snapshot.uri);
+    expect(onReady).toHaveBeenLastCalledWith(null);
+    await fireEvent(nextMap, 'mapLoaded');
+    expect(service.captureReelMap).toHaveBeenLastCalledWith(42, [
+      { latitude: 37.57, longitude: 126.98, label: '1' },
+    ]);
+  });
+  it('교체된 지도의 늦은 로딩 이벤트로 새 지도를 미리 캡처하지 않는다', async () => {
+    const onReady = jest.fn();
+    const day = reelCourse.itinerary.days[0];
+    const ui = await render(
+      <ReelRouteMap day={day} onReady={onReady} disabled={false} />,
+    );
+    const oldLoaded = ui.getByTestId('reel-google-map').props.onMapLoaded;
+    await ui.rerender(
+      <ReelRouteMap
+        day={{ ...day, stops: [day.stops[0]] }}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    await act(async () => oldLoaded());
+    expect(service.captureReelMap).not.toHaveBeenCalled();
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    expect(service.captureReelMap).toHaveBeenCalledTimes(1);
+  });
+  it('같은 좌표의 새 일정 객체는 지도 캡처를 다시 시작하지 않는다', async () => {
+    const onReady = jest.fn();
+    const day = reelCourse.itinerary.days[0];
+    const ui = await render(
+      <ReelRouteMap day={day} onReady={onReady} disabled={false} />,
+    );
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    const map = ui.getByTestId('reel-google-map');
+    onReady.mockClear();
+    await ui.rerender(
+      <ReelRouteMap
+        day={{ ...day, memo: '새 메모' }}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    expect(ui.getByTestId('reel-google-map')).toBe(map);
+    expect(onReady).not.toHaveBeenCalled();
+    expect(service.captureReelMap).toHaveBeenCalledTimes(1);
+  });
+  it('위치 변경 후 도착한 이전 캡처는 삭제하고 새 지도를 보존한다', async () => {
+    let resolve: (map: typeof snapshot) => void = () => {};
+    jest.mocked(service.captureReelMap).mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    const onReady = jest.fn();
+    const day = reelCourse.itinerary.days[0];
+    const ui = await render(
+      <ReelRouteMap day={day} onReady={onReady} disabled={false} />,
+    );
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    const next = { ...snapshot, uri: 'file:///new-map.png' };
+    jest.mocked(service.captureReelMap).mockResolvedValueOnce(next);
+    await ui.rerender(
+      <ReelRouteMap
+        day={{ ...day, stops: [day.stops[1]] }}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    await act(async () => resolve(snapshot));
+    expect(onReady).toHaveBeenLastCalledWith(next);
+    expect(service.deleteReel).toHaveBeenCalledWith(snapshot.uri);
+    expect(service.deleteReel).not.toHaveBeenCalledWith(next.uri);
+  });
+  it('모든 장소가 없어지면 이전 캡처를 정리하고 빈 지도를 표시한다', async () => {
+    const onReady = jest.fn();
+    const day = reelCourse.itinerary.days[0];
+    const ui = await render(
+      <ReelRouteMap day={day} onReady={onReady} disabled={false} />,
+    );
+    await fireEvent(ui.getByTestId('reel-google-map'), 'mapLoaded');
+    await ui.rerender(
+      <ReelRouteMap
+        day={{ ...day, stops: [] }}
+        onReady={onReady}
+        disabled={false}
+      />,
+    );
+    expect(ui.queryByTestId('reel-google-map')).toBeNull();
+    expect(ui.getByText(UI_STRINGS.REEL.MAP_EMPTY)).toBeTruthy();
+    expect(onReady).toHaveBeenLastCalledWith(null);
+    expect(service.deleteReel).toHaveBeenCalledWith(snapshot.uri);
+  });
   it('캡처 실패를 알리고 재시도하면 새 배경을 전달한다', async () => {
     (service.captureReelMap as jest.Mock).mockRejectedValueOnce(
       new Error('tiles'),

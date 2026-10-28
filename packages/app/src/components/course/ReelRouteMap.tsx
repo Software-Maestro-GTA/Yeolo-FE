@@ -16,13 +16,16 @@ import {
   captureReelMap,
   deleteReel,
   reelMapCoordinates,
+  reelMapRegion,
+  reelMapSignature,
+  type ReelMapCoordinate,
   type ReelMapSnapshot,
 } from '../../services/courseReelService';
 import { APP_CONFIG } from '../../constants/config';
 import { UI_STRINGS } from '../../constants/strings';
 import { palette } from '../../theme/colors';
 
-/** A fresh instance per date prevents late tile/snapshot events from updating another day's video. */
+/** Remounts each capture session when the remaining places, their coordinates or the date change. */
 export function ReelRouteMap({
   day,
   onReady,
@@ -34,29 +37,43 @@ export function ReelRouteMap({
   disabled: boolean;
   compact?: boolean;
 }) {
+  const [attempt, setAttempt] = useState(0);
+  const coordinates = useMemo(() => reelMapCoordinates(day), [day]);
+  return (
+    <ReelMapCapture
+      key={`${reelMapSignature(day)}:${attempt}`}
+      coordinates={coordinates}
+      onReady={onReady}
+      disabled={disabled}
+      compact={compact}
+      onRetry={() => setAttempt((value) => value + 1)}
+    />
+  );
+}
+
+/** Owns one native map and its pending capture so stale events cannot touch the next map. */
+function ReelMapCapture({
+  coordinates: initialCoordinates,
+  onReady,
+  disabled,
+  compact,
+  onRetry,
+}: {
+  coordinates: ReelMapCoordinate[];
+  onReady: (map: ReelMapSnapshot | null) => void;
+  disabled: boolean;
+  compact: boolean;
+  onRetry: () => void;
+}) {
+  // The parent key makes the coordinate set immutable for this capture session.
+  const coordinates = useRef(initialCoordinates).current;
   const mapRef = useRef<MapView>(null);
   const callback = useRef(onReady);
   callback.current = onReady;
-  const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const capture = useRef<(() => void) | null>(null);
-  const coordinates = useMemo(() => reelMapCoordinates(day), [day]);
-  const region = useMemo(() => {
-    if (!coordinates.length) return undefined;
-    const latitudes = coordinates.map((p) => p.latitude);
-    const longitudes = coordinates.map((p) => p.longitude);
-    const minLat = Math.min(...latitudes),
-      maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes),
-      maxLng = Math.max(...longitudes);
-    return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
-      latitudeDelta: Math.max(0.008, (maxLat - minLat) * 1.7),
-      longitudeDelta: Math.max(0.008, (maxLng - minLng) * 1.7),
-    };
-  }, [coordinates]);
+  const region = useMemo(() => reelMapRegion(coordinates), [coordinates]);
   useEffect(() => {
     let active = true,
       started = false;
@@ -105,7 +122,7 @@ export function ReelRouteMap({
       capture.current = null;
       if (uri) void deleteReel(uri).catch(() => {});
     };
-  }, [coordinates, attempt]);
+  }, [coordinates]);
   return (
     <View style={[styles.container, compact && styles.compactContainer]}>
       {!compact && (
@@ -114,7 +131,6 @@ export function ReelRouteMap({
       {region ? (
         <View collapsable={false} style={compact && styles.captureMask}>
           <MapView
-            key={attempt}
             ref={mapRef}
             testID='reel-google-map'
             provider={PROVIDER_GOOGLE}
@@ -141,7 +157,7 @@ export function ReelRouteMap({
             testID='reel-map-retry'
             accessibilityRole='button'
             disabled={disabled}
-            onPress={() => setAttempt((n) => n + 1)}>
+            onPress={onRetry}>
             <Text style={styles.retry}>{UI_STRINGS.REEL.MAP_RETRY}</Text>
           </TouchableOpacity>
         </>

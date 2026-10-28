@@ -16,6 +16,7 @@ public final class YeoloReelModule: Module {
   public func definition() -> ModuleDefinition {
     Name("YeoloReel")
     Events("onProgress")
+    Constant("rendererVersion") { 7 }
     Function("cancel") { self.lock.lock(); self.canceled = true; self.lock.unlock() }
     AsyncFunction("captureMapAsync") { (tag: Int, json: String) -> [String: Any] in
       guard let view = self.appContext?.findView(withTag: tag, ofType: UIView.self),

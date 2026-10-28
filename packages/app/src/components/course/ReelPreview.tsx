@@ -1,152 +1,209 @@
 /**
  * @file ReelPreview.tsx
- * @description Portrait storyboard preview with slow photo zoom and a captured Google Maps course route.
+ * @description Frame-timed portrait storyboard using the native export layout, readable captions and resumable playback.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
+  AppState,
   Image,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Text } from '../common/Typography';
-import Svg, { Circle, Polyline, Text as SvgText } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import type { ReelPlan } from '../../services/courseReelService';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  reelPlaybackFrame,
+  type ReelPlan,
+  type ReelScene,
+} from '../../services/courseReelService';
+import { APP_CONFIG } from '../../constants/config';
 import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants/strings';
 import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
 
-/** Renders an approximate storyboard preview; the exported MP4 is available separately. */
+/** Scales one 720px export canvas rather than maintaining a second typography/layout system. */
 export function ReelPreview({
   plan,
   compact = false,
   expanded = false,
-  intro = false,
   onClose,
 }: {
   plan: ReelPlan | null;
   compact?: boolean;
   expanded?: boolean;
-  intro?: boolean;
   onClose?: () => void;
 }) {
-  const [index, setIndex] = useState(0);
+  const [seconds, setSeconds] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const zoom = useRef(new Animated.Value(1)).current;
-  const scene = plan?.scenes[index] || plan?.scenes[0];
+  const [width, setWidth] = useState(216);
+  const elapsed = useRef(0);
+  const frame = plan ? reelPlaybackFrame(plan, seconds) : null;
+  const scene = frame && plan ? plan.scenes[frame.index] : undefined;
+  const fraction = frame?.fraction ?? 0;
+  const canvasStyles = useMemo(() => makeCanvasStyles(width), [width]);
+  const sceneStyles = useMemo(
+    () => makeSceneStyles(plan, scene),
+    [plan, scene],
+  );
+  const layout = plan?.layout ?? APP_CONFIG.REEL.LAYOUT;
   useEffect(() => {
-    setIndex(0);
+    elapsed.current = 0;
+    setSeconds(0);
     setPlaying(false);
   }, [plan]);
   useEffect(() => {
-    zoom.setValue(1);
-    if (!playing || !scene || !plan) return;
-    const animation = Animated.timing(zoom, {
-      toValue: 1.06,
-      duration: scene.seconds * 1000,
-      useNativeDriver: true,
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') setPlaying(false);
     });
-    animation.start();
-    const timer = setTimeout(() => {
-      if (index + 1 < plan.scenes.length) setIndex(index + 1);
-      else {
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    if (!playing || !plan) return;
+    const duration = plan.scenes.reduce((sum, item) => sum + item.seconds, 0);
+    const anchor = Date.now() - elapsed.current * 1000;
+    let finished = false;
+    const timer = setInterval(() => {
+      const next = (Date.now() - anchor) / 1000;
+      if (next >= duration) {
+        finished = true;
+        elapsed.current = 0;
+        setSeconds(0);
         setPlaying(false);
-        setIndex(0);
+      } else {
+        elapsed.current = next;
+        setSeconds(next);
       }
-    }, scene.seconds * 1000);
+    }, 1000 / plan.fps);
     return () => {
-      clearTimeout(timer);
-      animation.stop();
+      clearInterval(timer);
+      if (!finished)
+        elapsed.current = Math.min(duration, (Date.now() - anchor) / 1000);
     };
-  }, [index, playing, scene, plan, zoom]);
+  }, [playing, plan]);
+  const markerTime = fraction * (scene?.seconds ?? 0);
   return (
     <View style={styles.container}>
       <View
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
         style={[
           styles.frame,
           compact && styles.compactFrame,
           expanded && styles.expandedFrame,
-          intro && styles.introFrame,
           !scene && styles.emptyFrame,
         ]}
         testID='reel-preview'>
-        {scene?.kind === 'photo' && (
-          <Animated.View
-            style={[StyleSheet.absoluteFill, { transform: [{ scale: zoom }] }]}>
-            <Image
-              source={{ uri: scene.uri }}
-              style={StyleSheet.absoluteFill}
-              resizeMode='cover'
-            />
-          </Animated.View>
+        {scene && (
+          <View style={canvasStyles.canvas} pointerEvents='none'>
+            {scene.kind === 'photo' && (
+              <Image
+                testID='reel-photo-background'
+                source={{ uri: scene.uri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode='cover'
+              />
+            )}
+            {scene.kind === 'route' && (
+              <>
+                <View style={sceneStyles.mapCard}>
+                  <Image
+                    source={{ uri: scene.uri }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode='stretch'
+                    testID='reel-map-background'
+                  />
+                </View>
+                {scene.points.map((point, index) => {
+                  const opacity = Math.min(
+                    1,
+                    Math.max(
+                      0,
+                      (markerTime - index * layout.markerIntervalSeconds) /
+                        layout.markerFadeSeconds,
+                    ),
+                  );
+                  if (opacity <= 0) return null;
+                  const marker = makeMarkerStyles(point, opacity, layout);
+                  return (
+                    <View key={point.label} style={marker.group}>
+                      <View style={marker.circle}>
+                        <Text style={marker.number}>{point.label}</Text>
+                      </View>
+                      {!!point.name && (
+                        <View style={marker.nameBox}>
+                          <Text style={marker.name} numberOfLines={1}>
+                            {point.name}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
+            )}
+            {scene.kind === 'photo' && (
+              <LinearGradient
+                testID='reel-bottom-gradient'
+                colors={[
+                  palette.transparent,
+                  hexToRgba(palette.black, layout.gradientMidOpacity),
+                  hexToRgba(palette.black, layout.gradientBottomOpacity),
+                ]}
+                locations={[0, layout.gradientMidStop, 1]}
+                style={sceneStyles.gradient}
+              />
+            )}
+            {scene.role === 'stop' ? (
+              <View style={sceneStyles.placeHeading}>
+                <View style={sceneStyles.placeTitleRow}>
+                  {!!scene.number && !!scene.title.trim() && (
+                    <View style={sceneStyles.numberCircle}>
+                      <Text
+                        testID='reel-place-number'
+                        style={sceneStyles.number}>
+                        {scene.number}
+                      </Text>
+                    </View>
+                  )}
+                  <Text
+                    testID='reel-scene-title'
+                    style={sceneStyles.placeTitle}
+                    numberOfLines={2}>
+                    {scene.title}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text
+                testID='reel-scene-title'
+                style={sceneStyles.title}
+                numberOfLines={2}>
+                {scene.title}
+              </Text>
+            )}
+            {!!scene.caption && (
+              <Text style={sceneStyles.caption} numberOfLines={2}>
+                {scene.caption}
+              </Text>
+            )}
+            {plan && (
+              <Image
+                testID='reel-brand-mark'
+                source={plan.brandMark}
+                resizeMode='contain'
+                style={sceneStyles.brandMark}
+                accessible={false}
+              />
+            )}
+          </View>
         )}
-        {scene?.kind === 'route' && (
-          <Image
-            source={{ uri: scene.uri }}
-            style={styles.mapBackground}
-            resizeMode='stretch'
-            testID='reel-map-background'
-          />
+        {!scene && (
+          <View style={styles.emptyCaption}>
+            <Text style={styles.emptyText}>{UI_STRINGS.REEL.PREVIEW}</Text>
+            <Text style={styles.emptyText}>{UI_STRINGS.REEL.EMPTY_PHOTOS}</Text>
+          </View>
         )}
-        {scene?.kind === 'route' && !!scene.uri && (
-          <Svg viewBox='0 0 720 1280' style={StyleSheet.absoluteFill}>
-            <Polyline
-              points={scene.points
-                .map((p) => `${p.x * 720},${p.y * 1280}`)
-                .join(' ')}
-              stroke={palette.warning}
-              strokeWidth={6}
-              fill='none'
-            />
-            {scene.points.map((p, i) => (
-              <React.Fragment key={i}>
-                <Circle
-                  cx={p.x * 720}
-                  cy={p.y * 1280}
-                  r={22}
-                  fill={palette.warning}
-                />
-                <SvgText
-                  x={p.x * 720}
-                  y={p.y * 1280 + 9}
-                  fill={palette.deepNavy}
-                  fontSize={26}
-                  textAnchor='middle'>
-                  {p.label}
-                </SvgText>
-              </React.Fragment>
-            ))}
-          </Svg>
-        )}
-        {scene && scene.kind !== 'route' && (
-          <LinearGradient
-            colors={[palette.transparent, hexToRgba(palette.black, 0.75)]}
-            style={styles.gradient}
-          />
-        )}
-        <View
-          style={[
-            styles.caption,
-            scene?.kind === 'route' && styles.mapCaption,
-            intro && styles.introCaption,
-          ]}>
-          <Text
-            style={[styles.sceneTitle, !scene && styles.emptyText]}
-            numberOfLines={2}>
-            {scene?.title ?? UI_STRINGS.REEL.PREVIEW}
-          </Text>
-          <Text
-            style={[styles.sceneCaption, !scene && styles.emptyText]}
-            numberOfLines={4}>
-            {scene?.caption ??
-              (intro
-                ? BOOKING_REEL_UI.REEL.SAMPLE
-                : UI_STRINGS.REEL.EMPTY_PHOTOS)}
-          </Text>
-        </View>
         {!!plan && !compact && (
           <TouchableOpacity
             style={[styles.play, !!onClose && styles.playWithClose]}
@@ -173,30 +230,170 @@ export function ReelPreview({
           </TouchableOpacity>
         )}
       </View>
-      {!compact && !intro && (
+      {!compact && (
         <Text style={styles.meta}>
           {UI_STRINGS.REEL.FORMAT}
-          {plan ? ` · ${plan.scenes.reduce((n, s) => n + s.seconds, 0)}s` : ''}
+          {plan
+            ? ` · ${plan.scenes.reduce((sum, item) => sum + item.seconds, 0)}s`
+            : ''}
         </Text>
       )}
     </View>
   );
 }
+function makeCanvasStyles(width: number) {
+  return StyleSheet.create({
+    canvas: {
+      position: 'absolute',
+      width: 720,
+      height: 1280,
+      transformOrigin: 'top left',
+      transform: [{ scale: width / 720 }],
+    },
+  });
+}
+function makeSceneStyles(plan: ReelPlan | null, scene?: ReelScene) {
+  const l = plan?.layout ?? APP_CONFIG.REEL.LAYOUT;
+  const hero = scene?.role === 'hook';
+  const route = scene?.kind === 'route';
+  const common = {
+    position: 'absolute' as const,
+    color: plan?.textColor ?? palette.white,
+    textAlign: 'left' as const,
+    includeFontPadding: false,
+  };
+  return StyleSheet.create({
+    brandMark: {
+      position: 'absolute',
+      left: l.logoX,
+      top: l.logoY,
+      width: l.logoWidth,
+      height: l.logoHeight,
+    },
+    gradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: l.gradientTop,
+      bottom: 0,
+    },
+    mapCard: {
+      position: 'absolute',
+      left: l.mapX,
+      top: l.mapY,
+      width: l.mapSize,
+      height: l.mapSize,
+      borderRadius: l.mapRadius,
+      overflow: 'hidden',
+    },
+    title: {
+      ...common,
+      left: hero ? l.textX : l.titleX,
+      width: hero ? l.textWidth : l.titleWidth,
+      top: hero ? l.heroTitleY : l.titleY,
+      height: hero ? l.heroTitleHeight : l.titleHeight,
+      fontSize: hero ? l.heroTitleSize : l.titleSize,
+      fontWeight: '800',
+    },
+    placeHeading: {
+      position: 'absolute',
+      left: l.numberX - l.numberRadius,
+      top: l.titleY,
+      width: l.textWidth,
+      height: l.titleHeight,
+      justifyContent: 'flex-end',
+    },
+    placeTitleRow: { flexDirection: 'row', alignItems: 'flex-start' },
+    placeTitle: {
+      color: plan?.textColor ?? palette.white,
+      fontSize: l.titleSize,
+      fontWeight: '800',
+      includeFontPadding: false,
+      width: l.titleWidth,
+      minHeight: Math.ceil(l.titleSize * 1.2),
+      lineHeight: Math.ceil(l.titleSize * 1.2),
+    },
+    caption: {
+      ...common,
+      left: hero || route ? l.textX : l.captionX,
+      width: hero || route ? l.textWidth : l.captionWidth,
+      top: route ? l.dateY : hero ? l.heroCaptionY : l.captionY,
+      height: route
+        ? l.dateHeight
+        : hero
+          ? l.heroCaptionHeight
+          : l.captionHeight,
+      fontSize: route ? l.dateSize : hero ? l.heroCaptionSize : l.captionSize,
+      textAlign: route ? 'center' : 'left',
+      fontWeight: hero ? '800' : '500',
+    },
+    numberCircle: {
+      marginTop: l.numberY - l.titleY - l.numberRadius,
+      marginRight: l.titleX - l.numberX - l.numberRadius,
+      width: l.numberRadius * 2,
+      height: l.numberRadius * 2,
+      borderRadius: l.numberRadius,
+      backgroundColor: plan?.accentColor ?? palette.primary,
+      borderWidth: 2,
+      borderColor: palette.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    number: {
+      color: palette.white,
+      fontSize: l.numberSize,
+      fontWeight: '800',
+      lineHeight: l.numberRadius * 2 - 2,
+    },
+  });
+}
+function makeMarkerStyles(
+  point: NonNullable<ReelScene['points']>[number],
+  opacity: number,
+  l: ReelPlan['layout'],
+) {
+  return StyleSheet.create({
+    group: { ...StyleSheet.absoluteFill, opacity },
+    circle: {
+      position: 'absolute',
+      left: point.x * 720 - l.mapMarkerRadius,
+      top: point.y * 1280 - l.mapMarkerRadius,
+      width: l.mapMarkerRadius * 2,
+      height: l.mapMarkerRadius * 2,
+      borderRadius: l.mapMarkerRadius,
+      backgroundColor: palette.primary,
+      borderWidth: 3,
+      borderColor: palette.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    number: {
+      color: palette.white,
+      fontSize: l.mapMarkerSize,
+      fontWeight: '800',
+      lineHeight: l.mapMarkerRadius * 2 - 2,
+    },
+    nameBox: {
+      position: 'absolute',
+      left: point.nameX ?? 0,
+      top: point.nameY ?? 0,
+      width: point.nameWidth ?? 0,
+      height: l.mapNameHeight,
+      borderRadius: 4,
+      backgroundColor: palette.white,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+    },
+    name: {
+      color: palette.deepNavy,
+      fontSize: l.mapNameSize,
+      fontWeight: '700',
+      includeFontPadding: false,
+    },
+  });
+}
 const styles = StyleSheet.create({
-  mapCaption: { top: '70%', bottom: undefined },
-  mapBackground: {
-    position: 'absolute',
-    top: '10%',
-    width: '100%',
-    aspectRatio: 1,
-  },
-  compactFrame: { width: 210 },
-  expandedFrame: { width: 314 },
-  introFrame: { width: 252 },
-  emptyFrame: { backgroundColor: palette.mediaPlaceholder },
-  emptyText: { color: palette.mutedText, fontSize: 16, lineHeight: 22 },
-  introCaption: { top: 0, bottom: 0, justifyContent: 'center' },
-  container: { alignItems: 'center', marginVertical: 0, gap: 8 },
+  container: { alignItems: 'center', gap: 8 },
   frame: {
     width: 216,
     aspectRatio: 9 / 16,
@@ -204,33 +401,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
   },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '45%',
-  },
-  caption: {
-    position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 56,
+  compactFrame: { width: 210 },
+  expandedFrame: { width: 314 },
+  emptyFrame: { backgroundColor: palette.mediaPlaceholder },
+  emptyCaption: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 18,
     gap: 10,
   },
-  sceneTitle: {
-    color: palette.warning,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  sceneCaption: {
-    color: palette.white,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
+  emptyText: { color: palette.subText, fontSize: 14, textAlign: 'center' },
   play: {
     position: 'absolute',
     right: 12,

@@ -1,6 +1,6 @@
 /**
  * @file CourseReelComposer.tsx
- * @description Course-day photo/caption editor with independent local stop keys, portrait preview and cancellable MP4 export/save/share.
+ * @description Day-specific reel photo/text/order drafts, recaptured map previews and cancellable MP4 export/save/share.
  */
 import React, {
   useCallback,
@@ -49,6 +49,9 @@ import {
   shareReel,
   reelPhotoStops,
   reelStopKey,
+  applyReelDayEdits,
+  reelMapSignature,
+  type ReelDayEdits,
   type ReelPhoto,
   type ReelMapSnapshot,
 } from '../../services/courseReelService';
@@ -57,10 +60,13 @@ import {
   type ReelEditorDialogMode,
 } from './ReelEditorDialog';
 import { ReelPreview } from './ReelPreview';
+import { LoopingVideo } from '../common/LoopingVideo';
 import { ReelRouteMap } from './ReelRouteMap';
+import { ReelProgressBar } from './ReelProgressBar';
 
-type DayDraft = {
+type DayDraft = ReelDayEdits & {
   photos: ReelPhoto[];
+  order?: string[];
   text?: Record<string, { placeName: string; caption: string }>;
 };
 const V = BOOKING_REEL_UI.REEL;
@@ -185,34 +191,84 @@ function ReelEditor({
   };
   const [editorDialog, setEditorDialog] = useState<ReelEditorDialogMode>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [selectedDay, setSelectedDay] = useState(initialDay);
   const [drafts, setDrafts] = useState<Record<number, DayDraft>>({});
   const [hasEdits, setHasEdits] = useState(false);
-  const [title, setTitle] = useState('');
-  const [ending, setEnding] = useState('');
+  const [introDescription, setIntroDescription] = useState('');
+  const [introTitle, setIntroTitle] = useState<string | undefined>();
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState(0);
-  const progressStyles = useMemo(
-    () => makeProgressStyles(progress),
-    [progress],
-  );
   const [busyPhase, setBusyPhase] = useState<
     'photo' | 'render' | 'action' | null
   >(null);
   const busy = busyPhase !== null;
   const [output, setOutput] = useState<string | null>(null);
-  const [map, setMap] = useState<ReelMapSnapshot | null>(null);
+  const [mapState, setMapState] = useState<{
+    key: string;
+    snapshot: ReelMapSnapshot;
+  } | null>(null);
   const alive = useRef(true);
   const outputRef = useRef<string | null>(null);
   const operation = useRef(false);
-  const day = course.itinerary.days.find((d) => d.day === selectedDay);
+  const originalDay = course.itinerary.days.find((d) => d.day === selectedDay);
   const draft = drafts[selectedDay] || { photos: [] };
+  const day = useMemo(
+    () =>
+      originalDay
+        ? applyReelDayEdits(originalDay, {
+            deleted: draft.deleted,
+          })
+        : undefined,
+    [originalDay, draft.deleted],
+  );
+  const mapKey = day ? reelMapSignature(day) : '';
+  const activeMapKey = useRef(mapKey);
+  activeMapKey.current = mapKey;
+  const map = mapState?.key === mapKey ? mapState.snapshot : null;
+  const receiveMap = useCallback(
+    (snapshot: ReelMapSnapshot | null) => {
+      if (activeMapKey.current === mapKey)
+        setMapState(snapshot ? { key: mapKey, snapshot } : null);
+    },
+    [mapKey],
+  );
+  const activePhotos = useMemo(() => {
+    const keys = new Set(day ? reelPhotoStops(day).map(reelStopKey) : []);
+    return draft.photos.filter((photo) => keys.has(photo.placeId));
+  }, [day, draft.photos]);
+  const tooManyPhotos = activePhotos.length > APP_CONFIG.REEL.MAX_PHOTOS;
   const plan = useMemo(() => {
-    if (!day || !draft.photos.length) return null;
-    return buildReelPlan(day, draft.photos, title, ending, undefined, map);
-  }, [day, draft.photos, title, ending, map]);
+    if (!day || !activePhotos.length || tooManyPhotos) return null;
+    return buildReelPlan(
+      day,
+      activePhotos,
+      course.destinationCity,
+      introDescription,
+      undefined,
+      map,
+      draft.order,
+      {
+        introTitle: introTitle ?? course.title,
+        footerLocation: S.LOCATION_LABEL(
+          course.destinationCountry,
+          course.destinationCity,
+        ),
+      },
+    );
+  }, [
+    course.destinationCountry,
+    course.destinationCity,
+    day,
+    activePhotos,
+    tooManyPhotos,
+    course.title,
+    draft.order,
+    introDescription,
+    introTitle,
+    map,
+  ]);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -246,11 +302,34 @@ function ReelEditor({
     invalidate();
     setDrafts((prev) => ({ ...prev, [selectedDay]: next }));
   }
+  function moveStop(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (busy || target < 0 || target >= stops.length) return;
+    const order = stops.map(reelStopKey);
+    [order[index], order[target]] = [order[target], order[index]];
+    updateDraft({ ...draft, order });
+  }
+  function removeStop(stop: ItineraryStop) {
+    const key = reelStopKey(stop);
+    setMapState(null);
+    updateDraft({
+      ...draft,
+      order: (draft.order ?? stops.map(reelStopKey)).filter(
+        (item) => item !== key,
+      ),
+      deleted: [...(draft.deleted || []), key],
+    });
+  }
+  function resetItems() {
+    if (busy || (!draft.order && !draft.deleted?.length)) return;
+    if (draft.deleted?.length) setMapState(null);
+    updateDraft({ ...draft, order: undefined, deleted: undefined });
+  }
   function stopText(stop: ItineraryStop) {
     const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
     return (
       draft.text?.[reelStopKey(stop)] ?? {
-        placeName: photo?.placeName ?? '',
+        placeName: photo?.placeName ?? stop.place.placeName,
         caption: photo?.caption ?? '',
       }
     );
@@ -271,7 +350,7 @@ function ReelEditor({
   async function addPhoto(stop: ItineraryStop) {
     if (operation.current) return;
     const existing = draft.photos.find((p) => p.placeId === reelStopKey(stop));
-    if (!existing && draft.photos.length >= APP_CONFIG.REEL.MAX_PHOTOS) {
+    if (!existing && activePhotos.length >= APP_CONFIG.REEL.MAX_PHOTOS) {
       setError(S.LIMIT);
       return;
     }
@@ -307,13 +386,15 @@ function ReelEditor({
     setProgress(0);
     try {
       const uri = await generateReel(plan, (value) => {
-        if (alive.current) setProgress(value);
+        if (alive.current && Number.isFinite(value))
+          setProgress((previous) => Math.max(previous, Math.min(0.99, value)));
       });
       if (!alive.current) {
         await deleteReel(uri);
         return;
       }
       outputRef.current = uri;
+      setProgress(1);
       setOutput(uri);
     } catch (e) {
       if (alive.current)
@@ -348,8 +429,17 @@ function ReelEditor({
       if (alive.current) setBusyPhase(null);
     }
   }
-  const stops = useMemo(() => (day ? reelPhotoStops(day) : []), [day]);
-  function renderStop({ item: stop }: { item: ItineraryStop }) {
+  const stops = useMemo(
+    () => (day ? reelPhotoStops(day, draft.order) : []),
+    [day, draft.order],
+  );
+  function renderStop({
+    item: stop,
+    index,
+  }: {
+    item: ItineraryStop;
+    index: number;
+  }) {
     const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
     return (
       <View style={styles.placeCard}>
@@ -358,7 +448,7 @@ function ReelEditor({
           accessibilityRole='button'
           accessibilityLabel={`${stop.place.placeName} ${photo ? S.CHANGE_PHOTO : S.ADD_PHOTO}`}
           style={styles.photo}
-          disabled={busy}
+          disabled={busy || editMode}
           onPress={() => addPhoto(stop)}>
           {photo ? (
             <Image source={{ uri: photo.uri }} style={styles.photoImage} />
@@ -367,10 +457,63 @@ function ReelEditor({
           )}
         </TouchableOpacity>
         <View style={styles.placeBody}>
-          <View style={styles.placeHeading}>
+          <View
+            testID={`reel-heading-${reelStopKey(stop)}`}
+            style={styles.placeHeading}>
             <Text style={styles.placeName} numberOfLines={1}>
               {stop.place.placeName}
             </Text>
+            {editMode && (
+              <View style={styles.itemActions}>
+                <TouchableOpacity
+                  testID={`reel-move-up-${reelStopKey(stop)}`}
+                  accessibilityRole='button'
+                  accessibilityLabel={`${stop.place.placeName} ${S.MOVE_UP}`}
+                  accessibilityState={{ disabled: busy || index === 0 }}
+                  disabled={busy || index === 0}
+                  style={styles.itemAction}
+                  onPress={() => moveStop(index, -1)}>
+                  <Ionicons
+                    name='arrow-up'
+                    size={18}
+                    color={index === 0 ? palette.gray300 : palette.subText}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`reel-move-down-${reelStopKey(stop)}`}
+                  accessibilityRole='button'
+                  accessibilityLabel={`${stop.place.placeName} ${S.MOVE_DOWN}`}
+                  accessibilityState={{
+                    disabled: busy || index === stops.length - 1,
+                  }}
+                  disabled={busy || index === stops.length - 1}
+                  style={styles.itemAction}
+                  onPress={() => moveStop(index, 1)}>
+                  <Ionicons
+                    name='arrow-down'
+                    size={18}
+                    color={
+                      index === stops.length - 1
+                        ? palette.gray300
+                        : palette.subText
+                    }
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`reel-remove-${reelStopKey(stop)}`}
+                  accessibilityRole='button'
+                  accessibilityLabel={`${stop.place.placeName} ${S.REMOVE_ITEM}`}
+                  disabled={busy}
+                  style={styles.itemAction}
+                  onPress={() => removeStop(stop)}>
+                  <Ionicons
+                    name='trash-outline'
+                    size={18}
+                    color={palette.red500}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <TextInput
             testID={`reel-place-name-${reelStopKey(stop)}`}
@@ -381,8 +524,8 @@ function ReelEditor({
             placeholderTextColor={palette.mutedText}
             value={stopText(stop).placeName}
             maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
-            editable={!busy}
-            style={styles.captionInput}
+            editable={!busy && !editMode}
+            style={styles.placeNameInput}
             onChangeText={(placeName) => updateStopText(stop, { placeName })}
           />
           <TextInput
@@ -394,8 +537,8 @@ function ReelEditor({
             placeholderTextColor={palette.mutedText}
             value={stopText(stop).caption}
             maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
-            editable={!busy}
-            style={[styles.captionInput, styles.captionArea]}
+            editable={!busy && !editMode}
+            style={[styles.placeNameInput, styles.descriptionInput]}
             multiline
             onChangeText={(caption) => updateStopText(stop, { caption })}
           />
@@ -418,17 +561,7 @@ function ReelEditor({
             {busyPhase === 'render' ? (
               <View style={styles.rendering} testID='reel-rendering'>
                 <Text style={styles.renderText}>{V.GENERATING}</Text>
-                <View
-                  style={styles.progressTrack}
-                  accessibilityRole='progressbar'
-                  accessibilityValue={{
-                    min: 0,
-                    max: 100,
-                    now: Math.round(progress * 100),
-                  }}>
-                  <View style={[styles.progressFill, progressStyles.fill]} />
-                  <View style={progressStyles.remaining} />
-                </View>
+                <ReelProgressBar progress={progress} />
                 <Text style={styles.music}>{V.MUSIC}</Text>
               </View>
             ) : (
@@ -560,7 +693,8 @@ function ReelEditor({
                             blurInput();
                             Keyboard.dismiss();
                             invalidate();
-                            setMap(null);
+                            setMapState(null);
+                            setEditMode(false);
                             setSelectedDay(d.day);
                           }}>
                           <Text
@@ -579,28 +713,50 @@ function ReelEditor({
                         testID='reel-preview-open'
                         accessibilityRole='button'
                         accessibilityLabel={V.PREVIEW}
-                        disabled={!plan}
+                        accessibilityState={{ disabled: !plan || !map || busy }}
+                        disabled={!plan || !map || busy}
                         style={styles.previewButton}
                         onPress={() => setPreviewVisible(true)}>
                         <BookingReelAsset name='video' />
                         <Text style={styles.toolbarText}>{V.PREVIEW}</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        testID='reel-settings-toggle'
-                        accessibilityRole='button'
-                        accessibilityLabel={V.SETTINGS}
-                        accessibilityState={{ expanded: settingsVisible }}
-                        onPress={() => setSettingsVisible(!settingsVisible)}
-                        style={styles.settingsToggle}>
-                        <Text style={styles.toolbarText}>
-                          {V.TITLE_SETTINGS}
-                        </Text>
-                        <Ionicons
-                          name={settingsVisible ? 'chevron-up' : 'chevron-down'}
-                          size={16}
-                          color={palette.subText}
-                        />
-                      </TouchableOpacity>
+                      <View
+                        testID='reel-edit-controls'
+                        style={styles.editControls}>
+                        {editMode && (
+                          <TouchableOpacity
+                            testID='reel-reset'
+                            accessibilityRole='button'
+                            accessibilityLabel={S.RESET_ITEMS}
+                            disabled={busy}
+                            style={styles.editToggle}
+                            onPress={() => {
+                              blurInput();
+                              Keyboard.dismiss();
+                              setEditorDialog('reset');
+                            }}>
+                            <Text style={styles.toolbarText}>
+                              {S.RESET_ITEMS}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          testID='reel-edit-toggle'
+                          accessibilityRole='button'
+                          accessibilityLabel={editMode ? V.DONE : V.EDIT}
+                          accessibilityState={{ expanded: editMode }}
+                          disabled={busy}
+                          style={styles.editToggle}
+                          onPress={() => {
+                            blurInput();
+                            Keyboard.dismiss();
+                            setEditMode((value) => !value);
+                          }}>
+                          <Text style={styles.toolbarText}>
+                            {editMode ? V.DONE : V.EDIT}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <View style={styles.editorBody}>
                       <FlatList
@@ -624,60 +780,62 @@ function ReelEditor({
                           styles.content,
                           editorInsets.content,
                         ]}
-                        extraData={{ draft, busy }}
+                        extraData={{ draft, busy, editMode }}
                         ListEmptyComponent={
                           <Text style={styles.hint}>{S.EMPTY_DAY}</Text>
                         }
                         ListHeaderComponent={
-                          settingsVisible ? (
-                            <View style={styles.settings}>
-                              <Text style={styles.label}>{S.TITLE_LABEL}</Text>
-                              <TextInput
-                                testID='reel-title'
-                                onFocus={focusInput}
-                                onBlur={blurInput}
-                                accessibilityLabel={S.TITLE_LABEL}
-                                style={styles.input}
-                                placeholder={S.TITLE_PLACEHOLDER}
-                                placeholderTextColor={palette.mutedText}
-                                value={title}
-                                maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
-                                editable={!busy}
-                                onChangeText={(value) => {
-                                  if (value !== title) setHasEdits(true);
-                                  invalidate();
-                                  setTitle(value);
-                                }}
-                              />
-                              <Text style={styles.label}>{S.ENDING_LABEL}</Text>
-                              <TextInput
-                                testID='reel-ending'
-                                onFocus={focusInput}
-                                onBlur={blurInput}
-                                accessibilityLabel={S.ENDING_LABEL}
-                                style={[styles.input, styles.multilineInput]}
-                                placeholder={S.ENDING_PLACEHOLDER}
-                                placeholderTextColor={palette.mutedText}
-                                value={ending}
-                                maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
-                                editable={!busy}
-                                multiline
-                                onChangeText={(value) => {
-                                  if (value !== ending) setHasEdits(true);
-                                  invalidate();
-                                  setEnding(value);
-                                }}
-                              />
-                            </View>
-                          ) : null
+                          <View
+                            testID='reel-intro-fields'
+                            style={styles.settings}>
+                            <Text style={styles.label}>
+                              {S.INTRO_TITLE_LABEL}
+                            </Text>
+                            <TextInput
+                              testID='reel-intro-title'
+                              onFocus={focusInput}
+                              onBlur={blurInput}
+                              accessibilityLabel={S.INTRO_TITLE_LABEL}
+                              style={styles.input}
+                              placeholder={S.INTRO_TITLE_PLACEHOLDER}
+                              placeholderTextColor={palette.mutedText}
+                              value={introTitle ?? course.title}
+                              maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
+                              editable={!busy}
+                              onChangeText={(value) => {
+                                setHasEdits(true);
+                                invalidate();
+                                setIntroTitle(value);
+                              }}
+                            />
+                            <Text style={styles.label}>{S.TITLE_LABEL}</Text>
+                            <TextInput
+                              testID='reel-title'
+                              onFocus={focusInput}
+                              onBlur={blurInput}
+                              accessibilityLabel={S.TITLE_LABEL}
+                              style={styles.input}
+                              placeholder={S.TITLE_PLACEHOLDER}
+                              placeholderTextColor={palette.mutedText}
+                              value={introDescription}
+                              maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
+                              editable={!busy}
+                              onChangeText={(value) => {
+                                if (value !== introDescription)
+                                  setHasEdits(true);
+                                invalidate();
+                                setIntroDescription(value);
+                              }}
+                            />
+                          </View>
                         }
                         ListFooterComponent={
                           <>
-                            {!!error && (
+                            {(!!error || tooManyPhotos) && (
                               <Text
                                 accessibilityRole='alert'
                                 style={styles.error}>
-                                {error}
+                                {tooManyPhotos ? S.LIMIT : error}
                               </Text>
                             )}
                             {busyPhase === 'photo' && (
@@ -729,7 +887,7 @@ function ReelEditor({
                 <ReelRouteMap
                   key={selectedDay}
                   day={day}
-                  onReady={setMap}
+                  onReady={receiveMap}
                   disabled={busy}
                   compact
                 />
@@ -760,6 +918,10 @@ function ReelEditor({
             destination={`${course.destinationCountry} · ${course.destinationCity}`}
             date={(day?.date || course.startDate).replace(/-/g, '.')}
             onDismiss={() => setEditorDialog(null)}
+            onReset={() => {
+              setEditorDialog(null);
+              resetItems();
+            }}
             onLeave={() => {
               setEditorDialog(null);
               onClose();
@@ -855,8 +1017,17 @@ export function CourseReelComposer({
           {step === 'intro' ? (
             <ScrollView contentContainerStyle={styles.introBody}>
               <Text style={styles.completeTitle}>{V.INTRO}</Text>
-              <View style={styles.introPreview}>
-                <ReelPreview plan={null} intro />
+              <View
+                style={styles.introPreview}
+                accessible
+                accessibilityRole='image'
+                accessibilityLabel={V.EXAMPLE_VIDEO}>
+                <LoopingVideo
+                  source={require('../../../assets/reel-example/seoul-day.mp4')}
+                  poster={require('../../../assets/reel-example/seoul-day-poster.jpg')}
+                  style={styles.exampleVideo}
+                  testID='reel-example-video'
+                />
               </View>
               <Text style={styles.music}>{V.MUSIC}</Text>
             </ScrollView>
@@ -921,14 +1092,6 @@ export function CourseReelComposer({
 function makeEditorInsets(bottomInset: number, keyboardVisible: boolean) {
   return StyleSheet.create({
     content: { paddingBottom: keyboardVisible ? 16 : bottomInset + 100 },
-  });
-}
-
-function makeProgressStyles(progress: number) {
-  const fraction = Math.min(1, Math.max(0, progress));
-  return StyleSheet.create({
-    fill: { flex: Math.max(0.01, fraction) },
-    remaining: { flex: 1 - fraction },
   });
 }
 
@@ -1070,7 +1233,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 4,
-    minHeight: 23,
+    height: 23,
   },
   placeName: {
     flex: 1,
@@ -1079,7 +1242,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -1,
   },
-  captionInput: {
+  placeNameInput: {
     fontSize: 14,
     lineHeight: 19,
     color: palette.subText,
@@ -1089,13 +1252,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: palette.gray100,
   },
-  captionArea: { minHeight: 55, maxHeight: 114, textAlignVertical: 'top' },
-  multilineInput: { maxHeight: 114, textAlignVertical: 'top' },
-  settingsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  descriptionInput: { minHeight: 55, maxHeight: 114, textAlignVertical: 'top' },
+  editToggle: {
     minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editControls: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  itemActions: { flexDirection: 'row' },
+  itemAction: {
+    minHeight: 23,
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settings: { gap: 8, marginBottom: 16 },
   label: { color: palette.deepNavy, fontSize: 14, fontWeight: '600' },
@@ -1136,15 +1306,6 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   renderText: { color: palette.deepNavy, fontSize: 16 },
-  progressTrack: {
-    width: 249,
-    height: 9,
-    borderRadius: 5,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    backgroundColor: palette.gray200,
-  },
-  progressFill: { backgroundColor: palette.primary },
   music: {
     color: palette.mutedText,
     fontSize: 16,
@@ -1165,7 +1326,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   completedPreview: { alignItems: 'center' },
-  outputActions: { gap: 12, marginTop: 'auto' },
+  outputActions: { gap: 12, marginTop: 'auto', paddingBottom: 32 },
   error: {
     color: palette.red700,
     fontSize: 13,
@@ -1186,6 +1347,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   previewStage: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  exampleVideo: { width: 252, aspectRatio: 9 / 16, borderRadius: 12 },
   introBody: { flexGrow: 1, paddingHorizontal: 24 },
   introPreview: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   selectionContent: { paddingHorizontal: 20, paddingBottom: 20, gap: 16 },

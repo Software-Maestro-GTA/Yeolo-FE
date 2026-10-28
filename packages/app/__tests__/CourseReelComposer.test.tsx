@@ -3,8 +3,8 @@
  * @description Reel editor tests covering per-date drafts, shared guidance dialog dismissal, native export, retries and canceled component cleanup.
  */
 import React from 'react';
-import { Alert, FlatList, Keyboard, UIManager } from 'react-native';
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert, FlatList, Keyboard, StyleSheet, UIManager } from 'react-native';
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { CourseReelComposer } from '../src/components/course/CourseReelComposer';
 import * as service from '../src/services/courseReelService';
 import { renderWithQueryClient as render } from './test-utils';
@@ -13,6 +13,9 @@ import { UI_STRINGS } from '../src/constants/strings';
 import * as commonApi from '@yeolo/common';
 
 const mockMapCleanup = jest.fn();
+const mockMapDays = jest.fn();
+const mockMapCallbacks = jest.fn();
+let mockHoldMap = false;
 const originalMeasureInWindow = UIManager.measureInWindow;
 
 jest.mock('../src/services/courseReelService', () => ({
@@ -26,15 +29,31 @@ jest.mock('../src/services/courseReelService', () => ({
   shareReel: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../src/components/course/ReelRouteMap', () => ({
-  ReelRouteMap: ({ onReady }: { onReady: (snapshot: unknown) => void }) => {
+  ReelRouteMap: ({
+    day,
+    onReady,
+  }: {
+    day: (typeof reelCourse.itinerary.days)[number];
+    onReady: (snapshot: unknown) => void;
+  }) => {
     const React = require('react');
+    mockMapDays(day);
+    mockMapCallbacks(onReady);
     React.useEffect(() => {
+      if (mockHoldMap) {
+        onReady(null);
+        return mockMapCleanup;
+      }
       onReady({
         uri: 'file:///map.png',
-        points: [{ x: 0.5, y: 0.4, label: '1' }],
+        points: day.stops.map((stop) => ({
+          x: stop.sequence / 10,
+          y: 0.4,
+          label: String(stop.sequence),
+        })),
       });
       return mockMapCleanup;
-    }, [onReady]);
+    }, [day, onReady]);
     return null;
   },
 }));
@@ -43,7 +62,11 @@ const output = 'file:///reel.mp4';
 describe('CourseReelComposer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (service.pickReelPhoto as jest.Mock).mockResolvedValue('file:///photo.jpg');
+    mockHoldMap = false;
+    jest
+      .mocked(service.pickReelPhoto)
+      .mockReset()
+      .mockResolvedValue('file:///photo.jpg');
     (service.generateReel as jest.Mock).mockResolvedValue(output);
   });
   const mount = () =>
@@ -54,7 +77,368 @@ describe('CourseReelComposer', () => {
         onClose={jest.fn()}
       />,
     );
-  it('장소 ID가 비어 있어도 모든 장소의 사진과 문구를 각각 편집하고 영상에 반영한다', async () => {
+  it('코스 소개와 코스 설명을 편집 목록 상단에 항상 보여준다', async () => {
+    const ui = await mount();
+    expect(ui.getByLabelText('코스 소개')).toBeTruthy();
+    expect(ui.getByLabelText('코스 설명')).toBeTruthy();
+    expect(ui.queryByText('소개 제목')).toBeNull();
+    expect(ui.queryByText('소개 설명')).toBeNull();
+    expect(ui.getByTestId('reel-intro-fields')).toBeTruthy();
+    expect(ui.queryByTestId('reel-settings-toggle')).toBeNull();
+  });
+  it('편집 시 완료 왼쪽에 초기화를 표시하고 제목 옆에는 접근성 이름이 있는 아이콘만 둔다', async () => {
+    const ui = await mount();
+    expect(ui.queryByTestId('reel-reset')).toBeNull();
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    const controls = ui.getByTestId('reel-edit-controls');
+    expect(
+      within(controls)
+        .getAllByRole('button')
+        .map((button) => button.props.accessibilityLabel),
+    ).toEqual(['초기화', '완료']);
+    const heading = within(ui.getByTestId('reel-heading-카페'));
+    expect(heading.getByText('카페')).toBeTruthy();
+    for (const action of ['위로', '아래로', '삭제']) {
+      expect(
+        heading.getByRole('button', { name: `카페 ${action}` }),
+      ).toBeTruthy();
+      expect(heading.queryByText(action)).toBeNull();
+    }
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    expect(ui.queryByTestId('reel-reset')).toBeNull();
+  });
+  it('원래 제목행 높이를 유지해 사진과 입력칸 높이가 맞고 편집해도 늘어나지 않는다', async () => {
+    const ui = await mount();
+    const headingStyle = () =>
+      StyleSheet.flatten(ui.getByTestId('reel-heading-카페').props.style);
+    const before = headingStyle();
+    expect(before.height).toBe(23);
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    expect(headingStyle()).toEqual(before);
+    expect(
+      StyleSheet.flatten(ui.getByTestId('reel-remove-카페').props.style)
+        .minHeight,
+    ).toBeLessThanOrEqual(before.height);
+  });
+  it.each(['cancel', 'close', 'backdrop', 'back'])(
+    '초기화는 확인 전까지 적용하지 않고 %s로 닫아도 편집을 유지한다',
+    async (dismiss) => {
+      const ui = await mount();
+      await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+      await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+      await fireEvent.press(ui.getByTestId('reel-remove-바다'));
+      const captures = mockMapCleanup.mock.calls.length;
+      await fireEvent.press(ui.getByTestId('reel-reset'));
+      expect(ui.getByText('항목을 초기화할까요?')).toBeTruthy();
+      expect(ui.queryByTestId('reel-photo-바다')).toBeNull();
+      expect(mockMapCleanup).toHaveBeenCalledTimes(captures);
+      if (dismiss === 'back')
+        await fireEvent(ui.getByTestId('reel-reset-modal'), 'requestClose');
+      else
+        await fireEvent.press(
+          ui.getByTestId(
+            dismiss === 'cancel'
+              ? 'reel-cancel-reset'
+              : `reel-dialog-${dismiss}`,
+            { includeHiddenElements: true },
+          ),
+        );
+      expect(ui.queryByTestId('reel-reset-modal')).toBeNull();
+      expect(ui.queryByTestId('reel-photo-바다')).toBeNull();
+      expect(ui.getByTestId('reel-edit-toggle').props.accessibilityLabel).toBe(
+        '완료',
+      );
+      expect(
+        ui.getByTestId('reel-create').props.accessibilityState.disabled,
+      ).toBe(false);
+    },
+  );
+  it('초기화로 현재 날짜의 순서·삭제를 복원하고 사진·직접 수정한 문구와 다른 날짜 초안은 유지한다', async () => {
+    jest
+      .mocked(service.pickReelPhoto)
+      .mockResolvedValueOnce('file:///cafe.jpg')
+      .mockResolvedValueOnce('file:///sea.jpg');
+    const ui = await mount();
+    expect(ui.getByTestId('reel-intro-title').props.value).toBe(
+      reelCourse.title,
+    );
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-photo-바다'));
+    await fireEvent.changeText(ui.getByTestId('reel-intro-title'), '우리 여행');
+    await fireEvent.changeText(
+      ui.getByTestId('reel-place-name-카페'),
+      '우리 카페',
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('reel-caption-카페'),
+      '쉬어 가기',
+    );
+    await fireEvent.changeText(ui.getByTestId('reel-place-name-바다'), '');
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-remove-야경'));
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-move-up-바다'));
+    await fireEvent.press(ui.getByTestId('reel-remove-카페'));
+    await fireEvent.press(ui.getByTestId('reel-reset'));
+    await fireEvent.press(ui.getByTestId('reel-confirm-reset'));
+    expect(
+      ui.getAllByTestId(/^reel-photo-/).map((item) => item.props.testID),
+    ).toEqual(['reel-photo-카페', 'reel-photo-바다']);
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+      '우리 카페',
+    );
+    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('쉬어 가기');
+    expect(ui.getByTestId('reel-place-name-바다').props.value).toBe('');
+    expect(mockMapDays.mock.calls.at(-1)![0]).toEqual(
+      reelCourse.itinerary.days[0],
+    );
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    const plan = jest.mocked(service.generateReel).mock.calls[0][0];
+    expect(plan.scenes[0].title).toBe('우리 여행');
+    expect(
+      plan.scenes
+        .filter((scene) => scene.role === 'stop')
+        .map(({ title, caption, uri, number }) => ({
+          title,
+          caption,
+          uri,
+          number,
+        })),
+    ).toEqual([
+      {
+        title: '우리 카페',
+        caption: '쉬어 가기',
+        uri: 'file:///cafe.jpg',
+        number: '1',
+      },
+      { title: '', caption: '', uri: 'file:///sea.jpg', number: undefined },
+    ]);
+    expect(plan.scenes.at(-1)?.points.map(({ label }) => label)).toEqual([
+      '1',
+      '2',
+    ]);
+    await fireEvent.press(ui.getByTestId('reel-back'));
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    expect(ui.queryByTestId('reel-photo-야경')).toBeNull();
+  });
+  it('순서만 초기화할 때 같은 지도 캡처를 재사용한다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    const captures = mockMapCleanup.mock.calls.length;
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-move-up-바다'));
+    await fireEvent.press(ui.getByTestId('reel-reset'));
+    await fireEvent.press(ui.getByTestId('reel-confirm-reset'));
+    expect(mockMapCleanup).toHaveBeenCalledTimes(captures);
+    expect(
+      ui.getAllByTestId(/^reel-photo-/).map((item) => item.props.testID),
+    ).toEqual(['reel-photo-카페', 'reel-photo-바다']);
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(false);
+  });
+  it('삭제했던 사진은 활성 사진 제한에서 제외하고 복원 시 제한 초과를 안전하게 안내한다', async () => {
+    const source = reelCourse.itinerary.days[0].stops[0];
+    const course = {
+      ...reelCourse,
+      itinerary: {
+        days: [
+          {
+            ...reelCourse.itinerary.days[0],
+            stops: Array.from({ length: 8 }, (_, index) => ({
+              ...source,
+              sequence: index + 1,
+              place: {
+                ...source.place,
+                googlePlaceId: `id${index}`,
+                placeName: `장소${index}`,
+              },
+            })),
+          },
+        ],
+      },
+    };
+    const ui = await render(
+      <CourseReelComposer course={course} initialDay={1} onClose={jest.fn()} />,
+    );
+    // FlatList renders all eight rows in its initial window.
+    for (let i = 0; i < 7; i++)
+      await fireEvent.press(ui.getByTestId(`reel-photo-id${i}`));
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-remove-id0'));
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-photo-id7'));
+    expect(service.pickReelPhoto).toHaveBeenCalledTimes(8);
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(false);
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-reset'));
+    await fireEvent.press(ui.getByTestId('reel-confirm-reset'));
+    expect(ui.getByText(S.LIMIT)).toBeTruthy();
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(true);
+    expect(service.generateReel).not.toHaveBeenCalled();
+    await fireEvent.press(ui.getByTestId('reel-remove-id7'));
+    expect(ui.queryByText(S.LIMIT)).toBeNull();
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(false);
+  });
+  it('편집 모드에서 순서를 바꾸면 사진·문구와 지도 번호·등장 순서가 함께 바뀐다', async () => {
+    jest
+      .mocked(service.pickReelPhoto)
+      .mockResolvedValueOnce('file:///cafe.jpg')
+      .mockResolvedValueOnce('file:///sea.jpg');
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-photo-바다'));
+    await fireEvent.changeText(
+      ui.getByTestId('reel-place-name-카페'),
+      '우리 카페',
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('reel-caption-카페'),
+      '카페에서 쉬기',
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('reel-place-name-바다'),
+      '우리 바다',
+    );
+    const captures = mockMapCleanup.mock.calls.length;
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    expect(ui.queryByTestId('reel-location-map')).toBeNull();
+    expect(
+      ui.getByTestId('reel-move-up-카페').props.accessibilityState.disabled,
+    ).toBe(true);
+    expect(
+      ui.getByTestId('reel-move-down-바다').props.accessibilityState.disabled,
+    ).toBe(true);
+    await fireEvent.press(ui.getByTestId('reel-move-down-카페'));
+    expect(
+      ui.getAllByTestId(/^reel-photo-/).map((item) => item.props.testID),
+    ).toEqual(['reel-photo-바다', 'reel-photo-카페']);
+    expect(mockMapCleanup).toHaveBeenCalledTimes(captures);
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(false);
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    const plan = jest.mocked(service.generateReel).mock.calls[0][0];
+    expect(plan.scenes[0].uri).toBe('file:///sea.jpg');
+    expect(
+      plan.scenes
+        .filter((scene) => scene.role === 'stop')
+        .map(({ title, caption, uri, number }) => ({
+          title,
+          caption,
+          uri,
+          number,
+        })),
+    ).toEqual([
+      { title: '우리 바다', caption: '', uri: 'file:///sea.jpg', number: '1' },
+      {
+        title: '우리 카페',
+        caption: '카페에서 쉬기',
+        uri: 'file:///cafe.jpg',
+        number: '2',
+      },
+    ]);
+    const points = plan.scenes.at(-1)!.points;
+    expect(points.map(({ label, name }) => ({ label, name }))).toEqual([
+      { label: '1', name: '우리 바다' },
+      { label: '2', name: '우리 카페' },
+    ]);
+    expect(points[0].x).toBeGreaterThan(points[1].x);
+    expect(
+      reelCourse.itinerary.days[0].stops.map((stop) => stop.place.latitude),
+    ).toEqual([35.02, 35.01]);
+  });
+  it('순서·삭제 초안을 날짜별로 보존하고 삭제 후 남은 장소로 지도와 영상 수를 갱신한다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-photo-바다'));
+    await fireEvent.changeText(
+      ui.getByTestId('reel-place-name-카페'),
+      '우리 카페',
+    );
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-move-up-바다'));
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    expect(
+      ui.getAllByTestId(/^reel-photo-/).map((item) => item.props.testID),
+    ).toEqual(['reel-photo-바다', 'reel-photo-카페']);
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-remove-바다'));
+    expect(ui.queryByTestId('reel-photo-바다')).toBeNull();
+    expect(mockMapDays.mock.calls.at(-1)![0].stops).toHaveLength(1);
+    expect(mockMapDays.mock.calls.at(-1)![0].stops[0].place.latitude).toBe(
+      35.01,
+    );
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    expect(ui.queryByTestId('reel-photo-바다')).toBeNull();
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+      '우리 카페',
+    );
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    const plan = jest.mocked(service.generateReel).mock.calls[0][0];
+    expect(plan.scenes[0].title).toBe(reelCourse.title);
+    expect(plan.scenes.at(-1)?.points).toEqual([
+      expect.objectContaining({ label: '1', name: '우리 카페' }),
+    ]);
+    expect(reelCourse.itinerary.days[0].stops).toHaveLength(2);
+  });
+  it('모든 항목을 삭제하면 빈 목록과 비활성 생성 버튼을 보여준다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    for (const place of ['카페', '바다'])
+      await fireEvent.press(ui.getByTestId(`reel-remove-${place}`));
+    expect(ui.getByText(S.EMPTY_DAY)).toBeTruthy();
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(true);
+    expect(mockMapDays.mock.calls.at(-1)![0].stops).toHaveLength(0);
+  });
+  it('삭제 후 새 지도 캡처가 끝나기 전에는 이전 지도 콜백으로 내보내지 않는다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    const oldReady = mockMapCallbacks.mock.calls.at(-1)![0];
+    mockHoldMap = true;
+    await fireEvent.press(ui.getByTestId('reel-edit-toggle'));
+    await fireEvent.press(ui.getByTestId('reel-remove-바다'));
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(true);
+    expect(
+      ui.getByTestId('reel-preview-open').props.accessibilityState.disabled,
+    ).toBe(true);
+    await act(async () => oldReady({ uri: 'file:///old.png', points: [] }));
+    expect(
+      ui.getByTestId('reel-create').props.accessibilityState.disabled,
+    ).toBe(true);
+    const nextReady = mockMapCallbacks.mock.calls.at(-1)![0];
+    await act(async () =>
+      nextReady({
+        uri: 'file:///updated.png',
+        points: [{ x: 0.3, y: 0.4, label: '1' }],
+      }),
+    );
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes.at(-1)?.uri,
+    ).toBe('file:///updated.png');
+  });
+  it('장소 ID가 비어 있어도 장소별 사진과 제목 및 빈 설명을 영상에 반영한다', async () => {
     const course = {
       ...reelCourse,
       itinerary: {
@@ -70,89 +454,112 @@ describe('CourseReelComposer', () => {
     const ui = await render(
       <CourseReelComposer course={course} initialDay={1} onClose={jest.fn()} />,
     );
-    expect(ui.getByText('카페')).toBeTruthy();
-    expect(ui.getByText('바다')).toBeTruthy();
-    const addCafe = ui.getByLabelText(`카페 ${S.ADD_PHOTO}`);
-    const addSea = ui.getByLabelText(`바다 ${S.ADD_PHOTO}`);
-    await fireEvent.press(addCafe);
-    await fireEvent.changeText(
-      ui.getByLabelText(`카페 ${S.PLACE_NAME_LABEL}`),
-      '우리 카페',
-    );
-    await fireEvent.changeText(
-      ui.getByLabelText(`카페 ${S.CAPTION_LABEL}`),
-      '커피',
-    );
-    await fireEvent.press(addSea);
-    await fireEvent.changeText(
-      ui.getByLabelText(`바다 ${S.PLACE_NAME_LABEL}`),
-      '우리 바다',
-    );
-    await fireEvent.changeText(
-      ui.getByLabelText(`바다 ${S.CAPTION_LABEL}`),
-      '파도',
-    );
-    expect(ui.getByLabelText(`카페 ${S.PLACE_NAME_LABEL}`).props.value).toBe(
-      '우리 카페',
-    );
+    for (const place of ['카페', '바다']) {
+      expect(ui.getByLabelText(`${place} ${S.CAPTION_LABEL}`).props.value).toBe(
+        '',
+      );
+      await fireEvent.press(ui.getByLabelText(`${place} ${S.ADD_PHOTO}`));
+      await fireEvent.changeText(
+        ui.getByLabelText(`${place} ${S.PLACE_NAME_LABEL}`),
+        `우리 ${place}`,
+      );
+    }
     await fireEvent.press(ui.getByTestId('reel-day-2'));
     await fireEvent.press(ui.getByTestId('reel-day-1'));
-    expect(ui.getByLabelText(`바다 ${S.CAPTION_LABEL}`).props.value).toBe(
-      '파도',
+    expect(ui.getByLabelText(`바다 ${S.PLACE_NAME_LABEL}`).props.value).toBe(
+      '우리 바다',
     );
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
     const plan = jest.mocked(service.generateReel).mock.calls[0][0];
     expect(
       plan.scenes
-        .slice(2, -1)
+        .filter((scene) => scene.role === 'stop')
         .map(({ title, caption }) => ({ title, caption })),
     ).toEqual([
-      { title: '우리 카페', caption: '커피' },
-      { title: '우리 바다', caption: '파도' },
+      { title: '우리 카페', caption: '' },
+      { title: '우리 바다', caption: '' },
     ]);
   });
+
   afterEach(() => {
     jest.restoreAllMocks();
     UIManager.measureInWindow = originalMeasureInWindow;
   });
 
-  it('코스의 제목과 팁을 자동 입력하지 않고 빈 문구로도 영상을 만든다', async () => {
+  it('코스 제목과 장소명을 기본 입력하고 설명은 빈 값으로 시작한다', async () => {
     const ui = await mount();
     for (const place of ['카페', '바다']) {
-      expect(ui.getByTestId(`reel-place-name-${place}`).props.value).toBe('');
-      expect(ui.getByTestId(`reel-caption-${place}`).props.value).toBe('');
+      expect(ui.getByTestId(`reel-place-name-${place}`).props.value).toBe(
+        place,
+      );
+      expect(ui.getByLabelText(`${place} ${S.CAPTION_LABEL}`).props.value).toBe(
+        '',
+      );
     }
-    await fireEvent.press(ui.getByTestId('reel-settings-toggle'));
     expect(ui.getByTestId('reel-title').props.value).toBe('');
     expect(ui.getByTestId('reel-title').props.placeholder).toBe(
-      '예: 부산에서 보낸 하루',
+      '예: 막 찍어도 예쁜',
     );
-    expect(ui.getByTestId('reel-ending').props.value).toBe('');
-    expect(ui.getByTestId('reel-ending').props.placeholder).toBe(
-      '예: 우리의 하루가 오래 기억되기를.',
-    );
+    expect(ui.queryByTestId('reel-ending')).toBeNull();
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
-    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('');
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('');
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('카페');
     await fireEvent.press(ui.getByTestId('reel-day-2'));
-    expect(ui.getByTestId('reel-place-name-야경').props.value).toBe('');
-    expect(ui.getByTestId('reel-caption-야경').props.value).toBe('');
+    expect(ui.getByTestId('reel-place-name-야경').props.value).toBe('야경');
     await fireEvent.press(ui.getByTestId('reel-day-1'));
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
     const plan = (service.generateReel as jest.Mock).mock.calls[0][0];
-    expect(plan.scenes[0].title).toBe('');
-    expect(plan.scenes[2]).toMatchObject({
+    expect(plan.scenes[0].title).toBe(reelCourse.title);
+    expect(plan.scenes[0].caption).toBe('');
+    expect(plan.scenes[1]).toMatchObject({
       uri: 'file:///photo.jpg',
-      title: '',
+      title: '카페',
       caption: '',
     });
-    expect(plan.scenes.at(-1)).toMatchObject({ title: '', caption: '' });
+    expect(plan.scenes.at(-1)).toMatchObject({
+      kind: 'route',
+      title: '',
+      caption: '2026. 10. 03.\n한국, 부산에서',
+    });
   });
 
-  it('waits for the keyboard before revealing a caption and does not scroll again once visible', async () => {
+  it('소개 제목과 설명을 따로 수정하고 사진 교체·날짜 이동 후에도 내보낸다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    expect(ui.getByTestId('reel-intro-title').props.value).toBe(
+      reelCourse.title,
+    );
+    await fireEvent.changeText(
+      ui.getByTestId('reel-intro-title'),
+      '우리의 부산 산책',
+    );
+    await fireEvent.changeText(ui.getByTestId('reel-title'), '함께 놀기 좋은');
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[0],
+    ).toMatchObject({
+      title: '우리의 부산 산책',
+      caption: '함께 놀기 좋은',
+    });
+    await fireEvent.press(ui.getByTestId('reel-back'));
+    await fireEvent.changeText(ui.getByTestId('reel-intro-title'), '');
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[1][0].scenes[0],
+    ).toMatchObject({
+      title: '',
+      caption: '함께 놀기 좋은',
+    });
+  });
+
+  it('waits for the keyboard before revealing a place title and does not scroll again once visible', async () => {
     let scrollOffset = 0;
     const reveal = jest.fn(({ offset }: { offset: number }) => {
       scrollOffset = offset;
@@ -172,7 +579,7 @@ describe('CourseReelComposer', () => {
       return originalAdd(name, callback);
     });
     const ui = await mount();
-    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+    await fireEvent(ui.getByTestId('reel-place-name-카페'), 'focus', {
       nativeEvent: { target: 42 },
     });
     await fireEvent(ui.getByTestId('reel-editor-list'), 'layout', {
@@ -234,7 +641,7 @@ describe('CourseReelComposer', () => {
       return originalAdd(name, callback);
     });
     const ui = await mount();
-    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+    await fireEvent(ui.getByTestId('reel-place-name-카페'), 'focus', {
       nativeEvent: { target: 42 },
     });
     await act(async () =>
@@ -287,7 +694,7 @@ describe('CourseReelComposer', () => {
       return originalAdd(name, callback);
     });
     const ui = await mount();
-    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+    await fireEvent(ui.getByTestId('reel-place-name-카페'), 'focus', {
       nativeEvent: { target: 42 },
     });
     await act(async () => {
@@ -345,11 +752,11 @@ describe('CourseReelComposer', () => {
         endCoordinates: { screenY: 400, height: 300 },
       }),
     );
-    await fireEvent(ui.getByTestId('reel-caption-카페'), 'focus', {
+    await fireEvent(ui.getByTestId('reel-place-name-카페'), 'focus', {
       nativeEvent: { target: 42 },
     });
     await waitFor(() => expect(pending.has(42)).toBe(true));
-    await fireEvent(ui.getByTestId('reel-caption-바다'), 'focus', {
+    await fireEvent(ui.getByTestId('reel-place-name-바다'), 'focus', {
       nativeEvent: { target: 84 },
     });
     await waitFor(() => expect(pending.has(84)).toBe(true));
@@ -360,24 +767,17 @@ describe('CourseReelComposer', () => {
     expect(reveal).not.toHaveBeenCalled();
   });
 
-  it('카드 동작 버튼 없이 사진 영역에서 사진을 추가하고 빈 입력란에 안내를 표시한다', async () => {
+  it('사진 영역에서 사진을 추가하고 제목과 장소 설명 입력 안내를 표시한다', async () => {
     const ui = await mount();
-    for (const label of ['썸네일', '사진 넣기', '사진 빼기', '내용 지우기']) {
+    for (const label of ['썸네일', '사진 넣기', '사진 빼기', '내용 지우기'])
       expect(ui.queryByText(label)).toBeNull();
-    }
-    await fireEvent.changeText(ui.getByTestId('reel-place-name-카페'), '');
-    await fireEvent.changeText(ui.getByTestId('reel-caption-카페'), '');
+    expect(ui.getByLabelText(`카페 ${S.CAPTION_LABEL}`).props.value).toBe('');
     expect(ui.getByTestId('reel-place-name-카페').props.placeholder).toBe(
       '제목을 입력해주세요.',
     );
-    expect(ui.getByTestId('reel-caption-카페').props.placeholder).toBe(
-      '내용을 입력해주세요.',
-    );
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     expect(service.pickReelPhoto).toHaveBeenCalledTimes(1);
-    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('');
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('');
-    expect(ui.queryByText('사진 빼기')).toBeNull();
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('카페');
     await fireEvent.changeText(
       ui.getByTestId('reel-place-name-카페'),
       '새 제목',
@@ -385,27 +785,60 @@ describe('CourseReelComposer', () => {
     expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('새 제목');
   });
 
-  it('사진을 넣기 전 제목·내용을 채우고 수정 내용을 사진 추가·교체·날짜 변경 후에도 유지한다', async () => {
+  it('사진을 넣기 전 쓴 제목을 사진 추가·교체·날짜 변경 후에도 유지한다', async () => {
     const ui = await mount();
     expect(ui.queryByText('AI 작성')).toBeNull();
-    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('');
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('');
     await fireEvent.changeText(
-      ui.getByTestId('reel-caption-카페'),
+      ui.getByTestId('reel-place-name-카페'),
       '커피 한 잔',
     );
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('커피 한 잔');
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     await fireEvent.press(ui.getByTestId('reel-day-2'));
     await fireEvent.press(ui.getByTestId('reel-day-1'));
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('커피 한 잔');
-    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+      '커피 한 잔',
+    );
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
     expect(
-      jest.mocked(service.generateReel).mock.calls[0][0].scenes[2].caption,
-    ).toBe('커피 한 잔');
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[1],
+    ).toMatchObject({ title: '커피 한 잔', caption: '' });
+  });
+
+  it('장소 설명을 사진 추가·교체와 날짜 이동 후에도 보존하고 비운 값도 영상에 반영한다', async () => {
+    const ui = await mount();
+    const description = '커피와 디저트를 즐기는 곳.\n산책 사이 잠깐 쉬어가요.';
+    await fireEvent.changeText(
+      ui.getByTestId('reel-caption-카페'),
+      description,
+    );
+    await fireEvent.changeText(ui.getByTestId('reel-place-name-카페'), '카페');
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-day-2'));
+    await fireEvent.changeText(
+      ui.getByTestId('reel-caption-야경'),
+      '다른 날의 설명',
+    );
+    await fireEvent.press(ui.getByTestId('reel-day-1'));
+    expect(ui.getByTestId('reel-caption-카페').props.value).toBe(description);
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[1],
+    ).toMatchObject({
+      title: '카페',
+      caption: description,
+      uri: 'file:///photo.jpg',
+    });
+    await fireEvent.press(ui.getByTestId('reel-back'));
+    await fireEvent.changeText(ui.getByTestId('reel-caption-카페'), '');
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[1][0].scenes[1],
+    ).toMatchObject({ title: '카페', caption: '' });
   });
 
   it('편집과 순서 이동 없이 일정 순서로 표시한다', async () => {
@@ -418,30 +851,29 @@ describe('CourseReelComposer', () => {
     ).toEqual(['reel-photo-카페', 'reel-photo-바다']);
   });
 
-  it('내용을 직접 비워도 제목과 사진을 유지하고 날짜 이동 후에도 빈 내용을 유지한다', async () => {
+  it('제목을 직접 비워도 사진과 다른 장소 제목을 유지하고 날짜 이동 후에도 빈 제목을 보존한다', async () => {
     const ui = await mount();
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
-    await fireEvent.changeText(ui.getByTestId('reel-place-name-카페'), '카페');
     await fireEvent.changeText(
-      ui.getByTestId('reel-caption-카페'),
-      '지울 문구',
+      ui.getByTestId('reel-place-name-카페'),
+      '지울 제목',
     );
     await fireEvent.changeText(
-      ui.getByTestId('reel-caption-바다'),
+      ui.getByTestId('reel-place-name-바다'),
       '바다의 추억',
     );
-    await fireEvent.changeText(ui.getByTestId('reel-caption-카페'), '');
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('');
-    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('카페');
-    expect(ui.getByTestId('reel-caption-바다').props.value).toBe('바다의 추억');
+    await fireEvent.changeText(ui.getByTestId('reel-place-name-카페'), '');
     await fireEvent.press(ui.getByTestId('reel-day-2'));
     await fireEvent.press(ui.getByTestId('reel-day-1'));
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('');
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('');
+    expect(ui.getByTestId('reel-place-name-바다').props.value).toBe(
+      '바다의 추억',
+    );
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
     expect(
-      jest.mocked(service.generateReel).mock.calls[0][0].scenes[2],
-    ).toMatchObject({ title: '카페', caption: '', uri: 'file:///photo.jpg' });
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[1],
+    ).toMatchObject({ title: '', caption: '', uri: 'file:///photo.jpg' });
   });
 
   it('일정의 첫 사진을 썸네일로 사용하고 완료 화면 닫기도 변경 유실을 알린다', async () => {
@@ -513,7 +945,7 @@ describe('CourseReelComposer', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     onClose.mockClear();
     await fireEvent.changeText(
-      ui.getByTestId('reel-caption-카페'),
+      ui.getByTestId('reel-place-name-카페'),
       '새 메시지',
     );
     await fireEvent(ui.getByTestId('reel-back'), 'requestClose');
@@ -523,7 +955,9 @@ describe('CourseReelComposer', () => {
     expect(alert).not.toHaveBeenCalled();
     await fireEvent.press(ui.getByTestId('reel-keep-editing'));
     expect(ui.queryByTestId('reel-leave-modal')).toBeNull();
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('새 메시지');
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+      '새 메시지',
+    );
     expect(onClose).not.toHaveBeenCalled();
     for (const dismiss of ['close', 'backdrop', 'system']) {
       await fireEvent.press(ui.getByTestId('reel-back'));
@@ -536,12 +970,34 @@ describe('CourseReelComposer', () => {
           }),
         );
       expect(ui.queryByTestId('reel-leave-modal')).toBeNull();
-      expect(ui.getByTestId('reel-caption-카페').props.value).toBe('새 메시지');
+      expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+        '새 메시지',
+      );
       expect(onClose).not.toHaveBeenCalled();
     }
     await fireEvent.press(ui.getByTestId('reel-back'));
     await fireEvent.press(ui.getByTestId('reel-confirm-leave'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('도입 화면은 앱에서 만든 예시 영상을 보여주고 코스 선택 시 플레이어를 해제한다', async () => {
+    const ui = await render(
+      <CourseReelComposer
+        course={reelCourse}
+        initialDay={1}
+        initialStep='intro'
+        onClose={jest.fn()}
+      />,
+    );
+    const hidden = { includeHiddenElements: true };
+    const player = ui.getByTestId('reel-example-video-player', hidden);
+    expect(player.props.player.loop).toBe(true);
+    expect(player.props.player.muted).toBe(true);
+    expect(ui.getByTestId('reel-example-video-poster', hidden)).toBeTruthy();
+    expect(ui.queryByText(UI_STRINGS.REEL.EMPTY_PHOTOS)).toBeNull();
+    await fireEvent.press(ui.getByTestId('reel-next'));
+    expect(ui.queryByTestId('reel-example-video', hidden)).toBeNull();
+    expect(ui.getByTestId('reel-course-reel-course')).toBeTruthy();
   });
 
   it('도입 화면에서 실제 코스를 선택해야 편집기로 이동한다', async () => {
@@ -684,14 +1140,16 @@ describe('CourseReelComposer', () => {
     );
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     await fireEvent.changeText(
-      ui.getByTestId('reel-caption-카페'),
+      ui.getByTestId('reel-place-name-카페'),
       '우리의 카페',
     );
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-share');
     await fireEvent(ui.getByTestId('reel-share'), 'requestClose');
     expect(ui.queryByTestId('reel-share')).toBeNull();
-    expect(ui.getByTestId('reel-caption-카페').props.value).toBe('우리의 카페');
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe(
+      '우리의 카페',
+    );
     expect(service.deleteReel).toHaveBeenCalledWith(output);
     expect(onClose).not.toHaveBeenCalled();
     await fireEvent(ui.getByTestId('reel-create'), 'requestClose');
@@ -726,37 +1184,35 @@ describe('CourseReelComposer', () => {
     await fireEvent.press(ui.getByTestId('reel-preview-open'));
     expect(ui.getByTestId('reel-preview')).toBeTruthy();
     await fireEvent.press(ui.getByTestId('reel-preview-close'));
-    expect(ui.getByTestId('reel-caption-카페').props.editable).toBe(true);
+    expect(ui.getByTestId('reel-place-name-카페').props.editable).toBe(true);
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     await fireEvent.press(ui.getByTestId('reel-photo-카페'));
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
     expect(
       (service.generateReel as jest.Mock).mock.calls[0][0].scenes
-        .slice(2, 4)
+        .filter((scene: service.ReelScene) => scene.role === 'stop')
         .map((scene: service.ReelScene) => scene.title),
     ).toEqual(['카페', '바다']);
     expect(reelCourse.itinerary.days[0].stops[0].sequence).toBe(2);
   });
-  it('장소명과 메시지를 수정해 영상에 반영하고 사진 교체·날짜 이동에도 보존한다', async () => {
+  it('수정한 장소명을 사진 교체·날짜 이동에도 보존하고 변경 시 이전 영상을 제거한다', async () => {
     const { getByTestId, findByTestId, queryByTestId } = await mount();
     await fireEvent.press(getByTestId('reel-photo-카페'));
     await fireEvent.changeText(
       getByTestId('reel-place-name-카페'),
       '우리의 작은 카페',
     );
-    await fireEvent.changeText(getByTestId('reel-caption-카페'), '');
     await fireEvent.press(getByTestId('reel-photo-카페'));
     await fireEvent.press(getByTestId('reel-day-2'));
     await fireEvent.press(getByTestId('reel-day-1'));
     expect(getByTestId('reel-place-name-카페').props.value).toBe(
       '우리의 작은 카페',
     );
-    expect(getByTestId('reel-caption-카페').props.value).toBe('');
     await fireEvent.press(getByTestId('reel-create'));
     await findByTestId('reel-share');
     expect(
-      (service.generateReel as jest.Mock).mock.calls[0][0].scenes[2],
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[1],
     ).toMatchObject({ title: '우리의 작은 카페', caption: '' });
     expect(reelCourse.itinerary.days[0].stops[1].place.placeName).toBe('카페');
     await fireEvent.press(getByTestId('reel-back'));
@@ -767,6 +1223,7 @@ describe('CourseReelComposer', () => {
     expect(queryByTestId('reel-share')).toBeNull();
     expect(service.deleteReel).toHaveBeenCalledWith(output);
   });
+
   it('저장 선택을 취소하면 이전 저장 완료 문구도 남기지 않는다', async () => {
     (service.saveReel as jest.Mock)
       .mockResolvedValueOnce(true)
@@ -787,17 +1244,17 @@ describe('CourseReelComposer', () => {
       true,
     );
     await fireEvent.press(getByTestId('reel-photo-카페'));
-    expect(getByTestId('reel-caption-카페').props.value).toBe('');
+    expect(getByTestId('reel-place-name-카페').props.value).toBe('카페');
     expect(getByTestId('reel-create').props.accessibilityState.disabled).toBe(
       true,
     );
     expect(service.generateReel).not.toHaveBeenCalled();
   });
-  it('날짜별 사진과 자막을 보존하며 선택한 날짜만 생성한다', async () => {
+  it('날짜별 사진과 제목을 보존하며 선택한 날짜만 생성한다', async () => {
     const { getByTestId } = await mount();
     await fireEvent.press(getByTestId('reel-photo-카페'));
     await fireEvent.changeText(
-      getByTestId('reel-caption-카페'),
+      getByTestId('reel-place-name-카페'),
       '좋아하는 커피',
     );
     await fireEvent.press(getByTestId('reel-day-2'));
@@ -820,27 +1277,23 @@ describe('CourseReelComposer', () => {
     ).not.toContain('카페');
     await fireEvent.press(getByTestId('reel-back'));
     await fireEvent.press(getByTestId('reel-day-1'));
-    expect(getByTestId('reel-caption-카페').props.value).toBe('좋아하는 커피');
+    expect(getByTestId('reel-place-name-카페').props.value).toBe(
+      '좋아하는 커피',
+    );
     expect(service.deleteReel).toHaveBeenCalledWith(output);
   });
   it('생성 결과를 재생·저장·공유하고, 문구 수정 시 이전 영상을 제거한다', async () => {
     const { getByTestId, findByTestId, findByText, queryByTestId } =
       await mount();
     await fireEvent.press(getByTestId('reel-photo-카페'));
-    await fireEvent.press(getByTestId('reel-settings-toggle'));
     await fireEvent.changeText(getByTestId('reel-title'), '직접 쓴 여행 제목');
-    await fireEvent.changeText(
-      getByTestId('reel-ending'),
-      '부산에서 만난 우리',
-    );
     await fireEvent.press(getByTestId('reel-create'));
     await findByTestId('reel-share');
     expect(
-      (service.generateReel as jest.Mock).mock.calls[0][0].scenes.at(-1)
-        .caption,
-    ).toBe('부산에서 만난 우리');
+      (service.generateReel as jest.Mock).mock.calls[0][0].scenes.at(-1).kind,
+    ).toBe('route');
     expect(
-      (service.generateReel as jest.Mock).mock.calls[0][0].scenes[0].title,
+      (service.generateReel as jest.Mock).mock.calls[0][0].scenes[0].caption,
     ).toBe('직접 쓴 여행 제목');
     await fireEvent.press(getByTestId('reel-watch'));
     expect(service.previewReel).toHaveBeenCalledWith(output);
@@ -877,6 +1330,37 @@ describe('CourseReelComposer', () => {
     await findByTestId('reel-share');
     expect(service.generateReel).toHaveBeenCalledTimes(2);
     expect(mockMapCleanup).not.toHaveBeenCalled();
+  });
+  it('진행률이 후퇴하지 않고 파일 생성이 끝나기 전에는 100%나 완료 화면을 보이지 않는다', async () => {
+    let report: (value: number) => void = () => {};
+    let finish: (uri: string) => void = () => {};
+    jest
+      .mocked(service.generateReel)
+      .mockImplementationOnce((_plan, onProgress) => {
+        report = onProgress;
+        return new Promise<string>((resolve) => {
+          finish = resolve;
+        });
+      });
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    const percent = () =>
+      ui.getByRole('progressbar').props.accessibilityValue.now;
+    expect(percent()).toBe(0);
+    await act(async () => report(0.5));
+    expect(percent()).toBe(50);
+    await act(async () => {
+      report(0.2);
+      report(Number.NaN);
+    });
+    expect(percent()).toBe(50);
+    await act(async () => report(1));
+    expect(percent()).toBe(99);
+    expect(ui.getByTestId('reel-rendering')).toBeTruthy();
+    expect(ui.queryByTestId('reel-save')).toBeNull();
+    await act(async () => finish(output));
+    expect(await ui.findByTestId('reel-save')).toBeTruthy();
   });
   it('편집기를 닫으면 생성을 취소하고 늦게 완성된 파일도 삭제한다', async () => {
     let resolve: (s: string) => void = () => {};

@@ -11,9 +11,11 @@ import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
+import android.os.SystemClock
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.Base64
 import androidx.exifinterface.media.ExifInterface
 import org.json.JSONObject
 import java.io.File
@@ -25,7 +27,7 @@ internal class ReelRenderer(private val context: Context) {
     val plan = JSONObject(json)
     val width = plan.getInt("width"); val height = plan.getInt("height"); val fps = plan.getInt("fps")
     val scenes = plan.getJSONArray("scenes")
-    require(width == 720 && height == 1280 && fps == 24 && scenes.length() in 1..8)
+    require(width == 720 && height == 1280 && fps == 24 && scenes.length() in 1..10)
     val totalFrames = (0 until scenes.length()).sumOf {
       val seconds = scenes.getJSONObject(it).getDouble("seconds")
       require(seconds > 0 && seconds <= 30)
@@ -35,7 +37,16 @@ internal class ReelRenderer(private val context: Context) {
     val bg = Color.parseColor(plan.getString("backgroundColor"))
     val accent = Color.parseColor(plan.getString("accentColor"))
     val text = Color.parseColor(plan.getString("textColor"))
-    val gradient = LinearGradient(0f, height*.55f, 0f, height.toFloat(), Color.TRANSPARENT, Color.argb(191, 0, 0, 0), Shader.TileMode.CLAMP)
+    val layout = plan.optJSONObject("layout") ?: JSONObject()
+    fun l(key: String, fallback: Double) = layout.optDouble(key, fallback).toFloat()
+    val brandUri = plan.getJSONObject("brandMark").getString("uri")
+    require(brandUri.startsWith("data:image/png;base64,") && brandUri.length < 100_000)
+    val brandBytes = Base64.decode(brandUri.substringAfter(','),Base64.DEFAULT)
+    val brandImage = requireNotNull(BitmapFactory.decodeByteArray(brandBytes,0,brandBytes.size))
+    val brandRect = RectF(l("logoX",650.0),l("logoY",34.0),l("logoX",650.0)+l("logoWidth",33.3337),l("logoY",34.0)+l("logoHeight",38.8132))
+    val gradient = LinearGradient(0f,l("gradientTop",700.0),0f,height.toFloat(),intArrayOf(Color.TRANSPARENT,Color.argb((l("gradientMidOpacity",0.78)*255).toInt(),0,0,0),Color.argb((l("gradientBottomOpacity",0.98)*255).toInt(),0,0,0)),floatArrayOf(0f,l("gradientMidStop",0.55),1f),Shader.TileMode.CLAMP)
+    val card = RectF(l("mapX",26.0),l("mapY",306.0),l("mapX",26.0)+l("mapSize",668.0),l("mapY",306.0)+l("mapSize",668.0))
+    val cardPath = Path().apply { addRoundRect(card,l("mapRadius",24.0),l("mapRadius",24.0),Path.Direction.CW) }
     val codec = MediaCodec.createEncoderByType("video/avc")
     val muxer = MediaMuxer(output.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -43,6 +54,7 @@ internal class ReelRenderer(private val context: Context) {
     val yuvWriter = YuvFrameWriter(width, height)
 
     var started = false; var codecStarted = false; var frame = 0; var track = -1
+    var lastProgressTime = SystemClock.elapsedRealtime()
     val info = MediaCodec.BufferInfo()
     val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     fun checkCanceled() { check(!canceled()) { "REEL_CANCELED" } }
@@ -91,19 +103,29 @@ internal class ReelRenderer(private val context: Context) {
         val image = loadPhoto(scene.getString("uri"))
         try {
           val count = (scene.getDouble("seconds") * fps).toInt()
-          val title = TextLayer(scene.getString("title"), width*.08f, height*.70f, (width*.84f).toInt(), 40f, accent, 2)
-          val caption = TextLayer(scene.getString("caption"), width*.08f, height*.79f, (width*.84f).toInt(), 34f, text, 4)
-          val points = scene.getJSONArray("points")
-          val routePoints = (0 until points.length()).map { i ->
-            val point = points.getJSONObject(i)
-            val x = point.getDouble("x").toFloat() * width
-            val y = point.getDouble("y").toFloat() * height
-            RoutePoint(x, y, TextLayer(point.getString("label"), x-25, y-17, 50, 26f, bg, 1))
-          }
           val route = scene.getString("kind") == "route"
+          val hero = scene.optString("role") == "hook"
+          val title = TextLayer(scene.getString("title"),if(hero)l("textX",34.0) else l("titleX",86.0),if(hero)l("heroTitleY",1060.0) else l("titleY",938.0),(if(hero)l("textWidth",652.0) else l("titleWidth",600.0)).toInt(),if(hero)l("heroTitleSize",76.0) else l("titleSize",56.0),text,2,bold=true,bottomEdge=if(hero)null else l("titleY",938.0)+l("titleHeight",140.0))
+          val caption = TextLayer(scene.getString("caption"),if(hero||route)l("textX",34.0) else l("captionX",86.0),if(route)l("dateY",1042.0) else if(hero)l("heroCaptionY",906.0) else l("captionY",1082.0),(if(hero||route)l("textWidth",652.0) else l("captionWidth",600.0)).toInt(),if(route)l("dateSize",32.0) else if(hero)l("heroCaptionSize",56.0) else l("captionSize",32.0),text,2,centered=route,bold=hero)
+          val headingNumberY=title.drawY+l("numberY",972.0)-l("titleY",938.0)
+          val numberText = if (scene.getString("title").isNotBlank()) scene.optString("number") else ""
+          val numberRadius = l("numberRadius",18.0); val numberSize = l("numberSize",24.0)
+          val number = if(numberText.isNotEmpty()) TextLayer(numberText,l("numberX",52.0)-numberRadius,headingNumberY-numberSize*.62f,(numberRadius*2).toInt(),numberSize,text,1,centered=true,bold=true) else null
+          val overlay = Overlay(title,caption,number)
+          val points = scene.getJSONArray("points")
+          val routePoints = (0 until points.length()).map { index ->
+            val point = points.getJSONObject(index); val x=point.getDouble("x").toFloat()*width; val y=point.getDouble("y").toFloat()*height
+            val r=l("mapMarkerRadius",18.0); val font=l("mapMarkerSize",24.0)
+            val name=point.optString("name"); val nx=point.optDouble("nameX",0.0).toFloat(); val ny=point.optDouble("nameY",0.0).toFloat(); val nw=point.optDouble("nameWidth",0.0).toFloat()
+            RoutePoint(x,y,TextLayer(point.getString("label"),x-r,y-font*.62f,(r*2).toInt(),font,text,1,centered=true,bold=true),
+              if(name.isNotEmpty()) RectF(nx,ny,nx+nw,ny+l("mapNameHeight",38.0)) else null,
+              if(name.isNotEmpty()) TextLayer(name,nx+10,ny+7,(nw-20).toInt().coerceAtLeast(1),l("mapNameSize",18.0),bg,1,bold=true) else null)
+          }
           for (localFrame in 0 until count) {
             checkCanceled()
-            draw(canvas, paint, image, route, routePoints, title, caption, gradient, bg, accent, localFrame.toFloat() / max(1, count - 1), width, height)
+            draw(canvas, paint, image, route, routePoints, overlay, bg, accent, text, localFrame.toFloat() / max(1, count - 1), scene.getDouble("seconds").toFloat(), gradient, card, cardPath, l("gradientTop",700.0),l("mapMarkerRadius",18.0),l("numberX",52.0),headingNumberY,numberRadius,l("markerIntervalSeconds",0.35),l("markerFadeSeconds",0.18),width,height)
+            paint.shader=null;paint.alpha=255;paint.style=Paint.Style.FILL
+            canvas.drawBitmap(brandImage,null,brandRect,paint)
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
             val input = inputBuffer()
             val yuv = requireNotNull(codec.getInputImage(input)) { "Encoder does not support YUV image input" }
@@ -114,7 +136,11 @@ internal class ReelRenderer(private val context: Context) {
               YuvPlane(planes[2].buffer, planes[2].rowStride, planes[2].pixelStride))
             codec.queueInputBuffer(input, 0, width * height * 3 / 2, frame.toLong() * 1_000_000 / fps, 0)
             frame++
-            if (frame % fps == 0) progress(frame.toDouble() / totalFrames)
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastProgressTime >= 100) {
+              progress(min(0.99, frame.toDouble() / totalFrames))
+              lastProgressTime = now
+            }
           }
         } finally { image?.recycle() }
       }
@@ -130,7 +156,7 @@ internal class ReelRenderer(private val context: Context) {
       if (codecStarted) runCatching { codec.stop() }
       codec.release()
       if (started) runCatching { muxer.stop() }
-      muxer.release(); bitmap.recycle()
+      muxer.release(); bitmap.recycle(); brandImage.recycle()
     }
   }
 
@@ -166,48 +192,54 @@ internal class ReelRenderer(private val context: Context) {
     return rotated
   }
 
-  private data class RoutePoint(val x: Float, val y: Float, val label: TextLayer)
+  private data class Overlay(val title: TextLayer, val caption: TextLayer, val number: TextLayer?)
+
+  private data class RoutePoint(val x: Float, val y: Float, val label: TextLayer, val nameBox: RectF?, val name: TextLayer?)
 
   /** Text shaping and line layout are scene-invariant; only opacity changes per frame. */
-  private class TextLayer(text: String, private val x: Float, private val y: Float, width: Int, size: Float, color: Int, lines: Int) {
+  private class TextLayer(text: String, private val x: Float, private val y: Float, width: Int, size: Float, color: Int, lines: Int, centered: Boolean = false, bold: Boolean = false, bottomEdge: Float? = null) {
     private val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-      textSize = size; this.color = color; typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+      textSize = size; this.color = color; typeface = Typeface.create(if (bold) "sans-serif" else "sans-serif-medium", if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
     private val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-      .setAlignment(Layout.Alignment.ALIGN_CENTER).setMaxLines(lines).setIncludePad(false).build()
+      .setAlignment(if (centered) Layout.Alignment.ALIGN_CENTER else Layout.Alignment.ALIGN_NORMAL).setMaxLines(lines).setIncludePad(false).build()
+    val drawY = if(bottomEdge==null)y else max(y,bottomEdge-layout.height)
     fun draw(canvas: Canvas, alpha: Float = 1f) {
       paint.alpha = (alpha*255).toInt()
-      canvas.save(); canvas.translate(x, y); layout.draw(canvas); canvas.restore()
+      canvas.save(); canvas.translate(x, drawY); layout.draw(canvas); canvas.restore()
     }
   }
 
-  private fun draw(canvas: Canvas, paint: Paint, image: Bitmap?, route: Boolean, points: List<RoutePoint>, title: TextLayer, caption: TextLayer, gradient: LinearGradient, bg: Int, accent: Int, fraction: Float, width: Int, height: Int) {
-    canvas.drawColor(bg); paint.shader = null; paint.alpha = 255
-    if (route && image != null) {
-      canvas.drawBitmap(image, null, RectF(0f, height*.1f, width.toFloat(), height*.1f+width), paint)
-    } else if (image != null) {
-      val scale = max(width.toFloat() / image.width, height.toFloat() / image.height) * (1 + fraction * .06f)
-      val w = image.width * scale; val h = image.height * scale
-      canvas.drawBitmap(image, null, RectF((width-w)/2, (height-h)/2, (width+w)/2, (height+h)/2), paint)
-    }
-    if (route) {
-      val distance = fraction * max(0, points.size - 1)
-      paint.color = accent; paint.strokeWidth = 6f
-      for (i in 1 until points.size) {
-        val a = points[i-1]; val b = points[i]
-        val amount = min(1f, max(0f, distance - (i - 1)))
-        canvas.drawLine(a.x, a.y, a.x + (b.x - a.x)*amount, a.y + (b.y - a.y)*amount, paint)
+  private fun draw(canvas: Canvas, paint: Paint, image: Bitmap?, route: Boolean, points: List<RoutePoint>, overlay: Overlay, bg: Int, accent: Int, text: Int, fraction: Float, seconds: Float, gradient: LinearGradient, card:RectF,cardPath:Path,gradientTop:Float,markerRadius:Float,numberX:Float,numberY:Float,numberRadius:Float,interval:Float,fade:Float,width:Int,height:Int) {
+    canvas.drawColor(bg); paint.shader=null;paint.alpha=255;paint.style=Paint.Style.FILL
+    if(route) {
+      canvas.save();canvas.clipPath(cardPath)
+      if(image!=null)canvas.drawBitmap(image,null,card,paint)
+      canvas.restore()
+      for((index,point) in points.withIndex()) {
+        val opacity = min(1f,max(0f,(fraction*seconds-index*interval)/fade))
+        if(opacity<=0f)continue
+        paint.alpha=(opacity*255).toInt()
+        drawNumber(canvas,paint,point.x,point.y,markerRadius,accent,text)
+        point.label.draw(canvas,opacity)
+        point.nameBox?.let { paint.color=Color.WHITE;canvas.drawRoundRect(it,4f,4f,paint) }
+        point.name?.draw(canvas,opacity)
       }
-      for (point in points) {
-        paint.color = accent; canvas.drawCircle(point.x, point.y, 22f, paint)
-        point.label.draw(canvas)
-      }
+      paint.alpha=255
+      overlay.caption.draw(canvas)
+      return
     }
-    if (!route) {
-      paint.shader = gradient
-      canvas.drawRect(0f, height*.55f, width.toFloat(), height.toFloat(), paint); paint.shader = null
+    if(image!=null) {
+      val scale=max(width.toFloat()/image.width,height.toFloat()/image.height)
+      val w=image.width*scale;val h=image.height*scale
+      canvas.drawBitmap(image,null,RectF((width-w)/2,(height-h)/2,(width+w)/2,(height+h)/2),paint)
     }
-    val alpha = min(1f, fraction * 8 + .2f)
-    title.draw(canvas, alpha); caption.draw(canvas, alpha)
+    paint.shader=gradient;canvas.drawRect(0f,gradientTop,width.toFloat(),height.toFloat(),paint);paint.shader=null
+    if(overlay.number!=null) { drawNumber(canvas,paint,numberX,numberY,numberRadius,accent,text);overlay.number.draw(canvas) }
+    overlay.title.draw(canvas);overlay.caption.draw(canvas)
+  }
+  private fun drawNumber(canvas:Canvas,paint:Paint,x:Float,y:Float,radius:Float,accent:Int,text:Int) {
+    paint.style=Paint.Style.FILL;paint.color=accent;canvas.drawCircle(x,y,radius,paint)
+    paint.style=Paint.Style.STROKE;paint.strokeWidth=3f;paint.color=text;canvas.drawCircle(x,y,radius,paint);paint.style=Paint.Style.FILL
   }
 }

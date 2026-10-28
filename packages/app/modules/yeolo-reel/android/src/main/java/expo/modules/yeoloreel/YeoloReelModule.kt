@@ -41,6 +41,7 @@ class YeoloReelModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("YeoloReel")
     Events("onProgress")
+    Constant("rendererVersion") { 7 }
     Function("cancel") { canceled.set(true) }
     AsyncFunction("captureMapAsync") { tag: Int, json: String, promise: Promise ->
       val view = requireNotNull(appContext.findView<View>(tag))

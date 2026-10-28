@@ -12,11 +12,17 @@ final class ReelRenderer {
   static func render(json: String, output: URL, canceled: () -> Bool, progress: (Double) -> Void) throws {
     guard let data = json.data(using: .utf8),
       let plan = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let scenes = plan["scenes"] as? [[String: Any]], !scenes.isEmpty, scenes.count <= 8,
+      let scenes = plan["scenes"] as? [[String: Any]], !scenes.isEmpty, scenes.count <= 10,
       let width = plan["width"] as? Int, let height = plan["height"] as? Int,
       width == 720, height == 1280, let fps = plan["fps"] as? Int, fps == 24 else { throw ReelError.invalidPlan }
     let duration = scenes.reduce(0.0) { $0 + ($1["seconds"] as? Double ?? 0) }
     guard duration > 0, duration <= 30, scenes.allSatisfy({ ($0["seconds"] as? Double ?? 0) > 0 }) else { throw ReelError.invalidPlan }
+    guard let brand = plan["brandMark"] as? [String:Any],
+      let uri = brand["uri"] as? String, uri.hasPrefix("data:image/png;base64,"), uri.count < 100_000,
+      let brandData = Data(base64Encoded:String(uri.dropFirst("data:image/png;base64,".count))),
+      let brandImage = UIImage(data:brandData) else { throw ReelError.invalidPlan }
+    let brandLayout = plan["layout"] as? [String:Any] ?? [:]
+    let brandRect = CGRect(x:brandLayout["logoX"] as? Double ?? 650,y:brandLayout["logoY"] as? Double ?? 34,width:brandLayout["logoWidth"] as? Double ?? 33.3337,height:brandLayout["logoHeight"] as? Double ?? 38.8132)
     let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
     let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
       AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
@@ -33,6 +39,7 @@ final class ReelRenderer {
     guard writer.startWriting() else { throw writer.error ?? ReelError.encoding }
     writer.startSession(atSourceTime: .zero)
     var frame = 0
+    var lastProgressTime = ProcessInfo.processInfo.systemUptime
     do {
       for scene in scenes {
         if canceled() { throw ReelError.canceled }
@@ -60,10 +67,15 @@ final class ReelRenderer {
             UIGraphicsPushContext(context)
             defer { UIGraphicsPopContext() }
             draw(context, scene: scene, image: image, fraction: CGFloat(localFrame) / CGFloat(max(1, count - 1)), size: CGSize(width: width, height: height), plan: plan)
+            brandImage.draw(in:brandRect)
             guard adaptor.append(pixel, withPresentationTime: CMTime(value: Int64(frame), timescale: Int32(fps))) else { throw writer.error ?? ReelError.encoding }
           }
           frame += 1
-          if frame % fps == 0 { progress(Double(frame) / (duration * Double(fps))) }
+          let now = ProcessInfo.processInfo.systemUptime
+          if now - lastProgressTime >= 0.1 {
+            progress(min(0.99, Double(frame) / (duration * Double(fps))))
+            lastProgressTime = now
+          }
         }
       }
       input.markAsFinished()
@@ -100,43 +112,70 @@ final class ReelRenderer {
     let bg = color(plan["backgroundColor"], fallback: .black)
     let accent = color(plan["accentColor"], fallback: .white)
     let text = color(plan["textColor"], fallback: .white)
+    let layout = plan["layout"] as? [String: Any] ?? [:]
+    func v(_ key: String, _ fallback: CGFloat) -> CGFloat { (layout[key] as? NSNumber).map { CGFloat(truncating: $0) } ?? fallback }
     ctx.setFillColor(bg.cgColor); ctx.fill(CGRect(origin: .zero, size: size))
     let route = scene["kind"] as? String == "route"
-    if route, let image {
-      image.draw(in: CGRect(x: 0, y: size.height * 0.1, width: size.width, height: size.width))
-    } else if let image {
-      let scale = max(size.width / image.size.width, size.height / image.size.height) * (1 + fraction * 0.06)
-      let w = image.size.width * scale, h = image.size.height * scale
-      image.draw(in: CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h))
-    }
-    if route, let points = scene["points"] as? [[String: Any]], !points.isEmpty {
-      let positions = points.map { CGPoint(x: ($0["x"] as? Double ?? 0.5) * size.width, y: ($0["y"] as? Double ?? 0.5) * size.height) }
-      ctx.setStrokeColor(accent.cgColor); ctx.setLineWidth(6); ctx.setLineCap(.round)
-      let distance = fraction * CGFloat(max(0, positions.count - 1))
-      ctx.beginPath(); ctx.move(to: positions[0])
-      for i in 1..<positions.count {
-        let amount = min(1, max(0, distance - CGFloat(i - 1)))
-        ctx.addLine(to: CGPoint(x: positions[i-1].x + (positions[i].x - positions[i-1].x) * amount, y: positions[i-1].y + (positions[i].y - positions[i-1].y) * amount))
+    let hero = scene["role"] as? String == "hook"
+    if route {
+      let card = CGRect(x:v("mapX",26),y:v("mapY",306),width:v("mapSize",668),height:v("mapSize",668))
+      ctx.saveGState(); UIBezierPath(roundedRect:card,cornerRadius:v("mapRadius",24)).addClip()
+      image?.draw(in:card)
+      ctx.restoreGState()
+      if let points = scene["points"] as? [[String:Any]] {
+        let time = fraction * CGFloat(scene["seconds"] as? Double ?? 4)
+        for (index, point) in points.enumerated() {
+          let opacity = min(1,max(0,(time-CGFloat(index)*v("markerIntervalSeconds",0.35))/v("markerFadeSeconds",0.18)))
+          if opacity <= 0 { continue }
+          let x = CGFloat(point["x"] as? Double ?? 0.5)*size.width, y = CGFloat(point["y"] as? Double ?? 0.5)*size.height
+          ctx.saveGState(); ctx.setAlpha(opacity)
+          drawNumber(ctx, label:point["label"] as? String ?? "", x:x,y:y,radius:v("mapMarkerRadius",18),font:v("mapMarkerSize",24),fill:accent,text:text)
+          if let name = point["name"] as? String, !name.isEmpty {
+            let rect = CGRect(x:point["nameX"] as? Double ?? 0,y:point["nameY"] as? Double ?? 0,width:point["nameWidth"] as? Double ?? 0,height:Double(v("mapNameHeight",38)))
+            UIColor.white.setFill(); UIBezierPath(roundedRect:rect,cornerRadius:4).fill()
+            drawText(name,rect:CGRect(x:rect.minX+10,y:rect.minY+7,width:rect.width-20,height:rect.height-7),font:v("mapNameSize",18),color:bg,weight:.bold)
+          }
+          ctx.restoreGState()
+        }
       }
-      ctx.strokePath()
-      for (i, point) in positions.enumerated() {
-        ctx.setFillColor(accent.cgColor); ctx.fillEllipse(in: CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44))
-        drawText(points[i]["label"] as? String ?? "", rect: CGRect(x: point.x - 25, y: point.y - 17, width: 50, height: 40), font: 26, color: bg)
-      }
+      drawText(scene["caption"] as? String ?? "",rect:CGRect(x:v("textX",34),y:v("dateY",1042),width:v("textWidth",652),height:v("dateHeight",64)),font:v("dateSize",32),color:text,weight:.medium,centered:true)
+      return
     }
-    if !route, let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [UIColor.clear.cgColor, UIColor.black.withAlphaComponent(0.75).cgColor] as CFArray, locations: [0, 1]) {
-      ctx.drawLinearGradient(gradient, start: CGPoint(x: 0, y: size.height * 0.55), end: CGPoint(x: 0, y: size.height), options: [.drawsAfterEndLocation])
+    if let image {
+      let scale = max(size.width/image.size.width,size.height/image.size.height)
+      let w = image.size.width*scale, h = image.size.height*scale
+      image.draw(in:CGRect(x:(size.width-w)/2,y:(size.height-h)/2,width:w,height:h))
     }
-    ctx.saveGState(); ctx.setAlpha(min(1, fraction * 8 + 0.2))
-    drawText(scene["title"] as? String ?? "", rect: CGRect(x: size.width * 0.08, y: size.height * 0.70, width: size.width * 0.84, height: 110), font: 40, color: accent)
-    drawText(scene["caption"] as? String ?? "", rect: CGRect(x: size.width * 0.08, y: size.height * 0.79, width: size.width * 0.84, height: 170), font: 34, color: text)
-    ctx.restoreGState()
+    if let gradient = CGGradient(colorsSpace:CGColorSpaceCreateDeviceRGB(),colors:[UIColor.clear.cgColor,UIColor.black.withAlphaComponent(v("gradientMidOpacity",0.78)).cgColor,UIColor.black.withAlphaComponent(v("gradientBottomOpacity",0.98)).cgColor] as CFArray,locations:[0,v("gradientMidStop",0.55),1]) {
+      ctx.drawLinearGradient(gradient,start:CGPoint(x:0,y:v("gradientTop",700)),end:CGPoint(x:0,y:size.height),options:[.drawsAfterEndLocation])
+    }
+    let title = scene["title"] as? String ?? ""
+    let titleSize = hero ? v("heroTitleSize",76):v("titleSize",56)
+    var titleRect = CGRect(x:hero ? v("textX",34):v("titleX",86),y:hero ? v("heroTitleY",1020):v("titleY",938),width:hero ? v("textWidth",652):v("titleWidth",600),height:hero ? v("heroTitleHeight",190):v("titleHeight",140))
+    if !hero {
+      let font = UIFont.systemFont(ofSize:titleSize,weight:.heavy)
+      let bounds = (title as NSString).boundingRect(with:CGSize(width:titleRect.width,height:titleRect.height),options:[.usesLineFragmentOrigin,.usesFontLeading],attributes:[.font:font],context:nil)
+      let height = min(titleRect.height,max(ceil(font.lineHeight),ceil(bounds.height)))
+      titleRect = CGRect(x:titleRect.minX,y:titleRect.maxY-height,width:titleRect.width,height:height)
+    }
+    if let number = scene["number"] as? String, !number.isEmpty, !title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+      drawNumber(ctx,label:number,x:v("numberX",52),y:titleRect.minY+v("numberY",972)-v("titleY",938),radius:v("numberRadius",18),font:v("numberSize",24),fill:accent,text:text)
+    }
+    drawText(title,rect:titleRect,font:titleSize,color:text,weight:.heavy)
+    drawText(scene["caption"] as? String ?? "",rect:CGRect(x:hero ? v("textX",34):v("captionX",86),y:hero ? v("heroCaptionY",946):v("captionY",1082),width:hero ? v("textWidth",652):v("captionWidth",600),height:hero ? v("heroCaptionHeight",108):v("captionHeight",128)),font:hero ? v("heroCaptionSize",56):v("captionSize",32),color:text,weight:hero ? .heavy:.medium)
   }
 
-  private static func drawText(_ text: String, rect: CGRect, font: CGFloat, color: UIColor) {
-    let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .center; paragraph.lineBreakMode = .byWordWrapping
+  private static func drawNumber(_ ctx:CGContext,label:String,x:CGFloat,y:CGFloat,radius:CGFloat,font:CGFloat,fill:UIColor,text:UIColor) {
+    let rect = CGRect(x:x-radius,y:y-radius,width:radius*2,height:radius*2)
+    ctx.setFillColor(fill.cgColor); ctx.fillEllipse(in:rect)
+    ctx.setStrokeColor(text.cgColor); ctx.setLineWidth(3); ctx.strokeEllipse(in:rect)
+    drawText(label,rect:CGRect(x:x-radius,y:y-font*0.62,width:radius*2,height:font*1.3),font:font,color:text,weight:.heavy,centered:true)
+  }
+
+  private static func drawText(_ text: String, rect: CGRect, font: CGFloat, color: UIColor, weight: UIFont.Weight = .medium, centered: Bool = false) {
+    let paragraph = NSMutableParagraphStyle(); paragraph.alignment = centered ? .center : .left; paragraph.lineBreakMode = .byWordWrapping
     (text as NSString).draw(with: rect, options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [
-      .font: UIFont.systemFont(ofSize: font, weight: .medium), .foregroundColor: color, .paragraphStyle: paragraph
+      .font: UIFont.systemFont(ofSize: font, weight: weight), .foregroundColor: color, .paragraphStyle: paragraph
     ], context: nil)
   }
 }

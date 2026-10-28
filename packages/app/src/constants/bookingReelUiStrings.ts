@@ -47,11 +47,14 @@ export const BOOKING_REEL_UI = {
     EDIT: '편집',
     DONE: '완료',
     TITLE_PLACEHOLDER: '제목을 입력해주세요.',
-    CAPTION_PLACEHOLDER: '내용을 입력해주세요.',
-    AI: 'AI 작성',
+    CAPTION_PLACEHOLDER: '장소의 특징을 입력해주세요.',
     INFO_TITLE: '릴스 제작 안내',
     INFO: (destination: string, date: string) =>
       `${destination}의 ${date} 일정으로 릴스를 만들어요. 선택한 날짜에 추가한 사진과 문구만 영상에 담깁니다.`,
+    RESET_TITLE: '항목을 초기화할까요?',
+    RESET_MESSAGE:
+      '현재 날짜의 장소 순서와 삭제한 항목을 원래대로 되돌려요. 추가한 사진과 수정한 문구는 유지돼요.',
+    CANCEL_RESET: '취소',
     LEAVE_TITLE: '편집을 그만할까요?',
     LEAVE_MESSAGE:
       '이 화면을 나가면 추가한 사진과 수정한 문구가 사라집니다. 계속 편집하시겠어요?',
@@ -64,8 +67,6 @@ export const BOOKING_REEL_UI = {
     MUSIC: '음악이 없이 저장돼요.\nSNS에 올릴 때 좋아하는 음악을 더해보세요',
     SHARE: '공유하기',
     SAVE: '내 기기에 저장',
-    SETTINGS: '영상 제목과 마무리 문구',
-    TITLE_SETTINGS: '영상 제목',
-    SAMPLE: '사진을 추가해 나만의 영상을 만들어보세요',
+    EXAMPLE_VIDEO: '광화문과 청계천을 담은 서울 여행 릴스 예시 영상',
   },
 } as const;

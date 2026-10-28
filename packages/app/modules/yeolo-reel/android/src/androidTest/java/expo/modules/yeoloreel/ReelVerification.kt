@@ -14,8 +14,10 @@ import android.media.MediaExtractor
 import android.media.MediaMetadataRetriever
 import android.os.Bundle
 import android.net.Uri
+import android.util.Base64
 import org.json.JSONObject
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
 class ReelVerification : Instrumentation() {
@@ -42,9 +44,13 @@ class ReelVerification : Instrumentation() {
       paint.color = Color.WHITE; mapCanvas.drawRect(0f,690f,720f,720f,paint)
       mapFile.outputStream().use { mapBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }; mapBitmap.recycle()
       route.put("uri", Uri.fromFile(mapFile).toString())
+      val brandBitmap=Bitmap.createBitmap(16,16,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+      val brandBytes=ByteArrayOutputStream().use { stream -> brandBitmap.compress(Bitmap.CompressFormat.PNG,100,stream);stream.toByteArray() }
+      brandBitmap.recycle()
       val plan = JSONObject().apply {
         put("width",720); put("height",1280); put("fps",24); put("backgroundColor","#0D2137"); put("accentColor","#F59E0B"); put("textColor","#FFFFFF")
         put("scenes",org.json.JSONArray().put(scene).put(route).put(scene))
+        put("brandMark",JSONObject().put("uri","data:image/png;base64,"+Base64.encodeToString(brandBytes,Base64.NO_WRAP)))
       }
       val output = File(dir,"sample-reel.mp4")
       val start = System.nanoTime()
@@ -58,12 +64,16 @@ class ReelVerification : Instrumentation() {
       val first = requireNotNull(retriever.getFrameAtTime(0,MediaMetadataRetriever.OPTION_CLOSEST))
       val rgb = first.getPixel(360,200)
       check(Color.red(rgb) > 150 && Color.blue(rgb) < 80)
+      val brandPixel=first.getPixel(666,53)
+      check(Color.red(brandPixel)>230 && Color.green(brandPixel)>230 && Color.blue(brandPixel)>230)
       first.recycle()
       val mapFrame = requireNotNull(retriever.getFrameAtTime(3_500_000, MediaMetadataRetriever.OPTION_CLOSEST))
-      val mapPixel = mapFrame.getPixel(360,200)
+      val mapPixel = mapFrame.getPixel(360,400)
       check(Color.green(mapPixel) > 150 && Color.red(mapPixel) < 80)
-      val strip = mapFrame.getPixel(360,830)
+      val strip = mapFrame.getPixel(360,960)
       check(Color.red(strip) > 230 && Color.green(strip) > 230 && Color.blue(strip) > 230)
+      val mapBrandPixel=mapFrame.getPixel(666,53)
+      check(Color.red(mapBrandPixel)>230 && Color.green(mapBrandPixel)>230 && Color.blue(mapBrandPixel)>230)
       mapFrame.recycle(); retriever.release()
       val extractor = MediaExtractor(); extractor.setDataSource(output.absolutePath); extractor.selectTrack(0)
       val buffer = ByteBuffer.allocate(2_000_000); var frames = 0

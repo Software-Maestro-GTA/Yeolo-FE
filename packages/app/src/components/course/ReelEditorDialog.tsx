@@ -1,6 +1,6 @@
 /**
  * @file ReelEditorDialog.tsx
- * @description Reel guidance through the shared info dialog and draft discard confirmation using course deletion modal styles.
+ * @description Reel guidance and explicit confirmations for discarding drafts or restoring item order and deletions.
  */
 import ModalCloseSvg from '../../../assets/images/figma-course/modal-close.svg';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -8,24 +8,27 @@ import { Text } from '../common/Typography';
 import { FigmaAsset } from '../common/FigmaAsset';
 import { InfoDialog } from '../common/InfoDialog';
 import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
+import { UI_STRINGS } from '../../constants/strings';
 import { palette, hexToRgba } from '../../theme/colors';
 
-export type ReelEditorDialogMode = 'info' | 'leave' | null;
+export type ReelEditorDialogMode = 'info' | 'leave' | 'reset' | null;
 const V = BOOKING_REEL_UI.REEL;
 
-/** Dismissal always retains the draft; only the explicit leave action discards it. */
+/** Dismissal retains all edits; only explicit confirmation leaves the editor or resets its items. */
 export function ReelEditorDialog({
   mode,
   destination,
   date,
   onDismiss,
   onLeave,
+  onReset,
 }: {
   mode: ReelEditorDialogMode;
   destination: string;
   date: string;
   onDismiss: () => void;
   onLeave: () => void;
+  onReset: () => void;
 }) {
   if (!mode) return null;
   if (mode === 'info')
@@ -39,9 +42,10 @@ export function ReelEditorDialog({
         onDismiss={onDismiss}
       />
     );
+  const isReset = mode === 'reset';
   return (
     <Modal
-      testID='reel-leave-modal'
+      testID={isReset ? 'reel-reset-modal' : 'reel-leave-modal'}
       visible
       transparent
       animationType='fade'
@@ -67,23 +71,29 @@ export function ReelEditorDialog({
             <Text style={styles.date}>{date}</Text>
           </View>
           <Text style={styles.leaveTitle} accessibilityRole='header'>
-            {V.LEAVE_TITLE}
+            {isReset ? V.RESET_TITLE : V.LEAVE_TITLE}
           </Text>
-          <Text style={styles.leaveMessage}>{V.LEAVE_MESSAGE}</Text>
+          <Text style={styles.leaveMessage}>
+            {isReset ? V.RESET_MESSAGE : V.LEAVE_MESSAGE}
+          </Text>
           <View style={styles.actions}>
             <Pressable
-              testID='reel-keep-editing'
+              testID={isReset ? 'reel-cancel-reset' : 'reel-keep-editing'}
               accessibilityRole='button'
               style={styles.cancelButton}
               onPress={onDismiss}>
-              <Text style={styles.cancelText}>{V.KEEP_EDITING}</Text>
+              <Text style={styles.cancelText}>
+                {isReset ? V.CANCEL_RESET : V.KEEP_EDITING}
+              </Text>
             </Pressable>
             <Pressable
-              testID='reel-confirm-leave'
+              testID={isReset ? 'reel-confirm-reset' : 'reel-confirm-leave'}
               accessibilityRole='button'
               style={styles.leaveButton}
-              onPress={onLeave}>
-              <Text style={styles.buttonText}>{V.LEAVE}</Text>
+              onPress={isReset ? onReset : onLeave}>
+              <Text style={styles.buttonText}>
+                {isReset ? UI_STRINGS.REEL.RESET_ITEMS : V.LEAVE}
+              </Text>
             </Pressable>
           </View>
         </View>
