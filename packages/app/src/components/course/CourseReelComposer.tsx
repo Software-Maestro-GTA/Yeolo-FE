@@ -64,11 +64,12 @@ import { LoopingVideo } from '../common/LoopingVideo';
 import { ReelRouteMap } from './ReelRouteMap';
 import { ReelProgressBar } from './ReelProgressBar';
 
+type ReelItemDraft = Partial<Pick<ReelPhoto, 'uri' | 'placeName' | 'caption'>>;
 type DayDraft = ReelDayEdits & {
-  photos: ReelPhoto[];
+  items: Record<string, ReelItemDraft>;
   order?: string[];
-  text?: Record<string, { placeName: string; caption: string }>;
 };
+const EMPTY_DAY_DRAFT: DayDraft = { items: {} };
 const V = BOOKING_REEL_UI.REEL;
 const S = UI_STRINGS.REEL;
 
@@ -213,7 +214,7 @@ function ReelEditor({
   const outputRef = useRef<string | null>(null);
   const operation = useRef(false);
   const originalDay = course.itinerary.days.find((d) => d.day === selectedDay);
-  const draft = drafts[selectedDay] || { photos: [] };
+  const draft = drafts[selectedDay] ?? EMPTY_DAY_DRAFT;
   const day = useMemo(
     () =>
       originalDay
@@ -223,7 +224,7 @@ function ReelEditor({
         : undefined,
     [originalDay, draft.deleted],
   );
-  const mapKey = day ? reelMapSignature(day) : '';
+  const mapKey = useMemo(() => (day ? reelMapSignature(day) : ''), [day]);
   const activeMapKey = useRef(mapKey);
   activeMapKey.current = mapKey;
   const map = mapState?.key === mapKey ? mapState.snapshot : null;
@@ -234,10 +235,28 @@ function ReelEditor({
     },
     [mapKey],
   );
-  const activePhotos = useMemo(() => {
-    const keys = new Set(day ? reelPhotoStops(day).map(reelStopKey) : []);
-    return draft.photos.filter((photo) => keys.has(photo.placeId));
-  }, [day, draft.photos]);
+  const stops = useMemo(
+    () => (day ? reelPhotoStops(day, draft.order) : []),
+    [day, draft.order],
+  );
+  const activePhotos = useMemo(
+    () =>
+      stops.flatMap((stop): ReelPhoto[] => {
+        const key = reelStopKey(stop);
+        const item = draft.items[key];
+        return item?.uri
+          ? [
+              {
+                placeId: key,
+                uri: item.uri,
+                placeName: item.placeName ?? stop.place.placeName,
+                caption: item.caption ?? '',
+              },
+            ]
+          : [];
+      }),
+    [stops, draft.items],
+  );
   const tooManyPhotos = activePhotos.length > APP_CONFIG.REEL.MAX_PHOTOS;
   const plan = useMemo(() => {
     if (!day || !activePhotos.length || tooManyPhotos) return null;
@@ -325,31 +344,24 @@ function ReelEditor({
     if (draft.deleted?.length) setMapState(null);
     updateDraft({ ...draft, order: undefined, deleted: undefined });
   }
-  function stopText(stop: ItineraryStop) {
-    const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
-    return (
-      draft.text?.[reelStopKey(stop)] ?? {
-        placeName: photo?.placeName ?? stop.place.placeName,
-        caption: photo?.caption ?? '',
-      }
-    );
-  }
-  function updateStopText(
-    stop: ItineraryStop,
-    change: Partial<{ placeName: string; caption: string }>,
-  ) {
-    const text = { ...stopText(stop), ...change };
+  function updateItem(stop: ItineraryStop, change: ReelItemDraft) {
+    const key = reelStopKey(stop);
     updateDraft({
       ...draft,
-      text: { ...draft.text, [reelStopKey(stop)]: text },
-      photos: draft.photos.map((photo) =>
-        photo.placeId === reelStopKey(stop) ? { ...photo, ...text } : photo,
-      ),
+      items: {
+        ...draft.items,
+        [key]: {
+          placeName: stop.place.placeName,
+          caption: '',
+          ...draft.items[key],
+          ...change,
+        },
+      },
     });
   }
   async function addPhoto(stop: ItineraryStop) {
     if (operation.current) return;
-    const existing = draft.photos.find((p) => p.placeId === reelStopKey(stop));
+    const existing = draft.items[reelStopKey(stop)]?.uri;
     if (!existing && activePhotos.length >= APP_CONFIG.REEL.MAX_PHOTOS) {
       setError(S.LIMIT);
       return;
@@ -359,18 +371,7 @@ function ReelEditor({
     setError('');
     try {
       const uri = await pickReelPhoto();
-      if (uri && alive.current)
-        updateDraft({
-          ...draft,
-          photos: [
-            ...draft.photos.filter((p) => p.placeId !== reelStopKey(stop)),
-            {
-              placeId: reelStopKey(stop),
-              uri,
-              ...stopText(stop),
-            },
-          ],
-        });
+      if (uri && alive.current) updateItem(stop, { uri });
     } catch {
       if (alive.current) setError(S.PICK_ERROR);
     } finally {
@@ -429,10 +430,6 @@ function ReelEditor({
       if (alive.current) setBusyPhase(null);
     }
   }
-  const stops = useMemo(
-    () => (day ? reelPhotoStops(day, draft.order) : []),
-    [day, draft.order],
-  );
   function renderStop({
     item: stop,
     index,
@@ -440,33 +437,33 @@ function ReelEditor({
     item: ItineraryStop;
     index: number;
   }) {
-    const photo = draft.photos.find((p) => p.placeId === reelStopKey(stop));
+    const key = reelStopKey(stop);
+    const item = draft.items[key];
+    const photoUri = item?.uri;
     return (
       <View style={styles.placeCard}>
         <TouchableOpacity
-          testID={`reel-photo-${reelStopKey(stop)}`}
+          testID={`reel-photo-${key}`}
           accessibilityRole='button'
-          accessibilityLabel={`${stop.place.placeName} ${photo ? S.CHANGE_PHOTO : S.ADD_PHOTO}`}
+          accessibilityLabel={`${stop.place.placeName} ${photoUri ? S.CHANGE_PHOTO : S.ADD_PHOTO}`}
           style={styles.photo}
           disabled={busy || editMode}
           onPress={() => addPhoto(stop)}>
-          {photo ? (
-            <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.photoImage} />
           ) : (
             <BookingReelAsset name='photo' />
           )}
         </TouchableOpacity>
         <View style={styles.placeBody}>
-          <View
-            testID={`reel-heading-${reelStopKey(stop)}`}
-            style={styles.placeHeading}>
+          <View testID={`reel-heading-${key}`} style={styles.placeHeading}>
             <Text style={styles.placeName} numberOfLines={1}>
               {stop.place.placeName}
             </Text>
             {editMode && (
               <View style={styles.itemActions}>
                 <TouchableOpacity
-                  testID={`reel-move-up-${reelStopKey(stop)}`}
+                  testID={`reel-move-up-${key}`}
                   accessibilityRole='button'
                   accessibilityLabel={`${stop.place.placeName} ${S.MOVE_UP}`}
                   accessibilityState={{ disabled: busy || index === 0 }}
@@ -480,7 +477,7 @@ function ReelEditor({
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  testID={`reel-move-down-${reelStopKey(stop)}`}
+                  testID={`reel-move-down-${key}`}
                   accessibilityRole='button'
                   accessibilityLabel={`${stop.place.placeName} ${S.MOVE_DOWN}`}
                   accessibilityState={{
@@ -500,7 +497,7 @@ function ReelEditor({
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  testID={`reel-remove-${reelStopKey(stop)}`}
+                  testID={`reel-remove-${key}`}
                   accessibilityRole='button'
                   accessibilityLabel={`${stop.place.placeName} ${S.REMOVE_ITEM}`}
                   disabled={busy}
@@ -516,31 +513,31 @@ function ReelEditor({
             )}
           </View>
           <TextInput
-            testID={`reel-place-name-${reelStopKey(stop)}`}
+            testID={`reel-place-name-${key}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.PLACE_NAME_LABEL}`}
             placeholder={V.TITLE_PLACEHOLDER}
             placeholderTextColor={palette.mutedText}
-            value={stopText(stop).placeName}
+            value={item?.placeName ?? stop.place.placeName}
             maxLength={APP_CONFIG.REEL.TITLE_LIMIT}
             editable={!busy && !editMode}
             style={styles.placeNameInput}
-            onChangeText={(placeName) => updateStopText(stop, { placeName })}
+            onChangeText={(placeName) => updateItem(stop, { placeName })}
           />
           <TextInput
-            testID={`reel-caption-${reelStopKey(stop)}`}
+            testID={`reel-caption-${key}`}
             onFocus={focusInput}
             onBlur={blurInput}
             accessibilityLabel={`${stop.place.placeName} ${S.CAPTION_LABEL}`}
             placeholder={V.CAPTION_PLACEHOLDER}
             placeholderTextColor={palette.mutedText}
-            value={stopText(stop).caption}
+            value={item?.caption ?? ''}
             maxLength={APP_CONFIG.REEL.CAPTION_LIMIT}
             editable={!busy && !editMode}
             style={[styles.placeNameInput, styles.descriptionInput]}
             multiline
-            onChangeText={(caption) => updateStopText(stop, { caption })}
+            onChangeText={(caption) => updateItem(stop, { caption })}
           />
         </View>
       </View>

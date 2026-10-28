@@ -39,9 +39,10 @@ export function ReelRouteMap({
 }) {
   const [attempt, setAttempt] = useState(0);
   const coordinates = useMemo(() => reelMapCoordinates(day), [day]);
+  const signature = useMemo(() => reelMapSignature(day), [day]);
   return (
     <ReelMapCapture
-      key={`${reelMapSignature(day)}:${attempt}`}
+      key={`${signature}:${attempt}`}
       coordinates={coordinates}
       onReady={onReady}
       disabled={disabled}

@@ -785,6 +785,37 @@ describe('CourseReelComposer', () => {
     expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('새 제목');
   });
 
+  it('코스가 갱신되어도 이미 편집한 항목의 기본 제목은 보존하고 미편집 항목은 새 장소명을 쓴다', async () => {
+    const ui = await mount();
+    await fireEvent.press(ui.getByTestId('reel-photo-카페'));
+    const refreshed = {
+      ...reelCourse,
+      itinerary: {
+        ...reelCourse.itinerary,
+        days: reelCourse.itinerary.days.map((day) => ({
+          ...day,
+          stops: day.stops.map((stop) => ({
+            ...stop,
+            place: { ...stop.place, placeName: `새 ${stop.place.placeName}` },
+          })),
+        })),
+      },
+    };
+    await ui.rerender(
+      <CourseReelComposer
+        course={refreshed}
+        initialDay={1}
+        onClose={jest.fn()}
+      />,
+    );
+    expect(ui.getByTestId('reel-place-name-카페').props.value).toBe('카페');
+    expect(ui.getByTestId('reel-place-name-바다').props.value).toBe('새 바다');
+    await fireEvent.press(ui.getByTestId('reel-create'));
+    await ui.findByTestId('reel-save');
+    expect(
+      jest.mocked(service.generateReel).mock.calls[0][0].scenes[1].title,
+    ).toBe('카페');
+  });
   it('사진을 넣기 전 쓴 제목을 사진 추가·교체·날짜 변경 후에도 유지한다', async () => {
     const ui = await mount();
     expect(ui.queryByText('AI 작성')).toBeNull();

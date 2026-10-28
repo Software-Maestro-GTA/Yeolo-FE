@@ -368,12 +368,16 @@ export function reelPlaybackFrame(plan: ReelPlan, seconds: number) {
 
 /** Places compact name tags without covering other numbers, labels or the SDK attribution strip. */
 export function layoutReelMapNames(points: ReelPoint[]): ReelPoint[] {
-  const l = APP_CONFIG.REEL.LAYOUT;
+  const {
+    LAYOUT: l,
+    WIDTH: canvasWidth,
+    HEIGHT: canvasHeight,
+  } = APP_CONFIG.REEL;
   type Box = { x: number; y: number; width: number; height: number };
   const placed: Box[] = [];
   const circles = points.map((p) => ({
-    x: p.x * 720 - 22,
-    y: p.y * 1280 - 22,
+    x: p.x * canvasWidth - 22,
+    y: p.y * canvasHeight - 22,
     width: 44,
     height: 44,
   }));
@@ -390,8 +394,8 @@ export function layoutReelMapNames(points: ReelPoint[]): ReelPoint[] {
       224,
       Math.max(72, Math.ceil(units * l.mapNameSize) + 20),
     );
-    const x = point.x * 720,
-      y = point.y * 1280,
+    const x = point.x * canvasWidth,
+      y = point.y * canvasHeight,
       h = l.mapNameHeight;
     const candidates = [
       { x: x + 26, y: y - h / 2 },
@@ -408,14 +412,18 @@ export function layoutReelMapNames(points: ReelPoint[]): ReelPoint[] {
       width,
       height: h,
     }));
+    const obstacles = [...placed, ...circles];
     const score = (box: Box) =>
-      [...placed, ...circles].reduce(
-        (sum, other) => sum + overlap(box, other),
-        0,
-      );
-    const chosen = candidates.reduce((best, candidate) =>
-      score(candidate) < score(best) ? candidate : best,
-    );
+      obstacles.reduce((sum, other) => sum + overlap(box, other), 0);
+    let chosen = candidates[0];
+    let bestScore = score(chosen);
+    for (const candidate of candidates.slice(1)) {
+      const candidateScore = score(candidate);
+      if (candidateScore < bestScore) {
+        chosen = candidate;
+        bestScore = candidateScore;
+      }
+    }
     placed.push(chosen);
     return {
       ...point,

@@ -17,6 +17,7 @@ import {
   reelPlaybackFrame,
   type ReelPlan,
   type ReelScene,
+  type ReelPoint,
 } from '../../services/courseReelService';
 import { APP_CONFIG } from '../../constants/config';
 import { palette, hexToRgba } from '../../theme/colors';
@@ -42,12 +43,10 @@ export function ReelPreview({
   const frame = plan ? reelPlaybackFrame(plan, seconds) : null;
   const scene = frame && plan ? plan.scenes[frame.index] : undefined;
   const fraction = frame?.fraction ?? 0;
-  const canvasStyles = useMemo(() => makeCanvasStyles(width), [width]);
-  const sceneStyles = useMemo(
-    () => makeSceneStyles(plan, scene),
-    [plan, scene],
+  const duration = useMemo(
+    () => plan?.scenes.reduce((sum, item) => sum + item.seconds, 0) ?? 0,
+    [plan],
   );
-  const layout = plan?.layout ?? APP_CONFIG.REEL.LAYOUT;
   useEffect(() => {
     elapsed.current = 0;
     setSeconds(0);
@@ -61,7 +60,6 @@ export function ReelPreview({
   }, []);
   useEffect(() => {
     if (!playing || !plan) return;
-    const duration = plan.scenes.reduce((sum, item) => sum + item.seconds, 0);
     const anchor = Date.now() - elapsed.current * 1000;
     let finished = false;
     const timer = setInterval(() => {
@@ -81,8 +79,7 @@ export function ReelPreview({
       if (!finished)
         elapsed.current = Math.min(duration, (Date.now() - anchor) / 1000);
     };
-  }, [playing, plan]);
-  const markerTime = fraction * (scene?.seconds ?? 0);
+  }, [playing, plan, duration]);
   return (
     <View style={styles.container}>
       <View
@@ -94,109 +91,13 @@ export function ReelPreview({
           !scene && styles.emptyFrame,
         ]}
         testID='reel-preview'>
-        {scene && (
-          <View style={canvasStyles.canvas} pointerEvents='none'>
-            {scene.kind === 'photo' && (
-              <Image
-                testID='reel-photo-background'
-                source={{ uri: scene.uri }}
-                style={StyleSheet.absoluteFill}
-                resizeMode='cover'
-              />
-            )}
-            {scene.kind === 'route' && (
-              <>
-                <View style={sceneStyles.mapCard}>
-                  <Image
-                    source={{ uri: scene.uri }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode='stretch'
-                    testID='reel-map-background'
-                  />
-                </View>
-                {scene.points.map((point, index) => {
-                  const opacity = Math.min(
-                    1,
-                    Math.max(
-                      0,
-                      (markerTime - index * layout.markerIntervalSeconds) /
-                        layout.markerFadeSeconds,
-                    ),
-                  );
-                  if (opacity <= 0) return null;
-                  const marker = makeMarkerStyles(point, opacity, layout);
-                  return (
-                    <View key={point.label} style={marker.group}>
-                      <View style={marker.circle}>
-                        <Text style={marker.number}>{point.label}</Text>
-                      </View>
-                      {!!point.name && (
-                        <View style={marker.nameBox}>
-                          <Text style={marker.name} numberOfLines={1}>
-                            {point.name}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </>
-            )}
-            {scene.kind === 'photo' && (
-              <LinearGradient
-                testID='reel-bottom-gradient'
-                colors={[
-                  palette.transparent,
-                  hexToRgba(palette.black, layout.gradientMidOpacity),
-                  hexToRgba(palette.black, layout.gradientBottomOpacity),
-                ]}
-                locations={[0, layout.gradientMidStop, 1]}
-                style={sceneStyles.gradient}
-              />
-            )}
-            {scene.role === 'stop' ? (
-              <View style={sceneStyles.placeHeading}>
-                <View style={sceneStyles.placeTitleRow}>
-                  {!!scene.number && !!scene.title.trim() && (
-                    <View style={sceneStyles.numberCircle}>
-                      <Text
-                        testID='reel-place-number'
-                        style={sceneStyles.number}>
-                        {scene.number}
-                      </Text>
-                    </View>
-                  )}
-                  <Text
-                    testID='reel-scene-title'
-                    style={sceneStyles.placeTitle}
-                    numberOfLines={2}>
-                    {scene.title}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <Text
-                testID='reel-scene-title'
-                style={sceneStyles.title}
-                numberOfLines={2}>
-                {scene.title}
-              </Text>
-            )}
-            {!!scene.caption && (
-              <Text style={sceneStyles.caption} numberOfLines={2}>
-                {scene.caption}
-              </Text>
-            )}
-            {plan && (
-              <Image
-                testID='reel-brand-mark'
-                source={plan.brandMark}
-                resizeMode='contain'
-                style={sceneStyles.brandMark}
-                accessible={false}
-              />
-            )}
-          </View>
+        {scene && plan && (
+          <ReelSceneCanvas
+            plan={plan}
+            scene={scene}
+            width={width}
+            markerTime={scene.kind === 'route' ? fraction * scene.seconds : 0}
+          />
         )}
         {!scene && (
           <View style={styles.emptyCaption}>
@@ -233,14 +134,156 @@ export function ReelPreview({
       {!compact && (
         <Text style={styles.meta}>
           {UI_STRINGS.REEL.FORMAT}
-          {plan
-            ? ` · ${plan.scenes.reduce((sum, item) => sum + item.seconds, 0)}s`
-            : ''}
+          {plan ? ` · ${duration}s` : ''}
         </Text>
       )}
     </View>
   );
 }
+/** Keeps static photo scenes out of the playback clock's render loop. */
+const ReelSceneCanvas = React.memo(function ReelSceneCanvas({
+  plan,
+  scene,
+  width,
+  markerTime,
+}: {
+  plan: ReelPlan;
+  scene: ReelScene;
+  width: number;
+  markerTime: number;
+}) {
+  const canvasStyles = useMemo(() => makeCanvasStyles(width), [width]);
+  const sceneStyles = useMemo(
+    () => makeSceneStyles(plan, scene),
+    [plan, scene],
+  );
+  const layout = plan.layout;
+  return (
+    <View style={canvasStyles.canvas} pointerEvents='none'>
+      {scene.kind === 'photo' && (
+        <Image
+          testID='reel-photo-background'
+          source={{ uri: scene.uri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode='cover'
+        />
+      )}
+      {scene.kind === 'route' && (
+        <>
+          <View style={sceneStyles.mapCard}>
+            <Image
+              source={{ uri: scene.uri }}
+              style={StyleSheet.absoluteFill}
+              resizeMode='stretch'
+              testID='reel-map-background'
+            />
+          </View>
+          {scene.points.map((point, index) => {
+            const opacity = Math.min(
+              1,
+              Math.max(
+                0,
+                (markerTime - index * layout.markerIntervalSeconds) /
+                  layout.markerFadeSeconds,
+              ),
+            );
+            if (opacity <= 0) return null;
+            return (
+              <ReelMapMarker
+                key={point.label}
+                point={point}
+                opacity={opacity}
+                layout={layout}
+              />
+            );
+          })}
+        </>
+      )}
+      {scene.kind === 'photo' && (
+        <LinearGradient
+          testID='reel-bottom-gradient'
+          colors={[
+            palette.transparent,
+            hexToRgba(palette.black, layout.gradientMidOpacity),
+            hexToRgba(palette.black, layout.gradientBottomOpacity),
+          ]}
+          locations={[0, layout.gradientMidStop, 1]}
+          style={sceneStyles.gradient}
+        />
+      )}
+      {scene.role === 'stop' ? (
+        <View style={sceneStyles.placeHeading}>
+          <View style={sceneStyles.placeTitleRow}>
+            {!!scene.number && !!scene.title.trim() && (
+              <View style={sceneStyles.numberCircle}>
+                <Text testID='reel-place-number' style={sceneStyles.number}>
+                  {scene.number}
+                </Text>
+              </View>
+            )}
+            <Text
+              testID='reel-scene-title'
+              style={sceneStyles.placeTitle}
+              numberOfLines={2}>
+              {scene.title}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Text
+          testID='reel-scene-title'
+          style={sceneStyles.title}
+          numberOfLines={2}>
+          {scene.title}
+        </Text>
+      )}
+      {!!scene.caption && (
+        <Text style={sceneStyles.caption} numberOfLines={2}>
+          {scene.caption}
+        </Text>
+      )}
+      <Image
+        testID='reel-brand-mark'
+        source={plan.brandMark}
+        resizeMode='contain'
+        style={sceneStyles.brandMark}
+        accessible={false}
+      />
+    </View>
+  );
+});
+
+/** Reuses marker geometry and skips renders once its fade has finished. */
+const ReelMapMarker = React.memo(function ReelMapMarker({
+  point,
+  opacity,
+  layout,
+}: {
+  point: ReelPoint;
+  opacity: number;
+  layout: ReelPlan['layout'];
+}) {
+  const marker = useMemo(
+    () => makeMarkerStyles(point, layout),
+    [point, layout],
+  );
+  const fadeStyle = useMemo(() => ({ opacity }), [opacity]);
+  return (
+    <View style={[marker.group, fadeStyle]}>
+      <View style={marker.circle}>
+        <Text style={marker.number}>{point.label}</Text>
+      </View>
+      {!!point.name && (
+        <View style={marker.nameBox}>
+          <Text style={marker.name} numberOfLines={1}>
+            {point.name}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+});
+
 function makeCanvasStyles(width: number) {
   return StyleSheet.create({
     canvas: {
@@ -347,13 +390,9 @@ function makeSceneStyles(plan: ReelPlan | null, scene?: ReelScene) {
     },
   });
 }
-function makeMarkerStyles(
-  point: NonNullable<ReelScene['points']>[number],
-  opacity: number,
-  l: ReelPlan['layout'],
-) {
+function makeMarkerStyles(point: ReelPoint, l: ReelPlan['layout']) {
   return StyleSheet.create({
-    group: { ...StyleSheet.absoluteFill, opacity },
+    group: StyleSheet.absoluteFill,
     circle: {
       position: 'absolute',
       left: point.x * 720 - l.mapMarkerRadius,
