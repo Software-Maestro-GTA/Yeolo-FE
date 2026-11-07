@@ -133,11 +133,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
     // The mutation awaits token storage before the store starts the request.
     // Clear the previous result synchronously, before mounting its loading UI.
     useCourseStore.getState().resetCourseState();
-    trackButtonClick('btn_submit_course_create', 'Submit Course Create Form', {
-      country: data.destinationCountry,
-      city: data.destinationCity,
-      budget: data.budget,
-    });
+    trackButtonClick('btn_submit_course_create', 'Submit Course Create Form');
     createCourseMutation.mutate(data);
     onSubmit?.(data);
   });
@@ -313,7 +309,7 @@ export const CourseCreateScreen: React.FC<CourseCreateScreenProps> = ({
                             onPress={() => {
                               trackButtonClick(
                                 'btn_select_popular_destination',
-                                `Select ${city}, ${country}`,
+                                'Select Recommended Destination',
                               );
                               form.handleSelectPopularDestination(
                                 country,

@@ -58,6 +58,22 @@ describe('App Analytics (@yeolo/app)', () => {
     });
   });
 
+  test('does not attribute a late async result to another session after sign-out', async () => {
+    await tracker.setUserId('first-user');
+    const track = tracker.captureEventLogger();
+    track('course_generation_start');
+
+    await tracker.setUserId(null);
+    await tracker.setUserId('first-user');
+    track('course_generation_complete');
+    tracker.captureEventLogger()('course_generation_start');
+
+    expect(jest.mocked(logEvent).mock.calls.map(([, event]) => event)).toEqual([
+      'course_generation_start',
+      'course_generation_start',
+    ]);
+  });
+
   test('analyticsService integration with AppAnalyticsTracker', async () => {
     analyticsService.registerTracker(tracker);
     await analyticsService.logScreenView('CourseListScreen');

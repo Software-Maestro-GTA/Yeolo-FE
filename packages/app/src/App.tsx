@@ -2,7 +2,7 @@
  * @file App.tsx
  * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
-import React, { useEffect } from 'react';
+import React from 'react';
 import './services/appVersionService';
 import { useFonts } from 'expo-font';
 import { appFonts } from './theme/fonts';
@@ -24,6 +24,10 @@ import { BackgroundImageLayout } from './layouts';
 import { AppVersionNotice } from './components/common/AppVersionNotice';
 
 import { APP_CONFIG } from './constants/config';
+
+// The first screen can mount before a parent effect runs.
+analyticsService.registerTracker(appAnalyticsTracker);
+analyticsService.registerTracker(airbridgeAnalyticsTracker);
 
 const handleGlobalApiError = (error: unknown) => {
   if (
@@ -69,16 +73,6 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(appFonts);
-  useEffect(() => {
-    analyticsService.registerTracker(appAnalyticsTracker);
-    analyticsService.registerTracker(airbridgeAnalyticsTracker);
-
-    return () => {
-      analyticsService.unregisterTracker(appAnalyticsTracker);
-      analyticsService.unregisterTracker(airbridgeAnalyticsTracker);
-    };
-  }, []);
-
   if (!fontsLoaded && !fontError) return null;
 
   return (

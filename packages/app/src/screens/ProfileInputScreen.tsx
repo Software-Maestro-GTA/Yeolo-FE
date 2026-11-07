@@ -115,9 +115,7 @@ export const ProfileInputScreen: React.FC<ProfileInputScreenProps> = ({
     }
     setNicknameError(null);
 
-    trackButtonClick('btn_save_profile_input', 'Save Profile Input', {
-      nickname: displayName,
-    });
+    trackButtonClick('btn_save_profile_input', 'Save Profile Input');
 
     try {
       const result = await updateProfileMutation.mutateAsync({

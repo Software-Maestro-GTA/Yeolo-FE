@@ -145,9 +145,7 @@ export function CourseListScreen({
 
   const openDelete = useCallback(
     (course: CourseSummary) => {
-      trackButtonClick('btn_open_delete_modal', 'Open Delete Confirm Modal', {
-        course_id: course.courseId,
-      });
+      trackButtonClick('btn_open_delete_modal', 'Open Delete Confirm Modal');
       setEditing(true);
       setDeleteError(null);
       setCourseToDelete(course);
@@ -158,9 +156,7 @@ export function CourseListScreen({
   const handleConfirmDelete = () => {
     if (!courseToDelete || deleteCourseMutation.isPending) return;
     const courseId = courseToDelete.courseId;
-    trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course', {
-      course_id: courseId,
-    });
+    trackButtonClick('btn_confirm_delete_course', 'Confirm Delete Course');
     setDeleteError(null);
     deleteCourseMutation.mutate(courseId, {
       onSuccess: async () => {
