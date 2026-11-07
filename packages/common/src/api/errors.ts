@@ -11,3 +11,13 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 }
+
+/** A server HTTP 426 requires an app update without clearing the user's session. */
+export class AppVersionMismatchError extends ApiError {
+  constructor(
+    message = '앱 버전이 맞지 않습니다. 최신 버전으로 업데이트해 주세요.',
+  ) {
+    super(426, message);
+    this.name = 'AppVersionMismatchError';
+  }
+}

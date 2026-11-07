@@ -7,6 +7,13 @@
  * UI Latest Design String Constants (Extracted from Figma UI)
  */
 export const UI_STRINGS = {
+  APP_UPDATE: {
+    TITLE: '앱 업데이트가 필요해요',
+    MESSAGE:
+      '앱 버전이 서버에서 지원하는 버전과 맞지 않습니다. 스토어에서 최신 버전으로 업데이트해 주세요.',
+    OPEN_STORE: '스토어로 이동',
+    STORE_ERROR: '스토어를 열지 못했어요. 잠시 후 다시 눌러 주세요.',
+  },
   NAVIGATION: {
     IN_PROGRESS: '진행 중에는 이전으로 돌아갈 수 없습니다.',
     EXIT_CONFIRM: '한 번 더 누르시면 앱이 종료됩니다.',

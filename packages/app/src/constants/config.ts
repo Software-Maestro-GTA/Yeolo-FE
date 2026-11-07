@@ -69,6 +69,8 @@ export const APP_CONFIG = {
   },
   DEFAULT_API_URL: 'https://api.yeolo.app',
   WEB_BASE_URL: 'https://www.yeolo.app',
+  APP_STORE_URL: 'https://apps.apple.com/kr/app/id6796231811',
+  PLAY_STORE_URL: 'https://play.google.com/store/apps/details?id=com.yeolo.app',
   INVITE_BASE_URL: 'https://www.yeolo.app/invite',
   PRIVACY_POLICY_URL: 'https://www.yeolo.app/privacy',
   TERMS_OF_SERVICE_URL: 'https://www.yeolo.app/terms',

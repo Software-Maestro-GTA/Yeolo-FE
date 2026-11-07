@@ -2,7 +2,12 @@
  * @file taste.ts
  * @description Shared taste analysis API with terminal SSE completion, bounded idle waits, and profile retrieval (API-PREF-3, API-PREF-4).
  */
-import { createHttpClient, getAcceptLanguage } from './kyClient';
+import {
+  assertCompatibleAppVersion,
+  createHttpClient,
+  getAcceptLanguage,
+  getAppVersion,
+} from './kyClient';
 import { parseServerSentEvents, type ServerSentEvent } from 'parse-sse';
 import type {
   AnalyzeTastePayload,
@@ -40,9 +45,11 @@ export async function analyzeTastePreferenceStream(
     payload.images?.length,
   );
   const normalizedUrl = apiUrl.replace(/\/$/, '');
+  const appVersion = getAppVersion();
   const headers: Record<string, string> = {
     'Accept-Language': getAcceptLanguage(),
     'Content-Type': 'application/json',
+    ...(appVersion ? { 'X-App-Version': appVersion } : {}),
   };
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
@@ -87,14 +94,20 @@ export async function analyzeTastePreferenceStream(
       let errorStatus = response.status;
       let errorMessage =
         '사진 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      let errorBody: unknown = null;
       try {
-        const errorBody = await waitForResponse(response.json());
-        if (errorBody?.status) errorStatus = errorBody.status;
-        if (errorBody?.message) errorMessage = errorBody.message;
+        errorBody = await waitForResponse(response.json());
       } catch (error) {
         if (error instanceof ApiError) throw error;
         // An unreadable error body uses the HTTP status and fallback message.
       }
+      await assertCompatibleAppVersion(response.status, errorBody);
+      const parsedError = errorBody as {
+        status?: number;
+        message?: string;
+      } | null;
+      if (parsedError?.status) errorStatus = parsedError.status;
+      if (parsedError?.message) errorMessage = parsedError.message;
       throw new ApiError(errorStatus, errorMessage);
     }
 

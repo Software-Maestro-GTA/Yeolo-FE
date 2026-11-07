@@ -3,6 +3,7 @@
  * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
 import React, { useEffect } from 'react';
+import './services/appVersionService';
 import { useFonts } from 'expo-font';
 import { appFonts } from './theme/fonts';
 import { TypographyProvider } from './components/common/Typography';
@@ -20,6 +21,7 @@ import { AuthProvider, BackgroundProvider } from './context';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
 import { BackgroundImageLayout } from './layouts';
+import { AppVersionNotice } from './components/common/AppVersionNotice';
 
 import { APP_CONFIG } from './constants/config';
 
@@ -48,7 +50,9 @@ const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         if (
           (error instanceof ApiError &&
-            (error.status === 401 || error.status === 403)) ||
+            (error.status === 401 ||
+              error.status === 403 ||
+              error.status === 426)) ||
           (typeof error === 'object' &&
             error !== null &&
             'status' in error &&
@@ -89,6 +93,7 @@ export default function App() {
               </BackgroundImageLayout>
             </BackgroundProvider>
           </AuthProvider>
+          <AppVersionNotice />
         </SafeAreaProvider>
       </QueryClientProvider>
     </TypographyProvider>

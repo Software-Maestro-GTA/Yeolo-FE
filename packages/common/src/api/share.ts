@@ -79,7 +79,7 @@ export async function createShareLinkApi(
 }
 
 /**
- * Retrieves details of a shared course link (API-SHARE-2, unauthenticated).
+ * Retrieves a shared course link without authentication or app version checks (API-SHARE-2).
  *
  * @param apiUrl Base backend URL
  * @param shareToken Share token string
@@ -91,7 +91,9 @@ export async function getShareLinkApi(
 ): Promise<ShareLinkDetailResponseData> {
   logger.info('[ShareAPI] getShareLinkApi request, shareToken:', shareToken);
   try {
-    const client = createPublicHttpClient(apiUrl);
+    const client = createPublicHttpClient(apiUrl, {
+      skipAppVersionCheck: true,
+    });
     const response = await client.get(`api/share-links/${shareToken}`);
 
     const json = (await response

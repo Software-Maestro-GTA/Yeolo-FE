@@ -74,6 +74,18 @@ describe('InviteCard Component', () => {
 });
 
 describe('InviteErrorState Component', () => {
+  it('treats an unexpected HTTP 426 as a temporary share lookup error', () => {
+    render(<InviteErrorState status={426} message='앱 업데이트가 필요해요' />);
+    expect(
+      screen.getByRole('heading', { name: '일시적인 오류 발생' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('앱 업데이트가 필요해요'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /App Store|Google Play/ }),
+    ).toBeNull();
+  });
   it('renders 404 invalid link error message and home button', () => {
     render(
       <InviteErrorState

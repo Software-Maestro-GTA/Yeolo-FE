@@ -3,8 +3,10 @@
  * @description Common user management and preference API services shared across Web and Mobile (API-USER-1~4, API-PREF-1~2).
  */
 import {
+  assertCompatibleAppVersion,
   createHttpClient,
   getAcceptLanguage,
+  getAppVersion,
   setAcceptLanguage,
 } from './kyClient';
 import type { WithdrawRequest, WithdrawResponse } from '../types/auth';
@@ -60,22 +62,31 @@ export async function updateUserProfileApi(
   const normalizedApiUrl = apiUrl.replace(/\/$/, '');
   const targetUrl = `${normalizedApiUrl}/api/users/me/profile`;
   const acceptLanguage = getAcceptLanguage();
+  const appVersion = getAppVersion();
 
   return new Promise<UpdateUserProfileResponse>((resolve, reject) => {
     if (typeof XMLHttpRequest !== 'undefined') {
       const xhr = new XMLHttpRequest();
       xhr.open('PATCH', targetUrl);
       xhr.setRequestHeader('Accept-Language', acceptLanguage);
+      if (appVersion) xhr.setRequestHeader('X-App-Version', appVersion);
 
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
 
-      xhr.onload = () => {
+      xhr.onload = async () => {
+        let result: UpdateUserProfileResponse | null = null;
         try {
-          const result = JSON.parse(
-            xhr.responseText,
-          ) as UpdateUserProfileResponse;
+          result = JSON.parse(xhr.responseText) as UpdateUserProfileResponse;
+        } catch {
+          // HTTP 426 still requires an update when the response body is unreadable.
+        }
+        try {
+          await assertCompatibleAppVersion(xhr.status, result);
+          if (!result) {
+            throw new ApiError(xhr.status || 500, '응답 데이터 파싱 실패');
+          }
           if (xhr.status >= 200 && xhr.status < 300 && result.status === 200) {
             resolve(result);
           } else {
@@ -87,8 +98,8 @@ export async function updateUserProfileApi(
             );
             reject(new ApiError(errorStatus, errorMessage));
           }
-        } catch (e) {
-          reject(new ApiError(xhr.status || 500, '응답 데이터 파싱 실패'));
+        } catch (error) {
+          reject(error);
         }
       };
 
@@ -105,6 +116,7 @@ export async function updateUserProfileApi(
     } else {
       const headers: Record<string, string> = {
         'Accept-Language': acceptLanguage,
+        ...(appVersion ? { 'X-App-Version': appVersion } : {}),
       };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -118,6 +130,7 @@ export async function updateUserProfileApi(
           const result = (await res
             .json()
             .catch(() => null)) as UpdateUserProfileResponse | null;
+          await assertCompatibleAppVersion(res.status, result);
           if (res.ok && result?.status === 200) {
             resolve(result);
           } else {
@@ -131,7 +144,12 @@ export async function updateUserProfileApi(
         })
         .catch((err) =>
           reject(
-            new ApiError(500, err?.message || '네트워크 오류가 발생했습니다.'),
+            err instanceof ApiError
+              ? err
+              : new ApiError(
+                  500,
+                  err?.message || '네트워크 오류가 발생했습니다.',
+                ),
           ),
         );
     }
