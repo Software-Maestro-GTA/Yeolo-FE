@@ -3,7 +3,7 @@
     "name": "여로",
     "slug": "yeolo",
     "scheme": "yeolo",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/branding/ios-blue-wordmark.png",
     "userInterfaceStyle": "light",
@@ -58,6 +58,9 @@
         "expo-build-properties",
         {
           "ios": {
+            "enableSceneSupport": true,
+            "forceStaticLinking": ["RNFBApp", "RNFBAnalytics"],
+            "usePrecompiledModules": false,
             "useFrameworks": "static"
           },
           "android": {

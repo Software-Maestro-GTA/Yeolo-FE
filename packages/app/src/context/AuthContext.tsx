@@ -129,18 +129,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     clearPrivateQueries();
     setTokenGetter(async () => {
-      const { accessToken, refreshToken } = await AsyncStorage.getMany([
-        'accessToken',
-        'refreshToken',
-      ]);
+      const { accessToken, refreshToken } = Object.fromEntries(
+        await AsyncStorage.multiGet(['accessToken', 'refreshToken']),
+      );
       return { accessToken, refreshToken };
     });
 
     setTokenSetter(async (newAccessToken, newRefreshToken) => {
-      await AsyncStorage.setMany({
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      });
+      await AsyncStorage.multiSet([
+        ['accessToken', newAccessToken],
+        ['refreshToken', newRefreshToken],
+      ]);
     });
 
     setUnauthorizedHandler(async () => {
@@ -173,7 +172,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           user: savedUser,
           recentCourseId: savedRecentCourseId,
           hasCompletedOnboarding: savedOnboarding,
-        } = await AsyncStorage.getMany(SESSION_STORAGE_KEYS);
+        } = Object.fromEntries(
+          await AsyncStorage.multiGet(SESSION_STORAGE_KEYS),
+        );
 
         if (savedRecentCourseId) {
           setRecentCourseId(savedRecentCourseId);
@@ -186,10 +187,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (token && refreshToken) {
           try {
             const newTokens = await refreshTokenApi(apiUrl, refreshToken);
-            await AsyncStorage.setMany({
-              accessToken: newTokens.data.accessToken,
-              refreshToken: newTokens.data.refreshToken,
-            });
+            await AsyncStorage.multiSet([
+              ['accessToken', newTokens.data.accessToken],
+              ['refreshToken', newTokens.data.refreshToken],
+            ]);
             setIsAuthenticated(true);
             if (savedUser) {
               setUser(JSON.parse(savedUser));
@@ -205,7 +206,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 refreshErr,
               );
               await clearLocalSession();
-              await AsyncStorage.removeMany([
+              await AsyncStorage.multiRemove([
                 'recentCourseId',
                 'hasCompletedOnboarding',
               ]);
@@ -351,7 +352,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       );
     } finally {
       await signOutGoogle();
-      await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
+      await AsyncStorage.multiRemove(SESSION_STORAGE_KEYS);
       clearPrivateQueries();
       setIsAuthenticated(false);
       setUser(null);
@@ -365,7 +366,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     logger.info('[AuthContext] Resetting local auth state without API call...');
     clearPrivateQueries();
     await signOutGoogle();
-    await AsyncStorage.removeMany(SESSION_STORAGE_KEYS);
+    await AsyncStorage.multiRemove(SESSION_STORAGE_KEYS);
     clearPrivateQueries();
     setIsAuthenticated(false);
     setUser(null);
