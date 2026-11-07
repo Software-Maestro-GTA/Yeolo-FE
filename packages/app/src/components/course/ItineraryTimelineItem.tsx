@@ -1,6 +1,6 @@
 /**
  * @file ItineraryTimelineItem.tsx
- * @description UI v3 일정·교통 정보를 표시하고 Google Place ID로 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
+ * @description UI v3 일정·교통 정보의 텍스트 선택·복사를 지원하고 장소 지도와 확인 불가 구간의 길찾기를 엽니다.
  */
 import MemoSvg from '../../../assets/figma-v3/screen-media/memo.svg';
 import ReasonSvg from '../../../assets/figma-v3/screen-media/reason.svg';
@@ -163,7 +163,9 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                 <ReasonSvg />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipText}>{reason}</Text>
+                <Text selectable style={styles.tipText}>
+                  {reason}
+                </Text>
               </View>
             </View>
           )}
@@ -173,7 +175,9 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                 <MemoSvg />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipText}>{memo}</Text>
+                <Text selectable style={styles.tipText}>
+                  {memo}
+                </Text>
               </View>
             </View>
           )}
@@ -251,7 +255,7 @@ export const ItineraryTimelineItem: React.FC<ItineraryTimelineItemProps> = ({
                   <Text style={styles.fare}>{transportCost}</Text>
                 )}
               </View>
-              <Text style={styles.transitMemo}>
+              <Text selectable style={styles.transitMemo}>
                 {transport.memo?.trim() ||
                   UI_STRINGS.COURSE_DETAIL.RECOMMENDED_ROUTE_TIP}
               </Text>
