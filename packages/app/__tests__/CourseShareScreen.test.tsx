@@ -10,6 +10,7 @@ import { CourseShareScreen } from '../src/screens/CourseShareScreen';
 import { AuthContext } from '../src/context';
 import * as commonApi from '@yeolo/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logEvent } from '@react-native-firebase/analytics';
 
 const mockShareDetailResponse = {
   course: {
@@ -66,6 +67,11 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
     expect(await findByText('2026-09-01 · 5일')).toBeTruthy();
     expect(await findByTestId('btn-save-course')).toBeTruthy();
     expect(queryByTestId('login-bottom-sheet')).toBeNull();
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'course_invite_viewed',
+      { auth_state: 'signed_in' },
+    );
   });
 
   it('게스트는 코스를 먼저 보고 저장을 누르면 로그인 시트가 열리며 닫으면 미리보기로 돌아간다', async () => {
@@ -158,6 +164,16 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
     );
     expect(mockSaveSuccess).toHaveBeenCalledWith('accepted-course-999');
     expect(alertSpy).not.toHaveBeenCalled();
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'course_invite_accept_started',
+      undefined,
+    );
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'course_invite_accept_result',
+      { outcome: 'success' },
+    );
   });
 
   it('acceptShareLinkApi 호출 시 400 에러(본인 코스 또는 이미 수락된 코스)가 발생하면 "이미 저장된 코스입니다" 알림 후 onSaveSuccess가 호출되어야 한다', async () => {
@@ -202,6 +218,50 @@ describe('CourseShareScreen (API-SHARE-2, API-SHARE-3 & 공유 수신/예외 처
     const alertButtons = alertSpy.mock.calls[0][2];
     alertButtons?.[0]?.onPress?.();
     expect(mockSaveSuccess).toHaveBeenCalledWith('original-course-123');
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'course_invite_accept_result',
+      { outcome: 'already_owned' },
+    );
+  });
+
+  it('수락 요청 도중 화면을 닫아도 서버가 저장한 결과를 기록한다', async () => {
+    jest
+      .spyOn(commonApi, 'getShareLinkApi')
+      .mockResolvedValue(mockShareDetailResponse);
+    let finishAccept!: (result: { courseId: string }) => void;
+    const accept = jest
+      .spyOn(commonApi, 'acceptShareLinkApi')
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finishAccept = resolve;
+          }),
+      );
+    const onSaveSuccess = jest.fn();
+    const screen = await render(
+      <AuthContext.Provider
+        value={{ isAuthenticated: true, isLoading: false } as any}>
+        <CourseShareScreen
+          shareToken='pending-share'
+          onSaveSuccess={onSaveSuccess}
+        />
+      </AuthContext.Provider>,
+    );
+
+    await fireEvent.press(await screen.findByTestId('btn-save-course'));
+    await waitFor(() => expect(accept).toHaveBeenCalledTimes(1));
+    await screen.unmount();
+    await act(async () => finishAccept({ courseId: 'saved-course' }));
+
+    expect(onSaveSuccess).not.toHaveBeenCalled();
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'course_invite_accept_result',
+      {
+        outcome: 'success',
+      },
+    );
   });
 
   it('만료되었거나 유효하지 않은 공유 링크(API-SHARE-2 404/410 에러) 진입 시 로그인 유저는 홈 화면으로 리다이렉트되어야 한다', async () => {

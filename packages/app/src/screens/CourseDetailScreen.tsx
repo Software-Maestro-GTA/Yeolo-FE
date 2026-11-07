@@ -179,10 +179,12 @@ export function CourseDetailScreen({
   });
 
   const createShareLinkMutation = useCreateShareLinkMutation();
+  const shareInFlight = React.useRef(false);
 
   const handleShareCourse = () => {
+    if (!courseId || shareInFlight.current) return;
+    shareInFlight.current = true;
     trackButtonClick('btn_course_detail_share', 'Share Course Click');
-    if (!courseId) return;
 
     createShareLinkMutation.mutate(courseId, {
       onSuccess: async (shareData) => {
@@ -214,6 +216,9 @@ export function CourseDetailScreen({
           UI_STRINGS.COURSE_DETAIL.SHARE_FAIL_TITLE,
           err?.message || UI_STRINGS.COURSE_DETAIL.SHARE_FAIL_DEFAULT,
         );
+      },
+      onSettled: () => {
+        shareInFlight.current = false;
       },
     });
   };

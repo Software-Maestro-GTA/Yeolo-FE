@@ -4,7 +4,7 @@
  */
 import BackSvg from '../../assets/images/figma-course/back.svg';
 import AppleSvg from '../../assets/figma/share/apple.svg';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -40,6 +40,7 @@ import {
   isAppleAuthAvailable,
 } from '../services';
 import { showAuthErrorAlert } from '../utils/errorUtils';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 export interface CourseShareScreenProps {
   shareToken?: string;
@@ -84,6 +85,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   const loginEntrance = useSheetEntrance(showLogin && !isAuthenticated);
 
   const [isLocalLoggingIn, setIsLocalLoggingIn] = useState<boolean>(false);
+  const loginInFlight = useRef(false);
   const isLoggingIn = auth?.isLoading || isLocalLoggingIn;
 
   const [isAppleAvailable, setIsAppleAvailable] = useState<boolean>(
@@ -128,9 +130,34 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   }, [shareError, isAuthenticated, onDecline, onNavigateToLogin]);
 
   const acceptShareLinkMutation = useAcceptShareLinkMutation();
+  const acceptInFlight = useRef(false);
+  const viewedShareToken = useRef<string | undefined>(undefined);
 
   const inviter = shareData?.inviter;
   const course = shareData?.course;
+  const isRestoringAuth = auth?.isLoading;
+  useEffect(() => {
+    if (
+      !shareToken ||
+      !course ||
+      isLoadingShare ||
+      isRestoringAuth ||
+      shareError ||
+      viewedShareToken.current === shareToken
+    )
+      return;
+    viewedShareToken.current = shareToken;
+    void appAnalyticsTracker.logEvent('course_invite_viewed', {
+      auth_state: isAuthenticated ? 'signed_in' : 'guest',
+    });
+  }, [
+    shareToken,
+    course,
+    isLoadingShare,
+    isRestoringAuth,
+    shareError,
+    isAuthenticated,
+  ]);
 
   const activeInviterName = inviter?.displayName || '';
   const activeInviterAvatar = inviter?.profileImageUrl || null;
@@ -146,6 +173,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   const coverImage = course?.coverImageUrl?.trim() || '';
 
   const handleSaveCourse = () => {
+    if (acceptInFlight.current) return;
     trackButtonClick('btn_save_shared_course', 'Save Shared Course Click');
     if (!isAuthenticated) {
       setShowLogin(true);
@@ -153,6 +181,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
     }
 
     if (shareToken) {
+      acceptInFlight.current = true;
       acceptShareLinkMutation.mutate(shareToken, {
         onSuccess: (res) => {
           onSaveSuccess?.(res.courseId || courseId);
@@ -177,6 +206,9 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
             );
           }
         },
+        onSettled: () => {
+          acceptInFlight.current = false;
+        },
       });
     } else {
       if (onSaveSuccess) {
@@ -196,21 +228,27 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    if (isLoggingIn || loginInFlight.current) return;
+    loginInFlight.current = true;
     trackButtonClick(
       `btn_share_login_${provider}`,
       `Share Login ${provider} Click`,
     );
-    if (isLoggingIn) return;
     setIsLocalLoggingIn(true);
+    const eventParams = { method: provider, source: 'shared_course' };
+    let stage: 'provider' | 'backend' = 'provider';
+    void appAnalyticsTracker.logEvent('auth_start', eventParams);
 
     try {
       if (provider === 'google') {
         const code = await signInWithGoogle();
+        stage = 'backend';
         if (auth?.loginWithGoogle) {
           await auth.loginWithGoogle(code);
         }
       } else {
         const { code, idToken } = await signInWithApple();
+        stage = 'backend';
         if (auth?.loginWithApple) {
           await auth.loginWithApple({ code, idToken });
         }
@@ -220,8 +258,15 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
         err?.code === 'ERR_REQUEST_CANCELED' ||
         err?.code === 'SIGN_IN_CANCELLED'
       ) {
+        if (stage === 'provider') {
+          void appAnalyticsTracker.logEvent('auth_cancelled', eventParams);
+        }
         return;
       }
+      void appAnalyticsTracker.logEvent('auth_failed', {
+        ...eventParams,
+        stage,
+      });
       if (provider === 'google') {
         await signOutGoogle();
       }
@@ -232,6 +277,7 @@ export const CourseShareScreen: React.FC<CourseShareScreenProps> = ({
           : UI_STRINGS.AUTH.APPLE_LOGIN_FAIL_DEFAULT,
       );
     } finally {
+      loginInFlight.current = false;
       setIsLocalLoggingIn(false);
     }
   };
