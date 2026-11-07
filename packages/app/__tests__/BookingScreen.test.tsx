@@ -6,6 +6,7 @@ import React from 'react';
 import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Keyboard, Linking, StyleSheet } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { logEvent } from '@react-native-firebase/analytics';
 import { MyRealTripError } from '@yeolo/common';
 import * as commonApi from '@yeolo/common';
 import { BookingScreen } from '../src/screens/BookingScreen';
@@ -27,6 +28,11 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 }));
 
 const S = UI_STRINGS.BOOKING;
+const bookingEvents = () =>
+  jest
+    .mocked(logEvent)
+    .mock.calls.filter(([, name]) => name.startsWith('booking_'))
+    .map(([, name, params]) => [name, params]);
 const product = {
   itemName: '성산일출봉 투어',
   productUrl: 'https://experiences.myrealtrip.com/products/123',
@@ -238,6 +244,7 @@ test('장소 검색 → 상품 선택 → 생성한 제휴 링크만 연다', as
   const ui = await render(
     <BookingScreen
       kind='ticket'
+      source='home'
       context={{ keyword: '성산일출봉' }}
       onBack={jest.fn()}
     />,
@@ -262,6 +269,18 @@ test('장소 검색 → 상품 선택 → 생성한 제휴 링크만 연다', as
   );
   expect(search).toHaveBeenCalledWith('성산일출봉', 1, expect.anything());
   expect(link).toHaveBeenCalledWith(product.productUrl, expect.anything());
+  const entry = { booking_kind: 'ticket', entry_source: 'home' };
+  const attempt = { ...entry, search_mode: 'manual' };
+  expect(bookingEvents()).toEqual([
+    ['booking_open', entry],
+    ['booking_search_started', attempt],
+    [
+      'booking_search_result',
+      { ...attempt, outcome: 'success', result_count: 1 },
+    ],
+    ['booking_product_selected', entry],
+    ['booking_partner_opened', { ...entry, link_type: 'product' }],
+  ]);
 });
 
 test('장소에서 진입한 투어·티켓은 장소명으로 즉시 검색 결과를 보여준다', async () => {
@@ -319,6 +338,9 @@ test('투어 결과 끝에서 다음 페이지를 중복 없이 이어 붙인다
     fireEvent(ui.getByTestId('booking-results-list'), 'onEndReached');
   });
   expect(search).toHaveBeenCalledTimes(2);
+  expect(
+    bookingEvents().filter(([name]) => name === 'booking_search_result'),
+  ).toHaveLength(1);
 });
 
 test('숙소는 장소의 첫 지역을 자동 선택하고 숫자 입력을 숙소 검색에 전달한다', async () => {
@@ -787,6 +809,10 @@ test('자동 숙소 검색 중 화면을 떠나면 상품 요청을 취소한다
   expect(productSignal.aborted).toBe(true);
   await act(async () => resolveProducts(hotelPage));
   expect(Linking.openURL).not.toHaveBeenCalled();
+  expect(bookingEvents().map(([name]) => name)).toEqual([
+    'booking_open',
+    'booking_search_started',
+  ]);
 });
 
 test.each([
@@ -1475,8 +1501,14 @@ test('링크 열기 실패 후 상품을 다시 선택할 수 있다', async () 
   await fireEvent.press(ui.getByTestId('booking-search'));
   await fireEvent.press(await ui.findByText(product.itemName));
   await ui.findByText(S.OPEN_ERROR);
+  expect(bookingEvents().map(([name]) => name)).not.toContain(
+    'booking_partner_opened',
+  );
   await fireEvent.press(ui.getByText(product.itemName));
   await waitFor(() => expect(Linking.openURL).toHaveBeenCalledTimes(2));
+  expect(
+    bookingEvents().filter(([name]) => name === 'booking_partner_opened'),
+  ).toHaveLength(1);
 });
 
 test('중복 클릭은 요청 하나만 실행하고 닫힌 창의 응답은 외부 페이지를 열지 않는다', async () => {

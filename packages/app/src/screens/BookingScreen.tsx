@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useBackground } from '../context';
 import { useGA4ScreenTracking } from '../hooks';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 import {
   MyRealTripError,
   type BookingKind,
@@ -61,6 +62,9 @@ type Choice = {
 };
 type AirportTarget = 'departure' | 'arrival';
 type FieldType = 'text' | 'number' | 'date';
+type BookingSearchMode = 'manual' | 'automatic';
+type BookingSearchOutcome = 'success' | 'empty' | 'failure';
+type BookingLinkType = 'flight_results' | 'product' | 'partner_home';
 type HotelQuery = {
   regionId: number;
   checkIn: string;
@@ -78,12 +82,24 @@ const formatBookingDateInput = (value: string) => {
 interface Props {
   kind: BookingKind;
   context?: BookingContext;
+  source?: 'home' | 'course_detail';
   onBack: () => void;
 }
 
 /** Mount per booking session so closing or changing screens discards stale requests and results. */
-export function BookingScreen({ kind, context = {}, onBack }: Props) {
+export function BookingScreen({ kind, context = {}, source, onBack }: Props) {
   useGA4ScreenTracking('BookingScreen');
+  const entrySource = source ?? 'unknown';
+  const bookingAnalytics = { booking_kind: kind, entry_source: entrySource };
+  const bookingOpenTracked = useRef(false);
+  useEffect(() => {
+    if (bookingOpenTracked.current) return;
+    bookingOpenTracked.current = true;
+    void appAnalyticsTracker.logEvent('booking_open', {
+      booking_kind: kind,
+      entry_source: entrySource,
+    });
+  }, [kind, entrySource]);
   const { setBackground, resetBackground } = useBackground();
   const insets = useSafeAreaInsets();
   const safeAreaStyles = StyleSheet.create({
@@ -452,15 +468,24 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setChoices(items);
     setMessage(items.length ? '' : S.EMPTY);
   };
-  const openLink = async (url: string, signal: AbortSignal) => {
+  const openLink = async (
+    url: string,
+    signal: AbortSignal,
+    linkType: BookingLinkType,
+  ) => {
     if (signal.aborted || !mounted.current) return;
+    const track = appAnalyticsTracker.captureEventLogger();
     try {
       await Linking.openURL(url);
+      track('booking_partner_opened', {
+        ...bookingAnalytics,
+        link_type: linkType,
+      });
     } catch {
       if (mounted.current) setMessage(S.OPEN_ERROR);
     }
   };
-  const search = () => {
+  const search = (searchMode: BookingSearchMode) => {
     if (active.current) return;
     autoSearchStarted.current = true;
     const count = Number(adults);
@@ -506,8 +531,25 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     clearResults();
     Keyboard.dismiss();
     if (kind === 'ticket') transitionForm(true);
+    const searchVersion = resultsVersion.current;
+    const searchAnalytics = { ...bookingAnalytics, search_mode: searchMode };
+    const logSearchResult = (
+      outcome: BookingSearchOutcome,
+      resultCount?: number,
+    ) => {
+      if (resultsVersion.current !== searchVersion) return;
+      void appAnalyticsTracker.logEvent('booking_search_result', {
+        ...searchAnalytics,
+        outcome,
+        ...(resultCount === undefined ? {} : { result_count: resultCount }),
+      });
+    };
     void run(
       async (signal) => {
+        void appAnalyticsTracker.logEvent(
+          'booking_search_started',
+          searchAnalytics,
+        );
         if (kind === 'flight') {
           setAirportSearch(null);
           setAirportChoices([]);
@@ -545,10 +587,12 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           if (signal.aborted || !mounted.current) return;
           if (!departureCode || !arrivalCode) {
             setMessage(S.FLIGHT_AIRPORT_REQUIRED);
+            logSearchResult('empty');
             return;
           }
           if (departureCode === arrivalCode) {
             setMessage(S.FLIGHT_SAME_AIRPORT);
+            logSearchResult('failure');
             return;
           }
           const url = await myRealTrip.createFlightLink(
@@ -561,7 +605,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
             },
             signal,
           );
-          await openLink(url, signal);
+          if (signal.aborted || !mounted.current) return;
+          logSearchResult('success');
+          await openLink(url, signal, 'flight_results');
         } else {
           const query: HotelQuery | null =
             kind === 'hotel'
@@ -582,6 +628,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
             product: p,
           }));
           if (!signal.aborted && mounted.current) {
+            logSearchResult(found.length ? 'success' : 'empty', found.length);
             if (kind === 'hotel') {
               hotelQuery.current = query;
               if (found.length) setSelectedHotelUrl(found[0].id);
@@ -597,7 +644,10 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
           showChoices(found, signal);
         }
       },
-      kind === 'ticket' ? () => transitionForm(false) : undefined,
+      () => {
+        logSearchResult('failure');
+        if (kind === 'ticket') transitionForm(false);
+      },
     );
   };
   useEffect(() => {
@@ -610,7 +660,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     const timer = setTimeout(() => {
       if (autoSearchStarted.current) return;
       autoSearchStarted.current = true;
-      search();
+      search('automatic');
     }, 0);
     return () => clearTimeout(timer);
   }, [
@@ -693,9 +743,14 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     if (item.product) {
       if (kind === 'hotel') setSelectedHotelUrl(item.id);
       void run(async (signal) => {
+        void appAnalyticsTracker.logEvent(
+          'booking_product_selected',
+          bookingAnalytics,
+        );
         await openLink(
           await myRealTrip.createLink(item.product!.productUrl, signal),
           signal,
+          'product',
         );
       });
       return;
@@ -1245,6 +1300,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                                 signal,
                               ),
                               signal,
+                              'partner_home',
                             );
                           });
                         })}
@@ -1439,7 +1495,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
                 : kind === 'hotel'
                   ? V.HOTEL_SEARCH
                   : V.TICKET_SEARCH,
-              search,
+              () => search('manual'),
               'booking-search',
             )}
           </View>

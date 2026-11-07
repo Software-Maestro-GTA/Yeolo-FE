@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { fireEvent, within } from '@testing-library/react-native';
+import { logEvent } from '@react-native-firebase/analytics';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { setTokenGetter } from '@yeolo/common';
@@ -39,9 +40,10 @@ const hotel = {
 };
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() =>
-  setTokenGetter(async () => ({ accessToken: 'yeolo-booking-token' })),
-);
+beforeEach(() => {
+  jest.clearAllMocks();
+  setTokenGetter(async () => ({ accessToken: 'yeolo-booking-token' }));
+});
 
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
@@ -114,7 +116,12 @@ test('자동 숙소 검색이 제한되면 안내 후 같은 조건으로 사용
     }),
   );
   const ui = await render(
-    <BookingScreen kind='hotel' context={context} onBack={jest.fn()} />,
+    <BookingScreen
+      kind='hotel'
+      source='course_detail'
+      context={context}
+      onBack={jest.fn()}
+    />,
   );
   expect(await ui.findByText(UI_STRINGS.BOOKING.RATE_LIMIT)).toBeTruthy();
   expect(searches).toBe(1);
@@ -123,6 +130,24 @@ test('자동 숙소 검색이 제한되면 안내 후 같은 조건으로 사용
   expect(await ui.findByText(hotel.itemName)).toBeTruthy();
   expect(regions).toBe(1);
   expect(searches).toBe(2);
+  const entry = { booking_kind: 'hotel', entry_source: 'course_detail' };
+  const automatic = { ...entry, search_mode: 'automatic' };
+  const manual = { ...entry, search_mode: 'manual' };
+  expect(
+    jest
+      .mocked(logEvent)
+      .mock.calls.filter(([, name]) => name.startsWith('booking_'))
+      .map(([, name, params]) => [name, params]),
+  ).toEqual([
+    ['booking_open', entry],
+    ['booking_search_started', automatic],
+    ['booking_search_result', { ...automatic, outcome: 'failure' }],
+    ['booking_search_started', manual],
+    [
+      'booking_search_result',
+      { ...manual, outcome: 'success', result_count: 1 },
+    ],
+  ]);
 });
 
 test('코스 목적지로 투어 티켓을 즉시 검색하고 국가·도시와 태그 없는 상품을 보여준다', async () => {

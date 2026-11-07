@@ -595,6 +595,13 @@ export function NavigationRoot({
             <BookingScreen
               kind={bookingRequest?.kind || 'ticket'}
               context={bookingRequest?.context}
+              source={
+                bookingRequest
+                  ? bookingRequest.tab === NAV_TABS.HOME
+                    ? 'home'
+                    : 'course_detail'
+                  : undefined
+              }
               onBack={goBack}
             />
           </MainLayout>
