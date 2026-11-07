@@ -1,12 +1,14 @@
 /**
  * @file AuthContext.tsx
- * @description Authentication, session restoration and private query cleanup across account boundaries.
+ * @description Authentication, session restoration, private query cleanup and confirmed GA4 auth milestones.
  */
 import React, {
   createContext,
   useState,
   ReactNode,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useCallback,
   useMemo,
 } from 'react';
@@ -29,12 +31,15 @@ import {
   clearLocalSession,
 } from '../services';
 import { APP_CONFIG } from '../constants';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 import {
   useGoogleLoginMutation,
   useAppleLoginMutation,
   useLogoutMutation,
 } from '../hooks/queries/useAuthMutations';
+
+type OnboardingMethod = 'photo' | 'mbti';
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -43,7 +48,10 @@ export interface AuthContextType {
   recentCourseId?: string | null;
   hasCompletedOnboarding?: boolean | null;
   setRecentCourseId?: (id: string | null) => void;
-  setHasCompletedOnboarding?: (completed: boolean) => Promise<void>;
+  setHasCompletedOnboarding?: (
+    completed: boolean,
+    method?: OnboardingMethod,
+  ) => Promise<void>;
   loginWithGoogle: (code: string) => Promise<{
     user: User;
     isNewUser: boolean;
@@ -102,6 +110,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [hasCompletedOnboarding, setHasCompletedOnboardingState] = useState<
     boolean | null
   >(null);
+  const onboardingStatus = useRef<boolean | null>(null);
+  const analyticsUserId = useRef<string | null | undefined>(undefined);
+  const pendingTutorialCompletion = useRef<{
+    userId: string;
+    method: OnboardingMethod | undefined;
+  } | null>(null);
 
   const { mutateAsync: googleLogin, isPending: googleLoginPending } =
     useGoogleLoginMutation();
@@ -110,21 +124,52 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const { mutateAsync: logoutUser, isPending: logoutPending } =
     useLogoutMutation();
 
-  useEffect(() => {
-    void analyticsService.setUserId(
-      user?.userId === undefined || user?.userId === null
-        ? null
-        : String(user.userId),
-    );
-  }, [user?.userId]);
-
-  const setHasCompletedOnboarding = useCallback(async (completed: boolean) => {
-    setHasCompletedOnboardingState(completed);
-    await AsyncStorage.setItem(
-      'hasCompletedOnboarding',
-      completed ? 'true' : 'false',
-    );
+  const syncAnalyticsUserId = useCallback((id?: string | null) => {
+    const normalizedId = id == null ? null : String(id);
+    if (analyticsUserId.current === normalizedId) return;
+    analyticsUserId.current = normalizedId;
+    pendingTutorialCompletion.current = null;
+    void analyticsService.setUserId(normalizedId);
   }, []);
+
+  useLayoutEffect(() => {
+    syncAnalyticsUserId(user?.userId);
+  }, [syncAnalyticsUserId, user?.userId]);
+
+  const setOnboardingStatus = useCallback((status: boolean | null) => {
+    onboardingStatus.current = status;
+    if (status !== true) pendingTutorialCompletion.current = null;
+    setHasCompletedOnboardingState(status);
+  }, []);
+
+  const setHasCompletedOnboarding = useCallback(
+    async (completed: boolean, method?: OnboardingMethod) => {
+      const userId = analyticsUserId.current;
+      if (completed && onboardingStatus.current === false && userId) {
+        pendingTutorialCompletion.current = { userId, method };
+      }
+      const completion = completed ? pendingTutorialCompletion.current : null;
+      setOnboardingStatus(completed);
+      await AsyncStorage.setItem(
+        'hasCompletedOnboarding',
+        completed ? 'true' : 'false',
+      );
+      if (
+        completion &&
+        pendingTutorialCompletion.current === completion &&
+        analyticsUserId.current === completion.userId
+      ) {
+        // Preserve the pending milestone on a failed write. The first
+        // successful write consumes it, even when the user retries.
+        pendingTutorialCompletion.current = null;
+        void appAnalyticsTracker.logEvent(
+          'tutorial_complete',
+          completion.method ? { method: completion.method } : undefined,
+        );
+      }
+    },
+    [setOnboardingStatus],
+  );
 
   useEffect(() => {
     clearPrivateQueries();
@@ -154,7 +199,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
-      setHasCompletedOnboardingState(null);
+      setOnboardingStatus(null);
     });
 
     const webClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -181,7 +226,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (savedOnboarding !== null) {
-          setHasCompletedOnboardingState(savedOnboarding === 'true');
+          setOnboardingStatus(savedOnboarding === 'true');
         }
 
         if (token && refreshToken) {
@@ -213,7 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               setIsAuthenticated(false);
               setUser(null);
               setRecentCourseId(null);
-              setHasCompletedOnboardingState(null);
+              setOnboardingStatus(null);
             } else {
               logger.warn(
                 `[AuthContext] Refresh API returned status ${status || 'network error'}, falling back to existing token session:`,
@@ -235,14 +280,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setIsAuthenticated(false);
           setUser(null);
           setRecentCourseId(null);
-          setHasCompletedOnboardingState(null);
+          setOnboardingStatus(null);
         }
       } catch (error) {
         logger.error('[AuthContext] 세션 복원 실패:', error);
         setIsAuthenticated(false);
         setUser(null);
         setRecentCourseId(null);
-        setHasCompletedOnboardingState(null);
+        setOnboardingStatus(null);
       } finally {
         setIsRestoring(false);
       }
@@ -253,7 +298,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       unsubscribe();
     };
-  }, [clearPrivateQueries]);
+  }, [clearPrivateQueries, setOnboardingStatus]);
 
   const loginWithGoogle = useCallback(
     async (
@@ -269,18 +314,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const result = await googleLogin(code);
         clearPrivateQueries();
+        syncAnalyticsUserId(result.user.userId);
+        void appAnalyticsTracker.logEvent('login', { method: 'google' });
         setUser(result.user);
         setRecentCourseId(result.recentCourseId || null);
-        setHasCompletedOnboardingState(!result.doOnboarding);
+        setOnboardingStatus(!result.doOnboarding);
         setIsAuthenticated(true);
-        logger.info('[AuthContext] Google login successful:', {
-          userId: result.user.userId,
-          email: result.user.email,
-          doOnboarding: result.doOnboarding,
-          hasCompletedOnboarding: !result.doOnboarding,
-          recentCourseId: result.recentCourseId,
-          isNewUser: result.isNewUser,
-        });
+        logger.info('[AuthContext] Google login successful');
         return result;
       } catch (error) {
         clearPrivateQueries();
@@ -290,11 +330,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setIsAuthenticated(false);
         setUser(null);
         setRecentCourseId(null);
-        setHasCompletedOnboardingState(null);
+        setOnboardingStatus(null);
         throw error;
       }
     },
-    [googleLogin, clearPrivateQueries],
+    [
+      googleLogin,
+      clearPrivateQueries,
+      setOnboardingStatus,
+      syncAnalyticsUserId,
+    ],
   );
 
   const loginWithApple = useCallback(
@@ -312,18 +357,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const result = await appleLogin(payload);
         clearPrivateQueries();
+        syncAnalyticsUserId(result.user.userId);
+        void appAnalyticsTracker.logEvent('login', { method: 'apple' });
         setUser(result.user);
         setRecentCourseId(result.recentCourseId || null);
-        setHasCompletedOnboardingState(!result.doOnboarding);
+        setOnboardingStatus(!result.doOnboarding);
         setIsAuthenticated(true);
-        logger.info('[AuthContext] Apple login successful:', {
-          userId: result.user.userId,
-          email: result.user.email,
-          doOnboarding: result.doOnboarding,
-          hasCompletedOnboarding: !result.doOnboarding,
-          recentCourseId: result.recentCourseId,
-          isNewUser: result.isNewUser,
-        });
+        logger.info('[AuthContext] Apple login successful');
         return result;
       } catch (error) {
         clearPrivateQueries();
@@ -332,11 +372,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setIsAuthenticated(false);
         setUser(null);
         setRecentCourseId(null);
-        setHasCompletedOnboardingState(null);
+        setOnboardingStatus(null);
         throw error;
       }
     },
-    [appleLogin, clearPrivateQueries],
+    [appleLogin, clearPrivateQueries, setOnboardingStatus, syncAnalyticsUserId],
   );
 
   const logout = useCallback(async () => {
@@ -357,10 +397,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsAuthenticated(false);
       setUser(null);
       setRecentCourseId(null);
-      setHasCompletedOnboardingState(null);
+      setOnboardingStatus(null);
       logger.info('[AuthContext] Local session cleanup finished');
     }
-  }, [logoutUser, clearPrivateQueries]);
+  }, [logoutUser, clearPrivateQueries, setOnboardingStatus]);
 
   const resetAuthState = useCallback(async () => {
     logger.info('[AuthContext] Resetting local auth state without API call...');
@@ -371,8 +411,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setIsAuthenticated(false);
     setUser(null);
     setRecentCourseId(null);
-    setHasCompletedOnboardingState(null);
-  }, [clearPrivateQueries]);
+    setOnboardingStatus(null);
+  }, [clearPrivateQueries, setOnboardingStatus]);
 
   const updateUser = useCallback((updatedFields: Partial<User>) => {
     setUser((prevUser) =>

@@ -47,14 +47,6 @@ export function useGoogleLoginMutation({
       const doOnboarding = response.data.doOnboarding;
       const recentCourseId = response.data.recentCourseId || null;
 
-      logger.info('[AuthMutation] Google login API response parsed:', {
-        userId: fetchedUser.userId,
-        email: fetchedUser.email,
-        doOnboarding,
-        recentCourseId,
-        isNewUser,
-      });
-
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
       await AsyncStorage.setItem('user', JSON.stringify(fetchedUser));
@@ -108,14 +100,6 @@ export function useAppleLoginMutation({
       const isNewUser = !fetchedUser.lastLoginAt;
       const doOnboarding = response.data.doOnboarding;
       const recentCourseId = response.data.recentCourseId || null;
-
-      logger.info('[AuthMutation] Apple login API response parsed:', {
-        userId: fetchedUser.userId,
-        email: fetchedUser.email,
-        doOnboarding,
-        recentCourseId,
-        isNewUser,
-      });
 
       await AsyncStorage.setItem('accessToken', response.data.accessToken);
       await AsyncStorage.setItem('refreshToken', response.data.refreshToken);

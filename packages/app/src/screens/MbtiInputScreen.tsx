@@ -23,6 +23,7 @@ import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useUpdatePreferencesMutation } from '../hooks/queries/useAuthMutations';
 import type { MbtiType } from '../constants/mbtiProfiles';
 import { getAuthErrorMessage } from '../utils/errorUtils';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 interface MbtiInputScreenProps {
   onBack?: () => void;
@@ -58,6 +59,7 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
   const selectedMbti = `${ei || '_'}${sn || '_'}${tf || '_'}${jp || '_'}`;
 
   const handlePressNext = () => {
+    if (updatePreferencesMutation.isPending) return;
     if (!isComplete) {
       if (Platform.OS === 'android') {
         ToastAndroid.show(
@@ -73,14 +75,20 @@ export const MbtiInputScreen: React.FC<MbtiInputScreenProps> = ({
       return;
     }
 
+    trackButtonClick('btn_mbti_next', 'MBTI Next');
     updatePreferencesMutation.mutate(
       { mbti: selectedMbti },
       {
         onSuccess: () => {
-          trackButtonClick('btn_mbti_next', `MBTI Next (${selectedMbti})`);
+          void appAnalyticsTracker.logEvent('mbti_save_result', {
+            result: 'saved',
+          });
           onNext(selectedMbti as MbtiType);
         },
         onError: (err: any) => {
+          void appAnalyticsTracker.logEvent('mbti_save_result', {
+            result: 'failed',
+          });
           const errorMessage = getAuthErrorMessage(
             err,
             ONBOARDING_UI_STRINGS.MBTI_SAVE_ERROR,

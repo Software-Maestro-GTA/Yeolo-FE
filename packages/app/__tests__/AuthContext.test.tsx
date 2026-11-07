@@ -4,6 +4,9 @@
  */
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { logEvent, setUserId } from '@react-native-firebase/analytics';
+import { analyticsService } from '@yeolo/common';
+import { appAnalyticsTracker } from '../src/analytics/firebaseTracker';
 
 import { AuthProvider, AuthContext } from '../src/context/AuthContext';
 import { server } from './mocks/server';
@@ -130,10 +133,12 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   shouldFail = false;
   jest.clearAllMocks();
+  analyticsService.registerTracker(appAnalyticsTracker);
 });
 
 afterEach(() => {
   shouldFail = false;
+  analyticsService.unregisterTracker(appAnalyticsTracker);
   jest.clearAllMocks();
 });
 
@@ -201,6 +206,44 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'login', {
+      method: 'google',
+    });
+    const identityCall = jest
+      .mocked(setUserId)
+      .mock.calls.findIndex(([, id]) => id === result.current.user?.userId);
+    const loginCall = jest
+      .mocked(logEvent)
+      .mock.calls.findIndex(([, name]) => name === 'login');
+    expect(identityCall).toBeGreaterThanOrEqual(0);
+    expect(
+      jest.mocked(setUserId).mock.invocationCallOrder[identityCall],
+    ).toBeLessThan(jest.mocked(logEvent).mock.invocationCallOrder[loginCall]);
+
+    jest
+      .mocked(AsyncStorage.setItem)
+      .mockRejectedValueOnce(new Error('disk unavailable'));
+    await act(async () => {
+      await expect(
+        result.current.setHasCompletedOnboarding?.(true, 'photo'),
+      ).rejects.toThrow('disk unavailable');
+    });
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
+    expect(logEvent).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'tutorial_complete',
+      expect.anything(),
+    );
+    await act(async () => {
+      const complete = result.current.setHasCompletedOnboarding!;
+      await Promise.all([complete(true), complete(true)]);
+    });
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+    expect(
+      jest
+        .mocked(logEvent)
+        .mock.calls.filter(([, name]) => name === 'tutorial_complete'),
+    ).toEqual([[expect.anything(), 'tutorial_complete', { method: 'photo' }]]);
   });
 
   it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰, recentCourseId를 저장해야 한다', async () => {
@@ -232,6 +275,17 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'login', {
+      method: 'apple',
+    });
+    await act(async () => {
+      await result.current.setHasCompletedOnboarding?.(true, 'photo');
+    });
+    expect(logEvent).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'tutorial_complete',
+      expect.anything(),
+    );
   });
 
   it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 세션 정리(signOut)가 수행되어야 한다', async () => {
@@ -286,6 +340,7 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(result.current.hasCompletedOnboarding).toBe(false);
+    expect(logEvent).not.toHaveBeenCalled();
   });
 
   it('setHasCompletedOnboarding 호출 시 상태와 AsyncStorage가 업데이트되어야 한다', async () => {

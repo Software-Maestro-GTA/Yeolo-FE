@@ -15,6 +15,7 @@ import { NavigationRoot } from '../src/navigation/NavigationRoot';
 import { AuthContext, type AuthContextType } from '../src/context/AuthContext';
 import { NAV_STEPS, UI_STRINGS } from '../src/constants';
 import { getPhotoAccess } from '../src/services/photoPermissionService';
+import { logEvent } from '@react-native-firebase/analytics';
 jest.mock('../src/services/photoPermissionService', () => ({
   getPhotoAccess: jest.fn(),
 }));
@@ -721,7 +722,7 @@ describe('NavigationRoot user navigation flows', () => {
     await press(screen, 'Choose MBTI');
     await press(screen, 'Select INFJ');
     await press(screen, 'Generate from MBTI');
-    expect(setHasCompletedOnboarding).toHaveBeenCalledWith(true);
+    expect(setHasCompletedOnboarding).toHaveBeenCalledWith(true, 'mbti');
     await press(screen, 'MBTI result back');
     expect(screen.getByText('MBTI input route')).toBeTruthy();
 
@@ -793,7 +794,19 @@ describe('NavigationRoot user navigation flows', () => {
   it('Android back on initial onboarding cannot bypass it into the course list', async () => {
     const screen = await render(
       <AuthContext.Provider
-        value={{ ...authenticated, hasCompletedOnboarding: false }}>
+        value={{
+          ...authenticated,
+          hasCompletedOnboarding: false,
+          user: {
+            userId: 'onboarding-test-user',
+            provider: 'google',
+            email: null,
+            displayName: null,
+            profileImageUrl: null,
+            status: 'active',
+            lastLoginAt: '2026-11-07T00:00:00Z',
+          },
+        }}>
         <NavigationRoot />
       </AuthContext.Provider>,
     );
@@ -804,5 +817,10 @@ describe('NavigationRoot user navigation flows', () => {
     expect(screen.getByText('Photo consent route')).toBeTruthy();
     expect(screen.queryByText('Course list route')).toBeNull();
     expect(screen.queryByText('Home route')).toBeNull();
+    expect(
+      jest
+        .mocked(logEvent)
+        .mock.calls.filter(([, name]) => name === 'tutorial_begin'),
+    ).toEqual([[expect.anything(), 'tutorial_begin', undefined]]);
   });
 });

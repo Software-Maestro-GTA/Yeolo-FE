@@ -24,6 +24,7 @@ import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useSavePhotoConsentMutation } from '../hooks/queries/useAuthMutations';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 interface PhotoConsentScreenProps {
   onNext: (access: PhotoAccess) => void;
@@ -68,6 +69,9 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
       });
     } catch {
       if (!mounted.current) return;
+      void appAnalyticsTracker.logEvent('photo_consent_result', {
+        result: 'failed',
+      });
       Alert.alert(
         UI_STRINGS.ONBOARDING.ERROR_TITLE,
         UI_STRINGS.PHOTO_CONSENT.SAVE_ERROR,
@@ -77,15 +81,27 @@ export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
       return;
     }
     if (!mounted.current) return;
+    void appAnalyticsTracker.logEvent('photo_consent_result', {
+      result: 'saved',
+    });
     try {
       const access = await requestPhotoAccess();
-      if (mounted.current) onNext(access);
+      if (mounted.current) {
+        void appAnalyticsTracker.logEvent('photo_permission_result', {
+          result: access,
+        });
+        onNext(access);
+      }
     } catch {
-      if (mounted.current)
+      if (mounted.current) {
+        void appAnalyticsTracker.logEvent('photo_permission_result', {
+          result: 'failed',
+        });
         Alert.alert(
           UI_STRINGS.ONBOARDING.ERROR_TITLE,
           UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR,
         );
+      }
     } finally {
       pending.current = false;
       if (mounted.current) setIsRequesting(false);

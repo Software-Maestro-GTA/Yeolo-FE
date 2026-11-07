@@ -7,6 +7,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logEvent } from '@react-native-firebase/analytics';
 import { renderWithQueryClient as render } from './test-utils';
 import { TasteAnalysisScreen } from '../src/screens/TasteAnalysisScreen';
 import { UI_STRINGS } from '../src/constants';
@@ -51,6 +52,11 @@ jest.mock('../src/services/photoService', () => ({
 describe('TasteAnalysisScreen UI & Progress', () => {
   const mockOnFinish = jest.fn();
   const mockOnFail = jest.fn();
+  const tasteEvents = () =>
+    jest
+      .mocked(logEvent)
+      .mock.calls.filter(([, name]) => name.startsWith('taste_analysis_'))
+      .map(([, name, params]) => [name, params]);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -115,6 +121,13 @@ describe('TasteAnalysisScreen UI & Progress', () => {
     );
     expect(analyze).not.toHaveBeenCalled();
     expect(mockOnFinish).not.toHaveBeenCalled();
+    expect(tasteEvents()).toEqual([
+      ['taste_analysis_start', { access_mode: 'full' }],
+      [
+        'taste_analysis_result',
+        { access_mode: 'full', outcome: 'insufficient_photos' },
+      ],
+    ]);
   });
 
   it('제한 접근 표본 부족 시 사진 선택을 바꿀 수 있도록 설정 버튼을 제공해야 한다', async () => {
@@ -188,6 +201,9 @@ describe('TasteAnalysisScreen UI & Progress', () => {
     });
     expect(analyze).not.toHaveBeenCalled();
     expect(mockOnFinish).not.toHaveBeenCalled();
+    expect(tasteEvents()).toEqual([
+      ['taste_analysis_start', { access_mode: 'full' }],
+    ]);
   });
 
   it('분석 중 닫았다가 다시 들어오면 기존 요청과 진행 상태를 이어받는다', async () => {
@@ -227,6 +243,10 @@ describe('TasteAnalysisScreen UI & Progress', () => {
     });
     expect(firstFinish).not.toHaveBeenCalled();
     expect(secondFinish).toHaveBeenCalledWith('shared-result');
+    expect(tasteEvents()).toEqual([
+      ['taste_analysis_start', { access_mode: 'full' }],
+      ['taste_analysis_result', { access_mode: 'full', outcome: 'success' }],
+    ]);
   });
 
   it('사진 수집 도중 재진입해도 기기 사진을 중복 수집하지 않는다', async () => {
@@ -330,6 +350,15 @@ describe('TasteAnalysisScreen UI & Progress', () => {
     });
     expect(mockOnFinish).toHaveBeenCalledWith('retry-profile');
     expect(onLimitedFinish).not.toHaveBeenCalled();
+    expect(tasteEvents()).toEqual([
+      ['taste_analysis_start', { access_mode: 'limited' }],
+      [
+        'taste_analysis_result',
+        { access_mode: 'limited', outcome: 'insufficient_photos' },
+      ],
+      ['taste_analysis_start', { access_mode: 'limited' }],
+      ['taste_analysis_result', { access_mode: 'limited', outcome: 'success' }],
+    ]);
   });
 
   it('iOS 재선택은 선택 범위 변경 알림 이후 새 사진을 분석한다', async () => {

@@ -3,7 +3,7 @@
  * @description 최신 Figma 로그인 화면의 로컬 영상과 안전 영역을 적용하며 OAuth·고객 지원 동작을 유지합니다.
  */
 import { Text } from '../components/common/Typography';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -29,6 +29,7 @@ import {
 } from '../services';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { showAuthErrorAlert } from '../utils';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 export interface LoginScreenProps {
   onLoginSuccess?: (doOnboarding: boolean) => void;
@@ -49,6 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const loginWithApple = authContext?.loginWithApple;
   const [isLocalLoggingIn, setIsLocalLoggingIn] = useState<boolean>(false);
   const isLoggingIn = authContext?.isLoading || isLocalLoggingIn;
+  const loginInFlight = useRef(false);
 
   const [isAppleAvailable, setIsAppleAvailable] = useState<boolean>(
     Platform.OS === 'ios',
@@ -63,13 +65,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   }, []);
 
   const handleGoogleLogin = async () => {
+    if (isLoggingIn || loginInFlight.current) return;
+    loginInFlight.current = true;
     trackButtonClick('btn_google_login', 'Google OAuth Login Button');
-    if (isLoggingIn) return;
+    const event = { method: 'google', source: 'login' };
+    void appAnalyticsTracker.logEvent('auth_start', event);
     setIsLocalLoggingIn(true);
+    let stage: 'provider' | 'backend' | 'navigation' = 'provider';
     try {
       const code = await signInWithGoogle();
       if (loginWithGoogle) {
+        stage = 'backend';
         const result = await loginWithGoogle(code);
+        stage = 'navigation';
         onLoginSuccess?.(result.doOnboarding);
       }
     } catch (err: any) {
@@ -77,23 +85,36 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         err?.code === 'ERR_REQUEST_CANCELED' ||
         err?.code === 'SIGN_IN_CANCELLED'
       ) {
+        if (stage === 'provider') {
+          void appAnalyticsTracker.logEvent('auth_cancelled', event);
+        }
         return;
+      }
+      if (stage !== 'navigation') {
+        void appAnalyticsTracker.logEvent('auth_failed', { ...event, stage });
       }
       await signOutGoogle();
       showAuthErrorAlert(err, UI_STRINGS.AUTH.GOOGLE_LOGIN_FAIL_DEFAULT);
     } finally {
+      loginInFlight.current = false;
       setIsLocalLoggingIn(false);
     }
   };
 
   const handleAppleLogin = async () => {
+    if (isLoggingIn || loginInFlight.current) return;
+    loginInFlight.current = true;
     trackButtonClick('btn_apple_login', 'Apple OAuth Login Button');
-    if (isLoggingIn) return;
+    const event = { method: 'apple', source: 'login' };
+    void appAnalyticsTracker.logEvent('auth_start', event);
     setIsLocalLoggingIn(true);
+    let stage: 'provider' | 'backend' | 'navigation' = 'provider';
     try {
       const { code, idToken } = await signInWithApple();
       if (loginWithApple) {
+        stage = 'backend';
         const result = await loginWithApple({ code, idToken });
+        stage = 'navigation';
         onLoginSuccess?.(result.doOnboarding);
       }
     } catch (err: any) {
@@ -101,10 +122,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         err?.code === 'ERR_REQUEST_CANCELED' ||
         err?.code === 'SIGN_IN_CANCELLED'
       ) {
+        if (stage === 'provider') {
+          void appAnalyticsTracker.logEvent('auth_cancelled', event);
+        }
         return;
+      }
+      if (stage !== 'navigation') {
+        void appAnalyticsTracker.logEvent('auth_failed', { ...event, stage });
       }
       showAuthErrorAlert(err, UI_STRINGS.AUTH.APPLE_LOGIN_FAIL_DEFAULT);
     } finally {
+      loginInFlight.current = false;
       setIsLocalLoggingIn(false);
     }
   };

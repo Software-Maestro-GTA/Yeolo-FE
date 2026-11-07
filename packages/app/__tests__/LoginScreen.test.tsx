@@ -6,6 +6,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, Alert, Platform, ToastAndroid } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { logEvent } from '@react-native-firebase/analytics';
 import { AuthContext } from '../src/context/AuthContext';
 import { LoginScreen } from '../src/screens/LoginScreen';
 import { signInWithGoogle } from '../src/services/authService';
@@ -123,6 +124,10 @@ describe('LoginScreen UI & Interaction', () => {
       expect(mockLoginWithGoogle).toHaveBeenCalledWith('mock-google-auth-code');
       expect(onLoginSuccess).toHaveBeenCalledWith(true);
     });
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'auth_start', {
+      method: 'google',
+      source: 'login',
+    });
   });
 
   it('doOnboarding이 false인 경우 onLoginSuccess에 false를 전달해야 한다', async () => {
@@ -193,6 +198,14 @@ describe('LoginScreen UI & Interaction', () => {
       expect(onLoginSuccess).not.toHaveBeenCalled();
       expect(Alert.alert).not.toHaveBeenCalled();
       expect(ToastAndroid.show).not.toHaveBeenCalled();
+      expect(logEvent).toHaveBeenCalledWith(
+        expect.anything(),
+        'auth_cancelled',
+        {
+          method: 'google',
+          source: 'login',
+        },
+      );
 
       fireEvent.press(getByRole('button', { name: '구글로 시작하기' }));
 
@@ -250,6 +263,11 @@ describe('LoginScreen UI & Interaction', () => {
 
     await waitFor(() => {
       expect(mockLoginWithGoogle).toHaveBeenCalled();
+      expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'auth_failed', {
+        method: 'google',
+        source: 'login',
+        stage: 'backend',
+      });
     });
   });
 });

@@ -1,14 +1,16 @@
 /**
  * @file useTasteAnalysisPipeline.ts
- * @description Shares one in-flight photo analysis across screen re-entry and detaches closed screens from progress and completion.
+ * @description Shares one photo analysis across screen re-entry and records GA4 outcomes per run.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTasteStore } from '@yeolo/common';
 import { fetchPhotosWithExifData } from '../services/photoService';
 import { APP_CONFIG, UI_STRINGS } from '../constants';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 export type StepStatus = 'IDLE' | 'IN_PROGRESS' | 'COMPLETED';
+type AnalysisAccessMode = 'full' | 'limited';
 
 export interface ProgressState {
   step1Status: StepStatus;
@@ -18,7 +20,7 @@ export interface ProgressState {
 }
 
 export interface UseTasteAnalysisPipelineResult {
-  runPipeline: () => Promise<string | null>;
+  runPipeline: (accessMode?: AnalysisAccessMode) => Promise<string | null>;
   isLoading: boolean;
   error: string | null;
   needsMorePhotos: boolean;
@@ -54,7 +56,7 @@ function updateRun(run: AnalysisRun, update: Partial<AnalysisSnapshot>) {
   run.listeners.forEach((listener) => listener(run.snapshot));
 }
 
-function startRun(token: string): AnalysisRun {
+function startRun(token: string, accessMode: AnalysisAccessMode): AnalysisRun {
   const run: AnalysisRun = {
     token,
     snapshot: {
@@ -73,6 +75,8 @@ function startRun(token: string): AnalysisRun {
     promise: Promise.resolve(null),
   };
   activeRun = run;
+  const track = appAnalyticsTracker.captureEventLogger();
+  track('taste_analysis_start', { access_mode: accessMode });
   useTasteStore.getState().resetTasteState();
   const unsubscribe = useTasteStore.subscribe((state) => {
     const analyzing = state.progressStep === 'ANALYZING_PREFERENCE';
@@ -92,6 +96,7 @@ function startRun(token: string): AnalysisRun {
     }
   });
   run.promise = (async () => {
+    let completed = false;
     try {
       const images = await fetchPhotosWithExifData();
       // A closed screen must not start an upload after native collection ends.
@@ -130,6 +135,7 @@ function startRun(token: string): AnalysisRun {
           currentMessage: '사용자 취향 분석 완료!',
         },
       });
+      completed = true;
       return profileId;
     } catch (error: unknown) {
       updateRun(run, {
@@ -148,6 +154,14 @@ function startRun(token: string): AnalysisRun {
       });
       return null;
     } finally {
+      if (run.listeners.size > 0) {
+        const outcome = completed
+          ? 'success'
+          : run.snapshot.needsMorePhotos
+            ? 'insufficient_photos'
+            : 'failed';
+        track('taste_analysis_result', { access_mode: accessMode, outcome });
+      }
       unsubscribe();
       updateRun(run, { isLoading: false });
       if (activeRun === run) activeRun = undefined;
@@ -176,41 +190,44 @@ export function useTasteAnalysisPipeline(): UseTasteAnalysisPipelineResult {
     };
   }, []);
 
-  const runPipeline = useCallback(async (): Promise<string | null> => {
-    const id = ++requestId.current;
-    const isCurrent = () => mounted.current && requestId.current === id;
-    detach.current?.();
-    setSnapshot({ ...initialSnapshot, isLoading: true });
-    try {
-      const token = (await AsyncStorage.getItem('accessToken')) || '';
-      if (!isCurrent()) return null;
-      // Never attach another signed-in user's screen to an older request.
-      while (activeRun && activeRun.token !== token) {
-        await activeRun.promise;
+  const runPipeline = useCallback(
+    async (accessMode: AnalysisAccessMode = 'full'): Promise<string | null> => {
+      const id = ++requestId.current;
+      const isCurrent = () => mounted.current && requestId.current === id;
+      detach.current?.();
+      setSnapshot({ ...initialSnapshot, isLoading: true });
+      try {
+        const token = (await AsyncStorage.getItem('accessToken')) || '';
         if (!isCurrent()) return null;
+        // Never attach another signed-in user's screen to an older request.
+        while (activeRun && activeRun.token !== token) {
+          await activeRun.promise;
+          if (!isCurrent()) return null;
+        }
+        const run = activeRun ?? startRun(token, accessMode);
+        const listener = (next: AnalysisSnapshot) => {
+          if (isCurrent()) setSnapshot(next);
+        };
+        run.listeners.add(listener);
+        detach.current = () => run.listeners.delete(listener);
+        listener(run.snapshot);
+        const result = await run.promise;
+        run.listeners.delete(listener);
+        return isCurrent() ? result : null;
+      } catch (error: unknown) {
+        if (isCurrent())
+          setSnapshot({
+            ...initialSnapshot,
+            error:
+              error instanceof Error
+                ? error.message
+                : '사진 분석 중 오류가 발생했습니다.',
+          });
+        return null;
       }
-      const run = activeRun ?? startRun(token);
-      const listener = (next: AnalysisSnapshot) => {
-        if (isCurrent()) setSnapshot(next);
-      };
-      run.listeners.add(listener);
-      detach.current = () => run.listeners.delete(listener);
-      listener(run.snapshot);
-      const result = await run.promise;
-      run.listeners.delete(listener);
-      return isCurrent() ? result : null;
-    } catch (error: unknown) {
-      if (isCurrent())
-        setSnapshot({
-          ...initialSnapshot,
-          error:
-            error instanceof Error
-              ? error.message
-              : '사진 분석 중 오류가 발생했습니다.',
-        });
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   return { ...snapshot, runPipeline };
 }

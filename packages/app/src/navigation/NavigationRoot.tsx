@@ -14,6 +14,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useCourseStore, type BookingKind } from '@yeolo/common';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 import { BookingScreen } from '../screens/BookingScreen';
 import type { BookingContext, OpenBooking } from '../services/bookingService';
 import {
@@ -187,6 +188,24 @@ export function NavigationRoot({
     revision: 0,
   });
   const { step, history, revision } = navigation;
+  const startedOnboardingUsers = useRef(new Set<string>());
+  const onboardingUserId =
+    auth?.isAuthenticated &&
+    !auth.isLoading &&
+    auth.hasCompletedOnboarding === false &&
+    step &&
+    (ONBOARDING_FLOW_STEPS.includes(step) || step === NAV_STEPS.CREATE_COURSE)
+      ? auth.user?.userId
+      : undefined;
+  useEffect(() => {
+    if (
+      !onboardingUserId ||
+      startedOnboardingUsers.current.has(onboardingUserId)
+    )
+      return;
+    startedOnboardingUsers.current.add(onboardingUserId);
+    void appAnalyticsTracker.logEvent('tutorial_begin');
+  }, [onboardingUserId]);
   const navStateRef = useRef(navigation);
   const authRef = useRef(auth);
   authRef.current = auth;
@@ -617,7 +636,7 @@ export function NavigationRoot({
                 mbti={selectedMbti}
                 onBack={goBack}
                 onGenerateCourse={async () => {
-                  await auth?.setHasCompletedOnboarding?.(true);
+                  await auth?.setHasCompletedOnboarding?.(true, 'mbti');
                   setRecommendedDestination(undefined);
                   finishFlow(NAV_STEPS.CREATE_COURSE, ONBOARDING_FLOW_STEPS);
                 }}
@@ -666,7 +685,7 @@ export function NavigationRoot({
                   onLimitedFinish={() => navigateTo(NAV_STEPS.PHOTO_AUTH)}
                   onFinish={(tasteProfileId) => {
                     if (!isCurrentRoute() || step !== NAV_STEPS.TASTE) return;
-                    auth?.setHasCompletedOnboarding?.(true);
+                    void auth?.setHasCompletedOnboarding?.(true, 'photo');
                     setSelectedMbti(null);
                     setActiveTasteProfileId(tasteProfileId);
                     finishFlow(NAV_STEPS.TASTE_PROFILE, ONBOARDING_FLOW_STEPS);
@@ -699,7 +718,7 @@ export function NavigationRoot({
               tasteProfileId={activeTasteProfileId}
               onGenerateCourse={(destination) => {
                 if (!isCurrentRoute()) return;
-                auth?.setHasCompletedOnboarding?.(true);
+                void auth?.setHasCompletedOnboarding?.(true, 'photo');
                 navigateTo(NAV_STEPS.CREATE_COURSE, destination);
               }}
               onReanalyze={reanalyzeTaste}

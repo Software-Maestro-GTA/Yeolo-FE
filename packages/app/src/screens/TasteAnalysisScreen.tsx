@@ -67,6 +67,7 @@ export function TasteAnalysisScreen({
   const [attempt, setAttempt] = useState(0);
   const [selecting, setSelecting] = useState(false);
   const [hasFullAccess, setHasFullAccess] = useState(mode !== 'limited');
+  const analysisAccessMode = useRef(mode ?? 'full');
   const selectingRef = useRef(false);
   const awaitingSelectionChange = useRef(false);
   const mounted = useRef(true);
@@ -108,6 +109,9 @@ export function TasteAnalysisScreen({
       const access = await getPhotoAccess();
       if (!mounted.current) return;
       setHasFullAccess(access === 'all');
+      if (access !== 'denied') {
+        analysisAccessMode.current = access === 'all' ? 'full' : 'limited';
+      }
       if (access === 'limited') {
         awaitingSelectionChange.current = Platform.OS === 'ios';
         await presentPermissionsPicker(['photo']);
@@ -126,7 +130,7 @@ export function TasteAnalysisScreen({
   useEffect(() => {
     let subscribed = true;
     let completionTimeout: ReturnType<typeof setTimeout> | undefined;
-    void runPipeline().then((profileId) => {
+    void runPipeline(analysisAccessMode.current).then((profileId) => {
       if (subscribed && profileId)
         completionTimeout = setTimeout(() => {
           if (subscribed) finishRef.current(profileId);
