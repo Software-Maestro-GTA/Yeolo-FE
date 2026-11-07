@@ -6,6 +6,7 @@ import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { requireOptionalNativeModule } from 'expo';
+import { logEvent } from '@react-native-firebase/analytics';
 import { AppState, type AppStateStatus } from 'react-native';
 import {
   ApiError,
@@ -329,6 +330,12 @@ it('continues generation after the initiating screen unmounts', async () => {
   await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalled());
   await unmount();
   expect(native.finishAsync).not.toHaveBeenCalled();
+  expect(logEvent).toHaveBeenCalledTimes(1);
+  expect(logEvent).toHaveBeenCalledWith(
+    expect.anything(),
+    'course_generation_start',
+    undefined,
+  );
   await act(async () => {
     finish();
   });
@@ -340,6 +347,53 @@ it('continues generation after the initiating screen unmounts', async () => {
   expect(native.finishAsync).toHaveBeenCalledWith(
     native.startAsync.mock.calls[0][0],
     true,
+  );
+  expect(logEvent).toHaveBeenCalledTimes(2);
+  expect(logEvent).toHaveBeenLastCalledWith(
+    expect.anything(),
+    'course_generation_complete',
+    undefined,
+  );
+});
+
+it('logs one bounded failure for a background interruption and ignores duplicate requests', async () => {
+  let fail!: (error: Error) => void;
+  (createCourseStreamApi as jest.Mock).mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+  const { result } = await renderHook(() => useCourseCreateMutation(), {
+    wrapper,
+  });
+  let generation!: Promise<string | null>;
+  await act(async () => {
+    generation = result.current.mutateAsync(payload);
+  });
+  await waitFor(() => expect(createCourseStreamApi).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    await expect(result.current.mutateAsync(payload)).resolves.toBeNull();
+    changeAppState('background');
+    fail(new CourseStreamError(500, 'raw connection error', 'connection_lost'));
+    await expect(generation).resolves.toBeNull();
+  });
+
+  expect(logEvent).toHaveBeenCalledTimes(2);
+  expect(logEvent).toHaveBeenNthCalledWith(
+    1,
+    expect.anything(),
+    'course_generation_start',
+    undefined,
+  );
+  expect(logEvent).toHaveBeenNthCalledWith(
+    2,
+    expect.anything(),
+    'course_generation_failed',
+    { failure_reason: 'background_interrupted' },
   );
 });
 

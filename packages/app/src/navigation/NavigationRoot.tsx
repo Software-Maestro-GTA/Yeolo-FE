@@ -189,6 +189,7 @@ export function NavigationRoot({
   });
   const { step, history, revision } = navigation;
   const startedOnboardingUsers = useRef(new Set<string>());
+  const openedGeneratedCourseId = useRef<string | null>(null);
   const onboardingUserId =
     auth?.isAuthenticated &&
     !auth.isLoading &&
@@ -301,10 +302,22 @@ export function NavigationRoot({
     navigateTo(NAV_STEPS.HOME);
   };
 
+  const selectGeneratedCourse = (
+    courseId: string,
+    entrySource: 'generation_screen' | 'status_card',
+  ) => {
+    setSelectedCourseId(courseId);
+    if (openedGeneratedCourseId.current === courseId) return;
+    openedGeneratedCourseId.current = courseId;
+    void appAnalyticsTracker.logEvent('course_result_opened', {
+      entry_source: entrySource,
+    });
+  };
+
   const openGenerationStatus = () => {
     if (!isCurrentRoute()) return;
     if (generatedCourseId) {
-      setSelectedCourseId(generatedCourseId);
+      selectGeneratedCourse(generatedCourseId, 'status_card');
       setShowGenerationStatus(false);
       setGenerationSession(null);
       const previousScreens = history.filter(
@@ -380,6 +393,7 @@ export function NavigationRoot({
     const wasAuthenticated = previousAuthenticated.current;
     previousAuthenticated.current = auth?.isAuthenticated;
     if (wasAuthenticated && !auth?.isAuthenticated) {
+      openedGeneratedCourseId.current = null;
       setGenerationSession(null);
       setShowGenerationStatus(false);
       setSelectedCourseId('');
@@ -814,7 +828,7 @@ export function NavigationRoot({
               setShowGenerationStatus(false);
               setGenerationSession(null);
               if (courseId) {
-                setSelectedCourseId(courseId);
+                selectGeneratedCourse(courseId, 'generation_screen');
               }
               finishFlow(
                 courseId ? NAV_STEPS.COURSE_DETAIL : NAV_STEPS.COURSE_LIST,
