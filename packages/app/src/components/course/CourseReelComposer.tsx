@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { appAnalyticsTracker } from '../../analytics/firebaseTracker';
 import {
   ActivityIndicator,
   FlatList,
@@ -382,6 +383,9 @@ function ReelEditor({
   async function create() {
     if (operation.current || !plan || !map) return;
     operation.current = true;
+    const track = appAnalyticsTracker.captureEventLogger();
+    track('reel_generation_started');
+    let outcome: 'success' | 'failed' | 'cancelled' = 'cancelled';
     setBusyPhase('render');
     invalidate();
     setProgress(0);
@@ -397,14 +401,18 @@ function ReelEditor({
       outputRef.current = uri;
       setProgress(1);
       setOutput(uri);
+      outcome = 'success';
     } catch (e) {
-      if (alive.current)
+      if (alive.current) {
+        outcome = 'failed';
         setError(
           e instanceof Error && e.message === S.UNAVAILABLE
             ? S.UNAVAILABLE
             : S.EXPORT_ERROR,
         );
+      }
     } finally {
+      track('reel_generation_result', { outcome });
       operation.current = false;
       if (alive.current) setBusyPhase(null);
     }
@@ -412,6 +420,7 @@ function ReelEditor({
   async function outputAction(action: 'watch' | 'save' | 'share') {
     if (!output || operation.current) return;
     operation.current = true;
+    const track = appAnalyticsTracker.captureEventLogger();
     setBusyPhase('action');
     setError('');
     setStatus('');
@@ -421,6 +430,9 @@ function ReelEditor({
         save: saveReel,
         share: shareReel,
       }[action](output);
+      if (action === 'save' && result === true) {
+        track('reel_saved');
+      }
       if (alive.current && action === 'save' && result !== false)
         setStatus(S.SAVED);
     } catch {

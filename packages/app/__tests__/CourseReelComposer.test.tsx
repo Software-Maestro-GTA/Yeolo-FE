@@ -11,6 +11,7 @@ import { renderWithQueryClient as render } from './test-utils';
 import { reelCourse } from './mocks/reel-fixtures';
 import { UI_STRINGS } from '../src/constants/strings';
 import * as commonApi from '@yeolo/common';
+import { logEvent } from '@react-native-firebase/analytics';
 
 const mockMapCleanup = jest.fn();
 const mockMapDays = jest.fn();
@@ -196,6 +197,16 @@ describe('CourseReelComposer', () => {
     );
     await fireEvent.press(ui.getByTestId('reel-create'));
     await ui.findByTestId('reel-save');
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'reel_generation_started',
+      undefined,
+    );
+    expect(logEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'reel_generation_result',
+      { outcome: 'success' },
+    );
     const plan = jest.mocked(service.generateReel).mock.calls[0][0];
     expect(plan.scenes[0].title).toBe('우리 여행');
     expect(
