@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
@@ -126,6 +127,13 @@ export default function PrivacyPolicyPage() {
             1. 이용자는 언제든지 서비스 내 설정 메뉴를 통해 자신의 개인정보를
             조회하거나 수정할 수 있으며, 회원 탈퇴(가입해제)를 요청할 수
             있습니다.
+          </p>
+          <p>
+            앱에서 회원 탈퇴를 진행하는 방법과 이메일로 삭제를 요청하는 방법은{' '}
+            <Link href='/data-deletion' className='text-blue-ink underline'>
+              사용자 데이터 삭제 안내
+            </Link>
+            에서 확인할 수 있습니다.
           </p>
           <p>
             2. 이용자가 개인정보의 오류에 대한 정정을 요청하신 경우에는 정정을

@@ -56,6 +56,7 @@ export function Footer({ className = '' }: FooterProps) {
               <h3>이용 안내</h3>
               <Link href='/terms'>서비스 이용약관</Link>
               <Link href='/privacy'>개인정보처리방침</Link>
+              <Link href='/data-deletion'>사용자 데이터 삭제 안내</Link>
             </div>
           </nav>
         </div>
