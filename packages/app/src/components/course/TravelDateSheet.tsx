@@ -30,6 +30,7 @@ interface TravelDateSheetProps {
   endDate: string;
   onConfirm: (startDate: string, endDate: string) => void;
   maxDays?: number;
+  minimumDate?: string;
 }
 
 /** Keeps each month's date callback stable while the selected range changes. */
@@ -38,12 +39,14 @@ const TravelCalendarMonth = React.memo(function TravelCalendarMonth({
   startDate,
   endDate,
   maxDays,
+  minimumDate,
   onSelectDate,
 }: {
   month: { year: number; month: number };
   startDate: string;
   endDate: string;
   maxDays: number;
+  minimumDate?: string;
   onSelectDate: (date: string) => void;
 }) {
   const selectDay = useCallback(
@@ -60,6 +63,7 @@ const TravelCalendarMonth = React.memo(function TravelCalendarMonth({
       startDate={startDate}
       endDate={endDate}
       maxDays={maxDays}
+      minimumDate={minimumDate}
       hideMonthNavigation
       onPrevMonth={ignoreMonthNavigation}
       onNextMonth={ignoreMonthNavigation}
@@ -77,6 +81,7 @@ export function TravelDateSheet({
   endDate,
   onConfirm,
   maxDays = 29,
+  minimumDate,
 }: TravelDateSheetProps) {
   const [draft, setDraft] = useState({ start: startDate, end: endDate });
   const { start: draftStart, end: draftEnd } = draft;
@@ -89,14 +94,18 @@ export function TravelDateSheet({
   }, [visible, startDate, endDate]);
   const months = useMemo(() => {
     const today = new Date();
+    const [firstYear, firstMonth] = minimumDate
+      ? minimumDate.split('-').map(Number)
+      : [today.getFullYear(), today.getMonth() + 1];
     return Array.from({ length: 24 }, (_, index) => {
-      const date = new Date(today.getFullYear(), today.getMonth() + index, 1);
+      const date = new Date(firstYear, firstMonth - 1 + index, 1);
       return { year: date.getFullYear(), month: date.getMonth() + 1 };
     });
-  }, []);
+  }, [minimumDate]);
   const selectDate = useCallback(
     (date: string) => {
       setDraft((current) => {
+        if (minimumDate && date < minimumDate) return current;
         if (!current.start || current.end || date < current.start) {
           return { start: date, end: '' };
         }
@@ -106,7 +115,7 @@ export function TravelDateSheet({
           : current;
       });
     },
-    [maxDays],
+    [maxDays, minimumDate],
   );
   const rangeLabel =
     draftStart && draftEnd
@@ -156,6 +165,7 @@ export function TravelDateSheet({
                 startDate={draftStart}
                 endDate={draftEnd}
                 maxDays={maxDays}
+                minimumDate={minimumDate}
                 onSelectDate={selectDate}
               />
             )}

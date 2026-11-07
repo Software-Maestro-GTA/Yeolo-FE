@@ -1,7 +1,9 @@
 /**
  * @file myrealtrip.ts
- * @description MyRealTrip partner API transport, product discovery and affiliate link creation.
+ * @description Authenticated Yeolo MRT API transport, booking data and validated affiliate links.
  */
+import { createHttpClient } from './kyClient';
+
 export type BookingKind = 'flight' | 'hotel' | 'ticket';
 export interface BookingProduct {
   itemName: string;
@@ -19,7 +21,7 @@ export interface BookingProduct {
 export interface BookingHotelPage {
   items: BookingProduct[];
   page: number;
-  totalCount: number;
+  totalCount: number | null;
   hasMore: boolean;
 }
 export interface BookingTicketPage extends BookingHotelPage {}
@@ -30,6 +32,25 @@ export interface BookingRegion {
 }
 export interface BookingAirport {
   airport: { code: string; koName?: string; enName?: string };
+}
+export interface BookingCoupon {
+  code: string;
+  minimumPrice: number;
+  discount: number;
+}
+export interface BookingHotelQuery {
+  regionId: number;
+  checkIn: string;
+  checkOut: string;
+  adultCount: number;
+  page?: number;
+}
+export interface BookingFlightQuery {
+  depAirportCd: string;
+  arrAirportCd: string;
+  depDate: string;
+  arrDate: string;
+  adult: number;
 }
 export class MyRealTripError extends Error {
   constructor(
@@ -49,11 +70,15 @@ export function isMyRealTripUrl(
   if (typeof value !== 'string') return false;
   try {
     const url = new URL(value);
+    // URL.port drops an explicit default :443, so also inspect the authority.
+    const authority = value.match(/^https:\/\/([^/?#]+)/i)?.[1];
     return (
       url.protocol === 'https:' &&
       !url.username &&
       !url.password &&
       !url.port &&
+      !!authority &&
+      !authority.includes(':') &&
       (shortLink
         ? url.hostname === 'myrealt.rip'
         : url.hostname === 'myrealtrip.com' ||
@@ -64,96 +89,107 @@ export function isMyRealTripUrl(
   }
 }
 
-/** Creates an isolated MRT client. Never uses Yeolo's bearer token or logs credentials. */
-export function createMyRealTripClient(apiKey: string) {
-  async function post<T>(
+/**
+ * Creates an authenticated Yeolo client for the seven server-managed MRT APIs.
+ * @param baseUrl Yeolo backend base URL; no partner credential is accepted.
+ * @returns Booking searches, affiliate link creation and active coupon lookup.
+ * @throws MyRealTripError for request failures or malformed response data.
+ */
+export function createMyRealTripClient(baseUrl: string) {
+  const client = createHttpClient(baseUrl, { timeout: 15000, retry: 0 });
+
+  async function request<T>(
     path: string,
-    body: object,
+    method: 'GET' | 'POST',
+    input?: Record<string, string | number | boolean>,
     signal?: AbortSignal,
   ): Promise<T> {
-    if (!apiKey.trim()) throw new MyRealTripError('configuration');
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    if (signal?.aborted) abort();
-    signal?.addEventListener('abort', abort);
-    const timer = setTimeout(abort, 15000);
-    try {
-      const response = await fetch(
-        `https://partner-ext-api.myrealtrip.com/v1/${path}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey.trim()}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        },
+    if (!baseUrl.trim()) throw new MyRealTripError('configuration');
+    const response = await client(`api/myrealtrip/${path}`, {
+      method,
+      ...(method === 'GET' ? { searchParams: input } : { json: input }),
+      signal: signal ?? null,
+    });
+    const result = (await response.json().catch(() => null)) as {
+      status?: number;
+      data?: T;
+    } | null;
+    if (
+      !response.ok ||
+      (typeof result?.status === 'number' && result.status !== 200)
+    ) {
+      throw new MyRealTripError(
+        'request',
+        response.ok ? result!.status : response.status,
       );
-      if (!response.ok) throw new MyRealTripError('request', response.status);
-      const json = await response.json();
-      if (
-        !json ||
-        json.data == null ||
-        (json.result?.status !== undefined && json.result.status !== 200)
-      ) {
-        throw new MyRealTripError('response');
-      }
-      return json.data as T;
-    } finally {
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', abort);
     }
+    if (
+      !result ||
+      result.status !== 200 ||
+      !result.data ||
+      typeof result.data !== 'object'
+    ) {
+      throw new MyRealTripError('response');
+    }
+    return result.data;
   }
+
+  function affiliateUrl(data: { url: string }): string {
+    if (!isMyRealTripUrl(data.url, true)) throw new MyRealTripError('response');
+    return data.url;
+  }
+
   async function createLink(
     targetUrl: string,
     signal?: AbortSignal,
   ): Promise<string> {
     if (!isMyRealTripUrl(targetUrl)) throw new MyRealTripError('response');
-    const data = await post<{ mylink: string }>(
-      'mylink',
-      { targetUrl },
-      signal,
+    return affiliateUrl(
+      await request<{ url: string }>('links', 'POST', { targetUrl }, signal),
     );
-    if (!isMyRealTripUrl(data.mylink, true))
+  }
+
+  function productPage(data: BookingHotelPage): BookingHotelPage {
+    if (
+      !Array.isArray(data.items) ||
+      !Number.isSafeInteger(data.page) ||
+      data.page < 1 ||
+      (data.totalCount !== null &&
+        (!Number.isSafeInteger(data.totalCount) || data.totalCount < 0)) ||
+      typeof data.hasMore !== 'boolean'
+    ) {
       throw new MyRealTripError('response');
-    return data.mylink;
+    }
+    return {
+      items: data.items.filter(
+        (item) =>
+          item &&
+          typeof item.itemName === 'string' &&
+          isMyRealTripUrl(item.productUrl) &&
+          Number.isFinite(item.salePrice) &&
+          item.salePrice >= 0,
+      ),
+      page: data.page,
+      totalCount: data.totalCount,
+      hasMore: data.hasMore,
+    };
   }
-  function products(data: { items: BookingProduct[] }): BookingProduct[] {
-    if (!Array.isArray(data.items)) throw new MyRealTripError('response');
-    return data.items.filter(
-      (item) =>
-        item &&
-        typeof item.itemName === 'string' &&
-        isMyRealTripUrl(item.productUrl) &&
-        Number.isFinite(item.salePrice) &&
-        item.salePrice >= 0,
-    );
-  }
+
   async function searchTicketPage(
     keyword: string,
     page = 1,
     signal?: AbortSignal,
   ): Promise<BookingTicketPage> {
-    const size = 20;
-    const data = await post<{
-      items: BookingProduct[];
-      totalCount?: number;
-    }>('products/tna/search', { keyword: keyword.trim(), page, size }, signal);
-    const items = products(data);
-    const totalCount =
-      Number.isSafeInteger(data.totalCount) && data.totalCount! >= 0
-        ? data.totalCount!
-        : (page - 1) * size +
-          data.items.length +
-          (data.items.length === size ? 1 : 0);
-    return {
-      items,
-      page,
-      totalCount,
-      hasMore: page * size < totalCount,
-    };
+    return productPage(
+      await request<BookingTicketPage>(
+        'tickets',
+        'GET',
+        { keyword: keyword.trim(), page },
+        signal,
+      ),
+    );
   }
+
   return {
     createLink,
     searchTicketPage,
@@ -161,9 +197,10 @@ export function createMyRealTripClient(apiKey: string) {
       keyword: string,
       signal?: AbortSignal,
     ): Promise<BookingAirport[]> {
-      const data = await post<{ airports: BookingAirport[] }>(
-        'products/flight/airport-autocomplete',
-        { keyword: keyword.trim(), size: 10 },
+      const data = await request<{ airports: BookingAirport[] }>(
+        'airports',
+        'GET',
+        { keyword: keyword.trim() },
         signal,
       );
       if (!Array.isArray(data.airports)) throw new MyRealTripError('response');
@@ -176,8 +213,9 @@ export function createMyRealTripClient(apiKey: string) {
       isDomestic: boolean,
       signal?: AbortSignal,
     ): Promise<BookingRegion[]> {
-      const data = await post<{ regions: BookingRegion[] }>(
-        'products/accommodation/region-autocomplete',
+      const data = await request<{ regions: BookingRegion[] }>(
+        'regions',
+        'GET',
         { keyword: keyword.trim(), isDomestic },
         signal,
       );
@@ -190,55 +228,58 @@ export function createMyRealTripClient(apiKey: string) {
       );
     },
     async searchHotels(
-      input: {
-        regionId: number;
-        checkIn: string;
-        checkOut: string;
-        adultCount: number;
-        page?: number;
-      },
+      input: BookingHotelQuery,
       signal?: AbortSignal,
     ): Promise<BookingHotelPage> {
-      const page = input.page ?? 0;
-      const size = 20;
-      const data = await post<{
-        items: BookingProduct[];
-        totalCount?: number;
-        page?: number;
-      }>('products/accommodation/search', { ...input, page, size }, signal);
-      const items = products(data);
-      const totalCount =
-        Number.isSafeInteger(data.totalCount) && data.totalCount! >= 0
-          ? data.totalCount!
-          : page * size +
-            data.items.length +
-            (data.items.length === size ? 1 : 0);
-      return {
-        items,
-        page,
-        totalCount,
-        hasMore: (page + 1) * size < totalCount,
-      };
+      return productPage(
+        await request<BookingHotelPage>(
+          'hotels',
+          'GET',
+          { ...input, page: input.page ?? 1 },
+          signal,
+        ),
+      );
     },
     async searchTickets(keyword: string, signal?: AbortSignal) {
       return (await searchTicketPage(keyword, 1, signal)).items;
     },
     async createFlightLink(
-      input: {
-        depAirportCd: string;
-        arrAirportCd: string;
-        depDate: string;
-        arrDate: string;
-        adult: number;
-      },
+      input: BookingFlightQuery,
       signal?: AbortSignal,
-    ) {
-      const target = await post<string>(
-        'products/flight/fare-query-landing-url',
-        { ...input, tripTypeCd: 'RT' },
+    ): Promise<string> {
+      return affiliateUrl(
+        await request<{ url: string }>(
+          'flights/link',
+          'POST',
+          { ...input },
+          signal,
+        ),
+      );
+    },
+    async getCoupons(signal?: AbortSignal): Promise<BookingCoupon[]> {
+      const data = await request<{ coupons: BookingCoupon[] }>(
+        'coupons',
+        'GET',
+        undefined,
         signal,
       );
-      return createLink(target, signal);
+      if (!Array.isArray(data.coupons)) throw new MyRealTripError('response');
+      const seen = new Set<string>();
+      return data.coupons.filter((coupon) => {
+        if (
+          !coupon ||
+          typeof coupon.code !== 'string' ||
+          !coupon.code.trim() ||
+          seen.has(coupon.code) ||
+          !Number.isSafeInteger(coupon.minimumPrice) ||
+          coupon.minimumPrice < 0 ||
+          !Number.isSafeInteger(coupon.discount) ||
+          coupon.discount < 0
+        )
+          return false;
+        seen.add(coupon.code);
+        return true;
+      });
     },
   };
 }

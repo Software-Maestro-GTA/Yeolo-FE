@@ -150,7 +150,6 @@ export const UI_STRINGS = {
     TICKET_CTA: '🎫 마이리얼트립 투어·티켓 찾기',
     HOTEL_CTA: '🏨 마이리얼트립 숙소 찾기',
     COUPON_TITLE: '해외 투어·티켓 할인 쿠폰팩',
-    COUPON_SUMMARY: '누구나 1천·3천·5천원 할인',
     COUPON_HIDE: '쿠폰 접기',
     COUPON_DISCOUNT: '할인',
     COUPON_CONDITION: '이상 구매 시',

@@ -55,6 +55,11 @@ const hotelProduct = {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  jest.spyOn(myRealTrip, 'getCoupons').mockResolvedValue([
+    { code: 'SERVER1000', minimumPrice: 50000, discount: 1000 },
+    { code: 'SERVER3000', minimumPrice: 100000, discount: 3000 },
+    { code: 'SERVER5000', minimumPrice: 150000, discount: 5000 },
+  ]);
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -198,23 +203,20 @@ test('이미 키보드가 열린 상태로 투어·티켓 화면에 진입해도
 
 test('투어·티켓 쿠폰팩에서 코드와 중복 안내를 숨기고 할인 조건 및 복사 기능을 유지한다', async () => {
   const ui = await render(<BookingScreen kind='ticket' onBack={jest.fn()} />);
-  expect(ui.getByTestId('ticket-coupon-pack')).toBeTruthy();
-  expect(ui.queryByText(S.COUPON_NOTE)).toBeNull();
-  expect(
-    ui.getByText('복사한 코드를 마이리얼트립 결제 화면에 입력해 주세요.'),
-  ).toBeTruthy();
+  expect(await ui.findByTestId('ticket-coupon-pack')).toBeTruthy();
+  expect(ui.getByText(S.COUPON_NOTE)).toBeTruthy();
   for (const [code, minimum, discount] of [
-    ['PACKMKTP1000', '50,000원', '1,000원'],
-    ['PACKMKTP3000', '100,000원', '3,000원'],
-    ['PACKMKTP5000', '150,000원', '5,000원'],
+    ['SERVER1000', '50,000원', '1,000원'],
+    ['SERVER3000', '100,000원', '3,000원'],
+    ['SERVER5000', '150,000원', '5,000원'],
   ]) {
     expect(ui.queryByText(code)).toBeNull();
     expect(ui.getByText(`${minimum} 이상 구매 시`)).toBeTruthy();
     expect(ui.getByText(discount)).toBeTruthy();
   }
 
-  await fireEvent.press(ui.getByTestId('ticket-coupon-copy-PACKMKTP3000'));
-  expect(Clipboard.setString).toHaveBeenCalledWith('PACKMKTP3000');
+  await fireEvent.press(await ui.findByTestId('ticket-coupon-copy-SERVER3000'));
+  expect(Clipboard.setString).toHaveBeenCalledWith('SERVER3000');
   expect(ui.getByText(S.COUPON_COPIED)).toBeTruthy();
 });
 
@@ -325,7 +327,7 @@ test('숙소는 장소의 첫 지역을 자동 선택하고 숫자 입력을 숙
     .mockResolvedValue([{ regionId: 123, name: '제주시' }]);
   const search = jest.spyOn(myRealTrip, 'searchHotels').mockResolvedValue({
     items: [hotelProduct, product],
-    page: 0,
+    page: 1,
     totalCount: 2,
     hasMore: false,
   });
@@ -406,7 +408,7 @@ const courseHotelContext = {
 };
 const hotelPage = {
   items: [hotelProduct],
-  page: 0,
+  page: 1,
   totalCount: 1,
   hasMore: false,
 };
@@ -847,7 +849,7 @@ test('숙소 지역 제안은 네 개씩 보이며 내부 스크롤로 다른 �
   );
   const search = jest
     .spyOn(myRealTrip, 'searchHotels')
-    .mockResolvedValue({ items: [], page: 0, totalCount: 0, hasMore: false });
+    .mockResolvedValue({ items: [], page: 1, totalCount: 0, hasMore: false });
   const ui = await render(
     <BookingScreen
       kind='hotel'
@@ -893,14 +895,14 @@ test('숙소 결과 끝에서 다음 페이지를 이어 붙이고 맨 위로 �
   const search = jest
     .spyOn(myRealTrip, 'searchHotels')
     .mockImplementation(async (query) =>
-      query.page === 1
+      query.page === 2
         ? {
             items: [hotelProduct, nextHotel],
-            page: 1,
+            page: 2,
             totalCount: 21,
             hasMore: false,
           }
-        : { items: [hotelProduct], page: 0, totalCount: 21, hasMore: true },
+        : { items: [hotelProduct], page: 1, totalCount: 21, hasMore: true },
     );
   const ui = await render(
     <BookingScreen
@@ -930,7 +932,7 @@ test('숙소 결과 끝에서 다음 페이지를 이어 붙이고 맨 위로 �
   );
   expect(ui.getByText(nextHotel.itemName)).toBeTruthy();
   expect(search).toHaveBeenLastCalledWith(
-    expect.objectContaining({ page: 1 }),
+    expect.objectContaining({ page: 2 }),
     expect.anything(),
   );
   await act(async () => {
@@ -1695,8 +1697,8 @@ test('투어 첫 검색은 요청 중 먼저 접히고 검색 후 펼치면 쿠�
   expect(ui.queryByTestId('ticket-coupon-pack')).toBeNull();
   await fireEvent.press(ui.getByTestId('ticket-toggle-form'));
   expect(ui.getByTestId('ticket-coupon-pack')).toBeTruthy();
-  await fireEvent.press(ui.getByTestId('ticket-coupon-copy-PACKMKTP3000'));
-  expect(Clipboard.setString).toHaveBeenCalledWith('PACKMKTP3000');
+  await fireEvent.press(await ui.findByTestId('ticket-coupon-copy-SERVER3000'));
+  expect(Clipboard.setString).toHaveBeenCalledWith('SERVER3000');
   expect(ui.getByTestId('ticket-result-0')).toBeTruthy();
   await fireEvent.press(ui.getByTestId('ticket-toggle-form'));
   expect(ui.queryByTestId('ticket-coupon-pack')).toBeNull();

@@ -17,12 +17,13 @@ module.exports = ({ config }) => {
   const iosGoogleServices =
     process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
 
+  // Discard legacy public partner credentials when reading an older Expo config.
+  const { myRealTripApiKey: _partnerKey, ...publicExtra } = config.extra || {};
+
   return {
     ...config,
     extra: {
-      ...config.extra,
-      // Direct app integration: this value is embedded in the public Expo configuration.
-      myRealTripApiKey: process.env.MY_REAL_TRIP_API_KEY || '',
+      ...publicExtra,
     },
     plugins: [
       ...(config.plugins || []),

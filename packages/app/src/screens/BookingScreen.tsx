@@ -32,6 +32,7 @@ import {
 } from '@yeolo/common';
 import {
   myRealTrip,
+  bookingToday,
   isBookingDate,
   resolveCourseArrivalAirport,
   type BookingContext,
@@ -137,7 +138,9 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
   const [regionSearch, setRegionSearch] = useState<string | null>(null);
   const [selectedHotelUrl, setSelectedHotelUrl] = useState<string>();
   const [productsSearched, setProductsSearched] = useState(false);
-  const [productsTotalCount, setProductsTotalCount] = useState(0);
+  const [productsTotalCount, setProductsTotalCount] = useState<number | null>(
+    null,
+  );
   const [priceInfoVisible, setPriceInfoVisible] = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
   const reduceMotion = useRef(true);
@@ -381,7 +384,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
     setChoices([]);
     setSelectedHotelUrl(undefined);
     setProductsSearched(false);
-    setProductsTotalCount(0);
+    setProductsTotalCount(null);
     setFormCollapsed(false);
     setLoadingMore(false);
     setPageError(false);
@@ -842,7 +845,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
       <View style={styles.resultsHeading}>
         <Text
           style={styles.sectionTitle}
-          accessibilityLabel={`${kind === 'hotel' ? S.HOTEL_RESULTS : S.TICKET_RESULTS} ${productsTotalCount}${kind === 'hotel' ? S.HOTEL_COUNT : S.TICKET_COUNT}`}>
+          accessibilityLabel={`${kind === 'hotel' ? S.HOTEL_RESULTS : S.TICKET_RESULTS}${productsTotalCount === null ? '' : ` ${productsTotalCount}${kind === 'hotel' ? S.HOTEL_COUNT : S.TICKET_COUNT}`}`}>
           {kind === 'hotel' ? S.HOTEL_RESULTS : S.TICKET_RESULTS}
         </Text>
         <TouchableOpacity
@@ -1489,6 +1492,7 @@ export function BookingScreen({ kind, context = {}, onBack }: Props) {
         startDate={start}
         endDate={end}
         maxDays={365}
+        minimumDate={bookingToday()}
         onClose={() => setDatesVisible(false)}
         onConfirm={(nextStart, nextEnd) => {
           clearResults();

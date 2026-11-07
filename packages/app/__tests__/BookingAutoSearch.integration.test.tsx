@@ -7,21 +7,24 @@ import React from 'react';
 import { fireEvent, within } from '@testing-library/react-native';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { setTokenGetter } from '@yeolo/common';
 import { BookingScreen } from '../src/screens/BookingScreen';
 import { UI_STRINGS } from '../src/constants/strings';
 import { renderWithQueryClient as render } from './test-utils';
 
-jest.mock('../src/services/bookingService', () => {
-  const service = jest.requireActual('../src/services/bookingService');
-  const { createMyRealTripClient } = jest.requireActual('@yeolo/common');
-  return {
-    ...service,
-    myRealTrip: createMyRealTripClient('local-booking-fixture-key'),
-  };
-});
+const server = setupServer(
+  http.get('*/api/myrealtrip/coupons', () =>
+    HttpResponse.json({
+      status: 200,
+      message: 'ok',
+      data: { coupons: [] },
+    }),
+  ),
+);
+const base = '*/api/myrealtrip';
+const query = (request: Request) =>
+  Object.fromEntries(new URL(request.url).searchParams);
 
-const server = setupServer();
-const base = 'https://partner-ext-api.myrealtrip.com/v1/products/accommodation';
 const context = {
   keyword: '도쿄',
   country: '일본',
@@ -36,39 +39,52 @@ const hotel = {
 };
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() =>
+  setTokenGetter(async () => ({ accessToken: 'yeolo-booking-token' })),
+);
+
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 test('코스에서 숙소 예약을 열면 해외 지역 응답의 ID로 검색하고 결과를 표시한다', async () => {
   const requests: unknown[] = [];
   server.use(
-    http.post(`${base}/region-autocomplete`, async ({ request }) => {
-      requests.push({ lookup: await request.json() });
+    http.get(`${base}/regions`, async ({ request }) => {
+      requests.push({ lookup: query(request) });
       return HttpResponse.json({
+        status: 200,
+        message: 'ok',
         data: { regions: [{ regionId: 987, name: '도쿄도' }] },
       });
     }),
-    http.post(`${base}/search`, async ({ request }) => {
-      requests.push({ search: await request.json() });
-      return HttpResponse.json({ data: { items: [hotel], totalCount: 1 } });
+    http.get(`${base}/hotels`, async ({ request }) => {
+      expect(request.headers.get('Authorization')).toBe(
+        'Bearer yeolo-booking-token',
+      );
+      requests.push({ search: query(request) });
+      return HttpResponse.json({
+        status: 200,
+        message: 'ok',
+        data: { items: [hotel], totalCount: null, page: 1, hasMore: false },
+      });
     }),
   );
   const ui = await render(
     <BookingScreen kind='hotel' context={context} onBack={jest.fn()} />,
   );
   expect(await ui.findByText(hotel.itemName)).toBeTruthy();
+  expect(ui.getByLabelText(UI_STRINGS.BOOKING.HOTEL_RESULTS)).toBeTruthy();
   expect(ui.getByTestId('hotel-search-summary')).toBeTruthy();
   expect(ui.queryByLabelText(UI_STRINGS.BOOKING.HOTEL_LOCATION)).toBeNull();
   expect(requests).toEqual([
-    { lookup: { keyword: '도쿄', isDomestic: false } },
+    { lookup: { keyword: '도쿄', isDomestic: 'false' } },
     {
       search: {
-        regionId: 987,
+        regionId: '987',
         checkIn: '2099-12-30',
         checkOut: '2100-01-02',
-        adultCount: 1,
-        page: 0,
-        size: 20,
+        adultCount: '1',
+        page: '1',
       },
     },
   ]);
@@ -78,17 +94,23 @@ test('자동 숙소 검색이 제한되면 안내 후 같은 조건으로 사용
   let searches = 0;
   let regions = 0;
   server.use(
-    http.post(`${base}/region-autocomplete`, () => {
+    http.get(`${base}/regions`, () => {
       regions += 1;
       return HttpResponse.json({
+        status: 200,
+        message: 'ok',
         data: { regions: [{ regionId: 987, name: '도쿄도' }] },
       });
     }),
-    http.post(`${base}/search`, () => {
+    http.get(`${base}/hotels`, () => {
       searches += 1;
       return searches === 1
         ? new HttpResponse(null, { status: 429 })
-        : HttpResponse.json({ data: { items: [hotel], totalCount: 1 } });
+        : HttpResponse.json({
+            status: 200,
+            message: 'ok',
+            data: { items: [hotel], totalCount: 1, page: 1, hasMore: false },
+          });
     }),
   );
   const ui = await render(
@@ -112,13 +134,14 @@ test('코스 목적지로 투어 티켓을 즉시 검색하고 국가·도시와
     tags: ['무료취소', '최저가 보장제'],
   };
   server.use(
-    http.post(
-      'https://partner-ext-api.myrealtrip.com/v1/products/tna/search',
-      async ({ request }) => {
-        requests.push(await request.json());
-        return HttpResponse.json({ data: { items: [ticket], totalCount: 1 } });
-      },
-    ),
+    http.get(`${base}/tickets`, async ({ request }) => {
+      requests.push(query(request));
+      return HttpResponse.json({
+        status: 200,
+        message: 'ok',
+        data: { items: [ticket], totalCount: null, page: 1, hasMore: false },
+      });
+    }),
   );
   const ui = await render(
     <BookingScreen
@@ -130,9 +153,10 @@ test('코스 목적지로 투어 티켓을 즉시 검색하고 국가·도시와
   const card = within(await ui.findByTestId('ticket-result-0'));
   expect(card.getByText(ticket.itemName)).toBeTruthy();
   for (const tag of ticket.tags) expect(card.queryByText(tag)).toBeNull();
+  expect(ui.getByLabelText(UI_STRINGS.BOOKING.TICKET_RESULTS)).toBeTruthy();
   const summary = within(ui.getByTestId('ticket-search-summary'));
   expect(summary.getByText('일본')).toBeTruthy();
   expect(summary.getByText('도쿄')).toBeTruthy();
   expect(ui.queryByTestId('booking-search')).toBeNull();
-  expect(requests).toEqual([{ keyword: '도쿄', page: 1, size: 20 }]);
+  expect(requests).toEqual([{ keyword: '도쿄', page: '1' }]);
 });

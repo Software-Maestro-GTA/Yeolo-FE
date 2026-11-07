@@ -76,11 +76,6 @@ export const APP_CONFIG = {
   TERMS_OF_SERVICE_URL: 'https://www.yeolo.app/terms',
   INSTAGRAM_URL: 'https://www.instagram.com/yeolo_my_trip/',
   MYREALTRIP_HOME_URL: 'https://www.myrealtrip.com/',
-  MYREALTRIP_TICKET_COUPONS: [
-    { code: 'PACKMKTP1000', minimumPrice: 50000, discount: 1000 },
-    { code: 'PACKMKTP3000', minimumPrice: 100000, discount: 3000 },
-    { code: 'PACKMKTP5000', minimumPrice: 150000, discount: 5000 },
-  ],
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
   DEFAULT_SUPPORT_EMAIL: 'yeolotrip@gmail.com',

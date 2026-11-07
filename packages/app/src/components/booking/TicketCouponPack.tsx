@@ -1,22 +1,42 @@
 /**
  * @file TicketCouponPack.tsx
- * @description Expandable MyRealTrip overseas tour coupon codes with one-tap copying.
+ * @description Displays a copyable coupon pack only when the server provides active coupons.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { logger, type BookingCoupon } from '@yeolo/common';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../common/Typography';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { BookingReelAsset } from './BookingReelAsset';
 import { BOOKING_REEL_UI } from '../../constants/bookingReelUiStrings';
-import { APP_CONFIG } from '../../constants/config';
+import { myRealTrip } from '../../services/bookingService';
 import { UI_STRINGS } from '../../constants/strings';
 import { palette } from '../../theme/colors';
 
 const S = UI_STRINGS.BOOKING;
 
+/** Loads active server-managed coupons and lets users copy a code for checkout. */
 export function TicketCouponPack() {
   const [expanded, setExpanded] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [coupons, setCoupons] = useState<BookingCoupon[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void myRealTrip
+      .getCoupons(controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setCoupons(result);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          logger.warn('[TicketCouponPack] Coupon lookup failed.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (coupons.length === 0) return null;
 
   return (
     <View testID='ticket-coupon-pack' style={styles.container}>
@@ -34,15 +54,13 @@ export function TicketCouponPack() {
             <Text style={styles.title}>
               {BOOKING_REEL_UI.BOOKING.COUPON_TITLE}
             </Text>
-            <Text style={styles.summary}>
-              {BOOKING_REEL_UI.BOOKING.COUPON_NOTE}
-            </Text>
+            <Text style={styles.summary}>{S.COUPON_NOTE}</Text>
           </View>
         </View>
       </TouchableOpacity>
       {expanded && (
         <View style={styles.coupons}>
-          {APP_CONFIG.MYREALTRIP_TICKET_COUPONS.map((coupon) => (
+          {coupons.map((coupon) => (
             <View key={coupon.code} style={styles.coupon}>
               <View style={styles.couponInfo}>
                 <Text style={styles.discount}>

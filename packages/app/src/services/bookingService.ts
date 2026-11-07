@@ -1,9 +1,9 @@
 /**
  * @file bookingService.ts
- * @description App MRT client configuration and course-aware booking form defaults.
+ * @description Yeolo booking API configuration and course-aware booking form defaults.
  */
-import Constants from 'expo-constants';
 import {
+  AppVersionMismatchError,
   createMyRealTripClient,
   MyRealTripError,
   type BookingAirport,
@@ -11,9 +11,10 @@ import {
   type BookingKind,
 } from '@yeolo/common';
 
-// Direct client access explicitly selected by the user; Expo extra is public in the app bundle.
+import { APP_CONFIG } from '../constants/config';
+
 export const myRealTrip = createMyRealTripClient(
-  Constants.expoConfig?.extra?.myRealTripApiKey || '',
+  process.env.EXPO_PUBLIC_API_URL || APP_CONFIG.DEFAULT_API_URL,
 );
 
 export interface BookingContext {
@@ -79,7 +80,8 @@ export async function resolveCourseArrivalAirport(
       if (airport) return airport;
     } catch (error) {
       if (signal.aborted) return;
-      // Retrying a different keyword cannot fix missing credentials or rate limits.
+      // Another keyword cannot fix an outdated app, authentication or rate limits.
+      if (error instanceof AppVersionMismatchError) throw error;
       if (
         error instanceof MyRealTripError &&
         (error.code === 'configuration' ||
@@ -92,7 +94,15 @@ export async function resolveCourseArrivalAirport(
   if (lastError) throw lastError;
 }
 
-/** Validates calendar dates, including month overflow, against the user's local day. */
+/**
+ * Returns the Asia/Seoul service day used by the booking APIs.
+ * @returns ISO calendar date; Korea uses UTC+09:00 without daylight saving.
+ */
+export function bookingToday(): string {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** Validates calendar dates, including month overflow, against the Seoul service day. */
 export function isBookingDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T12:00:00Z`);
@@ -101,7 +111,5 @@ export function isBookingDate(value: string): boolean {
     date.toISOString().slice(0, 10) !== value
   )
     return false;
-  const today = new Date();
-  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  return value >= localToday;
+  return value >= bookingToday();
 }

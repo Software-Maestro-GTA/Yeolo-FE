@@ -19,6 +19,7 @@ export interface InlineCalendarViewProps {
   onSelectDay: (day: number) => void;
   hideMonthNavigation?: boolean;
   maxDays?: number;
+  minimumDate?: string;
 }
 
 /** Memoized by visual state so an unchanged date does not rebuild its native views. */
@@ -96,6 +97,7 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   onSelectDay,
   hideMonthNavigation = false,
   maxDays = 29,
+  minimumDate,
 }) => {
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month - 1, 1).getDay();
@@ -134,18 +136,17 @@ export const InlineCalendarView: React.FC<InlineCalendarViewProps> = ({
   const todayY = today.getFullYear();
   const todayM = String(today.getMonth() + 1).padStart(2, '0');
   const todayD = String(today.getDate()).padStart(2, '0');
-  const todayStr = `${todayY}-${todayM}-${todayD}`;
+  const todayStr = minimumDate ?? `${todayY}-${todayM}-${todayD}`;
 
-  const isPrevMonthDisabled =
-    currentYearMonth.year < todayY ||
-    (currentYearMonth.year === todayY &&
-      currentYearMonth.month <= today.getMonth() + 1);
+  const displayedMonth = `${currentYearMonth.year}-${String(currentYearMonth.month).padStart(2, '0')}`;
+  const isPrevMonthDisabled = displayedMonth <= todayStr.slice(0, 7);
 
   return (
     <View style={styles.inlineCalendarCard} testID='inline-calendar'>
       <View style={styles.calendarHeader}>
         {!hideMonthNavigation && (
           <TouchableOpacity
+            testID='calendar-prev-month'
             onPress={onPrevMonth}
             disabled={isPrevMonthDisabled}
             style={[

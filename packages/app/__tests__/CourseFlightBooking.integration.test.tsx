@@ -8,7 +8,11 @@ import { waitFor } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { createMyRealTripClient } from '@yeolo/common';
+import {
+  AppVersionMismatchError,
+  createMyRealTripClient,
+  setTokenGetter,
+} from '@yeolo/common';
 import { BookingScreen } from '../src/screens/BookingScreen';
 import {
   myRealTrip,
@@ -17,17 +21,8 @@ import {
 import { UI_STRINGS } from '../src/constants/strings';
 import { renderWithQueryClient as render } from './test-utils';
 
-jest.mock('expo-constants', () => ({
-  __esModule: true,
-  default: {
-    expoConfig: {
-      extra: { myRealTripApiKey: 'local-flight-fixture-key' },
-    },
-  },
-}));
-
 const server = setupServer();
-const base = 'https://partner-ext-api.myrealtrip.com/v1';
+const base = '*/api/myrealtrip';
 const context = {
   keyword: '도쿄',
   country: '일본',
@@ -44,6 +39,7 @@ const arrival = {
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   jest.clearAllMocks();
+  setTokenGetter(async () => ({ accessToken: 'yeolo-flight-token' }));
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 afterEach(() => {
@@ -60,43 +56,35 @@ test.each([
   async (_description, matchingQuery, expectedArrivalQueries) => {
     const airportQueries: string[] = [];
     const linkRequests: unknown[] = [];
-    const landing = 'https://air-web.myrealtrip.com/results?fixture=course';
     const affiliate = 'https://myrealt.rip/course-flight';
     server.use(
-      http.post(
-        `${base}/products/flight/airport-autocomplete`,
-        async ({ request }) => {
-          expect(request.headers.get('Authorization')).toBe(
-            'Bearer local-flight-fixture-key',
-          );
-          const body = (await request.json()) as {
-            keyword: string;
-            size: number;
-          };
-          expect(body.size).toBe(10);
-          airportQueries.push(body.keyword);
-          return HttpResponse.json({
-            data: {
-              airports:
-                body.keyword === '인천'
-                  ? [{ airport: { code: 'ICN', koName: '인천' } }]
-                  : body.keyword === matchingQuery
-                    ? [arrival]
-                    : [],
-            },
-          });
-        },
-      ),
-      http.post(
-        `${base}/products/flight/fare-query-landing-url`,
-        async ({ request }) => {
-          linkRequests.push({ flight: await request.json() });
-          return HttpResponse.json({ data: landing });
-        },
-      ),
-      http.post(`${base}/mylink`, async ({ request }) => {
-        linkRequests.push({ affiliate: await request.json() });
-        return HttpResponse.json({ data: { mylink: affiliate } });
+      http.get(`${base}/airports`, async ({ request }) => {
+        expect(request.headers.get('Authorization')).toBe(
+          'Bearer yeolo-flight-token',
+        );
+        const keyword = new URL(request.url).searchParams.get('keyword')!;
+        expect(new URL(request.url).searchParams.has('size')).toBe(false);
+        airportQueries.push(keyword);
+        return HttpResponse.json({
+          status: 200,
+          message: 'ok',
+          data: {
+            airports:
+              keyword === '인천'
+                ? [{ airport: { code: 'ICN', koName: '인천' } }]
+                : keyword === matchingQuery
+                  ? [arrival]
+                  : [],
+          },
+        });
+      }),
+      http.post(`${base}/flights/link`, async ({ request }) => {
+        linkRequests.push(await request.json());
+        return HttpResponse.json({
+          status: 200,
+          message: 'ok',
+          data: { url: affiliate },
+        });
       }),
     );
 
@@ -115,16 +103,12 @@ test.each([
     );
     expect(linkRequests).toEqual([
       {
-        flight: {
-          depAirportCd: 'ICN',
-          arrAirportCd: 'NRT',
-          tripTypeCd: 'RT',
-          depDate: '2099-12-30',
-          arrDate: '2100-01-02',
-          adult: 1,
-        },
+        depAirportCd: 'ICN',
+        arrAirportCd: 'NRT',
+        depDate: '2099-12-30',
+        arrDate: '2100-01-02',
+        adult: 1,
       },
-      { affiliate: { targetUrl: landing } },
     ]);
   },
 );
@@ -143,14 +127,15 @@ test.each([
 ])('%s', async (_description, bookingContext, expectedQuery) => {
   const queries: string[] = [];
   server.use(
-    http.post(
-      `${base}/products/flight/airport-autocomplete`,
-      async ({ request }) => {
-        const { keyword } = (await request.json()) as { keyword: string };
-        queries.push(keyword);
-        return HttpResponse.json({ data: { airports: [arrival] } });
-      },
-    ),
+    http.get(`${base}/airports`, async ({ request }) => {
+      const keyword = new URL(request.url).searchParams.get('keyword')!;
+      queries.push(keyword);
+      return HttpResponse.json({
+        status: 200,
+        message: 'ok',
+        data: { airports: [arrival] },
+      });
+    }),
   );
   await expect(
     resolveCourseArrivalAirport(bookingContext, new AbortController().signal),
@@ -163,14 +148,11 @@ test.each([401, 403, 429])(
   async (status) => {
     const queries: string[] = [];
     server.use(
-      http.post(
-        `${base}/products/flight/airport-autocomplete`,
-        async ({ request }) => {
-          const { keyword } = (await request.json()) as { keyword: string };
-          queries.push(keyword);
-          return new HttpResponse(null, { status });
-        },
-      ),
+      http.get(`${base}/airports`, async ({ request }) => {
+        const keyword = new URL(request.url).searchParams.get('keyword')!;
+        queries.push(keyword);
+        return new HttpResponse(null, { status });
+      }),
     );
     await expect(
       resolveCourseArrivalAirport(context, new AbortController().signal),
@@ -179,12 +161,16 @@ test.each([401, 403, 429])(
   },
 );
 
-test('API 키가 없으면 공항 조회를 반복하거나 HTTP 요청을 보내지 않는다', async () => {
+test('백엔드 주소가 없으면 공항 조회를 반복하거나 HTTP 요청을 보내지 않는다', async () => {
   let httpCalls = 0;
   server.use(
-    http.post(`${base}/products/flight/airport-autocomplete`, () => {
+    http.get(`${base}/airports`, () => {
       httpCalls += 1;
-      return HttpResponse.json({ data: { airports: [arrival] } });
+      return HttpResponse.json({
+        status: 200,
+        message: 'ok',
+        data: { airports: [arrival] },
+      });
     }),
   );
   const unconfigured = createMyRealTripClient('');
@@ -201,19 +187,37 @@ test('API 키가 없으면 공항 조회를 반복하거나 HTTP 요청을 보�
 test('일시적인 공항 조회 실패는 국가·도시 조회로 대체할 수 있다', async () => {
   const queries: string[] = [];
   server.use(
-    http.post(
-      `${base}/products/flight/airport-autocomplete`,
-      async ({ request }) => {
-        const { keyword } = (await request.json()) as { keyword: string };
-        queries.push(keyword);
-        return keyword === context.arrivalAirportName
-          ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json({ data: { airports: [arrival] } });
-      },
-    ),
+    http.get(`${base}/airports`, async ({ request }) => {
+      const keyword = new URL(request.url).searchParams.get('keyword')!;
+      queries.push(keyword);
+      return keyword === context.arrivalAirportName
+        ? new HttpResponse(null, { status: 503 })
+        : HttpResponse.json({
+            status: 200,
+            message: 'ok',
+            data: { airports: [arrival] },
+          });
+    }),
   );
   await expect(
     resolveCourseArrivalAirport(context, new AbortController().signal),
   ).resolves.toMatchObject({ airport: { code: 'NRT' } });
   expect(queries).toEqual([context.arrivalAirportName, '일본 도쿄']);
+});
+
+test('버전 불일치는 국가·도시 대체 조회 없이 업데이트 처리로 전달한다', async () => {
+  let calls = 0;
+  server.use(
+    http.get(`${base}/airports`, () => {
+      calls += 1;
+      return HttpResponse.json(
+        { status: 426, error: '앱 버전이 맞지 않습니다.' },
+        { status: 426 },
+      );
+    }),
+  );
+  await expect(
+    resolveCourseArrivalAirport(context, new AbortController().signal),
+  ).rejects.toBeInstanceOf(AppVersionMismatchError);
+  expect(calls).toBe(1);
 });
