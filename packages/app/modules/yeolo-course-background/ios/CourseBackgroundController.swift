@@ -1,6 +1,6 @@
 /**
  * @file CourseBackgroundController.swift
- * @description Main-thread execution assertions for course SSE, including iOS 26 continued processing and expiration cleanup.
+ * @description Protects course SSE with a finite UIKit assertion and optional continued processing without blocking foreground work on scheduler refusals.
  */
 import UIKit
 import BackgroundTasks
@@ -36,7 +36,8 @@ final class CourseBackgroundController {
       let identifier = "\(Bundle.main.bundleIdentifier!).course-generation.\(UUID().uuidString)"
       taskIdentifier = identifier
       guard BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: .main, launchHandler: { [weak self] task in
-        guard let self, self.jobId == id, let continued = task as? BGContinuedProcessingTask else {
+        guard let self, self.jobId == id, self.taskIdentifier == identifier,
+              let continued = task as? BGContinuedProcessingTask else {
           task.setTaskCompleted(success: false); return
         }
         self.continuedTask = continued
@@ -49,28 +50,45 @@ final class CourseBackgroundController {
         self.endShortAssertion()
         let callback = self.onReady; self.onReady = nil
         callback?(nil)
-      }) else { finish(id: id, success: false); throw ExecutionError.unavailable }
+      }) else {
+        continueWithLimitedExecution(id: id, reason: "registration-unavailable")
+        return
+      }
 
-      let timeout = DispatchWorkItem { [weak self] in self?.expire(id: id) }
+      let timeout = DispatchWorkItem { [weak self] in
+        self?.continueWithLimitedExecution(id: id, reason: "scheduler-start-timeout")
+      }
       startupTimeout = timeout
       DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeout)
       let request = BGContinuedProcessingTaskRequest(identifier: identifier, title: title, subtitle: message)
-      // Never queue a lease: the API request must start only after execution has actually been granted.
+      // Prefer immediate continued execution; the already granted UIKit assertion remains a bounded fallback.
       request.strategy = .fail
       do { try BGTaskScheduler.shared.submit(request) }
       catch {
-        if let schedulerError = error as? BGTaskScheduler.Error, schedulerError.code == .unavailable {
-          // Simulator and system-disabled scheduling can still use the finite UIKit assertion.
-          startupTimeout?.cancel(); startupTimeout = nil
-          BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
-          taskIdentifier = nil; onReady = nil
-          ready(nil)
-        } else { finish(id: id, success: false); throw error }
+        let failure = error as NSError
+        continueWithLimitedExecution(id: id, reason: "\(failure.domain):\(failure.code)")
       }
     } else {
       onReady = nil
       ready(nil)
     }
+  }
+
+  /// Scheduler permission/resource failures cannot invalidate an existing UIKit lease.
+  private func continueWithLimitedExecution(id: String, reason: String) {
+    dispatchPrecondition(condition: .onQueue(.main))
+    guard jobId == id, continuedTask == nil else { return }
+    guard backgroundId != .invalid else { expire(id: id); return }
+    startupTimeout?.cancel(); startupTimeout = nil
+    if let identifier = taskIdentifier {
+      BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
+    }
+    taskIdentifier = nil
+    executionMode = "limited"
+    // Log only native scheduling diagnostics; never tokens, payloads or API keys.
+    NSLog("[CourseBackground] Using finite execution after continued scheduling failure: %@", reason)
+    let callback = onReady; onReady = nil
+    callback?(nil)
   }
 
   func update(id: String, message: String, completed: Int, total: Int) {
