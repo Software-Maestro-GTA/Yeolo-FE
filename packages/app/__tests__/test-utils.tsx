@@ -1,6 +1,6 @@
 /**
  * @file test-utils.tsx
- * @description Testing utility helpers providing QueryClientProvider wrapper for unit tests.
+ * @description Testing helpers preserving query client and safe-area providers across unit-test rerenders.
  */
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,12 +30,14 @@ export function renderWithQueryClient(
     frame: { x: 0, y: 0, width: 360, height: 780 },
     insets: { top: 0, left: 0, right: 0, bottom: 0 },
   };
-  return render(
+  const Wrapper = ({ children }: React.PropsWithChildren) => (
     <QueryClientProvider client={testQueryClient}>
-      <SafeAreaProvider initialMetrics={initialMetrics}>{ui}</SafeAreaProvider>
-    </QueryClientProvider>,
-    options,
+      <SafeAreaProvider initialMetrics={initialMetrics}>
+        {children}
+      </SafeAreaProvider>
+    </QueryClientProvider>
   );
+  return render(ui, { ...options, wrapper: Wrapper });
 }
 
 describe('test-utils', () => {

@@ -5,13 +5,13 @@
 import React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   ScrollView,
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { Text } from '../common/Typography';
 
 import { palette, hexToRgba } from '../../theme/colors';
 import { UI_STRINGS } from '../../constants';

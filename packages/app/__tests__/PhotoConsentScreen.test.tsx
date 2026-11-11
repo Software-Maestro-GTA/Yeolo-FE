@@ -9,6 +9,7 @@ import { PhotoConsentScreen } from '../src/screens/PhotoConsentScreen';
 import { UI_STRINGS } from '../src/constants';
 import { renderWithQueryClient as render } from './test-utils';
 import { Alert } from 'react-native';
+import { requestPermissionsAsync } from 'expo-media-library';
 
 describe('PhotoConsentScreen UI & Navigation', () => {
   const mockOnNext = jest.fn();
@@ -17,19 +18,25 @@ describe('PhotoConsentScreen UI & Navigation', () => {
     jest.clearAllMocks();
   });
 
-  it('Figma 스펙 타이틀, 보증 카드 2개 및 동의 버튼이 정상 렌더링되어야 한다', async () => {
-    const { getByText, getByTestId } = await render(
+  it('최신 Figma UI v3 타이틀, 온보딩 영상, 안심 안내 목록 및 동의 버튼을 표시한다', async () => {
+    const { getByText, getByTestId, queryByTestId } = await render(
       <PhotoConsentScreen onNext={mockOnNext} />,
     );
 
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE)).toBeTruthy();
-    expect(getByText(UI_STRINGS.PHOTO_CONSENT.START_BUTTON)).toBeTruthy();
+    expect(
+      getByText(/사진으로 쉽고 빠르게\s*여행 취향을 파악해드릴게요/),
+    ).toBeTruthy();
+    expect(getByText(/안심하세요!/)).toBeTruthy();
+    expect(getByText(/저희는 사진을 볼 수 없어요/)).toBeTruthy();
+    expect(getByText(/사진은 서버에 저장되지 않아요/)).toBeTruthy();
+    expect(getByText(/취향파악이 끝나면 데이터는 소멸돼요/)).toBeTruthy();
+    expect(getByText('내 여행 취향 알아보기')).toBeTruthy();
 
-    expect(getByTestId('hero-illustration')).toBeTruthy();
-    expect(getByTestId('info-card-1')).toBeTruthy();
-    expect(getByTestId('info-card-2')).toBeTruthy();
+    expect(
+      getByTestId('onboarding-video', { includeHiddenElements: true }),
+    ).toBeTruthy();
+    expect(getByTestId('assurance-card')).toBeTruthy();
+    expect(queryByTestId('coupon-tooltip-badge')).toBeNull();
     expect(getByTestId('consent-start-button')).toBeTruthy();
   });
 
@@ -65,6 +72,35 @@ describe('PhotoConsentScreen UI & Navigation', () => {
       expect(mockOnNext).toHaveBeenCalledTimes(1);
     });
   });
+
+  it.each([
+    ['all', 'granted', 'all'],
+    ['limited', 'granted', 'limited'],
+    ['none', 'denied', 'denied'],
+  ])(
+    '권한 %s 응답 이후에만 현재 화면에서 분기한다',
+    async (accessPrivileges, status, expected) => {
+      let resolvePermission!: (value: unknown) => void;
+      (requestPermissionsAsync as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePermission = resolve;
+          }),
+      );
+      jest
+        .spyOn(yeoloCommon, 'savePhotoConsentApi')
+        .mockResolvedValueOnce({ status: 200, data: {} } as any);
+      const { getByTestId, getByText } = await render(
+        <PhotoConsentScreen onNext={mockOnNext} />,
+      );
+      await fireEvent.press(getByTestId('consent-start-button'));
+      await waitFor(() => expect(requestPermissionsAsync).toHaveBeenCalled());
+      expect(getByText(UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE)).toBeTruthy();
+      expect(mockOnNext).not.toHaveBeenCalled();
+      await act(async () => resolvePermission({ status, accessPrivileges }));
+      await waitFor(() => expect(mockOnNext).toHaveBeenCalledWith(expected));
+    },
+  );
 
   it('API 동의 저장 실패 시 Alert 에러 안내 메시지가 표기되고 onNext가 호출되지 않아야 한다', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { InviteContent } from '@/components/Invite/InviteContent';
 import { InviteCard } from '@/components/Invite/InviteCard';
 import { InviteErrorState } from '@/components/Invite/InviteErrorState';
 import { DeepLinkBridge } from '@/components/Invite/DeepLinkBridge';
@@ -17,6 +18,7 @@ describe('InviteCard Component', () => {
       title: '제주 에메랄드 힐링 투어',
       destinationCountry: '대한민국',
       destinationCity: '제주도',
+      coverImageUrl: 'https://example.com/courses/jeju.jpg',
       startDate: '2026-09-01',
       totalDays: 3,
     },
@@ -39,6 +41,24 @@ describe('InviteCard Component', () => {
     ).toBeInTheDocument();
   });
 
+  it('omits the expiration notice when the link has no expiry', () => {
+    render(<InviteCard data={{ ...mockData, expiresAt: null }} />);
+    expect(screen.queryByText(/까지 유효해요/)).not.toBeInTheDocument();
+  });
+
+  it('shows the course and app actions together in the invitation layout', () => {
+    render(<InviteContent data={mockData} shareToken='shared-course' />);
+    expect(
+      screen.getByRole('heading', { level: 1, name: mockData.course.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '여로 앱에서 열기' }),
+    ).toHaveAttribute('href', 'yeolo://invite/shared-course');
+    expect(
+      screen.getByText('앱을 설치한 뒤 이 초대 링크를 다시 열어주세요.'),
+    ).toBeInTheDocument();
+  });
+
   it('renders fallback when inviter displayName is null', () => {
     const dataWithoutInviter: ShareLinkDetailResponseData = {
       ...mockData,
@@ -54,6 +74,18 @@ describe('InviteCard Component', () => {
 });
 
 describe('InviteErrorState Component', () => {
+  it('treats an unexpected HTTP 426 as a temporary share lookup error', () => {
+    render(<InviteErrorState status={426} message='앱 업데이트가 필요해요' />);
+    expect(
+      screen.getByRole('heading', { name: '일시적인 오류 발생' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('앱 업데이트가 필요해요'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /App Store|Google Play/ }),
+    ).toBeNull();
+  });
   it('renders 404 invalid link error message and home button', () => {
     render(
       <InviteErrorState
@@ -69,6 +101,15 @@ describe('InviteErrorState Component', () => {
     expect(
       screen.getByRole('link', { name: '여로 홈으로 이동' }),
     ).toHaveAttribute('href', '/');
+  });
+
+  it('explains a temporary error without calling the invitation expired', () => {
+    render(<InviteErrorState status={500} />);
+    expect(
+      screen.getByRole('heading', { level: 1, name: '일시적인 오류 발생' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/잠시 후 다시 시도/)).toBeInTheDocument();
+    expect(screen.queryByText('만료된 공유 링크')).not.toBeInTheDocument();
   });
 
   it('renders 410 expired link error message and guidance', () => {
@@ -96,11 +137,19 @@ describe('DeepLinkBridge & StoreDownloadCTA Component', () => {
 
   it('renders deep link open app button with custom scheme', () => {
     render(<DeepLinkBridge shareToken={shareToken} />);
-    const appButton = screen.getByRole('button', { name: /앱에서 열기/i });
-    expect(appButton).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '여로 앱에서 열기' }),
+    ).toHaveAttribute('href', 'yeolo://invite/test-token-1234');
+  });
 
-    // Verify click attempts to open custom scheme
-    fireEvent.click(appButton);
+  it('encodes the invitation token as a single deep-link path segment', () => {
+    render(<DeepLinkBridge shareToken='token/with?reserved#characters' />);
+    expect(
+      screen.getByRole('link', { name: '여로 앱에서 열기' }),
+    ).toHaveAttribute(
+      'href',
+      'yeolo://invite/token%2Fwith%3Freserved%23characters',
+    );
   });
 
   it('renders store download CTA with store buttons on desktop', () => {

@@ -1,6 +1,6 @@
 /**
  * @file MainLayout.tsx
- * @description Shell layout component providing persistent bottom navigation bar for main tab screens, with optional noTopEdges for full bleed translucent status bar headers.
+ * @description Main screen shell with optional legacy tab navigation; UI v3 screens use their own headers and entry points.
  */
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
@@ -14,6 +14,7 @@ export interface MainLayoutProps {
   noTopEdges?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
+  showNavigation?: boolean;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
@@ -22,11 +23,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onTabPress,
   style,
   contentStyle,
+  showNavigation = false,
 }) => {
   return (
     <View style={[styles.mainLayout, style]}>
       <View style={[styles.content, contentStyle]}>{children}</View>
-      <BottomNavBar currentTab={currentTab} onTabPress={onTabPress} />
+      {showNavigation && (
+        <BottomNavBar currentTab={currentTab} onTabPress={onTabPress} />
+      )}
     </View>
   );
 };

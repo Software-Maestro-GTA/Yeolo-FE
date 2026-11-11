@@ -1,6 +1,6 @@
 /**
  * @file useShareMutations.ts
- * @description Custom TanStack Query hooks for travel course share link features (API-SHARE-1, API-SHARE-2, API-SHARE-3).
+ * @description Course sharing queries, mutations and GA4 outcomes for link creation and acceptance.
  */
 import {
   useMutation,
@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  ApiError,
   createShareLinkApi,
   getShareLinkApi,
   acceptShareLinkApi,
@@ -19,6 +20,7 @@ import {
   logger,
 } from '@yeolo/common';
 import { APP_CONFIG } from '../../constants';
+import { appAnalyticsTracker } from '../../analytics/firebaseTracker';
 
 export interface UseCreateShareLinkMutationOptions {
   options?: UseMutationOptions<ShareLinkCreateResponseData, Error, string>;
@@ -31,10 +33,15 @@ export function useCreateShareLinkMutation({
 
   return useMutation<ShareLinkCreateResponseData, Error, string>({
     mutationFn: async (courseId: string) => {
+      const track = appAnalyticsTracker.captureEventLogger();
+      track('course_share_started');
       try {
         const accessToken = (await AsyncStorage.getItem('accessToken')) || '';
-        return await createShareLinkApi(apiUrl, accessToken, courseId);
+        const link = await createShareLinkApi(apiUrl, accessToken, courseId);
+        track('course_share_link_created');
+        return link;
       } catch (err: unknown) {
+        track('course_share_failed');
         logger.error('Failed to create share link:', err);
         throw err;
       }
@@ -87,10 +94,24 @@ export function useAcceptShareLinkMutation({
 
   return useMutation<ShareLinkAcceptResponseData, Error, string>({
     mutationFn: async (shareToken: string) => {
+      const track = appAnalyticsTracker.captureEventLogger();
+      track('course_invite_accept_started');
       try {
         const accessToken = (await AsyncStorage.getItem('accessToken')) || '';
-        return await acceptShareLinkApi(apiUrl, accessToken, shareToken);
+        const accepted = await acceptShareLinkApi(
+          apiUrl,
+          accessToken,
+          shareToken,
+        );
+        track('course_invite_accept_result', { outcome: 'success' });
+        return accepted;
       } catch (err: unknown) {
+        track('course_invite_accept_result', {
+          outcome:
+            err instanceof ApiError && err.status === 400
+              ? 'already_owned'
+              : 'failed',
+        });
         logger.error('Failed to accept share link:', err);
         throw err;
       }

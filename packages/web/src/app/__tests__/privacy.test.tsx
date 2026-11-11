@@ -46,12 +46,9 @@ describe('PrivacyPolicyPage Component', () => {
   it('displays customer support email in article 6', () => {
     render(<PrivacyPolicyPage />);
     const emailLinks = screen.getAllByRole('link', {
-      name: 'ksk85628781@gmail.com',
+      name: 'yeolotrip@gmail.com',
     });
     expect(emailLinks.length).toBeGreaterThan(0);
-    expect(emailLinks[0]).toHaveAttribute(
-      'href',
-      'mailto:ksk85628781@gmail.com',
-    );
+    expect(emailLinks[0]).toHaveAttribute('href', 'mailto:yeolotrip@gmail.com');
   });
 });

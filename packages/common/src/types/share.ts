@@ -24,6 +24,7 @@ export interface ShareCourseSummary {
   title: string;
   destinationCountry: string;
   destinationCity: string;
+  coverImageUrl: string;
   startDate: string;
   totalDays: number;
 }

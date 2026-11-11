@@ -1,20 +1,20 @@
 /**
  * @file location.test.ts
- * @description Unit tests for fetchCountryAutocomplete (API-LOC-1) and fetchCityAutocomplete (API-LOC-2) in @yeolo/common with country filter and public authentication behavior.
+ * @description Unit tests for fetchCountriesApi (API-LOC-1), fetchCitiesApi (API-LOC-2), and searchLocationsApi (API-LOC-3) in @yeolo/common.
  */
 import {
-  fetchCountryAutocomplete,
-  fetchCityAutocomplete,
+  fetchCountriesApi,
+  fetchCitiesApi,
+  searchLocationsApi,
   setTokenGetter,
 } from '@yeolo/common';
 
 const API_URL = 'https://api.yeolo.com';
 
-describe('Location Autocomplete API Unit Tests (API-LOC-1, API-LOC-2)', () => {
+describe('Location API Unit Tests (API-LOC-1, API-LOC-2, API-LOC-3)', () => {
   let fetchSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    // Set token getter to simulate logged-in user with valid tokens
     setTokenGetter(async () => ({
       accessToken: 'mock-user-access-token',
       refreshToken: 'mock-user-refresh-token',
@@ -27,31 +27,23 @@ describe('Location Autocomplete API Unit Tests (API-LOC-1, API-LOC-2)', () => {
     }
   });
 
-  describe('fetchCountryAutocomplete (API-LOC-1)', () => {
-    it('should call GET /api/locations/countries/autocomplete without Authorization header', async () => {
+  describe('fetchCountriesApi (API-LOC-1)', () => {
+    it('should call GET /api/locations/countries with Bearer token and return countries', async () => {
       fetchSpy = jest
         .spyOn(globalThis, 'fetch')
         .mockImplementation(async (input: any, init: any) => {
           const url = typeof input === 'string' ? input : input.url;
-          const headers =
-            input instanceof Request
-              ? input.headers
-              : new Headers(init?.headers);
 
-          expect(url).toContain('api/locations/countries/autocomplete');
-          expect(url).toContain('keyword=%EB%8C%80%ED%95%9C%EB%AF%BC%EA%B5%AD'); // '대한민국'
-          expect(headers.get('Authorization')).toBeNull();
+          expect(url).toContain('api/locations/countries');
 
           return new Response(
             JSON.stringify({
               status: 200,
-              message: '국가 자동완성 조회 성공',
+              message: '국가 목록 조회 성공',
               data: {
                 countries: [
-                  {
-                    countryId: 'c-1',
-                    countryNameKo: '대한민국',
-                  },
+                  { countryName: '대한민국' },
+                  { countryName: '일본' },
                 ],
               },
             }),
@@ -59,61 +51,63 @@ describe('Location Autocomplete API Unit Tests (API-LOC-1, API-LOC-2)', () => {
           );
         });
 
-      const result = await fetchCountryAutocomplete(API_URL, '대한민국');
+      const result = await fetchCountriesApi(API_URL);
 
       expect(result.status).toBe(200);
-      expect(result.data.countries).toHaveLength(1);
-      expect(result.data.countries[0].countryNameKo).toBe('대한민국');
-    });
-
-    it('should pass limit query parameter when provided', async () => {
-      fetchSpy = jest
-        .spyOn(globalThis, 'fetch')
-        .mockImplementation(async (input: any) => {
-          const url = typeof input === 'string' ? input : input.url;
-          expect(url).toContain('limit=5');
-
-          return new Response(
-            JSON.stringify({
-              status: 200,
-              message: '국가 자동완성 조회 성공',
-              data: { countries: [] },
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        });
-
-      await fetchCountryAutocomplete(API_URL, '한', 5);
+      expect(result.data.countries).toHaveLength(2);
+      expect(result.data.countries[0].countryName).toBe('대한민국');
     });
   });
 
-  describe('fetchCityAutocomplete (API-LOC-2)', () => {
-    it('should call GET /api/locations/cities/autocomplete without country param and without Authorization header', async () => {
+  describe('fetchCitiesApi (API-LOC-2)', () => {
+    it('should call GET /api/locations/cities?countryName=... with Bearer token', async () => {
       fetchSpy = jest
         .spyOn(globalThis, 'fetch')
         .mockImplementation(async (input: any, init: any) => {
           const url = typeof input === 'string' ? input : input.url;
-          const headers =
-            input instanceof Request
-              ? input.headers
-              : new Headers(init?.headers);
 
-          expect(url).toContain('api/locations/cities/autocomplete');
-          expect(url).toContain('keyword=%EB%8F%84%EC%BF%84'); // '도쿄'
-          expect(url).not.toContain('country=');
-          expect(headers.get('Authorization')).toBeNull();
+          expect(url).toContain('api/locations/cities');
+          expect(url).toContain('countryName=%EC%9D%BC%EB%B3%B8');
 
           return new Response(
             JSON.stringify({
               status: 200,
-              message: '도시 자동완성 조회 성공',
+              message: '도시 목록 조회 성공',
               data: {
-                cities: [
+                cities: [{ cityName: '도쿄' }, { cityName: '오사카' }],
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        });
+
+      const result = await fetchCitiesApi(API_URL, '일본');
+
+      expect(result.status).toBe(200);
+      expect(result.data.cities).toHaveLength(2);
+      expect(result.data.cities[0].cityName).toBe('도쿄');
+    });
+  });
+
+  describe('searchLocationsApi (API-LOC-3)', () => {
+    it('should call GET /api/locations/search?keyword=... with Bearer token', async () => {
+      fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(async (input: any, init: any) => {
+          const url = typeof input === 'string' ? input : input.url;
+
+          expect(url).toContain('api/locations/search');
+          expect(url).toContain('keyword=%EB%8F%84%EC%BF%84');
+
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              message: '지역 검색 성공',
+              data: {
+                results: [
                   {
-                    cityId: 'city-1',
-                    cityNameKo: '도쿄',
-                    countryId: 'c-2',
-                    countryNameKo: '일본',
+                    countryName: '일본',
+                    cities: [{ cityName: '도쿄' }],
                   },
                 ],
               },
@@ -122,73 +116,11 @@ describe('Location Autocomplete API Unit Tests (API-LOC-1, API-LOC-2)', () => {
           );
         });
 
-      const result = await fetchCityAutocomplete(API_URL, '도쿄');
+      const result = await searchLocationsApi(API_URL, '도쿄');
 
       expect(result.status).toBe(200);
-      expect(result.data.cities).toHaveLength(1);
-      expect(result.data.cities[0].cityNameKo).toBe('도쿄');
-    });
-
-    it('should include country query parameter when country argument is provided', async () => {
-      fetchSpy = jest
-        .spyOn(globalThis, 'fetch')
-        .mockImplementation(async (input: any, init: any) => {
-          const url = typeof input === 'string' ? input : input.url;
-          const headers =
-            input instanceof Request
-              ? input.headers
-              : new Headers(init?.headers);
-
-          expect(url).toContain('api/locations/cities/autocomplete');
-          expect(url).toContain('keyword=%EB%8F%84'); // '도'
-          expect(url).toContain('country=%EC%9D%BC%EB%B3%B8'); // '일본'
-          expect(headers.get('Authorization')).toBeNull();
-
-          return new Response(
-            JSON.stringify({
-              status: 200,
-              message: '도시 자동완성 조회 성공',
-              data: {
-                cities: [
-                  {
-                    cityId: 'city-1',
-                    cityNameKo: '도쿄',
-                    countryId: 'c-2',
-                    countryNameKo: '일본',
-                  },
-                ],
-              },
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        });
-
-      const result = await fetchCityAutocomplete(API_URL, '도', '일본');
-
-      expect(result.status).toBe(200);
-      expect(result.data.cities[0].countryNameKo).toBe('일본');
-      expect(result.data.cities[0].cityNameKo).toBe('도쿄');
-    });
-
-    it('should include limit query parameter when limit argument is provided', async () => {
-      fetchSpy = jest
-        .spyOn(globalThis, 'fetch')
-        .mockImplementation(async (input: any) => {
-          const url = typeof input === 'string' ? input : input.url;
-          expect(url).toContain('limit=10');
-          expect(url).toContain('country=%EC%9D%BC%EB%B3%B8');
-
-          return new Response(
-            JSON.stringify({
-              status: 200,
-              message: '도시 자동완성 조회 성공',
-              data: { cities: [] },
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        });
-
-      await fetchCityAutocomplete(API_URL, '도', '일본', 10);
+      expect(result.data.results[0].countryName).toBe('일본');
+      expect(result.data.results[0].cities[0].cityName).toBe('도쿄');
     });
   });
 });

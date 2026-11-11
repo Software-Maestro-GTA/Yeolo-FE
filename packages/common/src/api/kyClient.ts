@@ -1,10 +1,10 @@
 /**
  * @file kyClient.ts
- * @description HTTP client instance with automatic 401 error interception and silent token refresh (API-AUTH-3).
+ * @description Shared language/version headers, HTTP 426 update handling, and single-flight authentication refresh.
  */
 import ky, { type KyInstance, type Options } from 'ky';
 import type { RefreshTokenResponse } from '../types/auth';
-import { ApiError } from './errors';
+import { ApiError, AppVersionMismatchError } from './errors';
 import { logger } from '../utils/logger';
 
 export type TokenGetter = () => Promise<{
@@ -20,6 +20,70 @@ export type UnauthorizedHandler = () => void | Promise<void>;
 let globalTokenGetter: TokenGetter | null = null;
 let globalTokenSetter: TokenSetter | null = null;
 let globalUnauthorizedHandler: UnauthorizedHandler | null = null;
+let globalAcceptLanguage = 'ko';
+let globalAppVersion = '';
+let globalVersionMismatchHandler:
+  ((error: AppVersionMismatchError) => void | Promise<void>) | null = null;
+
+/** Sets the running platform's release version before its first API request. */
+export function setAppVersion(version: string): void {
+  globalAppVersion = version.trim();
+}
+
+/** Returns the configured release version for native upload and streaming transports. */
+export function getAppVersion(): string {
+  return globalAppVersion;
+}
+
+/** Registers platform update guidance; null removes the handler on teardown. */
+export function setVersionMismatchHandler(
+  handler: ((error: AppVersionMismatchError) => void | Promise<void>) | null,
+): void {
+  globalVersionMismatchHandler = handler;
+}
+
+function injectAppVersion(request: Request): void {
+  if (globalAppVersion && !request.headers.has('X-App-Version')) {
+    request.headers.set('X-App-Version', globalAppVersion);
+  }
+}
+
+async function checkAppVersion(response: Response): Promise<void> {
+  if (response.status !== 426) return;
+  const result: unknown = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  await assertCompatibleAppVersion(response.status, result);
+}
+
+/**
+ * Applies the same HTTP 426 contract to transports that cannot use ky (native uploads/SSE).
+ * @param status HTTP response status, independent of a JSON envelope's status field.
+ * @param result Parsed error body, or null when the server did not send JSON.
+ * @throws AppVersionMismatchError after notifying the platform update handler on HTTP 426.
+ */
+export async function assertCompatibleAppVersion(
+  status: number,
+  result?: unknown,
+): Promise<void> {
+  if (status !== 426) return;
+  const message =
+    result &&
+    typeof result === 'object' &&
+    'message' in result &&
+    typeof result.message === 'string' &&
+    result.message.trim()
+      ? result.message
+      : undefined;
+  const error = new AppVersionMismatchError(message);
+  try {
+    await globalVersionMismatchHandler?.(error);
+  } catch (handlerError) {
+    logger.error('[HttpClient] Update notice handler failed:', handlerError);
+  }
+  throw error;
+}
 
 let refreshPromise: Promise<{
   accessToken: string;
@@ -51,6 +115,22 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler): void {
 }
 
 /**
+ * Configure default Accept-Language header value for API requests.
+ * @param language BCP 47 language code (defaults to 'ko').
+ */
+export function setAcceptLanguage(language: string): void {
+  globalAcceptLanguage = language || 'ko';
+}
+
+/**
+ * Retrieve current default Accept-Language header value.
+ * @returns Current BCP 47 language code.
+ */
+export function getAcceptLanguage(): string {
+  return globalAcceptLanguage;
+}
+
+/**
  * Execute POST /api/auth/refresh API request to renew access token using refresh token (API-AUTH-3).
  *
  * @param apiUrl Base backend URL
@@ -65,13 +145,16 @@ export async function refreshTokenApi(
   const targetUrl = `${normalizedApiUrl}/api/auth/refresh`;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Authorization: `Bearer ${refreshToken}`,
+    'Content-Type': 'application/json',
+    'Accept-Language': globalAcceptLanguage,
+    ...(globalAppVersion ? { 'X-App-Version': globalAppVersion } : {}),
   };
 
   logger.info(`[AuthAPI] refreshTokenApi -> POST ${targetUrl}`, {
     headers: {
       'Content-Type': 'application/json',
+      'Accept-Language': globalAcceptLanguage,
       Authorization: `Bearer ${refreshToken ? `${refreshToken.slice(0, 15)}...` : 'none'}`,
     },
     body: {
@@ -84,6 +167,8 @@ export async function refreshTokenApi(
     json: { refreshToken },
     throwHttpErrors: false,
   });
+
+  await checkAppVersion(response);
 
   const result = (await response
     .json()
@@ -149,7 +234,7 @@ async function executeTokenRefresh(
 }
 
 /**
- * Creates an HTTP client (ky instance) configured with 401 interceptor and Silent Refresh logic.
+ * Creates an HTTP client (ky instance) configured with Accept-Language header, 401 interceptor, and Silent Refresh logic.
  *
  * @param baseUrl Base API URL
  * @param customOptions Additional ky configuration options
@@ -165,6 +250,10 @@ export function createHttpClient(
     hooks: {
       beforeRequest: [
         async ({ request }) => {
+          injectAppVersion(request);
+          if (!request.headers.has('Accept-Language') && globalAcceptLanguage) {
+            request.headers.set('Accept-Language', globalAcceptLanguage);
+          }
           if (!request.headers.has('Authorization') && globalTokenGetter) {
             try {
               const tokens = await globalTokenGetter();
@@ -179,9 +268,11 @@ export function createHttpClient(
             }
           }
         },
+        ...(customOptions?.hooks?.beforeRequest ?? []),
       ],
       afterResponse: [
-        async ({ request, response }) => {
+        async ({ request, response, options: requestOptions }) => {
+          await checkAppVersion(response);
           if (
             response.status === 401 &&
             !request.url.includes('/api/auth/refresh')
@@ -207,21 +298,41 @@ export function createHttpClient(
                 );
 
                 // Retry original request with new access token
-                const newHeaders = new Headers(request.headers);
-                newHeaders.set(
-                  'Authorization',
-                  `Bearer ${newTokens.accessToken}`,
-                );
-                return ky(request.url, {
+                const newHeaders: Record<string, string> = {};
+                request.headers.forEach((value, key) => {
+                  newHeaders[key.toLowerCase()] = value;
+                });
+                newHeaders.authorization = `Bearer ${newTokens.accessToken}`;
+                if (globalAppVersion && !newHeaders['x-app-version']) {
+                  newHeaders['x-app-version'] = globalAppVersion;
+                }
+                if (!newHeaders['accept-language'] && globalAcceptLanguage) {
+                  newHeaders['accept-language'] = globalAcceptLanguage;
+                }
+                const retriedResponse = await ky(request.url, {
                   method: request.method,
                   headers: newHeaders,
+                  body: requestOptions.body ?? null,
+                  signal: request.signal,
+                  credentials: request.credentials,
+                  timeout: customOptions?.timeout ?? 10000,
+                  retry: 0,
+                  throwHttpErrors: false,
                 });
+                await checkAppVersion(retriedResponse);
+                if (retriedResponse.status !== 401) return retriedResponse;
               } else {
                 logger.warn(
                   '[HttpClient] No Refresh Token available for silent refresh.',
                 );
               }
             } catch (refreshError) {
+              if (
+                refreshError instanceof AppVersionMismatchError ||
+                request.signal.aborted
+              ) {
+                throw refreshError;
+              }
               logger.error('[HttpClient] Silent Refresh failed:', refreshError);
             }
 
@@ -240,6 +351,7 @@ export function createHttpClient(
 
           return response;
         },
+        ...(customOptions?.hooks?.afterResponse ?? []),
       ],
     },
   };
@@ -255,16 +367,39 @@ export function createHttpClient(
  * Creates an HTTP client (ky instance) for public endpoints that do not require Authorization header.
  *
  * @param baseUrl Base API URL
- * @param customOptions Additional ky configuration options
+ * @param options Additional ky configuration. skipAppVersionCheck omits the version header and update handling.
  * @returns KyInstance
  */
 export function createPublicHttpClient(
   baseUrl?: string,
-  customOptions?: Options,
+  {
+    skipAppVersionCheck = false,
+    ...customOptions
+  }: Options & {
+    skipAppVersionCheck?: boolean;
+  } = {},
 ): KyInstance {
   const options: Options = {
     throwHttpErrors: false,
     ...customOptions,
+    hooks: {
+      ...customOptions.hooks,
+      beforeRequest: [
+        ({ request }) => {
+          if (!skipAppVersionCheck) injectAppVersion(request);
+          if (!request.headers.has('Accept-Language') && globalAcceptLanguage) {
+            request.headers.set('Accept-Language', globalAcceptLanguage);
+          }
+        },
+        ...(customOptions.hooks?.beforeRequest ?? []),
+      ],
+      afterResponse: [
+        async ({ response }) => {
+          if (!skipAppVersionCheck) await checkAppVersion(response);
+        },
+        ...(customOptions.hooks?.afterResponse ?? []),
+      ],
+    },
   };
 
   if (baseUrl) {

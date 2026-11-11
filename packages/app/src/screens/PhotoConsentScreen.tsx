@@ -1,243 +1,248 @@
 /**
  * @file PhotoConsentScreen.tsx
- * @description Photo consent screen with privacy safeguards and start analysis action.
+ * @description Photo consent and native permission request with the current UI v3 assurance list and blue action (1196:175).
  */
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import BackSvg from '../../assets/ui-v3-onboarding/back.svg';
+import { LoopingVideo } from '../components/common/LoopingVideo';
+import { Text } from '../components/common/Typography';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from 'react-native';
+import {
+  requestPhotoAccess,
+  type PhotoAccess,
+} from '../services/photoPermissionService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { OnboardingSvg } from '../components/taste/OnboardingIllustrations';
+import { ONBOARDING_UI_STRINGS } from '../constants/onboardingUiStrings';
 import { palette } from '../theme/colors';
 import { UI_STRINGS } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
 import { useSavePhotoConsentMutation } from '../hooks/queries/useAuthMutations';
+import { appAnalyticsTracker } from '../analytics/firebaseTracker';
 
 interface PhotoConsentScreenProps {
-  onNext: () => void; // "동의하고 시작하기" 클릭 시 취향 분석 중 화면(TasteAnalysisScreen)으로 이동
+  onNext: (access: PhotoAccess) => void;
+  onBack?: () => void;
 }
 
+/** Requests consent and access; returning users may leave through their supplied entry route. */
 export const PhotoConsentScreen: React.FC<PhotoConsentScreenProps> = ({
   onNext,
+  onBack,
 }) => {
   useGA4ScreenTracking('PhotoConsentScreen');
+  const insets = useSafeAreaInsets();
+  const insetStyles = StyleSheet.create({
+    content: { paddingBottom: insets.bottom + 43 },
+  });
   const { trackButtonClick } = useGA4ButtonClick();
   const saveConsentMutation = useSavePhotoConsentMutation();
 
-  const handlePressConsent = () => {
+  const [isRequesting, setIsRequesting] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const handlePressConsent = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setIsRequesting(true);
     trackButtonClick(
       'btn_photo_consent_start',
       'Photo Analysis Consent & Start',
     );
-    saveConsentMutation.mutate(
-      {
+    try {
+      await saveConsentMutation.mutateAsync({
         agreed: true,
         consentVersion: 'v1.0',
-      },
-      {
-        onSuccess: () => {
-          onNext();
-        },
-        onError: () => {
-          Alert.alert(
-            '오류',
-            '사진 데이터 분석 동의 저장 중 오류가 발생했습니다.',
-          );
-        },
-      },
-    );
+      });
+    } catch {
+      if (!mounted.current) return;
+      void appAnalyticsTracker.logEvent('photo_consent_result', {
+        result: 'failed',
+      });
+      Alert.alert(
+        UI_STRINGS.ONBOARDING.ERROR_TITLE,
+        UI_STRINGS.PHOTO_CONSENT.SAVE_ERROR,
+      );
+      pending.current = false;
+      setIsRequesting(false);
+      return;
+    }
+    if (!mounted.current) return;
+    void appAnalyticsTracker.logEvent('photo_consent_result', {
+      result: 'saved',
+    });
+    try {
+      const access = await requestPhotoAccess();
+      if (mounted.current) {
+        void appAnalyticsTracker.logEvent('photo_permission_result', {
+          result: access,
+        });
+        onNext(access);
+      }
+    } catch {
+      if (mounted.current) {
+        void appAnalyticsTracker.logEvent('photo_permission_result', {
+          result: 'failed',
+        });
+        Alert.alert(
+          UI_STRINGS.ONBOARDING.ERROR_TITLE,
+          UI_STRINGS.PHOTO_AUTH.PERMISSION_CHECK_ERROR,
+        );
+      }
+    } finally {
+      pending.current = false;
+      if (mounted.current) setIsRequesting(false);
+    }
   };
 
   return (
     <View style={styles.screenContainer}>
-      <View style={styles.contentContainer}>
-        {/* Header Title Section */}
-        <View style={styles.headerSection} testID='top-content'>
-          <Text style={styles.mainTitle}>
-            {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
-          </Text>
-          <Text style={styles.subTitle}>
-            {UI_STRINGS.PHOTO_CONSENT.SUB_TITLE}
-          </Text>
+      {onBack && (
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.backButton}
+          accessibilityRole='button'
+          accessibilityLabel={UI_STRINGS.ONBOARDING.BACK}>
+          <OnboardingSvg source={BackSvg} />
+        </TouchableOpacity>
+      )}
+      <ScrollView
+        contentContainerStyle={[
+          styles.contentContainer,
+          insetStyles.content,
+          onBack && styles.contentWithBack,
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <Text style={styles.mainTitle}>
+          {UI_STRINGS.PHOTO_CONSENT.MAIN_TITLE}
+        </Text>
+        <View style={styles.heroContainer}>
+          <LoopingVideo
+            source={require('../../assets/figma-v3/screen-media/onboarding.mp4')}
+            poster={require('../../assets/figma-v3/screen-media/onboarding-poster.png')}
+            style={styles.heroVideo}
+            testID='onboarding-video'
+          />
         </View>
-
-        {/* Main Body Section */}
-        <View style={styles.mainBodyContainer} testID='main-content'>
-          {/* Hero Lock Illustration Graphic */}
-          <View style={styles.heroIllustration} testID='hero-illustration'>
-            <View style={styles.iconCircleBg}>
-              <Feather name='lock' size={44} color={palette.accent} />
-            </View>
-          </View>
-
-          {/* Security & Data Privacy Assurance Cards */}
-          <View style={styles.assuranceCardsContainer}>
-            {/* Card 1: 메타데이터만 안전하게 가공 */}
-            <View style={styles.infoCard} testID='info-card-1'>
-              <View style={styles.cardIconWrapper}>
-                <Ionicons
-                  name='shield-checkmark-outline'
-                  size={22}
-                  color={palette.accent}
-                />
-              </View>
-              <View style={styles.cardTextGroup}>
-                <Text style={styles.cardTitle}>
-                  {UI_STRINGS.PHOTO_CONSENT.CARD_1_TITLE}
+        <View style={styles.assuranceCard} testID='assurance-card'>
+          <Text style={styles.assuranceTitle}>
+            {UI_STRINGS.PHOTO_CONSENT.ASSURANCE_TITLE}
+          </Text>
+          <View style={styles.bulletList}>
+            {UI_STRINGS.PHOTO_CONSENT.ASSURANCE_BULLETS.map((bullet, idx) => (
+              <View
+                key={bullet}
+                style={styles.bulletRow}
+                testID={`info-card-${idx + 1}`}>
+                <Text style={styles.bulletMark}>
+                  {ONBOARDING_UI_STRINGS.PRIVACY_BULLET}
                 </Text>
-                <Text style={styles.cardDescription}>
-                  {UI_STRINGS.PHOTO_CONSENT.CARD_1_DESC}
-                </Text>
+                <Text style={styles.bulletText}>{bullet}</Text>
               </View>
-            </View>
-
-            {/* Card 2: 분석 즉시 데이터 파기 */}
-            <View style={styles.infoCard} testID='info-card-2'>
-              <View style={styles.cardIconWrapper}>
-                <Feather name='trash-2' size={22} color={palette.accent} />
-              </View>
-              <View style={styles.cardTextGroup}>
-                <Text style={styles.cardTitle}>
-                  {UI_STRINGS.PHOTO_CONSENT.CARD_2_TITLE}
-                </Text>
-                <Text style={styles.cardDescription}>
-                  {UI_STRINGS.PHOTO_CONSENT.CARD_2_DESC}
-                </Text>
-              </View>
-            </View>
+            ))}
           </View>
         </View>
-
-        {/* Bottom Container Action Button */}
-        <View style={styles.bottomContainer} testID='bottom-container'>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.8}
-            disabled={saveConsentMutation.isPending}
-            onPress={handlePressConsent}
-            testID='consent-start-button'>
-            <Text style={styles.primaryButtonText}>
-              {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
-            </Text>
-            <Ionicons
-              name='shield-checkmark'
-              size={18}
-              color={palette.white}
-              style={styles.buttonIcon}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+        <TouchableOpacity
+          accessibilityRole='button'
+          accessibilityState={{ disabled: isRequesting, busy: isRequesting }}
+          style={[styles.primaryButton, isRequesting && styles.disabledButton]}
+          activeOpacity={0.8}
+          disabled={isRequesting}
+          onPress={() => {
+            void handlePressConsent();
+          }}
+          testID='consent-start-button'>
+          <Text style={styles.primaryButtonText}>
+            {UI_STRINGS.PHOTO_CONSENT.START_BUTTON}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: palette.softMint,
-  },
-  safeArea: {
-    flex: 1,
+  screenContainer: { flex: 1, backgroundColor: palette.white },
+  backButton: {
+    width: 44,
+    height: 44,
+    marginLeft: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contentContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
+    flexGrow: 1,
+    paddingTop: 46,
+    paddingHorizontal: 20,
   },
-  headerSection: {
-    gap: 12,
-    width: '100%',
-  },
+  contentWithBack: { paddingTop: 2 },
   mainTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '600',
     color: palette.deepNavy,
-    lineHeight: 34,
-    letterSpacing: -0.6,
+    lineHeight: 37,
+    letterSpacing: -1,
+    textAlign: 'center',
   },
-  subTitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: palette.subText,
-    lineHeight: 21,
-  },
-  mainBodyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 24,
-    marginVertical: 16,
-  },
-  heroIllustration: {
+  heroContainer: {
+    flexGrow: 1,
+    minHeight: 347,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
+    paddingTop: 32,
   },
-  iconCircleBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: palette.lightTeal,
-    borderWidth: 1.5,
-    borderColor: palette.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  assuranceCardsContainer: {
-    gap: 12,
-    width: '100%',
-  },
-  infoCard: {
-    backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  cardIconWrapper: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  cardTextGroup: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+  heroVideo: { width: 278, maxWidth: '100%', aspectRatio: 1 },
+  assuranceCard: { gap: 12, marginBottom: 32 },
+  assuranceTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: palette.deepNavy,
+    letterSpacing: -1,
   },
-  cardDescription: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: palette.subText,
-    lineHeight: 17,
+  bulletList: { gap: 0 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  bulletMark: {
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.privacyRed,
+    lineHeight: 37,
   },
-  bottomContainer: {
-    width: '100%',
+  bulletText: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '500',
+    color: palette.deepNavy,
+    lineHeight: 37,
+    letterSpacing: -1,
   },
   primaryButton: {
+    width: '100%',
     backgroundColor: palette.primary,
-    height: 56,
+    minHeight: 62,
     borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: 12,
     justifyContent: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    alignItems: 'center',
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    lineHeight: 37,
+    fontWeight: '500',
+    letterSpacing: -0.6,
     color: palette.white,
+    textAlign: 'center',
   },
-  buttonIcon: {
-    marginLeft: 8,
-  },
+  disabledButton: { opacity: 0.6 },
 });

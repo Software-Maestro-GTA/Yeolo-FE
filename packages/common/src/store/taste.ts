@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import type { AnalyzeTastePayload, TasteAnalysisState } from '../types/taste';
 import { analyzeTastePreferenceStream } from '../api/taste';
 import { logger } from '../utils/logger';
+import { ApiError } from '../api/errors';
 
 export interface TasteStoreState extends TasteAnalysisState {
   setProgress: (step: string, message: string) => void;
@@ -123,7 +124,7 @@ export const useTasteStore = create<TasteStoreState>((set) => ({
       set({
         isAnalyzing: false,
         error: message,
-        errorCode: 400,
+        errorCode: err instanceof ApiError ? err.status : 500,
       });
       return null;
     }

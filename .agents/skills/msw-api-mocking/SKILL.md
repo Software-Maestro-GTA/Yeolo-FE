@@ -9,7 +9,7 @@ description: Guideline for writing MSW mocks and RTL tests inside Yeolo-FE.
 
 ## 1. MSW (Mock Service Worker) 핸들러 작성 규격
 
-- 모든 Mocking API 핸들러는 `Yeolo-SPEC/api-specs/API-*.md`에 정의된 규격을 엄격히 준수해야 합니다.
+- 모든 Mocking API 핸들러는 `.agents/Yeolo-SPEC/api-specs/API-*.md`에 정의된 규격을 엄격히 준수해야 합니다.
 - **REST API 모킹 예제**:
 
   ```typescript
@@ -17,7 +17,7 @@ description: Guideline for writing MSW mocks and RTL tests inside Yeolo-FE.
 
   export const handlers = [
     http.get("*/api/travel/history", ({ request }) => {
-      // API-FB-3 규격에 맞는 Mock 데이터 반환
+      // 설명용 예시이며 실제 작업에서는 해당 API 명세의 경로와 응답을 사용
       return HttpResponse.json(
         {
           success: true,
@@ -46,7 +46,7 @@ description: Guideline for writing MSW mocks and RTL tests inside Yeolo-FE.
 ## 2. Jest & React Testing Library (RTL) 통합 규칙
 
 1.  **서버 라이프사이클 관리**:
-    - 테스트 스위트 시작 시 `server.listen()`, 종료 시 `server.close()`, 각 테스트 종료 후 `server.resetHandlers()`를 호출하여 테스트 간 데이터 오염을 방지합니다.
+    - 테스트 스위트 시작 시 `server.listen({ onUnhandledRequest: "error" })`, 종료 시 `server.close()`, 각 테스트 종료 후 `server.resetHandlers()`를 호출하여 테스트 간 데이터 오염을 방지합니다.
 2.  **비동기 렌더링 대기**:
     - MSW를 통해 모킹된 API 결과가 화면에 반영될 때까지 `screen.getByText` 대신 `await screen.findByText`를 사용합니다.
 3.  **에러 핸들러 동적 오버라이드**:
@@ -63,4 +63,4 @@ description: Guideline for writing MSW mocks and RTL tests inside Yeolo-FE.
 ## 3. 모노레포 공통 스토어(@yeolo/common) 테스트 및 의존성 주입
 
 - 모노레포 빌드 산출물(`dist/index.js`) 내 내부 함수는 Jest의 `jest.spyOn`으로 가로채기 어려울 수 있습니다.
-- 공통 Zustand 스토어 및 화면 컴포넌트 구현 시 `fetcher` 등의 비동기 API 호출 함수를 옵셔널 프롭/인자로 전달받을 수 있도록 의존성 주입(Dependency Injection) 구조를 열어두거나, MSW 네트워크 인터셉터를 통해 테스트 코드를 안정적으로 구성합니다.
+- API 동작은 MSW 네트워크 인터셉터로 검증하는 것을 기본으로 합니다. 테스트 편의를 위해 화면에 `fetcher` Prop을 추가하지 않습니다. 기존 서비스 경계에 의존성 주입이 설계되어 있다면 그 경계를 사용합니다.

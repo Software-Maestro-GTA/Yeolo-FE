@@ -3,7 +3,10 @@
  * @description Unit tests for AuthContext state management and auto-login restore.
  */
 import React from 'react';
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { logEvent, setUserId } from '@react-native-firebase/analytics';
+import { analyticsService } from '@yeolo/common';
+import { appAnalyticsTracker } from '../src/analytics/firebaseTracker';
 
 import { AuthProvider, AuthContext } from '../src/context/AuthContext';
 import { server } from './mocks/server';
@@ -130,14 +133,16 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   shouldFail = false;
   jest.clearAllMocks();
+  analyticsService.registerTracker(appAnalyticsTracker);
 });
 
 afterEach(() => {
   shouldFail = false;
+  analyticsService.unregisterTracker(appAnalyticsTracker);
   jest.clearAllMocks();
 });
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from './test-utils';
 
 afterAll(() => {
@@ -145,8 +150,7 @@ afterAll(() => {
 });
 
 describe('AuthContext', () => {
-  const createWrapper = () => {
-    const queryClient = createTestQueryClient();
+  const createWrapper = (queryClient = createTestQueryClient()) => {
     return ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>{children}</AuthProvider>
@@ -162,6 +166,18 @@ describe('AuthContext', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('keeps the context value stable when a parent renders with the same session', async () => {
+    const { result, rerender } = await renderHook(
+      () => React.useContext(AuthContext)!,
+      {
+        wrapper: createWrapper(),
+      },
+    );
+    const session = result.current;
+    await rerender({});
+    expect(result.current).toBe(session);
   });
 
   it('loginWithGoogle 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰을 저장해야 한다', async () => {
@@ -190,6 +206,44 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'login', {
+      method: 'google',
+    });
+    const identityCall = jest
+      .mocked(setUserId)
+      .mock.calls.findIndex(([, id]) => id === result.current.user?.userId);
+    const loginCall = jest
+      .mocked(logEvent)
+      .mock.calls.findIndex(([, name]) => name === 'login');
+    expect(identityCall).toBeGreaterThanOrEqual(0);
+    expect(
+      jest.mocked(setUserId).mock.invocationCallOrder[identityCall],
+    ).toBeLessThan(jest.mocked(logEvent).mock.invocationCallOrder[loginCall]);
+
+    jest
+      .mocked(AsyncStorage.setItem)
+      .mockRejectedValueOnce(new Error('disk unavailable'));
+    await act(async () => {
+      await expect(
+        result.current.setHasCompletedOnboarding?.(true, 'photo'),
+      ).rejects.toThrow('disk unavailable');
+    });
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('false');
+    expect(logEvent).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'tutorial_complete',
+      expect.anything(),
+    );
+    await act(async () => {
+      const complete = result.current.setHasCompletedOnboarding!;
+      await Promise.all([complete(true), complete(true)]);
+    });
+    expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+    expect(
+      jest
+        .mocked(logEvent)
+        .mock.calls.filter(([, name]) => name === 'tutorial_complete'),
+    ).toEqual([[expect.anything(), 'tutorial_complete', { method: 'photo' }]]);
   });
 
   it('loginWithApple 호출 시 인가 코드를 서버에 전송하고 성공하면 사용자 정보와 토큰, recentCourseId를 저장해야 한다', async () => {
@@ -221,9 +275,24 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(await AsyncStorage.getItem('hasCompletedOnboarding')).toBe('true');
+    expect(logEvent).toHaveBeenCalledWith(expect.anything(), 'login', {
+      method: 'apple',
+    });
+    await act(async () => {
+      await result.current.setHasCompletedOnboarding?.(true, 'photo');
+    });
+    expect(logEvent).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'tutorial_complete',
+      expect.anything(),
+    );
   });
 
-  it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 에러를 발생시켜야 한다', async () => {
+  it('loginWithGoogle 호출 시 서버가 에러를 반환하면 로그인이 실패하고 세션 정리(signOut)가 수행되어야 한다', async () => {
+    const {
+      GoogleSignin,
+    } = require('@react-native-google-signin/google-signin');
+    const signOutSpy = jest.spyOn(GoogleSignin, 'signOut');
     shouldFail = true;
 
     const { result } = await renderHook(() => React.useContext(AuthContext)!, {
@@ -242,6 +311,7 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
+    expect(signOutSpy).toHaveBeenCalled();
   });
 
   it('기존에 저장된 세션 복원 시 AsyncStorage의 recentCourseId 및 hasCompletedOnboarding을 복원해야 한다', async () => {
@@ -270,6 +340,7 @@ describe('AuthContext', () => {
       '550e8400-e29b-41d4-a716-446655440030',
     );
     expect(result.current.hasCompletedOnboarding).toBe(false);
+    expect(logEvent).not.toHaveBeenCalled();
   });
 
   it('setHasCompletedOnboarding 호출 시 상태와 AsyncStorage가 업데이트되어야 한다', async () => {
@@ -350,4 +421,86 @@ describe('AuthContext', () => {
     expect(result.current.user).toBeNull();
     expect(await AsyncStorage.getItem('accessToken')).toBeNull();
   });
+
+  it.each(['logout', 'reset', 'unauthorized'] as const)(
+    '%s clears private queries and discards late results while preserving public destinations',
+    async (action) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+      });
+      const { result, unmount } = await renderHook(
+        () => React.useContext(AuthContext)!,
+        { wrapper: createWrapper(client) },
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await act(async () => {
+        await result.current.loginWithGoogle('mock-code');
+      });
+      client.setQueryData(['tasteProfile', 'me'], { intro: 'Previous user' });
+      client.setQueryData(['destination-countries', 'api'], ['Korea']);
+      client.setQueryData(['shareLinkDetail', 'public-link'], { id: 'shared' });
+      let completePreviousRequest!: (value: string[]) => void;
+      const pending = client
+        .fetchQuery({
+          queryKey: ['courses'],
+          queryFn: () =>
+            new Promise<string[]>((resolve) => {
+              completePreviousRequest = resolve;
+            }),
+        })
+        .catch(() => undefined);
+
+      await act(async () => {
+        if (action === 'logout') await result.current.logout();
+        else if (action === 'reset') await result.current.resetAuthState?.();
+        else {
+          const { notifyUnauthorized } = require('../src/services/authService');
+          await notifyUnauthorized();
+        }
+      });
+
+      expect(client.getQueryData(['tasteProfile', 'me'])).toBeUndefined();
+      expect(client.getQueryData(['courses'])).toBeUndefined();
+      expect(client.getQueryData(['destination-countries', 'api'])).toEqual([
+        'Korea',
+      ]);
+      expect(client.getQueryData(['shareLinkDetail', 'public-link'])).toEqual({
+        id: 'shared',
+      });
+      client.setQueryData(['courses'], ['Next user course']);
+      completePreviousRequest(['Previous user course']);
+      await pending;
+      expect(client.getQueryData(['courses'])).toEqual(['Next user course']);
+      await unmount();
+      client.clear();
+    },
+  );
+
+  it.each(['google', 'apple'] as const)(
+    '%s login clears previous private caches before the new account is used',
+    async (provider) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { gcTime: Infinity } },
+      });
+      const { result, unmount } = await renderHook(
+        () => React.useContext(AuthContext)!,
+        { wrapper: createWrapper(client) },
+      );
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      client.setQueryData(['tasteProfile', 'me'], { intro: 'Previous user' });
+      client.setQueryData(['courseDetail', 'old-course'], { id: 'old-course' });
+      await act(async () => {
+        if (provider === 'google')
+          await result.current.loginWithGoogle('mock-code');
+        else await result.current.loginWithApple({ code: 'mock-code' });
+      });
+      expect(result.current.isAuthenticated).toBe(true);
+      expect(client.getQueryData(['tasteProfile', 'me'])).toBeUndefined();
+      expect(
+        client.getQueryData(['courseDetail', 'old-course']),
+      ).toBeUndefined();
+      await unmount();
+      client.clear();
+    },
+  );
 });

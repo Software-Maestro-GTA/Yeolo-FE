@@ -1,3 +1,7 @@
+/**
+ * @file metro.config.js
+ * @description Expo monorepo resolution and build-time SVG component transformation.
+ */
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
@@ -19,5 +23,13 @@ config.resolver.nodeModulesPaths = [
 
 // 3. Disable hierarchical lookup to ensure symlinked monorepo packages resolve correctly
 config.resolver.disableHierarchicalLookup = true;
+
+// Compile vectors into native components instead of Android resource URLs.
+config.transformer.babelTransformerPath =
+  require.resolve('react-native-svg-transformer/expo');
+config.resolver.assetExts = config.resolver.assetExts.filter(
+  (extension) => extension !== 'svg',
+);
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'svg'];
 
 module.exports = config;

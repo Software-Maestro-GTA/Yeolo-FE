@@ -3,11 +3,12 @@
     "name": "여로",
     "slug": "yeolo",
     "scheme": "yeolo",
-    "version": "1.1.0",
+    "version": "1.2.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/branding/ios-blue-wordmark.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "icon": "./assets/branding/ios-blue-wordmark.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.yeolo-travel.app",
       "usesAppleSignIn": true,
@@ -23,16 +24,16 @@
     },
     "android": {
       "package": "com.yeolo.app",
+      "icon": "./assets/branding/android-blue-wordmark.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/branding/android-adaptive-foreground.png",
+        "backgroundImage": "./assets/branding/android-adaptive-background.png",
+        "backgroundColor": "#54A9F5"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/branding/android-blue-wordmark.png"
     },
     "plugins": [
       "@react-native-firebase/app",
@@ -48,7 +49,7 @@
         "expo-media-library",
         {
           "photosPermission": "프로필 사진 등록 및 AI 여행 성향 분석을 위해 사진 보관함에 접근합니다.",
-          "savePhotosPermission": "분석된 일정을 내 기기에 저장합니다.",
+          "savePhotosPermission": "생성한 여행 릴스 영상을 사진 보관함에 저장합니다.",
           "isAccessMediaLocationEnabled": true,
           "granularPermissions": ["photo"]
         }
@@ -57,11 +58,18 @@
         "expo-build-properties",
         {
           "ios": {
+            "enableSceneSupport": true,
+            "forceStaticLinking": ["RNFBApp", "RNFBAnalytics"],
+            "usePrecompiledModules": false,
             "useFrameworks": "static"
           },
           "android": {
+            "extraMavenRepos": [
+              "https://sdk-download.airbridge.io/maven"
+            ],
             "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn com.google.firebase.messaging.**"
           }
         }
       ]

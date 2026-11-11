@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["YeoloCourseBackgroundModule"] },
+  "android": { "modules": ["expo.modules.yeolocoursebackground.YeoloCourseBackgroundModule"] }
+}

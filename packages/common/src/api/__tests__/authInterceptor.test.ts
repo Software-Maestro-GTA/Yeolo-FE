@@ -1,6 +1,6 @@
 /**
  * @file authInterceptor.test.ts
- * @description Unit tests for refreshTokenApi and 401 HTTP interceptor (API-AUTH-3).
+ * @description Unit tests for Auth APIs (API-AUTH-1~4) and 401 HTTP interceptor.
  */
 import ky from 'ky';
 import {
@@ -10,12 +10,13 @@ import {
   setTokenSetter,
   setUnauthorizedHandler,
 } from '../kyClient';
+import { loginWithGoogleApi, loginWithAppleApi, logoutApi } from '../auth';
 import { ApiError } from '../errors';
 
 // Mock server URL
 const API_URL = 'https://api.yeolo.com';
 
-describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
+describe('Auth API & 401 Interceptor Unit Tests (API-AUTH-1~4)', () => {
   let mockAccessToken = 'expired-access-token';
   let mockRefreshToken = 'valid-refresh-token';
   let isUnauthorizedCalled = false;
@@ -44,7 +45,7 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
   });
 
   describe('1. refreshTokenApi (API-AUTH-3)', () => {
-    it('should call POST /api/auth/refresh and return new tokens on 200 OK', async () => {
+    it('should call POST /api/auth/refresh with Accept-Language and return new tokens on 200 OK', async () => {
       const mockResponseData = {
         status: 200,
         message: '토큰 재발급 성공',
@@ -54,18 +55,22 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
         },
       };
 
-      jest.spyOn(ky, 'post').mockImplementationOnce(() => {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockResponseData),
-        } as any);
-      });
+      const postSpy = jest
+        .spyOn(ky, 'post')
+        .mockImplementationOnce((_url, options: any) => {
+          expect(options?.headers?.['Accept-Language']).toBe('ko');
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(mockResponseData),
+          } as any);
+        });
 
       const result = await refreshTokenApi(API_URL, 'valid-refresh-token');
 
       expect(result.data.accessToken).toBe('new-access-token-123');
       expect(result.data.refreshToken).toBe('new-refresh-token-456');
+      postSpy.mockRestore();
     });
 
     it('should throw ApiError(401) when refresh token is expired or invalid', async () => {
@@ -75,7 +80,7 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
         data: null,
       };
 
-      jest.spyOn(ky, 'post').mockImplementationOnce(() => {
+      const postSpy = jest.spyOn(ky, 'post').mockImplementationOnce(() => {
         return Promise.resolve({
           ok: false,
           status: 401,
@@ -86,15 +91,134 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
       await expect(
         refreshTokenApi(API_URL, 'mock-expired-refresh-token'),
       ).rejects.toThrow(ApiError);
+      postSpy.mockRestore();
     });
   });
 
-  describe('2. 401 Interceptor and Silent Refresh', () => {
+  describe('2. loginWithGoogleApi, loginWithAppleApi, logoutApi (API-AUTH-1, 2, 4)', () => {
+    it('loginWithGoogleApi should call POST /api/auth/google without Authorization and with Accept-Language: ko', async () => {
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockImplementationOnce(async (input: any, init: any) => {
+          const headers =
+            input instanceof Request
+              ? input.headers
+              : new Headers(init?.headers);
+          expect(headers.get('Authorization')).toBeNull();
+          expect(headers.get('Accept-Language')).toBe('ko');
+
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              message: '로그인 성공',
+              data: {
+                user: {
+                  userId: 'u-1',
+                  provider: 'google',
+                  email: 'user@gmail.com',
+                  displayName: '여로',
+                  profileImageUrl: null,
+                  status: 'active',
+                  lastLoginAt: '2026-10-14T00:00:00Z',
+                },
+                doOnboarding: true,
+                recentCourseId: null,
+                accessToken: 'acc-1',
+                refreshToken: 'ref-1',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        });
+
+      const res = await loginWithGoogleApi(API_URL, {
+        code: 'google-code',
+        redirectUri: 'yeolo://oauth',
+      });
+      expect(res.data.user.provider).toBe('google');
+      expect(res.data.doOnboarding).toBe(true);
+      fetchSpy.mockRestore();
+    });
+
+    it('loginWithAppleApi should call POST /api/auth/apple without Authorization and with Accept-Language: ko', async () => {
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockImplementationOnce(async (input: any, init: any) => {
+          const headers =
+            input instanceof Request
+              ? input.headers
+              : new Headers(init?.headers);
+          expect(headers.get('Authorization')).toBeNull();
+          expect(headers.get('Accept-Language')).toBe('ko');
+
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              message: '로그인 성공',
+              data: {
+                user: {
+                  userId: 'u-2',
+                  provider: 'apple',
+                  email: null,
+                  displayName: null,
+                  profileImageUrl: null,
+                  status: 'active',
+                  lastLoginAt: '2026-10-14T00:00:00Z',
+                },
+                doOnboarding: false,
+                recentCourseId: 'course-1',
+                accessToken: 'acc-2',
+                refreshToken: 'ref-2',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        });
+
+      const res = await loginWithAppleApi(API_URL, {
+        code: 'apple-code',
+        redirectUri: 'yeolo://oauth',
+        idToken: null,
+      });
+      expect(res.data.user.provider).toBe('apple');
+      expect(res.data.recentCourseId).toBe('course-1');
+      fetchSpy.mockRestore();
+    });
+
+    it('logoutApi should call POST /api/auth/logout with Authorization and Accept-Language: ko', async () => {
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockImplementationOnce(async (input: any, init: any) => {
+          const headers =
+            input instanceof Request
+              ? input.headers
+              : new Headers(init?.headers);
+          expect(headers.get('Authorization')).toBe('Bearer valid-token');
+          expect(headers.get('Accept-Language')).toBe('ko');
+
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              message: '로그아웃 성공',
+              data: null,
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        });
+
+      const res = await logoutApi(API_URL, 'valid-token', {
+        refreshToken: 'ref-1',
+      });
+      expect(res.status).toBe(200);
+      fetchSpy.mockRestore();
+    });
+  });
+
+  describe('3. 401 Interceptor and Silent Refresh', () => {
     it('should automatically refresh token and retry failed request on 401 Unauthorized', async () => {
       const client = createHttpClient(API_URL);
 
       let callCount = 0;
-      // First call returns 401, second call after refresh returns 200
       const fetchSpy = jest
         .spyOn(global, 'fetch')
         .mockImplementation(async (input: any) => {
@@ -168,8 +292,9 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
           );
         });
 
-      await expect(client.get('api/courses').json()).rejects.toThrow();
+      const res = await client.get('api/courses').json<{ status: number }>();
 
+      expect(res.status).toBe(401);
       expect(isUnauthorizedCalled).toBe(true);
 
       fetchSpy.mockRestore();
@@ -186,7 +311,6 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
 
           if (url.includes('/api/auth/refresh')) {
             refreshCallCount++;
-            // Small delay to simulate network latency
             await new Promise((r) => setTimeout(r, 50));
             return new Response(
               JSON.stringify({
@@ -219,11 +343,10 @@ describe('refreshTokenApi & 401 Interceptor Unit Tests', () => {
           });
         });
 
-      // Fire 3 requests concurrently
       const results = await Promise.all([
         client.get('api/courses').json<{ status: number }>(),
-        client.get('api/users/me').json<{ status: number }>(),
-        client.get('api/taste-profile').json<{ status: number }>(),
+        client.get('api/users/me/language').json<{ status: number }>(),
+        client.get('api/users/me/taste-profile').json<{ status: number }>(),
       ]);
 
       expect(results.length).toBe(3);

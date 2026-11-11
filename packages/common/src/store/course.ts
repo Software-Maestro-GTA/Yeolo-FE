@@ -1,13 +1,18 @@
 /**
  * @file course.ts
- * @description Zustand store for managing course creation and SSE streaming progress states.
+ * @description Screen-independent course creation state with duplicate submission protection, terminal completion and local interruption reasons.
  */
 import { create } from 'zustand';
 import type { CourseCreateRequest, CourseState } from '../types/course';
-import { createCourseStreamApi } from '../api/course';
+import {
+  createCourseStreamApi,
+  CourseStreamError,
+  type CourseStreamErrorReason,
+} from '../api/course';
 import { ApiError } from '../api/errors';
 
 export interface CourseStoreState extends CourseState {
+  errorReason: CourseStreamErrorReason | null;
   setProgress: (step: string, message: string) => void;
   setComplete: (courseId: string) => void;
   setError: (error: string, errorCode?: number) => void;
@@ -20,13 +25,14 @@ export interface CourseStoreState extends CourseState {
   ) => Promise<string | null>;
 }
 
-export const useCourseStore = create<CourseStoreState>((set) => ({
+export const useCourseStore = create<CourseStoreState>((set, get) => ({
   createdCourseId: null,
   isGenerating: false,
   progressStep: null,
   progressMessage: null,
   error: null,
   errorCode: null,
+  errorReason: null,
 
   setProgress: (step: string, message: string) => {
     set({
@@ -35,6 +41,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
       progressMessage: message,
       error: null,
       errorCode: null,
+      errorReason: null,
     });
   },
 
@@ -44,6 +51,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
       isGenerating: false,
       error: null,
       errorCode: 200,
+      errorReason: null,
     });
   },
 
@@ -52,6 +60,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
       isGenerating: false,
       error,
       errorCode,
+      errorReason: null,
     });
   },
 
@@ -63,6 +72,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
       progressMessage: null,
       error: null,
       errorCode: null,
+      errorReason: null,
     });
   },
 
@@ -72,10 +82,12 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
     accessToken?: string,
     fetcher = createCourseStreamApi,
   ) => {
+    if (get().isGenerating) return null;
     set({
       isGenerating: true,
       error: null,
       errorCode: null,
+      errorReason: null,
       createdCourseId: null,
       progressStep: 'INIT',
       progressMessage: '코스 생성 준비 중...',
@@ -96,6 +108,7 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
             isGenerating: false,
             error: null,
             errorCode: 200,
+            errorReason: null,
           });
         },
       });
@@ -107,12 +120,15 @@ export const useCourseStore = create<CourseStoreState>((set) => ({
 
       return courseId;
     } catch (err: any) {
+      // The complete callback is authoritative even if transport cleanup fails.
+      if (get().createdCourseId) return get().createdCourseId;
       const status = err instanceof ApiError ? err.status : 400;
       const message = err?.message || '여행 조건 입력값이 올바르지 않습니다.';
       set({
         isGenerating: false,
         error: message,
         errorCode: status,
+        errorReason: err instanceof CourseStreamError ? err.reason : null,
       });
       return null;
     }

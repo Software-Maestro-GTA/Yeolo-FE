@@ -8,7 +8,7 @@ import { ApiError } from '../errors';
 const API_URL = 'https://api.yeolo.com';
 
 describe('updatePreferencesApi Unit Tests (API-PREF-1)', () => {
-  let fetchSpy: any;
+  let fetchSpy: jest.SpyInstance;
 
   afterEach(() => {
     if (fetchSpy) {
@@ -18,13 +18,19 @@ describe('updatePreferencesApi Unit Tests (API-PREF-1)', () => {
 
   it('MBTI 값이 전송되었을 때 PATCH /api/users/me/preferences 200 OK 성공 응답을 반환해야 한다', async () => {
     fetchSpy = jest
-      .spyOn(global, 'fetch')
+      .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input: any, init: any) => {
         const url = typeof input === 'string' ? input : input.url;
-        expect(url).toContain('api/users/me/preferences');
-        expect(init?.method).toBe('PATCH');
+        const method = typeof input === 'string' ? init?.method : input.method;
+        const headers =
+          input instanceof Request ? input.headers : new Headers(init?.headers);
+        const rawBody =
+          input instanceof Request ? await input.text() : init?.body;
+        const body = JSON.parse(rawBody || '{}');
 
-        const body = JSON.parse(init?.body || '{}');
+        expect(url).toContain('api/users/me/preferences');
+        expect(method?.toUpperCase()).toBe('PATCH');
+        expect(headers.get('Accept-Language')).toBe('ko');
         expect(body.mbti).toBe('ENFP');
 
         return new Response(
@@ -46,7 +52,7 @@ describe('updatePreferencesApi Unit Tests (API-PREF-1)', () => {
   });
 
   it('잘못된 MBTI 입력 시 400 ApiError를 던져야 한다', async () => {
-    fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(async () => {
+    fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       return new Response(
         JSON.stringify({
           status: 400,

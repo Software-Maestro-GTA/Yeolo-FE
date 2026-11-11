@@ -13,9 +13,9 @@ import { Footer } from '@/components/Footer';
 
 export default function HomePage() {
   return (
-    <div className='min-h-screen flex flex-col bg-white text-[#0d2137] selection:bg-[#00c9a7]/20 selection:text-[#0d2137]'>
+    <div className='min-h-screen flex flex-col'>
       <Header />
-      <main className='flex-1 flex flex-col'>
+      <main id='main-content' tabIndex={-1} className='flex-1'>
         <HeroSection />
         <FeaturesSection />
         <HowItWorksSection />

@@ -29,7 +29,7 @@ export function useCourseListQuery({
         return await getCourseListApi(apiUrl, token);
       } catch (err: unknown) {
         if (err instanceof ApiError) {
-          throw new Error(err.message || UI_STRINGS.COURSE_LIST.ERROR_DEFAULT);
+          throw err;
         }
         const errorObj = err as { message?: string };
         throw new Error(

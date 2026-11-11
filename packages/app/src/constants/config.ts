@@ -6,27 +6,98 @@
 import { Platform } from 'react-native';
 
 export const APP_CONFIG = {
+  DEFAULT_COURSE_BUDGET: 3000000,
+  REEL: {
+    WIDTH: 720,
+    HEIGHT: 1280,
+    FPS: 24,
+    MAX_PHOTOS: 7,
+    CAPTION_LIMIT: 80,
+    TITLE_LIMIT: 40,
+    PHOTO_SECONDS: 3,
+    INTRO_SECONDS: 1.5,
+    ROUTE_SECONDS: 4,
+    RENDERER_VERSION: 7,
+    PROGRESS_ANIMATION_MS: 300,
+    /** Export-pixel layout shared by native rendering and the scaled preview. */
+    LAYOUT: {
+      logoX: 650,
+      logoY: 34,
+      logoWidth: 33.3337,
+      logoHeight: 38.8132,
+      textX: 34,
+      textWidth: 652,
+      titleX: 86,
+      titleY: 938,
+      titleWidth: 600,
+      titleHeight: 140,
+      titleSize: 56,
+      captionX: 86,
+      captionY: 1094,
+      captionWidth: 600,
+      captionHeight: 80,
+      captionSize: 32,
+      heroTitleY: 1020,
+      heroTitleHeight: 190,
+      heroTitleSize: 76,
+      heroCaptionY: 906,
+      heroCaptionHeight: 108,
+      heroCaptionSize: 56,
+      gradientTop: 700,
+      gradientMidStop: 0.55,
+      gradientMidOpacity: 0.78,
+      gradientBottomOpacity: 0.98,
+      numberX: 52,
+      numberY: 972,
+      numberRadius: 18,
+      numberSize: 24,
+      mapX: 26,
+      mapY: 306,
+      mapSize: 668,
+      mapRadius: 24,
+      dateY: 1042,
+      dateHeight: 100,
+      dateSize: 32,
+      mapMarkerRadius: 18,
+      mapMarkerSize: 24,
+      mapNameSize: 18,
+      mapNameHeight: 38,
+      markerIntervalSeconds: 0.35,
+      markerFadeSeconds: 0.18,
+    },
+    MAP_TIMEOUT_MS: 20000,
+  },
   DEFAULT_API_URL: 'https://api.yeolo.app',
   WEB_BASE_URL: 'https://www.yeolo.app',
+  APP_STORE_URL: 'https://apps.apple.com/kr/app/id6796231811',
+  PLAY_STORE_URL: 'https://play.google.com/store/apps/details?id=com.yeolo.app',
   INVITE_BASE_URL: 'https://www.yeolo.app/invite',
   PRIVACY_POLICY_URL: 'https://www.yeolo.app/privacy',
   TERMS_OF_SERVICE_URL: 'https://www.yeolo.app/terms',
+  INSTAGRAM_URL: 'https://www.instagram.com/yeolo_my_trip/',
+  MYREALTRIP_HOME_URL: 'https://www.myrealtrip.com/',
   DEFAULT_REDIRECT_URI: 'yeolo-app',
   DEFAULT_USER_EMAIL: 'user@yeolo.com',
-  DEFAULT_SUPPORT_EMAIL: 'ksk85628781@gmail.com',
-  /** Maximum number of recent photos retrieved from media library for taste analysis */
+  DEFAULT_SUPPORT_EMAIL: 'yeolotrip@gmail.com',
+  /** Maximum representative metadata records sent for taste analysis */
   ANALYSIS_PHOTO_LIMIT: 100,
+  /** Initial sampling heuristics; calibrate against real libraries and recommendation quality. */
+  PHOTO_SAMPLING: {
+    LOOKBACK_DAYS: 365,
+    PERIOD_COUNT: 12,
+    CANDIDATES_PER_PERIOD: 250,
+    PAGE_SIZE: 100,
+    METADATA_CONCURRENCY: 4,
+    VISIT_RADIUS_METERS: 100,
+    VISIT_WINDOW_MINUTES: 120,
+    MAX_PER_DAY: 5,
+    MIN_REPRESENTATIVES: 5,
+    MIN_DAYS: 3,
+  },
   /** Default staleTime for TanStack Query (5 minutes) */
   QUERY_STALE_TIME: 5 * 60 * 1000,
-  /** Trip.com Affiliate booking URLs */
-  TRIP_HOTEL_URL:
-    'https://kr.trip.com/hotels/w/home?Allianceid=9936872&SID=327895947',
-  TRIP_FLIGHT_URL:
-    'https://kr.trip.com/flights/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
-  TRIP_TRAIN_URL:
-    'https://kr.trip.com/trains/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
-  TRIP_TICKET_URL:
-    'https://kr.trip.com/things-to-do/?locale=ko-KR&curr=KRW&Allianceid=9936872&SID=327895947',
+  AUTOCOMPLETE_DEBOUNCE_MS: 300,
+  MAP_MARKER_SETTLE_MS: 100,
   /** Default fallback map region (Seoul City Hall) for in-app mini map view */
   DEFAULT_MAP_REGION: {
     latitude: 37.5665,
@@ -49,11 +120,6 @@ export const IS_WEB = Platform.OS === 'web';
 export const getPlatformElevation = (elevation: number): number => {
   return IS_ANDROID ? 0 : elevation;
 };
-
-export const TRIP_HOTEL_URL = APP_CONFIG.TRIP_HOTEL_URL;
-export const TRIP_FLIGHT_URL = APP_CONFIG.TRIP_FLIGHT_URL;
-export const TRIP_TRAIN_URL = APP_CONFIG.TRIP_TRAIN_URL;
-export const TRIP_TICKET_URL = APP_CONFIG.TRIP_TICKET_URL;
 
 export const ANALYSIS_PHOTO_LIMIT = APP_CONFIG.ANALYSIS_PHOTO_LIMIT;
 export const DEFAULT_MAP_REGION = APP_CONFIG.DEFAULT_MAP_REGION;

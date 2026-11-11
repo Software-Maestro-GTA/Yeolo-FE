@@ -1,10 +1,16 @@
 /**
  * @file NavigationRoot.test.tsx
- * @description Unit test for NavigationRoot showing BottomNavBar on CourseDetailScreen.
+ * @description Verifies UI v3 navigation, course interruption home/history cleanup, onboarding paths and deep links.
  */
 import React from 'react';
+import { useCourseStore } from '@yeolo/common';
+import { BackHandler, Platform, PanResponder } from 'react-native';
 import { fireEvent, waitFor, act } from '@testing-library/react-native';
-import { NavigationRoot } from '../src/navigation/NavigationRoot';
+import {
+  NavigationRoot,
+  shouldHandleEdgeSwipe,
+  handlePanResponderRelease,
+} from '../src/navigation/NavigationRoot';
 import { AuthContext } from '../src/context';
 import { renderWithQueryClient as render } from './test-utils';
 
@@ -13,10 +19,26 @@ jest.mock('../src/screens', () => {
   const { Text, Button } = require('react-native');
   return {
     LoginScreen: ({ onLoginSuccess }: any) => (
-      <Button title='Mock Login' onPress={() => onLoginSuccess?.(false)} />
+      <>
+        <Button title='Mock Login' onPress={() => onLoginSuccess?.(false)} />
+        <Button title='New Login' onPress={() => onLoginSuccess?.(true)} />
+      </>
     ),
-    HomeScreen: ({ onNavigateToExplore }: any) => (
-      <Button title='Go to Explore' onPress={onNavigateToExplore} />
+    HomeScreen: ({
+      onNavigateToExplore,
+      onOpenBooking,
+      onNavigateToCreate,
+      onNavigateToProfile,
+    }: any) => (
+      <React.Fragment>
+        <Button title='Go to Explore' onPress={onNavigateToExplore} />
+        <Button title='Create Course' onPress={onNavigateToCreate} />
+        <Button title='Open Profile' onPress={onNavigateToProfile} />
+        <Button
+          title='Open Ticket Booking'
+          onPress={() => onOpenBooking?.('ticket', { keyword: '도쿄' })}
+        />
+      </React.Fragment>
     ),
     CourseListScreen: ({ onSelectCourse }: any) => (
       <Button
@@ -24,46 +46,126 @@ jest.mock('../src/screens', () => {
         onPress={() => onSelectCourse('course-123')}
       />
     ),
-    IntroScreen: ({ onNext }: any) => (
-      <Button title='Go to Intro Next' onPress={onNext} />
+    MBTIConsentScreen: ({ onNext, onPhoto }: any) => (
+      <>
+        <Button title='Choose MBTI' onPress={onNext} />
+        <Button title='Choose Photos' onPress={onPhoto} />
+      </>
+    ),
+    PhotoAuthExplainScreen: ({ onNext, onBack }: any) => (
+      <>
+        {onBack && <Button title='Permission Back' onPress={onBack} />}
+        <Button title='Full Permission Ready' onPress={() => onNext('all')} />
+        <Button
+          title='Selected Permission Ready'
+          onPress={() => onNext('limited')}
+        />
+      </>
+    ),
+    MBTIResultScreen: ({ mbti, onGenerateCourse, onPhoto, onBack }: any) => (
+      <>
+        <Text>{mbti} Result</Text>
+        <Button title='Result Course' onPress={onGenerateCourse} />
+        <Button title='Result Photos' onPress={onPhoto} />
+        <Button title='Result Back' onPress={onBack} />
+      </>
     ),
     MbtiInputScreen: ({ onNext }: any) => (
-      <Button title='Go to MBTI Next' onPress={onNext} />
+      <Button title='Go to MBTI Next' onPress={() => onNext('INFJ')} />
     ),
     PhotoConsentScreen: ({ onNext }: any) => (
-      <Button title='Go to Photo Next' onPress={onNext} />
+      <>
+        <Button title='Go to Photo Next' onPress={() => onNext('all')} />
+        <Button title='Limited Photos' onPress={() => onNext('limited')} />
+        <Button title='Deny Photos' onPress={() => onNext('denied')} />
+      </>
     ),
-    TasteAnalysisScreen: ({ onFinish, onFail }: any) => (
-      <React.Fragment>
-        <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
-        <Button title='Fail Taste' onPress={() => onFail?.()} />
-      </React.Fragment>
-    ),
-    TasteProfileScreen: ({ onGenerateCourse }: any) => (
-      <Button title='Go Home from Taste' onPress={onGenerateCourse} />
-    ),
-    ProfileScreen: () => <Text>ProfileScreen</Text>,
-    CourseCreateScreen: () => <Text>CourseCreateScreen</Text>,
-    CourseGeneratingScreen: ({ onComplete }: any) => (
-      <Button
-        title='Complete Course Generation'
-        onPress={() => onComplete?.('course-123')}
-      />
-    ),
-    CourseDetailScreen: ({ courseId, onSelectPlace, onBack }: any) => (
-      <React.Fragment>
+    TasteAnalysisScreen: ({
+      onFinish,
+      onFail,
+      mode,
+      onLimitedFinish,
+      onClose,
+      onFailureStateChange,
+    }: any) => {
+      const [failed, setFailed] = React.useState(false);
+      React.useEffect(() => {
+        onFailureStateChange?.(failed);
+        return () => onFailureStateChange?.(false);
+      }, [failed, onFailureStateChange]);
+      return (
+        <React.Fragment>
+          <Text>
+            {failed
+              ? 'Selection Failure'
+              : mode === 'limited'
+                ? 'Limited Analysis'
+                : 'Real Analysis'}
+          </Text>
+          <Button
+            title='Mark Analysis Failed'
+            onPress={() => setFailed(true)}
+          />
+          {onClose && <Button title='Close Analysis' onPress={onClose} />}
+          <Button title='Finish Limited' onPress={onLimitedFinish} />
+          <Button title='Finish Taste' onPress={() => onFinish?.('taste-1')} />
+          <Button title='Fail Taste' onPress={() => onFail?.()} />
+        </React.Fragment>
+      );
+    },
+    TasteProfileScreen: ({ onGenerateCourse, onBack }: any) => (
+      <>
+        <Button title='Taste Back' onPress={onBack} />
         <Button
-          title='Select Place Stop'
+          title='Go Home from Taste'
           onPress={() =>
-            onSelectPlace?.({
-              sequence: 1,
-              place: {
-                placeId: 'place-123',
-                placeName: '함덕 해수욕장',
-              },
-            })
+            onGenerateCourse({ countryName: '포르투갈', cityName: '리스본' })
           }
         />
+      </>
+    ),
+    ProfileScreen: () => <Text>ProfileScreen</Text>,
+    CourseCreateScreen: ({
+      mbti,
+      recommendedDestination,
+      onBack,
+      onSubmit,
+    }: any) => (
+      <>
+        <Text>CourseCreateScreen</Text>
+        <Button title='Create Back' onPress={onBack} />
+        <Button title='Generate Course' onPress={onSubmit} />
+        {recommendedDestination && (
+          <Text>
+            {recommendedDestination.countryName},{' '}
+            {recommendedDestination.cityName}
+          </Text>
+        )}
+        <Text>{mbti ? `Create with ${mbti}` : 'Create with photos'}</Text>
+      </>
+    ),
+    CourseGeneratingScreen: ({
+      onComplete,
+      onReturnToCreate,
+      onReturnHome,
+      onBack,
+    }: any) => (
+      <>
+        <Button title='Leave Course Generation' onPress={onBack} />
+        <Button
+          title='Complete Course Generation'
+          onPress={() => onComplete?.('course-123')}
+        />
+        <Button title='Return to Course Create' onPress={onReturnToCreate} />
+        <Button
+          title='Background Connection Interrupted'
+          onPress={onReturnHome}
+        />
+      </>
+    ),
+    CourseDetailScreen: ({ courseId, onBack }: any) => (
+      <React.Fragment>
+        <Text>CourseDetailScreen: {courseId}</Text>
         <Button title='Detail Back' onPress={() => onBack?.()} />
       </React.Fragment>
     ),
@@ -80,17 +182,18 @@ jest.mock('../src/screens', () => {
     ProfileInputScreen: () => (
       <Text testID='profile-input-screen'>ProfileInputScreen</Text>
     ),
-    PlaceDetailScreen: ({ stop, placeId }: any) => (
-      <Text testID='place-detail-screen'>
-        PlaceDetailScreen: {stop?.place?.placeName || placeId}
-      </Text>
-    ),
   };
 });
 
-import { NAV_STEPS } from '../src/constants';
+import { NAV_STEPS, UI_STRINGS } from '../src/constants';
 
-describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navigation', () => {
+describe('NavigationRoot - course detail and onboarding navigation', () => {
+  beforeEach(async () =>
+    act(async () => useCourseStore.getState().resetCourseState()),
+  );
+  afterEach(async () =>
+    act(async () => useCourseStore.getState().resetCourseState()),
+  );
   const mockAuthContext = {
     isAuthenticated: true,
     isLoading: false,
@@ -99,7 +202,219 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     logout: jest.fn(),
   };
 
-  it('renders BottomNavBar when showing CourseDetailScreen', async () => {
+  it('생성 중 홈으로 나가 다른 기능을 사용하고 완료 카드로 해당 결과를 연다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await act(async () =>
+      useCourseStore.setState({
+        isGenerating: true,
+        progressStep: 'GENERATING_COURSE',
+        progressMessage: '여행 코스를 구성하고 있어요',
+      }),
+    );
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.getByTestId('course-generation-status-action')).toBeTruthy();
+    expect(useCourseStore.getState().isGenerating).toBe(true);
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status-action')).toBeNull();
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.getState().setComplete('new-generated-course'),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(
+      ui.queryByText('CourseDetailScreen: new-generated-course'),
+    ).toBeNull();
+    expect(ui.getByText('결과 보기')).toBeTruthy();
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(
+      ui.getByText('CourseDetailScreen: new-generated-course'),
+    ).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status-action')).toBeNull();
+    await fireEvent.press(ui.getByText('Detail Back'));
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+  });
+
+  it('Android 뒤로가기와 생성 재진입은 새 요청 없이 진행 중인 화면을 연다', async () => {
+    const back = jest.spyOn(BackHandler, 'addEventListener');
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    const handler = back.mock.calls
+      .filter(([event]) => event === 'hardwareBackPress')
+      .at(-1)![1];
+    await act(async () => {
+      expect(handler({} as never)).toBe(true);
+    });
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(
+      ui.getByTestId('course-generation-status-action').props.accessibilityState
+        .busy,
+    ).toBe(true);
+    expect(
+      ui.getByText(UI_STRINGS.COURSE_GENERATING.MINI_DEFAULT_MESSAGE),
+    ).toBeTruthy();
+    // Includes the token-reading window before the store has started the stream.
+    await fireEvent.press(ui.getByText('Create Course'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    expect(ui.queryByText('CourseCreateScreen')).toBeNull();
+    back.mockRestore();
+  });
+
+  it('다른 화면에서 실패해도 완료로 표시하거나 자동 이동하지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.getState().setError('코스 생성에 실패했어요', 500),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.getByText('코스 생성에 실패했어요')).toBeTruthy();
+    expect(ui.queryByText('결과 보기')).toBeNull();
+    await fireEvent.press(ui.getByTestId('course-generation-status-dismiss'));
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('진행 화면에서 완료하면 기존 결과 이동을 유지하고 미니 카드는 남기지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Complete Course Generation'));
+    expect(ui.getByText('CourseDetailScreen: course-123')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('이탈 후 연결이 끊기면 상태 보기를 눌렀을 때 기존 연결 끊김 안내 동선을 연다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await fireEvent.press(ui.getByText('Open Profile'));
+    await act(async () =>
+      useCourseStore.setState({
+        error: '연결이 끊겼어요',
+        errorReason: 'background_interrupted',
+        isGenerating: false,
+      }),
+    );
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    await fireEvent.press(ui.getByTestId('course-generation-status-action'));
+    expect(ui.getByText('Complete Course Generation')).toBeTruthy();
+    await fireEvent.press(ui.getByText('Background Connection Interrupted'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.getByTestId('course-interruption-notice')).toBeTruthy();
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+  });
+
+  it('로그아웃 후에는 완료된 이전 계정의 진행 카드를 표시하지 않는다', async () => {
+    const screen = (authenticated: boolean) => (
+      <AuthContext.Provider
+        value={{ ...mockAuthContext, isAuthenticated: authenticated } as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>
+    );
+    const ui = await render(screen(true));
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Leave Course Generation'));
+    await ui.rerender(screen(false));
+    await act(async () =>
+      useCourseStore.getState().setComplete('old-account-course'),
+    );
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+    await ui.rerender(screen(true));
+    expect(ui.queryByTestId('course-generation-status')).toBeNull();
+    expect(ui.queryByText('CourseDetailScreen: old-account-course')).toBeNull();
+  });
+
+  it('생성 실패 후 코스 생성 화면으로 돌아가고 뒤로가기로 실패 화면을 다시 열지 않는다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={mockAuthContext as any}>
+        <NavigationRoot />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Create Course'));
+    await fireEvent.press(ui.getByText('Generate Course'));
+    await fireEvent.press(ui.getByText('Return to Course Create'));
+    expect(ui.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(ui.queryByText('Go to Photo Next')).toBeNull();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+    await fireEvent.press(ui.getByText('Create Back'));
+    expect(ui.getByText('Create Course')).toBeTruthy();
+    expect(ui.queryByText('Complete Course Generation')).toBeNull();
+  });
+
+  it.each(['confirm', 'backdrop', 'requestClose'])(
+    'shows an app info dialog over home after an interruption and dismisses via %s without returning to generation',
+    async (dismissal) => {
+      const ui = await render(
+        <AuthContext.Provider value={mockAuthContext as any}>
+          <NavigationRoot />
+        </AuthContext.Provider>,
+      );
+      await fireEvent.press(ui.getByText('Create Course'));
+      await fireEvent.press(ui.getByText('Generate Course'));
+      await fireEvent.press(ui.getByText('Background Connection Interrupted'));
+      expect(ui.getByTestId('course-interruption-notice')).toBeTruthy();
+      expect(
+        ui.getByText(UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_TITLE),
+      ).toBeTruthy();
+      expect(
+        ui.getByText(
+          UI_STRINGS.COURSE_GENERATING.BACKGROUND_INTERRUPTED_MESSAGE,
+        ),
+      ).toBeTruthy();
+      expect(ui.queryByText('Complete Course Generation')).toBeNull();
+      if (dismissal === 'confirm')
+        await fireEvent.press(ui.getByText(UI_STRINGS.COMMON.CONFIRM));
+      else if (dismissal === 'backdrop')
+        await fireEvent.press(
+          ui.getByTestId('course-interruption-notice-backdrop', {
+            includeHiddenElements: true,
+          }),
+        );
+      else
+        await fireEvent(
+          ui.getByTestId('course-interruption-notice'),
+          'requestClose',
+        );
+      expect(ui.queryByTestId('course-interruption-notice')).toBeNull();
+      expect(ui.getByText('Create Course')).toBeTruthy();
+      await fireEvent.press(ui.getByText('Create Course'));
+      await fireEvent.press(ui.getByText('Create Back'));
+      expect(ui.getByText('Create Course')).toBeTruthy();
+      expect(ui.queryByText('Complete Course Generation')).toBeNull();
+    },
+  );
+
+  it('opens CourseDetailScreen from the home course list', async () => {
     const { queryByText, getByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
@@ -119,12 +434,12 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     }
 
     await waitFor(() => {
-      expect(getByText('Select Place Stop')).toBeTruthy();
+      expect(getByText('CourseDetailScreen: course-123')).toBeTruthy();
     });
   });
 
-  it('navigates from CourseDetailScreen to PlaceDetailScreen when place is pressed', async () => {
-    const { getByText, findByTestId } = await render(
+  it('returns from course detail to its originating course list', async () => {
+    const { getByText, queryByText } = await render(
       <AuthContext.Provider value={mockAuthContext as any}>
         <NavigationRoot />
       </AuthContext.Provider>,
@@ -142,16 +457,15 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       });
     }
 
+    expect(getByText('CourseDetailScreen: course-123')).toBeTruthy();
     await act(async () => {
-      fireEvent.press(getByText('Select Place Stop'));
+      fireEvent.press(getByText('Detail Back'));
     });
-
-    const placeDetailScreen = await findByTestId('place-detail-screen');
-    expect(placeDetailScreen).toBeTruthy();
-    expect(getByText(/함덕 해수욕장/)).toBeTruthy();
+    expect(getByText('Select Course')).toBeTruthy();
+    expect(queryByText('CourseDetailScreen: course-123')).toBeNull();
   });
 
-  it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 IntroScreen(온보딩)으로 진입해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 경우 로그인 성공/세션 복원 시 PhotoConsentScreen(온보딩)으로 진입해야 한다', async () => {
     const mockAuthOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -168,7 +482,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     );
 
     await waitFor(() => {
-      expect(getByText('Go to Intro Next')).toBeTruthy();
+      expect(getByText('Go to Photo Next')).toBeTruthy();
     });
   });
 
@@ -229,7 +543,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     });
 
     // 2. CourseDetailScreen으로 이동 확인
-    expect(getByText('Select Place Stop')).toBeTruthy();
+    expect(getByText('CourseDetailScreen: course-accepted-1')).toBeTruthy();
 
     // 3. CourseDetailScreen에서 뒤로가기 실행
     await act(async () => {
@@ -294,7 +608,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Mock Login')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 사용자가 코스 생성을 시도하면 IntroScreen(온보딩)으로 유도해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 사용자가 코스 생성을 시도하면 PhotoConsentScreen(온보딩)으로 유도해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -308,11 +622,11 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       </AuthContext.Provider>,
     );
 
-    // Initial state is IntroScreen because hasCompletedOnboarding is false
-    expect(getByText('Go to Intro Next')).toBeTruthy();
+    // Initial state is PhotoConsentScreen because hasCompletedOnboarding is false
+    expect(getByText('Go to Photo Next')).toBeTruthy();
   });
 
-  it('hasCompletedOnboarding이 false인 상태에서 하단 탭 코스 생성을 탭하면 IntroScreen으로 이동해야 한다', async () => {
+  it('hasCompletedOnboarding이 false인 상태에서 홈에서 코스 생성을 누르면 PhotoConsentScreen으로 이동해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -330,16 +644,16 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
     expect(getByText('Go to Explore')).toBeTruthy();
 
     // Tab bar 'CREATE' 탭 클릭
-    const tabCreate = getByTestId('tab-create');
+    const tabCreate = getByText('Create Course');
     await act(async () => {
       fireEvent.press(tabCreate);
     });
 
-    // CourseCreateScreen 대신 IntroScreen(Go to Intro Next)이 렌더링되어야 함
-    expect(getByText('Go to Intro Next')).toBeTruthy();
+    // CourseCreateScreen 대신 PhotoConsentScreen(Go to Photo Next)이 렌더링되어야 함
+    expect(getByText('Go to Photo Next')).toBeTruthy();
   });
 
-  it('온보딩 중 TasteAnalysisScreen에서 onFail 발생 시 MBTI 화면(MbtiInputScreen)으로 이동해야 한다', async () => {
+  it('온보딩 중 TasteAnalysisScreen에서 onFail 발생 시 MBTI 동의 화면으로 이동해야 한다', async () => {
     const mockAuthNeedsOnboarding = {
       isAuthenticated: true,
       isLoading: false,
@@ -359,7 +673,7 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
       fireEvent.press(getByText('Fail Taste'));
     });
 
-    expect(getByText('Go to MBTI Next')).toBeTruthy();
+    expect(getByText('Choose MBTI')).toBeTruthy();
   });
 
   it('온보딩 완료 후 TasteAnalysisScreen에서 onFail 발생 시 ProfileScreen으로 이동해야 한다', async () => {
@@ -384,5 +698,314 @@ describe('NavigationRoot - CourseDetailScreen Navigation Bar & PlaceDetail Navig
 
     expect(getByText('ProfileScreen')).toBeTruthy();
   });
+
+  describe('iOS Edge Swipe to Go Back (PanResponder & shouldHandleEdgeSwipe)', () => {
+    it('shouldHandleEdgeSwipe: iOS에서 좌측 엣지(x0 <= 45) 및 가로 스와이프 시 true를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(true);
+    });
+
+    it('shouldHandleEdgeSwipe: x0 > 45(비 엣지 영역)이면 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 100,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: 세로 스크롤(dy > dx)인 경우 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 10,
+          dy: 70,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: history가 비어있거나 홈/로그인/생성중 단계인 경우 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.HOME,
+          history: [],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.GENERATING_COURSE,
+          history: [NAV_STEPS.HOME],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('shouldHandleEdgeSwipe: iOS가 아닌 환경(Android 등)에서는 false를 반환해야 한다', () => {
+      expect(
+        shouldHandleEdgeSwipe({
+          step: NAV_STEPS.COURSE_DETAIL,
+          history: [NAV_STEPS.COURSE_LIST],
+          x0: 30,
+          dx: 60,
+          dy: 5,
+          isIos: false,
+        }),
+      ).toBe(false);
+    });
+
+    it('handlePanResponderRelease: dx > 60 또는 dx > 30 & vx > 0.5인 경우 onBack을 호출해야 한다', () => {
+      const onBack1 = jest.fn();
+      const res1 = handlePanResponderRelease({ dx: 70 }, onBack1);
+      expect(res1).toBe(true);
+      expect(onBack1).toHaveBeenCalledTimes(1);
+
+      const onBack2 = jest.fn();
+      const res2 = handlePanResponderRelease({ dx: 40, vx: 0.8 }, onBack2);
+      expect(res2).toBe(true);
+      expect(onBack2).toHaveBeenCalledTimes(1);
+
+      const onBack3 = jest.fn();
+      const res3 = handlePanResponderRelease({ dx: 20, vx: 0.1 }, onBack3);
+      expect(res3).toBe(false);
+      expect(onBack3).not.toHaveBeenCalled();
+    });
+
+    it('최상위 네비게이션 컨테이너에 PanResponder panHandlers가 정상 바인딩되어 있어야 한다', async () => {
+      const mockAuth = {
+        isAuthenticated: true,
+        isLoading: false,
+        hasCompletedOnboarding: true,
+      };
+
+      const { getByTestId } = await render(
+        <AuthContext.Provider value={mockAuth as any}>
+          <NavigationRoot initialStep={NAV_STEPS.COURSE_LIST} />
+        </AuthContext.Provider>,
+      );
+
+      const container = getByTestId('navigation-root-container');
+      expect(container.props.onMoveShouldSetResponder).toBeDefined();
+      expect(container.props.onResponderRelease).toBeDefined();
+    });
+  });
 });
 
+describe('예약 화면의 앱 공통 내비게이션', () => {
+  const auth = {
+    isAuthenticated: true,
+    isLoading: false,
+    hasCompletedOnboarding: true,
+  };
+  it('예약에서 뒤로 돌아가 홈의 프로필 진입을 사용할 수 있다', async () => {
+    const ui = await render(
+      <AuthContext.Provider value={auth as any}>
+        <NavigationRoot initialStep={NAV_STEPS.HOME} />
+      </AuthContext.Provider>,
+    );
+    await fireEvent.press(ui.getByText('Open Ticket Booking'));
+    expect(ui.getByTestId('booking-screen-ticket')).toBeTruthy();
+    expect(ui.queryByTestId('bottom-nav-bar')).toBeNull();
+    expect(ui.getByLabelText('도시 또는 장소 이름').props.value).toBe('도쿄');
+    await fireEvent.press(ui.getByLabelText('예약 이전 화면으로'));
+    expect(ui.getByText('Open Ticket Booking')).toBeTruthy();
+    await fireEvent.press(ui.getByText('Open Profile'));
+    expect(ui.getByText('ProfileScreen')).toBeTruthy();
+    expect(ui.queryByTestId('booking-screen-ticket')).toBeNull();
+  });
+});
+
+describe('UI v3 onboarding routes', () => {
+  afterEach(() => jest.restoreAllMocks());
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    const [completed, setCompleted] = React.useState(false);
+    return (
+      <AuthContext.Provider
+        value={
+          {
+            isAuthenticated: true,
+            isLoading: false,
+            hasCompletedOnboarding: completed,
+            setHasCompletedOnboarding: async (value: boolean) =>
+              setCompleted(value),
+          } as any
+        }>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+  it('first login opens photo consent', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot initialStep={NAV_STEPS.LOGIN} />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('New Login'));
+    expect(screen.getByText('Go to Photo Next')).toBeTruthy();
+  });
+  it('full permission reaches the taste profile and course creation', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Go to Photo Next'));
+    expect(screen.getByText('Real Analysis')).toBeTruthy();
+    expect(screen.queryByText('Close Analysis')).toBeNull();
+    await fireEvent.press(screen.getByText('Finish Taste'));
+    await fireEvent.press(screen.getByText('Go Home from Taste'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.getByText('포르투갈, 리스본')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Create Back'));
+    await fireEvent.press(screen.getByText('Taste Back'));
+    await fireEvent.press(screen.getByText('Create Course'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.queryByText('포르투갈, 리스본')).toBeNull();
+  });
+  it('limited mode leads to explanation and switches back to real analysis', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Limited Photos'));
+    expect(screen.getByText('Limited Analysis')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Finish Limited'));
+    await fireEvent.press(screen.getByText('Full Permission Ready'));
+    expect(screen.getByText('Real Analysis')).toBeTruthy();
+  });
+  it('permission guidance can explicitly restart analysis with selected-photo access', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Limited Photos'));
+    await fireEvent.press(screen.getByText('Finish Limited'));
+    await fireEvent.press(screen.getByText('Selected Permission Ready'));
+    expect(screen.getByText('Limited Analysis')).toBeTruthy();
+    expect(screen.queryByText('Real Analysis')).toBeNull();
+    await fireEvent.press(screen.getByText('Finish Taste'));
+    expect(screen.getByText('Go Home from Taste')).toBeTruthy();
+  });
+  it.each(['button', 'android', 'ios'])(
+    'permission %s back restores the selection failure without restarting analysis',
+    async (method) => {
+      jest.replaceProperty(
+        Platform,
+        'OS',
+        method === 'ios' ? 'ios' : 'android',
+      );
+      const backListener = jest.spyOn(BackHandler, 'addEventListener');
+      const panCreate = jest.spyOn(PanResponder, 'create');
+      const screen = await render(
+        <Wrapper>
+          <NavigationRoot />
+        </Wrapper>,
+      );
+      await fireEvent.press(screen.getByText(/Limited Photos/i));
+      await fireEvent.press(screen.getByText(/Mark Analysis Failed/i));
+      await fireEvent.press(screen.getByText(/Finish Limited/i));
+      expect(screen.queryByText('Selection Failure')).toBeNull();
+      if (method === 'button')
+        await fireEvent.press(screen.getByText(/Permission Back/i));
+      else if (method === 'android') {
+        const calls = backListener.mock.calls;
+        const handler = calls
+          .filter(([event]) => event === 'hardwareBackPress')
+          .at(-1)![1];
+        await act(async () => {
+          expect(handler({} as never)).toBe(true);
+        });
+      } else {
+        await act(async () => {
+          panCreate.mock.calls.at(-1)![0].onPanResponderRelease!(
+            {} as any,
+            { dx: 80, vx: 0.8 } as any,
+          );
+        });
+      }
+      expect(screen.getByText('Selection Failure')).toBeTruthy();
+      expect(screen.queryByText('Limited Analysis')).toBeNull();
+      expect(screen.queryByText(/Go to Photo Next/i)).toBeNull();
+      await fireEvent.press(screen.getByText(/Finish Limited/i));
+      await fireEvent.press(screen.getByText(/Full Permission Ready/i));
+      expect(screen.getByText('Real Analysis')).toBeTruthy();
+      expect(screen.queryByText('Selection Failure')).toBeNull();
+      jest.restoreAllMocks();
+    },
+  );
+  it('permission back returns to the denied-access screen', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Deny Photos'));
+    await fireEvent.press(screen.getByText('Choose Photos'));
+    await fireEvent.press(screen.getByText('Permission Back'));
+    expect(screen.getByText('Choose Photos')).toBeTruthy();
+    expect(screen.getByText('Choose MBTI')).toBeTruthy();
+    expect(screen.queryByText('Go to Photo Next')).toBeNull();
+  });
+  it('denial flows through MBTI consent, input and result before course creation', async () => {
+    const screen = await render(
+      <Wrapper>
+        <NavigationRoot />
+      </Wrapper>,
+    );
+    await fireEvent.press(screen.getByText('Deny Photos'));
+    await fireEvent.press(screen.getByText('Choose MBTI'));
+    await fireEvent.press(screen.getByText('Go to MBTI Next'));
+    expect(screen.getByText('INFJ Result')).toBeTruthy();
+    expect(screen.queryByText('CourseCreateScreen')).toBeNull();
+    await fireEvent.press(screen.getByText('Result Course'));
+    expect(screen.getByText('CourseCreateScreen')).toBeTruthy();
+    expect(screen.getByText('Create with INFJ')).toBeTruthy();
+  });
+  it.each(['consent', 'result'])(
+    '%s photo CTA opens the permission explanation',
+    async (source) => {
+      const screen = await render(
+        <Wrapper>
+          <NavigationRoot />
+        </Wrapper>,
+      );
+      await fireEvent.press(screen.getByText('Deny Photos'));
+      if (source === 'result') {
+        await fireEvent.press(screen.getByText('Choose MBTI'));
+        await fireEvent.press(screen.getByText('Go to MBTI Next'));
+        await fireEvent.press(screen.getByText('Result Photos'));
+      } else await fireEvent.press(screen.getByText('Choose Photos'));
+      expect(screen.getByText('Full Permission Ready')).toBeTruthy();
+      if (source === 'result') {
+        await fireEvent.press(screen.getByText('Full Permission Ready'));
+        await fireEvent.press(screen.getByText('Finish Taste'));
+        await fireEvent.press(screen.getByText('Go Home from Taste'));
+        expect(screen.getByText('Create with photos')).toBeTruthy();
+      }
+    },
+  );
+});

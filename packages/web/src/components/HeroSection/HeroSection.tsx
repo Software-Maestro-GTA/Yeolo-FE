@@ -1,12 +1,10 @@
 /**
  * @file HeroSection.tsx
- * @description Yeolo 메인 히어로 섹션 컴포넌트
+ * @description 브랜드 문구와 텍스트 기반 서비스 소개를 활용한 다운로드 중심 첫 화면
  */
-
-import React from 'react';
-import Image from 'next/image';
 import { ArrowRightIcon } from '@/components/Icons';
-
+import { StoreButtons } from '@/components/StoreButtons/StoreButtons';
+import { ProductPreview } from '@/components/ProductPreview/ProductPreview';
 export interface HeroSectionProps {
   className?: string;
 }
@@ -14,58 +12,40 @@ export interface HeroSectionProps {
 export function HeroSection({ className = '' }: HeroSectionProps) {
   return (
     <section
-      className={`w-full bg-[#f5faf8] overflow-hidden py-12 lg:py-16 ${className}`}>
-      <div className='max-w-7xl mx-auto px-6 sm:px-12 lg:px-20'>
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center'>
-          {/* Left Column: Text & Actions */}
-          <div className='flex flex-col items-start gap-6 lg:gap-7'>
-            {/* Tag Badge */}
-            <div className='inline-flex items-center px-3.5 py-1.5 rounded-[20px] bg-[#e0f7f1]'>
-              <span className='text-[#2d7dd2] text-[13px] font-bold tracking-tight'>
-                AI 기반 초개인화 여행 플랫폼
-              </span>
-            </div>
-
-            {/* Headline */}
-            <h1 className='text-[34px] sm:text-[44px] lg:text-[52px] font-extrabold text-[#0d2137] leading-[1.25] tracking-tight'>
-              여행의 새로운 시작,
-              <br />
-              나만을 위한 맞춤 <span className='text-[#2d7dd2]'>여로</span>
-            </h1>
-
-            {/* Description */}
-            <p className='text-[16px] sm:text-[18px] text-[#64748b] leading-[1.6] max-w-xl'>
-              당신의 취향, MBTI 를 분석해
-              <br className='hidden sm:inline' />
-              세상에 단 하나뿐인 최적의 여행 코스를 실시간으로 설계합니다.
-            </p>
-
-            {/* CTA Button */}
-            <div className='pt-2'>
-              <a
-                href='#features'
-                className='inline-flex items-center gap-2 bg-[#2d7dd2] hover:bg-[#236dbb] active:scale-95 text-white font-bold text-[16px] px-7 py-4 rounded-[30px] shadow-lg shadow-[#2d7dd2]/25 transition-all group'>
-                <span>나만의 여행 시작하기</span>
-                <ArrowRightIcon
-                  className='transition-transform group-hover:translate-x-1'
-                  size={18}
-                />
-              </a>
-            </div>
-          </div>
-
-          {/* Right Column: Hero Image */}
-          <div className='relative w-full aspect-[4/3] lg:aspect-[616/560] max-h-[560px] rounded-[24px] overflow-hidden shadow-2xl shadow-slate-300/50'>
-            <Image
-              src='/images/hero-travel.png'
-              alt='여로 여행 맞춤 코스 뷰'
-              fill
-              priority
-              sizes='(max-width: 1024px) 100vw, 50vw'
-              className='object-cover transition-transform duration-700 hover:scale-105'
-            />
-          </div>
+      className={`hero-section ${className}`}
+      aria-labelledby='hero-title'>
+      <div className='site-container hero-grid'>
+        <div className='hero-copy'>
+          <span className='eyebrow'>
+            <span className='eyebrow-dot' /> 나를 아는 여행의 시작
+          </span>
+          <h1 id='hero-title'>
+            나도 몰랐던
+            <br />내 안의 <span>여행 취향.</span>
+          </h1>
+          <p className='hero-description'>
+            사진첩 속 취향이 나만의 여행 코스로.
+            <br />
+            어디로 갈지 고민하는 순간부터,
+            <br className='mobile-break' /> 여로가 함께할게요.
+          </p>
+          <StoreButtons />
+          <a className='text-link hero-explore' href='#how-it-works'>
+            여로와 여행하는 방법 <ArrowRightIcon size={18} aria-hidden='true' />
+          </a>
         </div>
+        <div className='hero-art'>
+          <div className='hero-orbit' aria-hidden='true' />
+          <ProductPreview />
+        </div>
+      </div>
+      <div className='site-container hero-bottom'>
+        <span>발견하고</span>
+        <i />
+        <span>계획하고</span>
+        <i />
+        <span>기록하는 여행</span>
+        <p>모든 여정의 시작, 여로</p>
       </div>
     </section>
   );

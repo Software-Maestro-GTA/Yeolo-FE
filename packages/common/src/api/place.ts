@@ -9,6 +9,7 @@ import type { PlaceDetail, PlaceDetailResponse } from '../types/place';
 
 /**
  * Fetch detailed place information by placeId (API-PLACE-1).
+ * @deprecated API-PLACE-1 (`~~API-PLACE-1~~.md`) has been deprecated in UI v3 API specs.
  * @param apiUrl Base backend API URL
  * @param accessToken User JWT access token
  * @param placeId Place identifier

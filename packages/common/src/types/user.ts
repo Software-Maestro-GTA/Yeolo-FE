@@ -1,6 +1,6 @@
 /**
  * @file user.ts
- * @description Shared user preference and profile types across Web and Mobile matching API-USER-1 spec.
+ * @description Shared user preference, profile, and language types matching API-USER-1~4 and API-PREF-1~2.
  */
 
 export interface UpdateUserProfilePayload {
@@ -10,11 +10,11 @@ export interface UpdateUserProfilePayload {
 
 export interface UserProfileData {
   userId: string;
-  provider: string;
+  provider: 'google' | 'apple' | string;
   email: string | null;
   displayName: string | null;
   profileImageUrl: string | null;
-  status: string;
+  status: 'active' | string;
   lastLoginAt: string;
 }
 
@@ -53,4 +53,24 @@ export interface SavePhotoConsentResponse {
   data: {
     consent: PhotoConsentData;
   };
+}
+
+export interface UserLanguageData {
+  language: string;
+}
+
+export interface GetUserLanguageResponse {
+  status: number;
+  message: string;
+  data: UserLanguageData;
+}
+
+export interface UpdateUserLanguagePayload {
+  language: string;
+}
+
+export interface UpdateUserLanguageResponse {
+  status: number;
+  message: string;
+  data: UserLanguageData;
 }

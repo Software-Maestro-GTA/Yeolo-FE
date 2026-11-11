@@ -2,7 +2,11 @@
  * @file App.tsx
  * @description Main mobile application root component utilizing BackgroundProvider and BackgroundImageLayout shell for edge-to-edge background media and safe area support.
  */
-import React, { useEffect } from 'react';
+import React from 'react';
+import './services/appVersionService';
+import { useFonts } from 'expo-font';
+import { appFonts } from './theme/fonts';
+import { TypographyProvider } from './components/common/Typography';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -12,13 +16,18 @@ import {
   MutationCache,
 } from '@tanstack/react-query';
 import { analyticsService, ApiError } from '@yeolo/common';
-import { appAnalyticsTracker } from './analytics';
+import { airbridgeAnalyticsTracker, appAnalyticsTracker } from './analytics';
 import { AuthProvider, BackgroundProvider } from './context';
 import NavigationRoot from './navigation/NavigationRoot';
 import { notifyUnauthorized } from './services/authService';
 import { BackgroundImageLayout } from './layouts';
+import { AppVersionNotice } from './components/common/AppVersionNotice';
 
 import { APP_CONFIG } from './constants/config';
+
+// The first screen can mount before a parent effect runs.
+analyticsService.registerTracker(appAnalyticsTracker);
+analyticsService.registerTracker(airbridgeAnalyticsTracker);
 
 const handleGlobalApiError = (error: unknown) => {
   if (
@@ -45,7 +54,9 @@ const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         if (
           (error instanceof ApiError &&
-            (error.status === 401 || error.status === 403)) ||
+            (error.status === 401 ||
+              error.status === 403 ||
+              error.status === 426)) ||
           (typeof error === 'object' &&
             error !== null &&
             'status' in error &&
@@ -61,22 +72,24 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  useEffect(() => {
-    analyticsService.registerTracker(appAnalyticsTracker);
-  }, []);
+  const [fontsLoaded, fontError] = useFonts(appFonts);
+  if (!fontsLoaded && !fontError) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <BackgroundProvider>
-            <BackgroundImageLayout>
-              <NavigationRoot />
-              <StatusBar style='auto' />
-            </BackgroundImageLayout>
-          </BackgroundProvider>
-        </AuthProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <TypographyProvider loaded={fontsLoaded}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <BackgroundProvider>
+              <BackgroundImageLayout>
+                <NavigationRoot />
+                <StatusBar style='dark' />
+              </BackgroundImageLayout>
+            </BackgroundProvider>
+          </AuthProvider>
+          <AppVersionNotice />
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </TypographyProvider>
   );
 }

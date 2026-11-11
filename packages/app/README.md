@@ -1,6 +1,6 @@
 # @yeolo/app
 
-여로(의 React Native (Expo) 기반 모바일 앱 패키지입니다.  
+여로의 React Native (Expo) 기반 모바일 앱 패키지입니다.
 공통 모듈인 `@yeolo/common`과 연동하여 통합 비즈니스 로직을 사용합니다.
 
 ---
@@ -17,7 +17,7 @@ packages/app/
 │   ├── screens/      # 화면 컴포넌트 (Home, Login 등)
 │   ├── services/     # Native SDK 및 세션 유틸리티
 │   └── App.tsx       # 모바일 앱 메인 컴포넌트
-├── assets/           # 아이콘 및 스플래시 이미지 에셋
+├── assets/           # 브랜드 로고·화면 이미지·폰트
 ├── app.config.js     # Expo 동적 설정 파일
 ├── app.json          # Expo 앱 전역 설정 및 메타데이터
 ├── eas.json          # EAS 빌드 프로필 설정

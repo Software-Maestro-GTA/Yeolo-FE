@@ -1,6 +1,12 @@
+/**
+ * @file navigation.ts
+ * @description App navigation steps and persistent bottom tab identifiers.
+ */
 export const NAV_STEPS = {
   LOGIN: 'LOGIN',
-  INTRO: 'INTRO',
+  PHOTO_AUTH: 'PHOTO_AUTH',
+  MBTI_CONSENT: 'MBTI_CONSENT',
+  MBTI_RESULT: 'MBTI_RESULT',
   MBTI: 'MBTI',
   PHOTO: 'PHOTO',
   TASTE: 'TASTE',
@@ -8,12 +14,12 @@ export const NAV_STEPS = {
   PROFILE: 'PROFILE',
   PROFILE_INPUT: 'PROFILE_INPUT',
   HOME: 'HOME',
+  BOOKING: 'BOOKING',
   COURSE_LIST: 'COURSE_LIST',
   CREATE_COURSE: 'CREATE_COURSE',
   GENERATING_COURSE: 'GENERATING_COURSE',
   COURSE_DETAIL: 'COURSE_DETAIL',
   COURSE_SHARE: 'COURSE_SHARE',
-  PLACE_DETAIL: 'PLACE_DETAIL',
 } as const;
 
 export type NavStep = (typeof NAV_STEPS)[keyof typeof NAV_STEPS];

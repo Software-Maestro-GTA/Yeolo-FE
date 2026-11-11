@@ -8,12 +8,8 @@ import type { Metadata } from 'next';
 import { getShareLinkApi } from '@yeolo/common';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import {
-  InviteCard,
-  DeepLinkBridge,
-  StoreDownloadCTA,
-  InviteErrorState,
-} from '@/components/Invite';
+import { InviteContent, InviteErrorState } from '@/components/Invite';
+import { DEFAULT_SHARE_IMAGE } from '@/lib/share-image';
 
 interface PageProps {
   params: Promise<{
@@ -21,37 +17,9 @@ interface PageProps {
   }>;
 }
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-const API_URL =
-  rawApiUrl && !rawApiUrl.includes('api.yeolo.site')
-    ? rawApiUrl
-    : 'https://d1eicq4gephyts.cloudfront.net';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-function getDestinationOgImage(
-  city?: string,
-  country?: string,
-): { url: string; width: number; height: number } {
-  const combined = `${city || ''} ${country || ''}`.toLowerCase();
-  if (combined.includes('제주') || combined.includes('jeju')) {
-    return { url: '/images/dest-jeju.png', width: 1536, height: 672 };
-  }
-  if (combined.includes('교토') || combined.includes('kyoto')) {
-    return { url: '/images/dest-kyoto.png', width: 1536, height: 672 };
-  }
-  if (combined.includes('발리') || combined.includes('bali')) {
-    return { url: '/images/dest-bali.png', width: 1536, height: 672 };
-  }
-  if (combined.includes('파리') || combined.includes('paris')) {
-    return { url: '/images/dest-paris.png', width: 1536, height: 672 };
-  }
-  if (combined.includes('방콕') || combined.includes('bangkok')) {
-    return { url: '/images/dest-bangkok.png', width: 1536, height: 672 };
-  }
-  if (combined.includes('바르셀로나') || combined.includes('barcelona')) {
-    return { url: '/images/dest-barcelona.png', width: 1536, height: 672 };
-  }
-  return { url: '/images/hero-travel.png', width: 1024, height: 1024 };
-}
+const INVITE_DESCRIPTION = '여로에서 함께할 여행 코스를 확인해 보세요';
 
 export async function generateMetadata({
   params,
@@ -62,66 +30,43 @@ export async function generateMetadata({
     const data = await getShareLinkApi(API_URL, shareToken);
     const inviterName = data.inviter.displayName || '친구';
     const courseTitle = data.course.title;
-    const location = `${data.course.destinationCountry} ${data.course.destinationCity}`;
-    const title = `[초대] ${inviterName}님이 '${courseTitle}' 여행에 초대했습니다 | 여로`;
-    const description = `${location} · ${data.course.totalDays}일 여행 코스를 확인하고 함께 여행을 계획해보세요.`;
-    const ogImage = getDestinationOgImage(
-      data.course.destinationCity,
-      data.course.destinationCountry,
-    );
+    const title = `[초대] ${inviterName}님이 ‘${courseTitle}’에 초대했습니다`;
 
     return {
       title,
-      description,
+      description: INVITE_DESCRIPTION,
       openGraph: {
         title,
-        description,
+        description: INVITE_DESCRIPTION,
         type: 'website',
         url: `/invite/${shareToken}`,
         siteName: '여로 (Yeolo)',
         locale: 'ko_KR',
-        images: [
-          {
-            url: ogImage.url,
-            width: ogImage.width,
-            height: ogImage.height,
-            alt: courseTitle,
-          },
-        ],
+        images: [DEFAULT_SHARE_IMAGE],
       },
       twitter: {
         card: 'summary_large_image',
         title,
-        description,
-        images: [ogImage.url],
+        description: INVITE_DESCRIPTION,
+        images: [DEFAULT_SHARE_IMAGE.url],
       },
     };
   } catch {
     return {
       title: '여행 코스 초대 | 여로 (Yeolo)',
-      description:
-        '초개인화 여행 플랫폼 여로(Yeolo)의 여행 코스 초대 링크입니다.',
+      description: INVITE_DESCRIPTION,
       openGraph: {
         title: '여행 코스 초대 | 여로 (Yeolo)',
-        description:
-          '초개인화 여행 플랫폼 여로(Yeolo)의 여행 코스 초대 링크입니다.',
+        description: INVITE_DESCRIPTION,
         siteName: '여로 (Yeolo)',
         locale: 'ko_KR',
-        images: [
-          {
-            url: '/images/hero-travel.png',
-            width: 1024,
-            height: 1024,
-            alt: '여로 AI 맞춤 여행',
-          },
-        ],
+        images: [DEFAULT_SHARE_IMAGE],
       },
       twitter: {
         card: 'summary_large_image',
         title: '여행 코스 초대 | 여로 (Yeolo)',
-        description:
-          '초개인화 여행 플랫폼 여로(Yeolo)의 여행 코스 초대 링크입니다.',
-        images: ['/images/hero-travel.png'],
+        description: INVITE_DESCRIPTION,
+        images: [DEFAULT_SHARE_IMAGE.url],
       },
     };
   }
@@ -176,7 +121,7 @@ export default async function InvitePage({ params }: PageProps) {
     : null;
 
   return (
-    <div className='min-h-screen flex flex-col bg-[#f5faf8] text-[#0d2137]'>
+    <div className='invite-page min-h-screen flex flex-col'>
       {jsonLd && (
         <script
           type='application/ld+json'
@@ -186,23 +131,12 @@ export default async function InvitePage({ params }: PageProps) {
 
       <Header />
 
-      <main className='flex-1 flex flex-col items-center justify-center py-12 sm:py-16 px-6'>
-        <div className='w-full max-w-lg flex flex-col items-center gap-8'>
-          {inviteData ? (
-            <>
-              {/* Course Detail Card */}
-              <InviteCard data={inviteData} />
-
-              {/* Deep Link Open App Bridge */}
-              <DeepLinkBridge shareToken={shareToken} />
-
-              {/* Store Download CTA & QR Code */}
-              <StoreDownloadCTA shareToken={shareToken} />
-            </>
-          ) : (
-            <InviteErrorState status={errorStatus} message={errorMessage} />
-          )}
-        </div>
+      <main id='main-content' tabIndex={-1} className='invite-main'>
+        {inviteData ? (
+          <InviteContent data={inviteData} shareToken={shareToken} />
+        ) : (
+          <InviteErrorState status={errorStatus} message={errorMessage} />
+        )}
       </main>
 
       <Footer />

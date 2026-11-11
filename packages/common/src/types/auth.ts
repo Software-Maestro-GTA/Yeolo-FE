@@ -1,18 +1,18 @@
 /**
  * @file auth.ts
- * @description Shared authentication types and interfaces across Web and Mobile.
+ * @description Shared authentication types and interfaces across Web and Mobile (API-AUTH-1~4).
  */
 
 export interface User {
   userId: string;
-  provider: string;
-  providerUserId?: string;
-  email: string;
-  displayName: string;
+  provider: 'google' | 'apple' | string;
+  email: string | null;
+  displayName: string | null;
   profileImageUrl: string | null;
-  status: string;
+  status: 'active' | string;
+  lastLoginAt: string;
+  providerUserId?: string;
   createdAt?: string;
-  lastLoginAt?: string;
   deletedAt?: string | null;
   recentCourseId?: string | null;
 }
@@ -28,7 +28,7 @@ export interface GoogleLoginResponse {
   data: {
     user: User;
     doOnboarding: boolean;
-    recentCourseId?: string | null;
+    recentCourseId: string | null;
     accessToken: string;
     refreshToken: string;
   };
@@ -46,7 +46,20 @@ export interface AppleLoginResponse {
   data: {
     user: User;
     doOnboarding: boolean;
-    recentCourseId?: string | null;
+    recentCourseId: string | null;
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
+export interface RefreshTokenPayload {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  status: number;
+  message: string;
+  data: {
     accessToken: string;
     refreshToken: string;
   };
@@ -70,17 +83,4 @@ export interface WithdrawResponse {
   status: number;
   message: string;
   data: null;
-}
-
-export interface RefreshTokenPayload {
-  refreshToken?: string;
-}
-
-export interface RefreshTokenResponse {
-  status: number;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-  };
 }

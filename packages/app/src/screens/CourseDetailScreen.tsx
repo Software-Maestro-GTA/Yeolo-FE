@@ -1,70 +1,159 @@
 /**
  * @file CourseDetailScreen.tsx
- * @description Screen component for rendering recommended travel course details and timeline itinerary.
+ * @description Renders course timelines with native scroll clipping, verified currency totals and safe booking/share actions.
  */
-import React, { useEffect, useState } from 'react';
+import BackSvg from '../../assets/images/figma-course/back.svg';
+import ShareSvg from '../../assets/images/figma-course/share.svg';
+import ReelSvg from '../../assets/images/figma-course/reel.svg';
+import BookingShadeSvg from '../../assets/images/figma-course/booking-shade.svg';
+import BookingArrowSvg from '../../assets/images/figma-course/booking-arrow.svg';
+import TicketShadeSvg from '../../assets/images/figma-course/ticket-shade.svg';
+import { Text } from '../components/common/Typography';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
-  Text,
+  Image,
   View,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  ImageBackground,
+  Animated,
   Share,
   Alert,
   Platform,
   ToastAndroid,
-  Linking,
-  StatusBar,
 } from 'react-native';
 
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import type { ItineraryStop } from '@yeolo/common';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import type { ItineraryStop, BookingKind } from '@yeolo/common';
 import {
   CourseMiniMapView,
   CourseDayTabs,
   ItineraryTimelineItem,
 } from '../components/course';
 import {
+  COURSE_MAP_EXPANDED_HEIGHT,
+  COURSE_MAP_COMPACT_HEIGHT,
+} from '../components/course/CourseMiniMapView';
+import {
   useCourseDetailQuery,
   useCreateShareLinkMutation,
 } from '../hooks/queries';
-import {
-  processCourseStopsMapData,
-  ProcessedCourseMapData,
-  getDestinationImageUrl,
-} from '../services';
-import { palette, hexToRgba } from '../theme/colors';
+import { processCourseStopsMapData } from '../services';
+import { palette } from '../theme/colors';
+import { COURSE_UI } from '../constants/courseUiStrings';
+import { FigmaAsset } from '../components/common/FigmaAsset';
 import { UI_STRINGS, APP_CONFIG } from '../constants';
 import { useGA4ScreenTracking, useGA4ButtonClick } from '../hooks';
-import ctaFlightBg from '../../assets/images/cta_flight_bg.png';
-import ctaHotelBg from '../../assets/images/cta_hotel_bg.png';
+import {
+  courseBookingContext,
+  type OpenBooking,
+} from '../services/bookingService';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
+import { CourseReelComposer } from '../components/course/CourseReelComposer';
 
 import { useBackground, AuthContext } from '../context';
 
+type DetailRow =
+  | { kind: 'intro' | 'controls' | 'date' }
+  | { kind: 'stop'; stop: ItineraryStop; index: number };
+
+export type CourseDetailViewState = {
+  selectedDay: number;
+  currencyMode: 'KRW' | 'LOCAL';
+};
+
 export interface CourseDetailScreenProps {
   courseId: string;
-  onSelectPlace?: (stop: ItineraryStop) => void;
   onBack?: () => void;
+  onOpenBooking?: OpenBooking;
+  initialViewState?: CourseDetailViewState;
+  onViewStateChange?: (state: CourseDetailViewState) => void;
 }
 
+/** Displays a course and restores the caller's day/currency selection when returning to it. */
 export function CourseDetailScreen({
   courseId,
-  onSelectPlace,
   onBack,
+  onOpenBooking,
+  initialViewState,
+  onViewStateChange,
 }: CourseDetailScreenProps) {
   useGA4ScreenTracking('CourseDetailScreen');
   const { trackButtonClick } = useGA4ButtonClick();
   const { setBackground, resetBackground } = useBackground();
-  const auth = React.useContext(AuthContext);
   const insets = useSafeAreaInsets();
-  const topPadding = (insets.top || 24) + 12;
+  const contentInsetStyles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        scrollContent: { paddingBottom: insets.bottom + 16 },
+      }),
+    [insets.bottom],
+  );
+  const auth = React.useContext(AuthContext);
+  const recentCourseId = auth?.recentCourseId;
+  const setRecentCourseId = auth?.setRecentCourseId;
+  const detailList = React.useRef<FlatList<DetailRow>>(null);
+  const scrollOffset = React.useRef(new Animated.Value(0)).current;
+  const [introHeight, setIntroHeight] = useState(0);
+  const [controlsDetailsHeight, setControlsDetailsHeight] = useState(0);
+  // Move the fixed-size header on the UI thread. Clipping the upper map strip
+  // avoids resizing native maps or racing scroll events against JS layout.
+  const controlsTranslateY = React.useMemo(
+    () =>
+      scrollOffset.interpolate({
+        inputRange: [
+          0,
+          introHeight + COURSE_MAP_EXPANDED_HEIGHT - COURSE_MAP_COMPACT_HEIGHT,
+        ],
+        outputRange: [
+          0,
+          -(
+            introHeight +
+            COURSE_MAP_EXPANDED_HEIGHT -
+            COURSE_MAP_COMPACT_HEIGHT
+          ),
+        ],
+        extrapolateRight: 'clamp',
+      }),
+    [scrollOffset, introHeight],
+  );
+  const controlsSpacerStyle = React.useMemo(
+    () =>
+      StyleSheet.create({
+        spacer: {
+          height:
+            COURSE_MAP_EXPANDED_HEIGHT +
+            controlsDetailsHeight +
+            styles.controls.gap +
+            styles.controls.paddingBottom,
+        },
+      }).spacer,
+    [controlsDetailsHeight],
+  );
+  const cornersTranslateY = React.useMemo(
+    () =>
+      scrollOffset.interpolate({
+        inputRange: [0, Math.max(introHeight, 1)],
+        outputRange: [0, -introHeight],
+        extrapolateRight: 'clamp',
+      }),
+    [scrollOffset, introHeight],
+  );
+  const [bookingCardWidth, setBookingCardWidth] = useState(165);
+  const bookingShadeStyle = React.useMemo(
+    () =>
+      StyleSheet.create({
+        shade: { transform: [{ scaleX: bookingCardWidth / 165 }] },
+      }),
+    [bookingCardWidth],
+  );
 
   useEffect(() => {
     setBackground({ noTopEdges: true });
@@ -74,11 +163,11 @@ export function CourseDetailScreen({
   }, [setBackground, resetBackground]);
 
   useEffect(() => {
-    if (courseId) {
-      auth?.setRecentCourseId?.(courseId);
+    if (courseId && courseId !== recentCourseId) {
+      setRecentCourseId?.(courseId);
       AsyncStorage.setItem('recentCourseId', courseId).catch(() => {});
     }
-  }, [courseId, auth]);
+  }, [courseId, recentCourseId, setRecentCourseId]);
 
   const {
     data: course,
@@ -90,26 +179,23 @@ export function CourseDetailScreen({
   });
 
   const createShareLinkMutation = useCreateShareLinkMutation();
+  const shareInFlight = React.useRef(false);
 
   const handleShareCourse = () => {
+    if (!courseId || shareInFlight.current) return;
+    shareInFlight.current = true;
     trackButtonClick('btn_course_detail_share', 'Share Course Click');
-    if (!courseId) return;
 
     createShareLinkMutation.mutate(courseId, {
       onSuccess: async (shareData) => {
-        const shareTitle =
-          course?.title || UI_STRINGS.COURSE_DETAIL.DEFAULT_COURSE_TITLE;
         const inviteUrl = shareData.shareToken
           ? `${APP_CONFIG.INVITE_BASE_URL}/${shareData.shareToken}`
           : shareData.shareUrl;
-        const shareMessage = `[여로] ${shareTitle} 여행 일정을 공유합니다!\n${inviteUrl}`;
 
         try {
-          await Share.share({
-            title: shareTitle,
-            message: shareMessage,
-            url: inviteUrl,
-          });
+          await Share.share(
+            Platform.OS === 'ios' ? { url: inviteUrl } : { message: inviteUrl },
+          );
         } catch (shareError) {
           Clipboard.setString(inviteUrl);
           if (Platform.OS === 'android') {
@@ -131,83 +217,114 @@ export function CourseDetailScreen({
           err?.message || UI_STRINGS.COURSE_DETAIL.SHARE_FAIL_DEFAULT,
         );
       },
+      onSettled: () => {
+        shareInFlight.current = false;
+      },
     });
   };
 
-  const handleOpenTripFlight = async () => {
-    trackButtonClick('btn_flight_cta', 'Click Flight Booking Banner');
-    try {
-      await Linking.openURL(APP_CONFIG.TRIP_FLIGHT_URL);
-    } catch (_err) {
-      Alert.alert(
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
-      );
-    }
+  const handleOpenBooking = (kind: BookingKind) => {
+    trackButtonClick(`btn_${kind}_cta`, `Open ${kind} Booking`);
+    onOpenBooking?.(kind, {
+      ...courseBookingContext(course, kind),
+      autoSearch: true,
+    });
   };
 
-  const handleOpenTripHotel = async () => {
-    trackButtonClick('btn_hotel_cta', 'Click Hotel Booking Banner');
-    try {
-      await Linking.openURL(APP_CONFIG.TRIP_HOTEL_URL);
-    } catch (_err) {
-      Alert.alert(
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_TITLE,
-        UI_STRINGS.COURSE_DETAIL.BOOKING_ERROR_MESSAGE,
+  const [selectedDay, setSelectedDay] = useState(
+    initialViewState?.selectedDay ?? 1,
+  );
+  const [currencyMode, setCurrencyMode] = useState<
+    CourseDetailViewState['currencyMode']
+  >(initialViewState?.currencyMode ?? 'KRW');
+  const calculatedTotalCost =
+    course?.totalCost ??
+    course?.itinerary?.days?.reduce((acc, d) => {
+      return (
+        acc +
+        (d.stops?.reduce((sAcc, s) => {
+          return sAcc + (s?.cost || 0) + (s?.transportToNext?.cost || 0);
+        }, 0) || 0)
       );
-    }
+    }, 0) ??
+    0;
+  const localCurrencySymbol = course?.exRateIcon?.trim() || '';
+  const localCurrencyIsKrw = ['₩', '￦', 'KRW', '원'].includes(
+    localCurrencySymbol.toUpperCase(),
+  );
+  const canShowLocalCurrency = Boolean(
+    localCurrencySymbol &&
+    !localCurrencyIsKrw &&
+    course?.totalCostExRate != null &&
+    Number.isFinite(course.totalCostExRate) &&
+    course.totalCostExRate >= 0 &&
+    !(calculatedTotalCost > 0 && course.totalCostExRate === 0),
+  );
+  const displayedCurrencyMode = canShowLocalCurrency ? currencyMode : 'KRW';
+  const updateViewState = (state: CourseDetailViewState) => {
+    if (
+      state.selectedDay === selectedDay &&
+      state.currencyMode === currencyMode
+    )
+      return;
+    setSelectedDay(state.selectedDay);
+    setCurrencyMode(state.currencyMode);
+    onViewStateChange?.(state);
   };
-
-  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [reelOpen, setReelOpen] = useState(false);
   const [isMapInteracting, setIsMapInteracting] = useState<boolean>(false);
-  const [mapData, setMapData] = useState<ProcessedCourseMapData>({
-    coordinates: [],
-    region: undefined,
-  });
-
+  const handleMapInteractionStart = useCallback(
+    () => setIsMapInteracting(true),
+    [],
+  );
+  const handleMapInteractionEnd = useCallback(
+    () => setIsMapInteracting(false),
+    [],
+  );
   useEffect(() => {
-    if (course?.itinerary?.days?.length) {
-      setSelectedDay(course.itinerary.days[0].day);
-    }
-  }, [course]);
+    if (!course) return;
+    const days = course?.itinerary?.days;
+    const nextDay =
+      days?.length && !days.some((day) => day.day === selectedDay)
+        ? days[0].day
+        : selectedDay;
+    if (nextDay === selectedDay && displayedCurrencyMode === currencyMode)
+      return;
+    setSelectedDay(nextDay);
+    setCurrencyMode(displayedCurrencyMode);
+    onViewStateChange?.({
+      selectedDay: nextDay,
+      currencyMode: displayedCurrencyMode,
+    });
+  }, [
+    course,
+    course?.itinerary?.days,
+    selectedDay,
+    currencyMode,
+    displayedCurrencyMode,
+    onViewStateChange,
+  ]);
 
   const currentDayData = course?.itinerary?.days?.find(
     (d) => d.day === selectedDay,
   );
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadMapCoordinatesData = async () => {
-      if (!currentDayData || !currentDayData.stops) {
-        if (isMounted) {
-          setMapData({
-            coordinates: [],
-            region: undefined,
-          });
-        }
-        return;
-      }
-
-      const processed = await processCourseStopsMapData(
-        currentDayData.stops,
-        course?.destinationCity,
-      );
-      if (isMounted) {
-        setMapData(processed);
-      }
-    };
-
-    loadMapCoordinatesData();
-    return () => {
-      isMounted = false;
-    };
-  }, [currentDayData, selectedDay, course?.destinationCity]);
+  const mapData = useMemo(
+    () =>
+      currentDayData?.stops
+        ? processCourseStopsMapData(
+            currentDayData.stops,
+            course?.destinationCity,
+          )
+        : { coordinates: [], region: undefined },
+    [currentDayData?.stops, course?.destinationCity],
+  );
 
   if (isLoading) {
     return (
       <View style={[styles.screenContainer, styles.centerContainer]}>
         <ActivityIndicator size='large' color={palette.primary} />
-        <Text style={styles.loadingText}>코스 정보를 불러오는 중...</Text>
+        <Text style={styles.loadingText}>{COURSE_UI.LOADING_COURSE}</Text>
       </View>
     );
   }
@@ -219,7 +336,7 @@ export function CourseDetailScreen({
           {UI_STRINGS.COURSE_DETAIL.ERROR_TITLE}
         </Text>
         <Text style={styles.errorSubText}>
-          {error?.message || '코스 정보를 불러오지 못했습니다.'}
+          {error?.message || COURSE_UI.COURSE_ERROR}
         </Text>
         <TouchableOpacity
           testID='retry-button'
@@ -240,257 +357,441 @@ export function CourseDetailScreen({
     );
   }
 
-  const calculatedTotalCost =
-    course.totalCost ||
-    course.itinerary?.days?.reduce((acc, d) => {
+  const budgetSymbol =
+    displayedCurrencyMode === 'KRW' ? '₩' : localCurrencySymbol;
+  const budgetAmount =
+    displayedCurrencyMode === 'KRW'
+      ? calculatedTotalCost
+      : course.totalCostExRate;
+  const formattedBudgetDisplay = `${budgetSymbol}\u00a0${(budgetAmount ?? 0).toLocaleString()}`;
+
+  const range = courseBookingContext(course);
+  const formatDate = (date?: string) => date?.slice(2).replace(/-/g, '.') || '';
+  const dateRange = `${formatDate(course.startDate)} - ${formatDate(range.endDate)}`;
+  const dayDate = currentDayData?.date
+    ? new Date(`${currentDayData.date}T12:00:00`)
+    : undefined;
+  const dayLabel = currentDayData?.date
+    ? `${formatDate(currentDayData.date)}(${COURSE_UI.WEEKDAYS[dayDate?.getDay() ?? 0]})`
+    : '';
+  const rows: DetailRow[] = [
+    { kind: 'intro' },
+    { kind: 'controls' },
+    { kind: 'date' },
+    ...(currentDayData?.stops ?? []).map((stop, index) => ({
+      kind: 'stop' as const,
+      stop,
+      index,
+    })),
+  ];
+  const renderRow = ({ item }: { item: DetailRow }) => {
+    if (item.kind === 'intro')
       return (
-        acc +
-        (d.stops?.reduce((sAcc, s) => {
-          return sAcc + (s?.cost || 0) + (s?.transportToNext?.cost || 0);
-        }, 0) || 0)
+        <View
+          style={styles.headerContentGroup}
+          onLayout={(event) => setIntroHeight(event.nativeEvent.layout.height)}
+          testID='course-detail-header'
+          accessibilityLabel={course.title}>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerTitle}>{course.destinationCountry}</Text>
+            <View style={styles.headerTitleDivider} />
+            <Text style={styles.headerTitle}>{course.destinationCity}</Text>
+          </View>
+          <Text style={styles.headerSubtitle}>{dateRange}</Text>
+          <View style={styles.tags}>
+            {course.tags?.map((tag) => (
+              <Text key={tag} style={styles.tag}>
+                #{tag.replace(/^#/, '')}
+              </Text>
+            ))}
+          </View>
+        </View>
       );
-    }, 0);
-
-  const activeHeroImageUrl =
-    course.coverImageUrl ||
-    getDestinationImageUrl(course.destinationCountry, course.destinationCity);
-
+    if (item.kind === 'controls')
+      return (
+        <View testID='course-controls-spacer' style={controlsSpacerStyle} />
+      );
+    if (item.kind === 'date')
+      return (
+        <View
+          style={styles.dayHeader}
+          accessibilityHint={currentDayData?.memo}
+          testID='day-header'>
+          <Text style={styles.dayDate}>{dayLabel}</Text>
+        </View>
+      );
+    if (item.kind === 'stop')
+      return (
+        <View style={styles.timelineRow}>
+          <ItineraryTimelineItem
+            stop={item.stop}
+            nextPlace={currentDayData?.stops[item.index + 1]?.place}
+            isLast={item.index === (currentDayData?.stops.length ?? 0) - 1}
+          />
+        </View>
+      );
+    return null;
+  };
   return (
-    <View style={styles.screenContainer} testID='screen-container'>
-      <ScrollView
-        contentContainerStyle={styles.scrollContentContainer}
-        scrollEnabled={!isMapInteracting}
-        showsVerticalScrollIndicator={false}>
-        {/* Direct Hero Header Section with Integrated Background (Scrolls naturally with content) */}
-        <View style={styles.heroSection} testID='course-detail-header'>
-          {/* 1. Background Image Layer (Scrolls with page) */}
-          <ImageBackground
-            source={{ uri: activeHeroImageUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode='cover'
-          />
-          {/* 2. Gradient Overlay for text readability and smooth transition */}
-          <LinearGradient
-            colors={[
-              hexToRgba(palette.deepNavy, 0.45),
-              hexToRgba(palette.deepNavy, 0.05),
-              hexToRgba(palette.softMint, 0.5),
-              palette.softMint,
-            ]}
-            locations={[0.0, 0.35, 0.75, 1.0]}
-            style={StyleSheet.absoluteFill}
-          />
-
-          <View style={[styles.heroContent, { paddingTop: topPadding }]}>
-            {/* Top Nav Actions Bar (Back & Share buttons) */}
-            <View style={styles.navActionsRow} testID='nav-actions'>
-              <TouchableOpacity
-                testID='btn-back'
-                style={styles.actionCircleBtn}
-                onPress={() => {
-                  trackButtonClick(
-                    'btn_course_detail_back',
-                    'Back Button Click',
-                  );
-                  onBack?.();
-                }}
-                activeOpacity={0.8}>
-                <Ionicons
-                  name='chevron-back'
-                  size={18}
-                  color={palette.deepNavy}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID='btn-share'
-                style={styles.actionCircleBtn}
-                onPress={handleShareCourse}
-                activeOpacity={0.8}>
-                <Ionicons
-                  name='share-outline'
-                  size={18}
-                  color={palette.deepNavy}
-                />
-              </TouchableOpacity>
+    <SafeAreaView
+      style={styles.screenContainer}
+      edges={['top', 'left', 'right']}
+      testID='screen-container'>
+      <View style={styles.navActionsRow} testID='nav-actions'>
+        <TouchableOpacity
+          testID='btn-back'
+          accessibilityRole='button'
+          accessibilityLabel={COURSE_UI.BACK}
+          style={styles.actionCircleBtn}
+          onPress={() => {
+            trackButtonClick('btn_course_detail_back', 'Back Button Click');
+            onBack?.();
+          }}>
+          <FigmaAsset source={BackSvg} width={24} height={24} />
+        </TouchableOpacity>
+        <View style={styles.shareActions} testID='course-share-actions'>
+          <TouchableOpacity
+            testID='btn-reel'
+            accessibilityRole='button'
+            accessibilityLabel={UI_STRINGS.REEL.BUTTON}
+            style={styles.actionCircleBtn}
+            onPress={() => {
+              trackButtonClick('btn_course_detail_reel', 'Create Course Reel');
+              setReelOpen(true);
+            }}>
+            <View style={styles.reelIcon}>
+              <ReelSvg />
             </View>
-
-            {/* Title Content Group at the bottom of hero */}
-            <View style={styles.headerContentGroup}>
-              <Text style={styles.headerTitle}>
-                {course.destinationCountry} {course.destinationCity}
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                {course.startDate ? `${course.startDate} · ` : ''}
-                {course.title}
-              </Text>
-            </View>
-          </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID='btn-share'
+            accessibilityRole='button'
+            accessibilityLabel={UI_STRINGS.COURSE_DETAIL.SHARE_COURSE_BUTTON}
+            style={styles.actionCircleBtn}
+            onPress={handleShareCourse}>
+            <FigmaAsset source={ShareSvg} width={24} height={24} />
+          </TouchableOpacity>
         </View>
-
-        {/* Main Content Body */}
-        <View style={styles.mainContentBody}>
-          {/* Mini Map View Component */}
-          <CourseMiniMapView
-            stopCoordinates={mapData.coordinates}
-            mapRegion={mapData.region}
-            onInteractionStart={() => setIsMapInteracting(true)}
-            onInteractionEnd={() => setIsMapInteracting(false)}
-          />
-
-          {/* Day Selector Tabs Component */}
-          <CourseDayTabs
-            days={course.itinerary?.days}
-            selectedDay={selectedDay}
-            onSelectDay={(day) => {
-              trackButtonClick(
-                'btn_course_detail_day_tab',
-                `Select Day ${day}`,
-                { day },
-              );
-              setSelectedDay(day);
-            }}
-          />
-
-          {/* Day Memo Theme Summary Card */}
-          {currentDayData?.memo && currentDayData.memo.trim() !== '' && (
-            <View style={styles.dayMemoCard} testID='day-memo-card'>
-              <Ionicons
-                name='compass-outline'
-                size={16}
-                color={palette.primary}
-              />
-              <Text style={styles.dayMemoText}>
-                {currentDayData.memo.trim()}
-              </Text>
-            </View>
+      </View>
+      <View style={styles.timelineViewport}>
+        <Animated.FlatList
+          ref={detailList}
+          testID='course-detail-list'
+          data={rows}
+          renderItem={renderRow}
+          keyExtractor={(row) =>
+            row.kind === 'stop'
+              ? `stop-${selectedDay}-${row.stop.sequence}-${row.index}`
+              : row.kind
+          }
+          scrollEnabled={!isMapInteracting}
+          showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollOffset } } }],
+            { useNativeDriver: true },
           )}
-
-          {/* Flight Booking Banner */}
-          <TouchableOpacity
-            testID='btn-flight-cta'
-            style={styles.ctaBanner}
-            activeOpacity={0.85}
-            onPress={handleOpenTripFlight}>
-            <ImageBackground
-              source={ctaFlightBg}
-              style={styles.bannerImageBg}
-              resizeMode='cover'>
-              <LinearGradient
-                colors={[
-                  hexToRgba(palette.primary, 0.85),
-                  hexToRgba(palette.darkBlue, 0.85),
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.bannerGradient}>
-                <View style={styles.bannerLeft}>
-                  <Text style={styles.bannerTitle}>
-                    {UI_STRINGS.COURSE_DETAIL.FLIGHT_BANNER_TITLE}
-                  </Text>
-                  <Text style={styles.bannerSubTitle}>
-                    {UI_STRINGS.COURSE_DETAIL.FLIGHT_BANNER_DESC}
-                  </Text>
-                </View>
-                <View style={styles.bannerCtaBadge}>
-                  <Text style={styles.bannerCtaText}>
-                    {UI_STRINGS.COURSE_DETAIL.BOOK_NOW}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </ImageBackground>
-          </TouchableOpacity>
-
-          {/* Timeline Itinerary Items Stream */}
-          <View style={styles.timelineSection} testID='timeline-section'>
-            {currentDayData?.stops && currentDayData.stops.length > 0 ? (
-              currentDayData.stops.map((stop: ItineraryStop, index: number) => (
-                <ItineraryTimelineItem
-                  key={stop.sequence || index}
-                  stop={stop}
-                  isLast={index === currentDayData.stops.length - 1}
-                  onPressPlace={onSelectPlace}
-                />
-              ))
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  해당 일차의 일정이 존재하지 않습니다.
-                </Text>
+          scrollEventThrottle={16}
+          contentInsetAdjustmentBehavior='never'
+          contentContainerStyle={[
+            styles.scrollContentContainer,
+            contentInsetStyles.scrollContent,
+          ]}
+          ListFooterComponent={
+            <View style={styles.footer}>
+              {!currentDayData?.stops?.length && (
+                <Text style={styles.emptyText}>{COURSE_UI.EMPTY_DAY}</Text>
+              )}
+              <View style={styles.bookingRow}>
+                <TouchableOpacity
+                  testID='btn-flight-cta'
+                  accessibilityRole='button'
+                  style={styles.bookingCard}
+                  onLayout={(event) =>
+                    setBookingCardWidth(event.nativeEvent.layout.width)
+                  }
+                  onPress={() => handleOpenBooking('flight')}>
+                  <Image
+                    source={require('../../assets/images/figma-course/flight-booking.jpg')}
+                    style={styles.bookingImage}
+                    resizeMode='cover'
+                  />
+                  <View style={styles.bookingShade}>
+                    <FigmaAsset
+                      source={BookingShadeSvg}
+                      width={165}
+                      height={65}
+                      style={bookingShadeStyle.shade}
+                    />
+                  </View>
+                  <View style={styles.bookingContent}>
+                    <Text style={styles.bookingTitle}>{COURSE_UI.FLIGHT}</Text>
+                    <View style={styles.bookingDescription}>
+                      <Text style={styles.bookingSubtitle}>
+                        {COURSE_UI.FLIGHT_DESC}
+                      </Text>
+                      <FigmaAsset
+                        source={BookingArrowSvg}
+                        width={14.5}
+                        height={8.5}
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID='btn-hotel-cta'
+                  accessibilityRole='button'
+                  style={styles.bookingCard}
+                  onPress={() => handleOpenBooking('hotel')}>
+                  <Image
+                    source={require('../../assets/images/figma-course/hotel-booking.jpg')}
+                    style={styles.bookingImage}
+                    resizeMode='cover'
+                  />
+                  <View style={styles.bookingShade}>
+                    <FigmaAsset
+                      source={BookingShadeSvg}
+                      width={165}
+                      height={65}
+                      style={bookingShadeStyle.shade}
+                    />
+                  </View>
+                  <View style={styles.bookingContent}>
+                    <Text style={styles.bookingTitle}>{COURSE_UI.HOTEL}</Text>
+                    <View style={styles.bookingDescription}>
+                      <Text style={styles.bookingSubtitle}>
+                        {course.destinationCity} {COURSE_UI.HOTEL_RECOMMENDED}
+                      </Text>
+                      <FigmaAsset
+                        source={BookingArrowSvg}
+                        width={14.5}
+                        height={8.5}
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
-
-          {/* Hotel Booking Banner */}
-          <TouchableOpacity
-            testID='btn-hotel-cta'
-            style={styles.ctaBanner}
-            activeOpacity={0.85}
-            onPress={handleOpenTripHotel}>
-            <ImageBackground
-              source={ctaHotelBg}
-              style={styles.bannerImageBg}
-              resizeMode='cover'>
-              <LinearGradient
-                colors={[
-                  hexToRgba(palette.accent, 0.85),
-                  hexToRgba(palette.darkTeal, 0.85),
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.bannerGradient}>
-                <View style={styles.bannerLeft}>
-                  <Text style={styles.bannerTitle}>
-                    {UI_STRINGS.COURSE_DETAIL.HOTEL_BANNER_TITLE}
-                  </Text>
-                  <Text style={styles.bannerSubTitle}>
-                    {UI_STRINGS.COURSE_DETAIL.HOTEL_BANNER_DESC}
-                  </Text>
+              <TouchableOpacity
+                testID='btn-ticket-cta'
+                accessibilityRole='button'
+                style={styles.ticketCard}
+                onPress={() => handleOpenBooking('ticket')}>
+                <Image
+                  source={require('../../assets/images/figma-course/ticket-booking.jpg')}
+                  style={styles.bookingImage}
+                  resizeMode='cover'
+                />
+                <FigmaAsset
+                  source={TicketShadeSvg}
+                  width={80}
+                  height={248}
+                  style={styles.ticketShade}
+                />
+                <View style={styles.ticketContent}>
+                  <Text style={styles.bookingTitle}>{COURSE_UI.TICKET}</Text>
+                  <FigmaAsset
+                    source={BookingArrowSvg}
+                    width={14.5}
+                    height={8.5}
+                  />
                 </View>
-                <View style={styles.bannerCtaBadge}>
-                  <Text style={styles.bannerCtaText}>
-                    {UI_STRINGS.COURSE_DETAIL.BOOK_NOW}
-                  </Text>
-                </View>
-              </LinearGradient>
-            </ImageBackground>
-          </TouchableOpacity>
-
-          {/* Summary Section (총 예상 경비) */}
-          <View style={styles.summarySection} testID='summary-section'>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>
-                {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
-              </Text>
-              <Text style={styles.summaryValue}>
-                ₩
-                {calculatedTotalCost
-                  ? calculatedTotalCost.toLocaleString()
-                  : '78,000'}
-              </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID='btn-share-bottom'
+                accessibilityRole='button'
+                style={styles.bottomShareBtn}
+                onPress={handleShareCourse}>
+                <Text style={styles.bottomShareBtnText}>
+                  {UI_STRINGS.COURSE_DETAIL.SHARE_COURSE_BUTTON}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          }
+        />
+        {/* The full viewport parent keeps translated Android controls hittable. */}
+        <View
+          testID='course-controls-overlay'
+          style={styles.controlsOverlay}
+          pointerEvents='box-none'>
+          <Animated.View
+            testID='course-controls-motion'
+            style={[
+              styles.floatingControls,
+              {
+                top: introHeight,
+                opacity: introHeight > 0 ? 1 : 0,
+                transform: [{ translateY: controlsTranslateY }],
+              },
+            ]}>
+            <View style={styles.controls} testID='course-sticky-controls'>
+              <CourseMiniMapView
+                stopCoordinates={mapData.coordinates}
+                mapRegion={mapData.region}
+                onInteractionStart={handleMapInteractionStart}
+                onInteractionEnd={handleMapInteractionEnd}
+              />
+              <View
+                style={styles.controlsDetails}
+                testID='course-controls-details'
+                onLayout={(event) =>
+                  setControlsDetailsHeight(event.nativeEvent.layout.height)
+                }>
+                <CourseDayTabs
+                  days={course.itinerary?.days}
+                  selectedDay={selectedDay}
+                  onSelectDay={(day) => {
+                    if (day === selectedDay) return;
+                    trackButtonClick(
+                      'btn_course_detail_day_tab',
+                      `Select Day ${day}`,
+                      { day },
+                    );
+                    updateViewState({
+                      selectedDay: day,
+                      currencyMode: displayedCurrencyMode,
+                    });
+                    detailList.current?.scrollToOffset({
+                      offset: 0,
+                      animated: true,
+                    });
+                  }}
+                />
+                <View style={styles.summarySection} testID='summary-section'>
+                  <View style={styles.summaryCard}>
+                    <Text style={styles.summaryTitle}>
+                      {UI_STRINGS.COURSE_DETAIL.TOTAL_BUDGET_LABEL}
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      {formattedBudgetDisplay}
+                    </Text>
+                  </View>
+                  {canShowLocalCurrency && (
+                    <View style={styles.currencyToggleGroup}>
+                      <TouchableOpacity
+                        testID='currency-toggle-krw'
+                        accessibilityRole='button'
+                        accessibilityState={{
+                          selected: currencyMode === 'KRW',
+                        }}
+                        style={[
+                          styles.currencyToggleBtn,
+                          currencyMode === 'KRW' &&
+                            styles.currencyToggleBtnActive,
+                        ]}
+                        onPress={() =>
+                          updateViewState({ selectedDay, currencyMode: 'KRW' })
+                        }>
+                        <Text
+                          style={[
+                            styles.currencyToggleText,
+                            currencyMode === 'KRW' &&
+                              styles.currencyToggleTextActive,
+                          ]}>
+                          ₩
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID='currency-toggle-local'
+                        accessibilityRole='button'
+                        accessibilityState={{
+                          selected: currencyMode === 'LOCAL',
+                        }}
+                        style={[
+                          styles.currencyToggleBtn,
+                          currencyMode === 'LOCAL' &&
+                            styles.currencyToggleBtnActive,
+                        ]}
+                        onPress={() =>
+                          updateViewState({
+                            selectedDay,
+                            currencyMode: 'LOCAL',
+                          })
+                        }>
+                        <Text
+                          style={[
+                            styles.currencyToggleText,
+                            currencyMode === 'LOCAL' &&
+                              styles.currencyToggleTextActive,
+                          ]}>
+                          {localCurrencySymbol}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+          {/* Round the newly exposed map edge without resizing its native surface. */}
+          <Animated.View
+            pointerEvents='none'
+            style={[
+              styles.mapTopCorners,
+              {
+                top: introHeight,
+                opacity: introHeight > 0 ? 1 : 0,
+                transform: [{ translateY: cornersTranslateY }],
+              },
+            ]}>
+            <Svg width={16} height={16} viewBox='0 0 16 16'>
+              <Path d='M0 0H16A16 16 0 0 0 0 16Z' fill={palette.white} />
+            </Svg>
+            <Svg
+              width={16}
+              height={16}
+              viewBox='0 0 16 16'
+              style={styles.rightMapCorner}>
+              <Path d='M0 0H16A16 16 0 0 0 0 16Z' fill={palette.white} />
+            </Svg>
+          </Animated.View>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+      {reelOpen && (
+        <CourseReelComposer
+          key={course.courseId}
+          course={course}
+          initialDay={selectedDay}
+          onClose={() => setReelOpen(false)}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: palette.transparent,
+  controlsDetails: { gap: 20 },
+  timelineViewport: { flex: 1, overflow: 'hidden' },
+  controlsOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
+  floatingControls: { position: 'absolute', left: 0, right: 0, zIndex: 1 },
+  mapTopCorners: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  rightMapCorner: { transform: [{ scaleX: -1 }] },
+  reelIcon: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  screenContainer: { flex: 1, backgroundColor: palette.white },
   centerContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
     gap: 12,
   },
-  loadingText: {
-    fontSize: 14,
-    color: palette.subText,
-  },
+  loadingText: { fontSize: 14, color: palette.subText },
   errorText: {
     fontSize: 16,
     fontWeight: '700',
@@ -509,180 +810,213 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  retryButtonText: {
-    color: palette.white,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  scrollContentContainer: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 24,
-  },
-  mainContentBody: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  ctaBanner: {
-    width: '100%',
-    height: 136,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-    marginVertical: 4,
-  },
-  bannerImageBg: {
-    width: '100%',
-    height: '100%',
-  },
-  bannerGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  bannerLeft: {
-    flex: 1,
-    gap: 6,
-  },
-  bannerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  bannerSubTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: hexToRgba(palette.white, 0.85),
-  },
-  bannerCtaBadge: {
-    backgroundColor: hexToRgba(palette.white, 0.15),
-    borderWidth: 1,
-    borderColor: hexToRgba(palette.white, 0.4),
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    height: 36,
-    borderRadius: 999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerCtaText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.white,
-  },
-  timelineSection: {
-    width: '100%',
-  },
-  emptyContainer: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: palette.subText,
-  },
-  summarySection: {
-    width: '100%',
-    marginVertical: 4,
-  },
-  summaryCard: {
+  retryButtonText: { color: palette.white, fontWeight: '600', fontSize: 14 },
+  navActionsRow: {
+    height: 56,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: palette.white,
-    borderWidth: 1,
-    borderColor: palette.gray200,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  summaryTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: palette.subText,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: palette.deepNavy,
-  },
-  heroSection: {
-    width: '100%',
-    height: 340,
-    marginBottom: 4,
-  },
-  heroContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  navActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    zIndex: 10,
   },
   actionCircleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: hexToRgba(palette.white, 0.85),
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  shareActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  scrollContentContainer: {
+    backgroundColor: palette.white,
   },
   headerContentGroup: {
-    gap: 4,
-    zIndex: 10,
+    paddingHorizontal: 32,
+    paddingTop: 4,
+    paddingBottom: 20,
+    backgroundColor: palette.white,
+  },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerTitleDivider: {
+    width: 2,
+    height: 16,
+    backgroundColor: palette.gray200,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '900',
-    color: palette.deepNavy,
-    lineHeight: 32,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: palette.subText,
-    fontWeight: '400',
-    lineHeight: 20,
-  },
-  dayMemoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: palette.white,
-    borderLeftWidth: 3,
-    borderLeftColor: palette.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    shadowColor: palette.deepNavy,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  dayMemoText: {
-    flex: 1,
-    fontSize: 13,
+    lineHeight: 37,
     fontWeight: '600',
     color: palette.deepNavy,
+    letterSpacing: -1,
+    flexShrink: 1,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.subText,
+    marginTop: 4,
+  },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  tag: {
+    fontSize: 14,
+    color: palette.subText,
+    backgroundColor: palette.gray200,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  controls: {
+    backgroundColor: palette.white,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 20,
+  },
+  summarySection: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  summaryCard: {
+    minHeight: 52,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: palette.gray300,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    gap: 8,
+    flexWrap: 'wrap',
+    alignContent: 'center',
+  },
+  summaryTitle: { fontSize: 16, color: palette.subText, letterSpacing: -0.6 },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: palette.deepNavy,
+    letterSpacing: -0.7,
+  },
+  currencyToggleGroup: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: palette.gray300,
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 52,
+  },
+  currencyToggleBtn: {
+    width: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.white,
+  },
+  currencyToggleBtnActive: { backgroundColor: palette.primary },
+  currencyToggleText: {
+    fontSize: 16,
+    color: palette.deepNavy,
+    fontWeight: '500',
+  },
+  currencyToggleTextActive: { color: palette.white },
+  dayHeader: {
+    minHeight: 56,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.gray100,
+  },
+  dayDate: { fontSize: 16, color: palette.subText },
+  timelineRow: { paddingHorizontal: 20, backgroundColor: palette.gray100 },
+  footer: {
+    padding: 20,
+    paddingTop: 28,
+    gap: 16,
+    backgroundColor: palette.white,
+  },
+  bookingRow: { flexDirection: 'row', gap: 20, marginBottom: 4 },
+  bookingCard: {
+    flex: 1,
+    minHeight: 106,
+    backgroundColor: palette.gray300,
+    borderRadius: 16,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  bookingImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  bookingShade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  bookingContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 15,
+    paddingTop: 55,
+    gap: 1,
+  },
+  bookingDescription: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  bookingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: palette.white,
+    letterSpacing: -1,
+  },
+  bookingSubtitle: {
+    fontSize: 14,
+    color: palette.white,
+    letterSpacing: -1,
+    flexShrink: 1,
+  },
+  ticketCard: {
+    minHeight: 80,
+    borderRadius: 16,
+    backgroundColor: palette.gray300,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  ticketContent: {
+    paddingHorizontal: 23,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  ticketShade: {
+    position: 'absolute',
+    width: 80,
+    height: 248,
+    left: 84,
+    top: -84,
+    transform: [{ rotate: '90deg' }],
+  },
+  bottomShareBtn: {
+    minHeight: 62,
+    backgroundColor: palette.primary,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    marginTop: 16,
+  },
+  bottomShareBtnText: {
+    color: palette.white,
+    fontSize: 20,
+    fontWeight: '500',
+    textAlign: 'center',
+    letterSpacing: -0.6,
+  },
+  emptyText: {
+    color: palette.subText,
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 16,
   },
 });

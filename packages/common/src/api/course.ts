@@ -1,6 +1,6 @@
 /**
  * @file course.ts
- * @description API service for initiating course generation SSE stream (API-FB-4) and retrieving course details (API-FB-7).
+ * @description Course API with cancellable SSE generation, distinct connection failures and terminal server outcomes, plus detail, list, and delete requests (API-COURSE-1~4).
  */
 import { createHttpClient } from './kyClient';
 import { parseServerSentEvents } from 'parse-sse';
@@ -21,20 +21,41 @@ export interface CourseStreamCallbacks {
   onComplete?: (event: CourseCompleteEvent) => void;
 }
 
+export interface CourseStreamOptions {
+  signal?: AbortSignal;
+}
+
+export type CourseStreamErrorReason =
+  'connection_lost' | 'background_interrupted';
+
+/** Identifies local stream interruptions without misclassifying server API errors. */
+export class CourseStreamError extends ApiError {
+  constructor(
+    status: number,
+    message: string,
+    public readonly reason: CourseStreamErrorReason,
+  ) {
+    super(status, message);
+  }
+}
+
 /**
- * Sends POST /api/courses request and parses SSE progress & complete events.
+ * Sends POST /api/courses and handles SSE progress, complete, and error events (API-COURSE-1).
  *
  * @param apiUrl Base backend URL
  * @param accessToken User JWT access token
- * @param payload Course creation parameters
+ * @param payload Course creation parameters (destinationCountry, destinationCity, startDate, totalDays, budget)
  * @param callbacks Event callbacks for progress and complete
+ * @param options Optional cancellation signal owned by the generation task
  * @returns Generated courseId string
+ * @throws ApiError with the server status and message when generation fails.
  */
 export async function createCourseStreamApi(
   apiUrl: string,
   accessToken: string,
   payload: CourseCreateRequest,
   callbacks?: CourseStreamCallbacks,
+  options?: CourseStreamOptions,
 ): Promise<string> {
   let courseId: string | undefined;
 
@@ -45,22 +66,29 @@ export async function createCourseStreamApi(
     );
     const client = createHttpClient(apiUrl);
     const response = await client.post('api/courses', {
-      json: payload,
+      json: {
+        destinationCountry: payload.destinationCountry,
+        destinationCity: payload.destinationCity,
+        startDate: payload.startDate,
+        totalDays: payload.totalDays,
+        budget: payload.budget,
+      },
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
       timeout: false,
+      signal: options?.signal ?? null,
     });
 
     const contentType = response.headers.get('content-type') || '';
 
-    // If response is standard JSON (e.g., in mock/test environment without stream headers)
-    if (contentType.includes('application/json')) {
-      const json = await response.json<{
+    // If response is standard JSON (e.g., error response or mock/test environment without stream headers)
+    if (!response.ok || contentType.includes('application/json')) {
+      const json = (await response.json().catch(() => null)) as {
         status?: number;
         message?: string;
-        data?: { courseId?: string };
-      }>();
+        data?: { courseId?: string } | null;
+      } | null;
 
       if (response.status === 200 && json?.data?.courseId) {
         courseId = json.data.courseId;
@@ -72,8 +100,9 @@ export async function createCourseStreamApi(
         return courseId;
       } else {
         throw new ApiError(
-          response.status || 400,
-          json?.message || '여행 코스 생성에 실패했습니다.',
+          json?.status || response.status || 400,
+          json?.message ||
+            '국가, 도시, 일정, 예산 등 필수 여행 조건을 확인해주세요.',
         );
       }
     }
@@ -86,11 +115,24 @@ export async function createCourseStreamApi(
         const parsed = JSON.parse(event.data);
         if (event.type === 'progress') {
           callbacks?.onProgress?.(parsed as CourseProgressEvent);
+        } else if (event.type === 'error') {
+          throw new ApiError(
+            parsed.status || 500,
+            parsed.message || '여행 코스 생성에 실패했습니다.',
+          );
         } else if (event.type === 'complete') {
+          if (!parsed.data?.courseId || parsed.status !== 200) {
+            throw new ApiError(
+              parsed.status || 500,
+              parsed.message || '여행 코스 생성에 실패했습니다.',
+            );
+          }
+          courseId = parsed.data.courseId;
           callbacks?.onComplete?.(parsed as CourseCompleteEvent);
-          courseId = parsed.data?.courseId;
+          break;
         }
       } catch (jsonError) {
+        if (jsonError instanceof ApiError) throw jsonError;
         logger.error(
           '[CourseAPI] Error parsing SSE event in course generation:',
           jsonError,
@@ -98,13 +140,15 @@ export async function createCourseStreamApi(
       }
     }
   } catch (error: any) {
+    // Closing a terminal stream must never turn an already completed course into a failure.
+    if (courseId) return courseId;
     logger.error('[CourseAPI] createCourseStreamApi error:', error);
     if (error instanceof ApiError) {
       throw error;
     }
     if (error?.response) {
       let status = 400;
-      let message = '여행 코스 생성에 실패했습니다.';
+      let message = '국가, 도시, 일정, 예산 등 필수 여행 조건을 확인해주세요.';
       try {
         status = error.response.status;
         const json = await error.response.json();
@@ -114,14 +158,19 @@ export async function createCourseStreamApi(
       }
       throw new ApiError(status, message);
     }
-    throw new ApiError(500, error?.message || '네트워크 오류가 발생했습니다.');
+    throw new CourseStreamError(
+      500,
+      error?.message || '네트워크 오류가 발생했습니다.',
+      'connection_lost',
+    );
   }
 
   if (!courseId) {
     logger.error('[CourseAPI] Course generation finished without courseId');
-    throw new ApiError(
+    throw new CourseStreamError(
       400,
       '여행 코스 생성 중 Course ID를 수신하지 못했습니다.',
+      'connection_lost',
     );
   }
 
@@ -129,7 +178,7 @@ export async function createCourseStreamApi(
 }
 
 /**
- * Sends GET /api/courses/{courseId} request to retrieve course details and full itinerary.
+ * Sends GET /api/courses/{courseId} request to retrieve course details and full itinerary (API-COURSE-2).
  *
  * @param apiUrl Base backend URL
  * @param accessToken User JWT access token
@@ -170,8 +219,7 @@ export async function getCourseDetailApi(
     }
 
     const errorStatus = json?.status || response.status || 500;
-    const errorMessage =
-      json?.message || '코스 상세 정보를 불러올 수 없습니다.';
+    const errorMessage = json?.message || '여행 코스를 찾을 수 없습니다.';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
     logger.error(`[CourseAPI] getCourseDetailApi error:`, error);
@@ -180,7 +228,7 @@ export async function getCourseDetailApi(
     }
     if (error?.response) {
       let status = error.response.status || 400;
-      let message = '코스 상세 정보를 불러오지 못했습니다.';
+      let message = '여행 코스를 찾을 수 없습니다.';
       try {
         const json = await error.response.json();
         if (json?.message) message = json.message;
@@ -194,15 +242,15 @@ export async function getCourseDetailApi(
 }
 
 /**
- * Sends GET /api/courses request to retrieve list of user's previously generated course recommendations.
+ * Sends GET /api/courses request to retrieve list of user's previously generated course recommendations (API-COURSE-3).
  *
  * @param apiUrl Base backend URL
- * @param accessToken User JWT access token
+ * @param accessToken Optional user JWT access token
  * @returns Promise resolving to array of CourseSummary objects
  */
 export async function getCourseListApi(
   apiUrl: string,
-  accessToken: string,
+  accessToken?: string,
 ): Promise<CourseSummary[]> {
   try {
     logger.info('[CourseAPI] getCourseListApi request');
@@ -239,7 +287,7 @@ export async function getCourseListApi(
     }
 
     const errorStatus = json?.status || response.status || 500;
-    const errorMessage = json?.message || '코스 목록을 불러올 수 없습니다.';
+    const errorMessage = json?.message || '여행 코스 목록 조회 실패';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
     logger.error('[CourseAPI] getCourseListApi error:', error);
@@ -248,7 +296,7 @@ export async function getCourseListApi(
     }
     if (error?.response) {
       let status = error.response.status || 400;
-      let message = '코스 목록을 불러오지 못했습니다.';
+      let message = '여행 코스 목록 조회 실패';
       try {
         const json = await error.response.json();
         if (json?.message) message = json.message;
@@ -302,7 +350,8 @@ export async function deleteCourseApi(
     }
 
     const errorStatus = json?.status || response.status || 500;
-    const errorMessage = json?.message || '코스 삭제에 실패했습니다.';
+    const errorMessage =
+      json?.message || '해당 여행 코스를 삭제할 권한이 없습니다.';
     throw new ApiError(errorStatus, errorMessage);
   } catch (error: any) {
     logger.error(
@@ -314,7 +363,7 @@ export async function deleteCourseApi(
     }
     if (error?.response) {
       let status = error.response.status || 400;
-      let message = '코스 삭제에 실패했습니다.';
+      let message = '해당 여행 코스를 삭제할 권한이 없습니다.';
       try {
         const json = await error.response.json();
         if (json?.message) message = json.message;

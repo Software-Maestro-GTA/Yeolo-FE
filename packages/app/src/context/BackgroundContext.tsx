@@ -19,6 +19,7 @@ export interface BackgroundConfig {
   gradientLocations?: readonly number[];
   gradientStyle?: StyleProp<ViewStyle>;
   noTopEdges?: boolean;
+  backgroundColor?: string;
 }
 
 export interface BackgroundContextType {
@@ -29,6 +30,7 @@ export interface BackgroundContextType {
   gradientLocations?: readonly number[];
   gradientStyle?: StyleProp<ViewStyle>;
   noTopEdges?: boolean;
+  backgroundColor?: string;
   setBackground: (config: BackgroundConfig) => void;
   resetBackground: () => void;
 }
@@ -69,6 +71,7 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({
       gradientLocations: bgConfig.gradientLocations,
       gradientStyle: bgConfig.gradientStyle,
       noTopEdges: bgConfig.noTopEdges ?? false,
+      backgroundColor: bgConfig.backgroundColor,
       setBackground,
       resetBackground,
     }),

@@ -4,3 +4,4 @@
  */
 
 export * from './tasteMappings';
+export * from './placeCategories';

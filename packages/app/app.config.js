@@ -1,6 +1,6 @@
 /**
  * @file app.config.js
- * @description Dynamic Expo configuration file resolving Google client keys safely from local environment variables.
+ * @description Expo environment configuration and iOS background course generation capabilities.
  */
 
 module.exports = ({ config }) => {
@@ -9,13 +9,22 @@ module.exports = ({ config }) => {
 
   const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
+  const airbridgeAppName = process.env.AIRBRIDGE_APP_NAME || 'yeolo';
+  const airbridgeAppToken = process.env.AIRBRIDGE_APP_SDK_TOKEN || '';
+
   const androidGoogleServices =
     process.env.GOOGLE_SERVICES_JSON || './google-services.json';
   const iosGoogleServices =
     process.env.GOOGLE_SERVICES_INFO_PLIST || './GoogleService-Info.plist';
 
+  // Discard legacy public partner credentials when reading an older Expo config.
+  const { myRealTripApiKey: _partnerKey, ...publicExtra } = config.extra || {};
+
   return {
     ...config,
+    extra: {
+      ...publicExtra,
+    },
     plugins: [
       ...(config.plugins || []),
       'expo-apple-authentication',
@@ -24,6 +33,13 @@ module.exports = ({ config }) => {
         {
           iosGoogleMapsApiKey: googleMapsApiKey,
           androidGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
+      [
+        'airbridge-expo-sdk',
+        {
+          appName: airbridgeAppName,
+          appToken: airbridgeAppToken,
         },
       ],
     ],
@@ -52,6 +68,19 @@ module.exports = ({ config }) => {
       googleServicesFile: iosGoogleServices,
       infoPlist: {
         ...config.ios?.infoPlist,
+        UIBackgroundModes: [
+          ...new Set([
+            ...(config.ios?.infoPlist?.UIBackgroundModes || []),
+            'processing',
+          ]),
+        ],
+        BGTaskSchedulerPermittedIdentifiers: [
+          ...new Set([
+            ...(config.ios?.infoPlist?.BGTaskSchedulerPermittedIdentifiers ||
+              []),
+            'com.yeolo-travel.app.course-generation.*',
+          ]),
+        ],
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: ['yeolo', googleScheme].filter(Boolean),

@@ -1,0 +1,7 @@
+{
+  "native": true,
+  "plugins": ["@svgr/plugin-jsx"],
+  "svgProps": {
+    "style": "{({ display: 'flex' })}"
+  }
+}

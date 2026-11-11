@@ -1,3 +1,50 @@
+/**
+ * @file jest.setup.js
+ * @description Global native-module mocks for isolated @yeolo/app Jest tests.
+ */
+
+// Native decoding and cache hits are verified in the simulator, not by Jest.
+jest.mock('expo-video', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    VideoView: (props) => React.createElement(View, props),
+    useVideoPlayer: jest.fn((source, setup) =>
+      React.useMemo(() => {
+        const player = {
+          play: jest.fn(),
+          pause: jest.fn(),
+          addListener: jest.fn(() => ({ remove: jest.fn() })),
+        };
+        setup?.(player);
+        return player;
+      }, [source]),
+    ),
+  };
+});
+
+jest.mock('expo-image', () => {
+  const mockReact = require('react');
+  const {
+    Image: mockImage,
+    View: mockView,
+    StyleSheet,
+  } = require('react-native');
+  return {
+    Image: (props) => mockReact.createElement(mockImage, props),
+    ImageBackground: ({ style, imageStyle, children, ...props }) =>
+      mockReact.createElement(
+        mockView,
+        { style },
+        mockReact.createElement(mockImage, {
+          ...props,
+          style: [StyleSheet.absoluteFill, imageStyle],
+        }),
+        children,
+      ),
+  };
+});
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = {};
   return {
@@ -5,6 +52,19 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       store[key] = value;
     }),
     getItem: jest.fn(async (key) => store[key] || null),
+    multiGet: jest.fn(async (keys) =>
+      keys.map((key) => [key, store[key] ?? null]),
+    ),
+    multiSet: jest.fn(async (entries) => {
+      entries.forEach(([key, value]) => {
+        store[key] = value;
+      });
+    }),
+    multiRemove: jest.fn(async (keys) => {
+      keys.forEach((key) => {
+        delete store[key];
+      });
+    }),
     removeItem: jest.fn(async (key) => {
       delete store[key];
     }),
@@ -14,6 +74,11 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: { setString: jest.fn() },
+}));
+
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),
@@ -21,6 +86,7 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
     signIn: jest.fn().mockResolvedValue({
       data: { serverAuthCode: 'mock-google-auth-code' },
     }),
+    signOut: jest.fn().mockResolvedValue(null),
   },
 }));
 
@@ -96,8 +162,14 @@ jest.mock('expo-media-library', () => {
   }
 
   return {
-    requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+    requestPermissionsAsync: jest
+      .fn()
+      .mockResolvedValue({ status: 'granted', accessPrivileges: 'all' }),
+    getPermissionsAsync: jest
+      .fn()
+      .mockResolvedValue({ status: 'granted', accessPrivileges: 'all' }),
     getAssetsAsync: jest.fn().mockResolvedValue({ assets: [] }),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
     MediaType: { IMAGE: 'photo' },
     AssetField: { MEDIA_TYPE: 'mediaType', CREATION_TIME: 'creationTime' },
     Query: MockQuery,
@@ -146,3 +218,27 @@ jest.mock('@react-native-firebase/analytics', () => {
     setUserProperty: mockAnalyticsSetUserProperty,
   };
 });
+
+const mockAirbridgeTrackEvent = jest.fn();
+const mockAirbridgeSetUserID = jest.fn();
+const mockAirbridgeClearUserID = jest.fn();
+const mockAirbridgeSetUserAttribute = jest.fn();
+const mockAirbridgeRemoveUserAttribute = jest.fn();
+
+jest.mock('airbridge-react-native-sdk', () => ({
+  Airbridge: {
+    trackEvent: mockAirbridgeTrackEvent,
+    setUserID: mockAirbridgeSetUserID,
+    clearUserID: mockAirbridgeClearUserID,
+    setUserAttribute: mockAirbridgeSetUserAttribute,
+    removeUserAttribute: mockAirbridgeRemoveUserAttribute,
+  },
+  AirbridgeCategory: {
+    SIGN_IN: 'airbridge.user.signin',
+    SIGN_UP: 'airbridge.user.signup',
+    SIGN_OUT: 'airbridge.user.signout',
+    COMPLETE_TUTORIAL: 'airbridge.user.completeTutorial',
+    SHARE: 'airbridge.share',
+    ORDER_COMPLETED: 'airbridge.ecommerce.order.completed',
+  },
+}));

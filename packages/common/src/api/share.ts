@@ -2,7 +2,7 @@
  * @file share.ts
  * @description API service functions for creating, retrieving, and accepting course share links (API-SHARE-1, API-SHARE-2, API-SHARE-3).
  */
-import { createHttpClient } from './kyClient';
+import { createHttpClient, createPublicHttpClient } from './kyClient';
 import { ApiError } from './errors';
 import { logger } from '../utils/logger';
 import type {
@@ -79,7 +79,7 @@ export async function createShareLinkApi(
 }
 
 /**
- * Retrieves details of a shared course link (API-SHARE-2).
+ * Retrieves a shared course link without authentication or app version checks (API-SHARE-2).
  *
  * @param apiUrl Base backend URL
  * @param shareToken Share token string
@@ -91,7 +91,9 @@ export async function getShareLinkApi(
 ): Promise<ShareLinkDetailResponseData> {
   logger.info('[ShareAPI] getShareLinkApi request, shareToken:', shareToken);
   try {
-    const client = createHttpClient(apiUrl);
+    const client = createPublicHttpClient(apiUrl, {
+      skipAppVersionCheck: true,
+    });
     const response = await client.get(`api/share-links/${shareToken}`);
 
     const json = (await response

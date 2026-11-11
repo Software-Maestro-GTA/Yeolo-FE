@@ -1,86 +1,77 @@
 /**
  * @file CTASection.tsx
- * @description Yeolo 모바일 앱 다운로드 유도 Call To Action 섹션 컴포넌트
+ * @description 스토어 직접 링크와 자주 묻는 질문을 제공하는 다운로드 영역
  */
-
-import React from 'react';
-import Image from 'next/image';
-import { PlayIcon, AppleIcon } from '@/components/Icons';
-
+import { StoreButtons } from '@/components/StoreButtons/StoreButtons';
 export interface CTASectionProps {
   className?: string;
 }
-
 export function CTASection({ className = '' }: CTASectionProps) {
   return (
-    <section
-      id='download'
-      className={`w-full bg-white py-16 lg:py-20 ${className}`}>
-      <div className='max-w-7xl mx-auto px-6 sm:px-12 lg:px-20'>
-        <div className='bg-[#0d2137] rounded-[32px] p-8 sm:p-12 lg:p-20 text-white flex flex-col lg:flex-row items-center justify-between gap-12 overflow-hidden relative shadow-2xl'>
-          {/* Subtle Background Glow Accent */}
-          <div className='absolute -top-24 -right-24 w-96 h-96 bg-[#00c9a7]/10 rounded-full blur-3xl pointer-events-none' />
-          <div className='absolute -bottom-24 -left-24 w-96 h-96 bg-[#2d7dd2]/10 rounded-full blur-3xl pointer-events-none' />
-
-          {/* Left: Text & Store Download Buttons */}
-          <div className='flex flex-col items-start gap-7 max-w-2xl z-10'>
-            <h2 className='text-[28px] sm:text-[38px] lg:text-[44px] font-extrabold leading-[1.25] text-white tracking-tight'>
-              지금 다운로드하고
+    <>
+      <section
+        className='faq-section section-space'
+        aria-labelledby='faq-title'>
+        <div className='site-container faq-grid'>
+          <div>
+            <span className='eyebrow'>BEFORE YOU GO</span>
+            <h2 id='faq-title' className='section-title'>
+              떠나기 전,
               <br />
-              나만의 똑똑한 여행을 만들어 보세요
+              궁금한 이야기.
             </h2>
-
-            <p className='text-[15px] sm:text-[16px] text-white/85 leading-[1.6]'>
-              구글 플레이 스토어와 애플 앱 스토어에서 여로 앱을 다운로드하고
-              <br className='hidden sm:inline' />
-              복잡한 여행 계획으로부터 완벽하게 자유로워지세요.
-            </p>
-
-            {/* Store Download Buttons */}
-            <div className='flex flex-wrap gap-4 pt-2'>
-              {/* Google Play Button */}
-              <a
-                href='https://play.google.com/store/apps/details?id=com.yeolo.app&pcampaignid=web_share'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3 rounded-[12px] inline-flex items-center gap-2.5 transition-all active:scale-95 shadow-sm'>
-                <PlayIcon size={20} className='text-white' />
-                <span>Google Play</span>
-              </a>
-
-              {/* App Store Button */}
-              <a
-                href='https://apps.apple.com/app/id6796231811'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[14px] px-5 py-3 rounded-[12px] inline-flex items-center gap-2.5 transition-all active:scale-95 shadow-sm'>
-                <AppleIcon size={20} className='text-white' />
-                <span>App Store</span>
-              </a>
-            </div>
           </div>
-
-          {/* Right: Realistic Smartphone Device Mockup Frame */}
-          <div className='relative shrink-0 z-10 flex items-center justify-center my-2 lg:my-0'>
-            {/* Outer Smartphone Body: scaled to match Left content height (~380px-400px) */}
-            <div className='relative w-[165px] sm:w-[175px] lg:w-[185px] aspect-[390/844] rounded-[32px] overflow-hidden bg-[#0c1824] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.15)] border-[4px] border-[#1e293b] transition-transform duration-500 hover:scale-[1.03]'>
-              {/* Screen Area: Full edge-to-edge fitting native status and bottom bars */}
-              <div className='relative w-full h-full bg-[#f5faf8]'>
-                <Image
-                  src='/images/app-mockup.png'
-                  alt='Yeolo App Screen Preview'
-                  fill
-                  priority
-                  sizes='(max-width: 640px) 165px, (max-width: 1024px) 175px, 185px'
-                  className='object-cover object-top'
-                />
-                {/* Subtle Screen Reflection Highlight */}
-                <div className='absolute inset-0 pointer-events-none bg-gradient-to-tr from-transparent via-white/[0.03] to-white/10' />
-              </div>
-            </div>
+          <div className='faq-list'>
+            <details>
+              <summary>
+                여로는 어떤 앱인가요?<span aria-hidden='true'>+</span>
+              </summary>
+              <p>
+                사진과 MBTI를 바탕으로 여행 취향을 발견하고, 목적지·날짜·예산에
+                맞춰 코스를 만드는 여행 앱이에요. 코스 공유와 여행 릴스 제작도
+                함께 이용할 수 있어요.
+              </p>
+            </details>
+            <details>
+              <summary>
+                사진을 선택하지 않아도 이용할 수 있나요?
+                <span aria-hidden='true'>+</span>
+              </summary>
+              <p>
+                네. 사진 분석 대신 MBTI로 여행 취향을 알아보고 코스를 만들 수
+                있어요. 앱에서 나에게 편한 방법을 선택해 주세요.
+              </p>
+            </details>
+            <details>
+              <summary>
+                친구에게 여행 코스를 공유할 수 있나요?
+                <span aria-hidden='true'>+</span>
+              </summary>
+              <p>
+                앱에서 만든 코스의 공유 링크를 보내면 친구가 웹에서 내용을
+                확인할 수 있어요. 이어서 여로 앱에서 여행을 함께 준비해 보세요.
+              </p>
+            </details>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <section
+        id='download'
+        className={`download-section ${className}`}
+        aria-labelledby='download-title'>
+        <div className='site-container download-panel download-panel--text'>
+          <div>
+            <span className='eyebrow'>YOUR JOURNEY, YOUR WAY</span>
+            <h2 id='download-title'>
+              다음 여행은
+              <br />
+              조금 더 나답게.
+            </h2>
+            <p>지금 여로에서 나만의 여행길을 열어보세요.</p>
+            <StoreButtons light />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

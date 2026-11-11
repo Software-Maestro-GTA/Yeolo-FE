@@ -13,8 +13,19 @@ import type { AnalyticsTracker, GA4EventParams } from '@yeolo/common';
 import { logger } from '@yeolo/common';
 
 export class AppAnalyticsTracker implements AnalyticsTracker {
+  private userId: string | null = null;
+  private identityRevision = 0;
+
   private getAnalyticsInstance() {
     return typeof getAnalytics === 'function' ? getAnalytics() : analytics();
+  }
+
+  /** Bind a long-running operation's events to the current analytics identity. */
+  public captureEventLogger(): (name: string, params?: GA4EventParams) => void {
+    const revision = this.identityRevision;
+    return (name, params) => {
+      if (revision === this.identityRevision) void this.logEvent(name, params);
+    };
   }
 
   public async logEvent(
@@ -91,6 +102,10 @@ export class AppAnalyticsTracker implements AnalyticsTracker {
   }
 
   public async setUserId(userId: string | null): Promise<void> {
+    if (this.userId !== userId) {
+      this.userId = userId;
+      this.identityRevision += 1;
+    }
     try {
       if (typeof modularSetUserId === 'function') {
         await modularSetUserId(this.getAnalyticsInstance(), userId);
